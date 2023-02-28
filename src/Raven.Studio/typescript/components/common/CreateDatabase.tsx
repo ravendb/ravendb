@@ -14,15 +14,16 @@ import {
     FormGroup,
     Input,
     InputGroup,
+    InputGroupText,
     Label,
     Modal,
     ModalBody,
     ModalFooter,
     PopoverBody,
     Row,
+    Table,
     UncontrolledDropdown,
     UncontrolledPopover,
-    UncontrolledTooltip,
 } from "reactstrap";
 
 import { Checkbox, Switch } from "./Checkbox";
@@ -77,20 +78,18 @@ export function CreateDatabase(props: CreateDatabaseProps) {
 
     //REPLICATION
 
-    const [replicationEnabled, setReplicationEnabled] = useState(false);
+    const [replicationFactor, setReplicationFactor] = useState(1);
 
     const [shardingEnabled, setShardingEnabled] = useState(false);
-
-    const toggleSharding = () => {
-        setShardingEnabled(!shardingEnabled);
-        console.log(shardingEnabled);
-    };
+    const [shardCount, setShardCount] = useState(1);
 
     const [manualNodeSelection, setManualNodeSelection] = useState(false);
 
     const toggleManualNodeSelection = () => {
         setManualNodeSelection(!manualNodeSelection);
     };
+
+    const nodeList: string[] = ["A", "B", "C", "D", "DEV"];
 
     //BACKUP
 
@@ -173,15 +172,21 @@ export function CreateDatabase(props: CreateDatabaseProps) {
         ),
         replicationAndSharding: (
             <StepReplicationAndSharding
+                availableNodes={nodeList.length}
                 manualNodeSelection={manualNodeSelection}
                 toggleManualNodeSelection={toggleManualNodeSelection}
                 shardingEnabled={shardingEnabled}
                 setShardingEnabled={setShardingEnabled}
-                toggleSharding={toggleSharding}
-                licenseIncludesSharding={licenseProps.sharding}
+                replicationFactor={replicationFactor}
+                setReplicationFactor={setReplicationFactor}
+                shardCount={shardCount}
+                setShardCount={setShardCount}
+                licenseProps={licenseProps}
             />
         ),
-        nodeSelection: <StepNodeSelection />,
+        nodeSelection: (
+            <StepNodeSelection nodeList={nodeList} shardCount={shardCount} replicationFactor={replicationFactor} />
+        ),
         paths: <StepPaths />,
     };
 
@@ -198,6 +203,14 @@ export function CreateDatabase(props: CreateDatabaseProps) {
             className="create-database"
         >
             <ModalBody>
+                <>
+                    wtf
+                    {nodeList.map((nodeTag, index) => {
+                        <>
+                            <Icon icon="node" color="node" /> {nodeTag}
+                        </>;
+                    })}
+                </>
                 <div className="d-flex  mb-5">
                     <Steps
                         current={currentStep}
@@ -207,7 +220,6 @@ export function CreateDatabase(props: CreateDatabaseProps) {
                     ></Steps>
                     <CloseButton onClick={toggleCreateDatabase} />
                 </div>
-
                 {stepViews[activeSteps[currentStep].id]}
             </ModalBody>
 
@@ -259,7 +271,7 @@ export function CreateDatabase(props: CreateDatabaseProps) {
                                     <PropSummaryName>
                                         <Icon icon="replication" className="me-1" /> Replication
                                     </PropSummaryName>
-                                    {replicationEnabled ? (
+                                    {replicationFactor > 1 ? (
                                         <PropSummaryValue color="success"> ON</PropSummaryValue>
                                     ) : (
                                         <PropSummaryValue color="danger"> OFF</PropSummaryValue>
@@ -435,41 +447,112 @@ export function StepEncryption(props: StepEncryptionProps) {
 }
 
 interface StepReplicationAndShardingProps {
+    availableNodes: number;
     manualNodeSelection: boolean;
     toggleManualNodeSelection: () => void;
     shardingEnabled: boolean;
     setShardingEnabled: (value: boolean) => void;
-    toggleSharding: () => void;
-    licenseIncludesSharding: boolean;
+    licenseProps: licenseProps;
+    replicationFactor: number;
+    setReplicationFactor: (value: number) => void;
+    shardCount: number;
+    setShardCount: (value: number) => void;
 }
 
 export function StepReplicationAndSharding(props: StepReplicationAndShardingProps) {
     const {
+        availableNodes,
         manualNodeSelection,
         toggleManualNodeSelection,
         shardingEnabled,
-        toggleSharding,
+
         setShardingEnabled,
-        licenseIncludesSharding,
+        licenseProps,
+        replicationFactor,
+        setReplicationFactor,
+        shardCount,
+        setShardCount,
     } = props;
 
     const shardingImg = require("Content/img/createDatabase/sharding.svg");
+
+    let showProps = replicationFactor > 1 || shardingEnabled;
+
+    const handleReplicationFactorChange = (event: any) => {
+        setReplicationFactor(event.target.value);
+    };
+    const handleShardCountChange = (event: any) => {
+        setShardCount(event.target.value);
+    };
 
     return (
         <div>
             <div className="d-flex justify-content-center">
                 <img src={shardingImg} alt="" className="step-img" />
             </div>
+
             <h2 className="text-center">Replication & Sharding</h2>
 
-            <div className="text-center mt-3">
-                <span>
-                    Available nodes: <Icon icon="node" color="node" className="ms-1" /> <strong>5</strong>
+            <Row>
+                <Col sm={{ size: 8, offset: 2 }} className="text-center">
+                    <p>
+                        Database replication provides benefits such as improved data availability, increased
+                        scalability, and enhanced disaster recovery capabilities.
+                    </p>
+                </Col>
+            </Row>
+
+            <div className="text-center mt-2">
+                <span id="ReplicationInfo">
+                    <Icon icon="info" color="info" /> Available nodes:{" "}
+                    <Icon icon="node" color="node" className="ms-1" /> <strong>{availableNodes}</strong>
                 </span>
                 <span id="ShardingInfo" className="ms-5">
                     <Icon icon="info" color="info" /> What is sharding?
                 </span>
             </div>
+
+            <div className="d-flex justify-content-center mt-4 pb-4">
+                <Button
+                    active={!shardingEnabled}
+                    onClick={() => setShardingEnabled(false)}
+                    outline
+                    className="rounded-pill me-2"
+                >
+                    <Icon icon="node" className="me-1" /> Unsharded
+                </Button>
+                <LicenseRestrictions
+                    isAvailable={licenseProps.sharding}
+                    featureName={
+                        <strong className="text-shard">
+                            <Icon icon="sharding" /> Sharding
+                        </strong>
+                    }
+                >
+                    <Button
+                        active={shardingEnabled}
+                        onClick={() => setShardingEnabled(true)}
+                        color="shard"
+                        outline
+                        className="rounded-pill"
+                        disabled={!licenseProps.sharding}
+                    >
+                        <Icon icon="sharding" className="me-1" /> Sharded
+                    </Button>
+                </LicenseRestrictions>
+            </div>
+
+            <UncontrolledPopover target="ReplicationInfo" placement="top" trigger="hover" container="PopoverContainer">
+                <PopoverBody>
+                    <div>
+                        Add more{" "}
+                        <strong className="text-node">
+                            <Icon icon="node" /> Instance nodes
+                        </strong>{" "}
+                        in <a href="#">Manage cluster</a> view
+                    </div>
+                </PopoverBody>
+            </UncontrolledPopover>
 
             <UncontrolledPopover target="ShardingInfo" placement="top" trigger="hover" container="PopoverContainer">
                 <PopoverBody>
@@ -495,35 +578,97 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                     </a>
                 </PopoverBody>
             </UncontrolledPopover>
-
-            <Switch color="shard" selected={shardingEnabled} toggleSelection={toggleSharding}>
-                Enable sharding
-            </Switch>
-            <div className="d-flex justify-content-center mt-4">
-                <Button
-                    active={!shardingEnabled}
-                    onClick={() => setShardingEnabled(false)}
-                    outline
-                    className="rounded-pill me-2"
-                >
-                    <Icon icon="node" className="me-1" /> Unsharded
-                </Button>
-                <Button
-                    active={shardingEnabled}
-                    onClick={() => setShardingEnabled(true)}
-                    color="shard"
-                    outline
-                    className="rounded-pill"
-                >
-                    <Icon icon="sharding" className="me-1" /> Sharded
-                </Button>
-            </div>
-
-            <Collapse isOpen={true}>
+            <Row>
+                <Col sm={{ offset: 2, size: 8 }}>
+                    <Row className="pb-2">
+                        <Col sm="auto">
+                            <InputGroup>
+                                <InputGroupText>Replication Factor</InputGroupText>
+                                <Input
+                                    type="number"
+                                    value={replicationFactor}
+                                    onChange={handleReplicationFactorChange}
+                                    className="replication-input"
+                                />
+                            </InputGroup>
+                        </Col>
+                        <Col>
+                            <Input
+                                type="range"
+                                min="1"
+                                max={availableNodes}
+                                value={replicationFactor}
+                                onChange={handleReplicationFactorChange}
+                                className="mt-1"
+                            />
+                        </Col>
+                    </Row>
+                    <Collapse isOpen={shardingEnabled}>
+                        <Row className="pb-2">
+                            <Col sm="auto">
+                                <InputGroup>
+                                    <InputGroupText>Number of shards</InputGroupText>
+                                    <Input
+                                        type="number"
+                                        value={shardCount}
+                                        onChange={handleShardCountChange}
+                                        className="replication-input"
+                                    />
+                                </InputGroup>
+                            </Col>
+                            <Col>
+                                <Input
+                                    type="range"
+                                    min="1"
+                                    max={availableNodes}
+                                    value={shardCount}
+                                    onChange={handleShardCountChange}
+                                    className="mt-1"
+                                />
+                            </Col>
+                        </Row>
+                    </Collapse>
+                    <Alert color="info" className=" text-center">
+                        {replicationFactor > 1 ? (
+                            <>
+                                Identical data will be copied to{" "}
+                                <strong>
+                                    {replicationFactor} <Icon icon="node" /> nodes
+                                </strong>
+                                .
+                            </>
+                        ) : (
+                            <>Data won't be replicated.</>
+                        )}
+                        {shardingEnabled ? (
+                            <>
+                                <br />
+                                Data will be divided into{" "}
+                                <strong>
+                                    {shardCount}
+                                    <Icon icon="shard" /> shards
+                                </strong>
+                                .
+                            </>
+                        ) : (
+                            <></>
+                        )}
+                    </Alert>
+                </Col>
+            </Row>
+            <Collapse isOpen={showProps}>
                 <Row>
                     <Col>
-                        <LicenseRestrictions isAvailable={false} featureName="Dynamic database distribution">
-                            <Switch color="primary" selected={null} toggleSelection={null} disabled={true}>
+                        <LicenseRestrictions
+                            isAvailable={licenseProps.dynamicDatabaseDistribution}
+                            featureName="Dynamic database distribution"
+                        >
+                            <Switch
+                                color="primary"
+                                selected={null}
+                                toggleSelection={null}
+                                disabled={!licenseProps.dynamicDatabaseDistribution}
+                            >
                                 Allow dynamic database distribution
                                 <br />
                                 <small>Maintain replication factor upon node failure</small>
@@ -547,10 +692,110 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
     );
 }
 
-interface StepNodeSelectionProps {}
+interface StepNodeSelectionProps {
+    nodeList: string[];
+    shardCount: number;
+    replicationFactor: number;
+}
+
+type destinationNode = {
+    id: string;
+    node: string;
+};
+
+type shardItem = destinationNode[];
 
 export function StepNodeSelection(props: StepNodeSelectionProps) {
-    return <h2>Manual Node Selection</h2>;
+    const { nodeList, shardCount, replicationFactor } = props;
+
+    const shards: shardItem[] = [];
+
+    for (let i = 0; i < shardCount; i++) {
+        shards.push(new Array());
+        for (let j = 0; j < replicationFactor; j++) {
+            shards[i].push({ id: "s" + i + "r" + j, node: null });
+        }
+    }
+    return (
+        <div className="text-center">
+            <h2 className="text-center">Manual Node Selection</h2>
+
+            <Button color="info" outline className="rounded-pill mb-4">
+                Auto assign
+            </Button>
+
+            <Table responsive bordered>
+                <thead>
+                    <tr>
+                        {shardCount > 1 && <th />}
+                        {shards[0].map((replica, index) => {
+                            return (
+                                <th>
+                                    Replica <strong>{index}</strong>
+                                </th>
+                            );
+                        })}
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {shards.map((shard, index) => {
+                        return (
+                            <tr>
+                                {shardCount > 1 && (
+                                    <th scope="row">
+                                        <Icon icon="shard" color="shard" /> {index}
+                                    </th>
+                                )}
+
+                                {shard.map((replica) => {
+                                    return (
+                                        <td key={replica.id}>
+                                            {replica.node}
+                                            <NodeSelectionDropdown
+                                                nodeList={nodeList}
+                                                shards={shards}
+                                            ></NodeSelectionDropdown>
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </Table>
+            <div id="DropdownContainer"></div>
+
+            <h3>Orchestrators</h3>
+            <small>minimum 1</small>
+        </div>
+    );
+}
+interface NodeSelectionDropdownProps {
+    nodeList: string[];
+    shards: shardItem[];
+}
+
+export function NodeSelectionDropdown(props: NodeSelectionDropdownProps) {
+    const { nodeList, shards } = props;
+    return (
+        <>
+            <UncontrolledDropdown>
+                <DropdownToggle caret color="link" className="w-100" size="sm">
+                    select
+                </DropdownToggle>
+                <DropdownMenu container="DropdownContainer">
+                    <>
+                        {nodeList.map((nodeTag, index) => {
+                            <DropdownItem>
+                                <Icon icon="node" color="node" />
+                            </DropdownItem>;
+                        })}
+                    </>
+                </DropdownMenu>
+            </UncontrolledDropdown>
+        </>
+    );
 }
 
 interface StepPathsProps {}
