@@ -483,8 +483,6 @@ namespace Raven.Server.Documents.Handlers
 
                 var cmd = new DeleteDocumentCommand(id, changeVector, Database);
                 await Database.TxMerger.Enqueue(cmd);
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(id, TrafficWatchChangeType.Documents);
             }
 
             NoContentStatus();
