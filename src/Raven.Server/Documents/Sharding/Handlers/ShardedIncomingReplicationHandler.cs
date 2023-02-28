@@ -237,13 +237,36 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     }
                 }
             }
-            else
-            {
-                foreach (var batch in batches.Values)
-                    batch.AttachmentStreams?.Clear();
-            }
+
+            EnsureNotNullAttachmentStreams(batches);
 
             return replicationBatches;
+        }
+
+        private void EnsureNotNullAttachmentStreams(Dictionary<int, ReplicationBatch> batches)
+        {
+            for (int i = 0; i < batches.Values.Count; i++)
+            {
+                var batch = batches[i];
+                if (batch.AttachmentStreams != null)
+                {
+                    List<Slice> itemsToRemove = null;
+                    foreach (var att in batch.AttachmentStreams)
+                    {
+                        if (att.Value == null)
+                        {
+                            itemsToRemove ??= new List<Slice>();
+                            itemsToRemove.Add(att.Key);
+                        }
+                    }
+
+                    if (itemsToRemove != null)
+                    {
+                        foreach (var key in itemsToRemove)
+                            batch.AttachmentStreams.Remove(key);
+                    }
+                }
+            }
         }
 
         public override LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
