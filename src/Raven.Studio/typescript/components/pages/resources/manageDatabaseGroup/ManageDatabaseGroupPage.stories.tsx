@@ -115,6 +115,7 @@ export const ClusterWithFailure: ComponentStory<typeof ManageDatabaseGroupPage> 
         x.nodes[0].lastStatus = "HighDirtyMemory";
         x.nodes[0].lastError = "This is some node error, which might be quite long in some cases...";
         x.nodes[0].responsibleNode = "X";
+        x.nodes[0].type = "Rehab";
     });
 
     const db = DatabasesStubs.nonShardedClusterDatabase();

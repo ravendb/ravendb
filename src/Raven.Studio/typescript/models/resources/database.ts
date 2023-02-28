@@ -25,6 +25,7 @@ abstract class database {
     isEncrypted = ko.observable<boolean>(false);
     lockMode = ko.observable<DatabaseLockMode>();
     deletionInProgress = ko.observableArray<{ tag: string, status: DeletionInProgressStatus }>([]);
+    dynamicNodesDistribution = ko.observable<boolean>(false);
     
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     environmentClass = database.createEnvironmentColorComputed("label", this.environment);
@@ -129,6 +130,7 @@ abstract class database {
                 relevant: this.relevant(),
                 isBeingDeleted: this.isBeingDeleted()
             },
+            dynamicNodesDistribution: this.dynamicNodesDistribution(),
             fixOrder: this.fixOrder(),
             indexesCount: this.indexesCount(),
             lockMode: this.lockMode(),
