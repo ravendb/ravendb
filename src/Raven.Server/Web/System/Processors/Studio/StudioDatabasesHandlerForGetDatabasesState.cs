@@ -92,7 +92,7 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
             var indexingStatus = GetIndexingStatus(record, database);
             var upTime = GetUpTime(database);
             var backupInfo = GetBackupInfo(databaseName, record, database, ServerStore, context);
-            var state = StudioDatabaseState.From(databaseName, database, backupInfo, upTime, indexingStatus);
+            var state = StudioDatabaseState.From(databaseName, database, ServerStore.DatabaseInfoCache, backupInfo, upTime, indexingStatus);
 
             context.Write(writer, state.ToJson());
         }
@@ -175,24 +175,67 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
 
     internal class StudioDatabaseState : DatabaseState
     {
-        public static StudioDatabaseState From(string databaseName, DocumentDatabase database, BackupInfo backupInfo, TimeSpan? upTime, IndexRunningStatus? indexingStatus)
+        public static StudioDatabaseState From(string databaseName, DocumentDatabase database, DatabaseInfoCache databaseInfoCache, BackupInfo backupInfo, TimeSpan? upTime, IndexRunningStatus? indexingStatus)
         {
-            var size = database?.GetSizeOnDisk() ?? (new Size(0), new Size(0));
+            Size totalSize = null;
+            Size tempBuffersSize = null;
+            long alerts = 0;
+            long performanceHints = 0;
+            long indexingErrors = 0;
+            long documentsCount = 0;
+            if (database != null)
+            {
+                (Size data, Size tempBuffers) = database.GetSizeOnDisk();
+                totalSize = data;
+                tempBuffersSize = tempBuffers;
+
+                alerts = database.NotificationCenter.GetAlertCount();
+                performanceHints = database.NotificationCenter.GetPerformanceHintCount();
+                indexingErrors = database.IndexStore?.GetIndexes()?.Sum(index => index.GetErrorCount()) ?? 0;
+                documentsCount = database.DocumentsStorage.GetNumberOfDocuments();
+            }
+            else if (databaseInfoCache.TryGet(databaseName, json =>
+                     {
+                         if (json == null)
+                             return;
+
+                         json.TryGet(nameof(Alerts), out alerts);
+                         json.TryGet(nameof(PerformanceHints), out performanceHints);
+                         json.TryGet(nameof(IndexingErrors), out indexingErrors);
+                         json.TryGet(nameof(DocumentsCount), out documentsCount);
+
+                         totalSize = GetSize(json, nameof(TotalSize));
+                         tempBuffersSize = GetSize(json, nameof(TempBuffersSize));
+                     }))
+            {
+                // nothing to do here
+            }
 
             return new StudioDatabaseState
             {
                 Name = databaseName,
-                TotalSize = size.Data,
-                TempBuffersSize = size.TempBuffers,
+                TotalSize = totalSize,
+                TempBuffersSize = tempBuffersSize,
                 UpTime = upTime,
                 BackupInfo = backupInfo,
-                Alerts = database?.NotificationCenter.GetAlertCount() ?? 0,
-                PerformanceHints = database?.NotificationCenter.GetPerformanceHintCount() ?? 0,
+                Alerts = alerts,
+                PerformanceHints = performanceHints,
                 LoadError = null,
-                IndexingErrors = database?.IndexStore?.GetIndexes()?.Sum(index => index.GetErrorCount()) ?? 0,
-                DocumentsCount = database?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
+                IndexingErrors = indexingErrors,
+                DocumentsCount = documentsCount,
                 IndexingStatus = indexingStatus ?? IndexRunningStatus.Running,
             };
+
+            static Size GetSize(BlittableJsonReaderObject json, string propertyName)
+            {
+                if (json.TryGet(propertyName, out BlittableJsonReaderObject sizeJson) && sizeJson != null)
+                {
+                    if (sizeJson.TryGet(nameof(Size.SizeInBytes), out long sizeInBytes))
+                        return new Size(sizeInBytes);
+                }
+
+                return null;
+            }
         }
     }
 }

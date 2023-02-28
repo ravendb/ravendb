@@ -97,16 +97,16 @@ namespace Raven.Client.ServerWide.Operations
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(TotalSize)] = new DynamicJsonValue
+                [nameof(TotalSize)] = TotalSize != null ? new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = TotalSize.HumaneSize,
                     [nameof(Size.SizeInBytes)] = TotalSize.SizeInBytes
-                },
-                [nameof(TempBuffersSize)] = new DynamicJsonValue
+                } : null,
+                [nameof(TempBuffersSize)] = TempBuffersSize != null ? new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = TempBuffersSize.HumaneSize,
                     [nameof(Size.SizeInBytes)] = TempBuffersSize.SizeInBytes
-                },
+                } : null,
                 [nameof(UpTime)] = UpTime?.ToString(),
                 [nameof(BackupInfo)] = BackupInfo?.ToJson(),
 
