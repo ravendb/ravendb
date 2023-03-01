@@ -67,8 +67,7 @@ public class RavenDB_17973 : RavenTestBase
                 session.SaveChanges();
                 Indexes.WaitForIndexing(store);
 
-                var tshirtsquery = session.Query<TShirt, TShirtIndex>()
-                    .ProjectInto<TShirtIndex.Result>()
+                var tshirtsquery = session.Query<TShirtIndex.Result, TShirtIndex>()
                     .Where(x => x.Manufacturer == "Raven")
                     .Intersect()
                     .Where(x => x.Color == "Blue" && x.Size == "Small")

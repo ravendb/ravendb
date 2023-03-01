@@ -43,7 +43,7 @@ public class GH_15634 : RavenTestBase
             // this query works using RavenDb.Client <=5.4.2
             // from version 5.4.3, it fails with a JsonSerializationException
             var ravenQueryable = session.Query<EntityBaseResult>("EntityBaseIndex")
-                .ProjectInto<EntityBaseResult>()
+                .ProjectInto<EntityBaseResultProjectInto>()
                 .Where(d => d.ModelType.In(assignableTypeNames))
                 .Where(a => a.Tags.ContainsAll(tags))
                 .Select(a => a.Tags_Count );
@@ -76,6 +76,13 @@ public class GH_15634 : RavenTestBase
         public string Id { get; set; } = "";
         public HashSet<string> Tags { get; set; } = new();
         public string ModelType => GetType().Name;
+    }
+
+    class EntityBaseResultProjectInto
+    {
+        public string ModelType { get; set; } = "";
+        public IEnumerable<string> Tags { get; set; } = default!;
+        public int Tags_Count { get; set; }
     }
 
     class EntityBaseResult
