@@ -208,7 +208,7 @@ namespace Raven.Server.Rachis
                                 // consider this an indication that the cluster was able to move past our term
                                 // and update the term accordingly
                                 var castVoteInTermCommand = new ElectorCastVoteInTermCommand(_engine, rv);
-                                _engine.TxMerger.Enqueue(castVoteInTermCommand).Wait();
+                                _engine.TxMerger.EnqueueSync(castVoteInTermCommand);
 
                                 _connection.Send(context, new RequestVoteResponse
                                 {

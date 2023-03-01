@@ -2085,7 +2085,7 @@ namespace Raven.Server.Rachis
 
             var command = new CastVoteInTermCommand(this, term, reason);
 
-            TxMerger.Enqueue(command).Wait();
+            TxMerger.EnqueueSync(command);
         }
 
         public void ValidateTerm(long term)
