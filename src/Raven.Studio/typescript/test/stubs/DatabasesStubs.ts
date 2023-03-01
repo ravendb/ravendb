@@ -13,6 +13,7 @@ export class DatabasesStubs {
             LockMode: "Unlock",
             DeletionInProgress: {},
             Sharding: null,
+            IndexesCount: 0,
             NodesTopology: {
                 PriorityOrder: [],
                 Members: [

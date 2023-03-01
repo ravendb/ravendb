@@ -5,6 +5,7 @@ import { useAppSelector } from "components/store";
 import { selectDatabaseState } from "components/common/shell/databasesSlice";
 import { sumBy } from "lodash";
 import genUtils from "common/generalUtils";
+import appUrl from "common/appUrl";
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
@@ -43,6 +44,11 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     //TODO: global backup status
 
+    const localDocumentsUrl = appUrl.forDocuments(null, db.name);
+    const documentsUrl = db.currentNode.relevant
+        ? localDocumentsUrl
+        : appUrl.toExternalDatabaseUrl(db, localDocumentsUrl);
+
     return (
         <RichPanelDetails className="flex-wrap">
             <RichPanelDetailItem>
@@ -63,7 +69,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 <i className="icon-drive me-1" /> {genUtils.formatBytesToSize(totalSize)}
             </RichPanelDetailItem>
             <RichPanelDetailItem>
-                <i className="icon-documents me-1" /> {totalDocuments.toLocaleString()}
+                <a href={documentsUrl} target={db.currentNode.relevant ? undefined : "_blank"}>
+                    <i className="icon-documents me-1" /> {totalDocuments.toLocaleString()}
+                </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <i className="icon-index me-1" /> {db.indexesCount}

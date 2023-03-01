@@ -24,7 +24,8 @@ jest.mock("../typescript/common/bindingHelpers/aceEditorBindingHandler");
 jest.mock("../typescript/common/versionProvider");
 
 jest.mock('plugins/router', () => ({
-    activate: jest.fn()
+    activate: jest.fn(),
+    navigate: jest.fn()
 }));
 jest.mock('plugins/dialog', () => ({
 }));
