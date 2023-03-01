@@ -40,8 +40,6 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow.Threading;
 using Size = Sparrow.Size;
-using static Nest.JoinField;
-using Nito.Disposables;
 
 namespace Raven.Server.Rachis
 {
@@ -568,27 +566,6 @@ namespace Raven.Server.Rachis
             };
         }
 
-        public class SwitchToSingleLeaderCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
-        {
-            private readonly RachisConsensus _engine;
-
-            public SwitchToSingleLeaderCommand(RachisConsensus engine)
-            {
-                _engine = engine;
-            }
-
-            protected override long ExecuteCmd(ClusterOperationContext context)
-            {
-                _engine.SwitchToSingleLeader(context);
-                return 1;
-            }
-
-            public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
         public bool ContainsCommandId(string guid)
         {
             using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
@@ -870,45 +847,6 @@ namespace Raven.Server.Rachis
                 }
 
                 node.CurrentTerm = lastTruncatedIndex;
-            }
-        }
-
-        public class SetNewStateCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
-        {
-            private readonly RachisConsensus _engine;
-            private readonly RachisState _rachisState;
-            private readonly IDisposable _parent;
-            private readonly long _expectedTerm;
-            private readonly string _stateChangedReason;
-            private readonly Action _beforeStateChangedEvent;
-            private readonly bool _disposeAsync;
-
-            public SetNewStateCommand(RachisConsensus engine,
-                RachisState rachisState,
-                IDisposable parent,
-                long expectedTerm,
-                string stateChangedReason,
-                Action beforeStateChangedEvent = null,
-                bool disposeAsync = true)
-            {
-                _engine = engine;
-                _rachisState = rachisState;
-                _parent = parent;
-                _expectedTerm = expectedTerm;
-                _stateChangedReason = stateChangedReason;
-                _beforeStateChangedEvent = beforeStateChangedEvent;
-                _disposeAsync = disposeAsync;
-            }
-
-            protected override long ExecuteCmd(ClusterOperationContext context)
-            {
-                _engine.SetNewStateInTx(context, _rachisState, _parent, _expectedTerm, _stateChangedReason, _beforeStateChangedEvent, _disposeAsync);
-                return 1;
-            }
-
-            public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
-            {
-                throw new NotImplementedException();
             }
         }
 
@@ -1272,7 +1210,7 @@ namespace Raven.Server.Rachis
             return topologyJson;
         }
 
-        public static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, ClusterOperationContext context,
+        internal static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, ClusterOperationContext context,
             ClusterTopology clusterTopology)
         {
             var topologyJson = context.ReadObject(clusterTopology.ToJson(), "topology");
@@ -1485,74 +1423,6 @@ namespace Raven.Server.Rachis
             catch (Exception e)
             {
                 throw new RachisApplyException($"Failed to remove entry number {index} from raft log", e);
-            }
-        }
-
-        public class RemoveEntryFromRaftLogCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
-        {
-            private readonly long _index;
-            private readonly string _tag;
-            private readonly RachisLogHistory _logHistory;
-            public bool Succeeded { get; private set; }
-
-            public RemoveEntryFromRaftLogCommand(string tag, long index, RachisLogHistory logHistory)
-            {
-                _index = index;
-                _tag = tag;
-                _logHistory = logHistory;
-            }
-
-            protected override long ExecuteCmd(ClusterOperationContext context)
-            {
-                Succeeded = RemoveEntryFromRaftLogInTx(context, _index);
-                return 1;
-            }
-
-            // TODO: Change after RavenDB-19870 is merged
-            private unsafe bool RemoveEntryFromRaftLogInTx(ClusterOperationContext context, long index)
-            {
-                Table table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-                long reversedIndex = Bits.SwapBytes(index);
-
-                long id;
-                long term;
-                using (Slice.External(context.Allocator, (byte*)&reversedIndex, sizeof(long), out Slice key))
-                {
-                    if (table.ReadByKey(key, out TableValueReader reader))
-                    {
-                        term = *(long*)reader.Read(1, out int size);
-                        id = reader.Id;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-
-                var noopCmd = new DynamicJsonValue
-                {
-                    ["Type"] = $"Noop for {_tag} in term {term}",
-                    ["Command"] = "noop"
-                };
-                var cmd = context.ReadObject(noopCmd, "noop-cmd");
-
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(reversedIndex);
-                    tvb.Add(term);
-                    tvb.Add(cmd.BasePointer, cmd.Size);
-                    tvb.Add((int)RachisEntryFlags.Noop);
-                    table.Update(id, tvb, true);
-                }
-
-                _logHistory.UpdateHistoryLogPreservingGuidAndStatus(context, index, term, cmd);
-
-                return true;
-            }
-
-            public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
-            {
-                throw new NotImplementedException();
             }
         }
 
@@ -2256,7 +2126,6 @@ namespace Raven.Server.Rachis
             }
             catch (ConcurrencyException) when (committed)
             {
-                Console.WriteLine("a");
                 // Thrown in tx OnDispose (which is set in SwitchToSingleLeader)
                 // Happens when old Leader.Run->SwitchToCandidateState->SwitchToSingleLeader runs
                 // And then HardResetToNewCluster->SwitchToSingleLeader runs in parallel.
@@ -2274,113 +2143,11 @@ namespace Raven.Server.Rachis
             return topologyId;
         }
 
-        public class HardResetToNewClusterCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
-        {
-            private readonly RachisConsensus _engine;
-            private readonly string _tag;
-            private readonly string _topologyId;
-            public bool Committed { get; private set; }
-
-            public HardResetToNewClusterCommand(RachisConsensus engine,string tag, string topologyId)
-            {
-                _engine = engine;
-                _topologyId = topologyId;
-                _tag = tag;
-                Committed = false;
-            }
-
-            protected override long ExecuteCmd(ClusterOperationContext context)
-            {
-                var topology = new ClusterTopology(
-                    _topologyId,
-                    new Dictionary<string, string>
-                    {
-                        [_tag] = _engine.Url
-                    },
-                    new Dictionary<string, string>(),
-                    new Dictionary<string, string>(),
-                    _tag,
-                    _engine.GetLastEntryIndex(context) + 1
-                );
-
-                _engine.UpdateNodeTag(context, _tag);
-
-                SetTopology(_engine, context, topology);
-
-                _engine.SetSnapshotRequest(context, false);
-
-                _engine.SwitchToSingleLeader(context);
-
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-                {
-                    if (tx is LowLevelTransaction llt && llt.Committed)
-                    {
-                        Committed = true;
-                    }
-                };
-
-                return 1;
-            }
-
-            public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-
         public Task HardResetToPassiveAsync(string topologyId = null)
         {
             var command = new HardResetToPassiveCommand(this, _tag, topologyId);
             return TxMerger.Enqueue(command);
         }
-
-        public class HardResetToPassiveCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
-        {
-            private readonly RachisConsensus _engine;
-            private readonly string _tag;
-            private readonly string _topologyId;
-            public HardResetToPassiveCommand(RachisConsensus engine, string tag, string topologyId)
-            {
-                _engine = engine;
-                _topologyId = topologyId;
-                _tag = tag;
-            }
-
-            protected override long ExecuteCmd(ClusterOperationContext context)
-            {
-                _engine.UpdateNodeTag(context, InitialTag);
-                var oldTopology = _engine.GetTopology(context);
-
-                var topology = new ClusterTopology(
-                    _topologyId ?? oldTopology.TopologyId,
-                    new Dictionary<string, string>
-                    {
-                        [_tag] = _engine.Url
-                    },
-                    new Dictionary<string, string>(),
-                    new Dictionary<string, string>(),
-                    _tag,
-                    _engine.GetLastEntryIndex(context) + 1
-                );
-
-                if (_topologyId != oldTopology.TopologyId)
-                    // if we are going to add this to a different cluster we must get a snapshot
-                    _engine.SetSnapshotRequest(context, true);
-
-                SetTopology(_engine, context, topology);
-
-                _engine.SetNewStateInTx(context, RachisState.Passive, null, _engine.CurrentTerm, "Hard reset to passive by admin");
-
-                return 1;
-            }
-
-            public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
 
         public static void ValidateNodeTag(string nodeTag)
         {
