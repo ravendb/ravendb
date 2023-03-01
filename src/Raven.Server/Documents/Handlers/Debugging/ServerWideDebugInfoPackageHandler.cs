@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                             if (debugInfoType.HasFlag(DebugInfoPackageContent.Databases))
                             {
-                                await WriteForAllLocalDatabases(archive, context, localEndpointClient, databases, token: token.Token);
+                                await WriteForAllLocalDatabases(archive, context, localEndpointClient, databases, token.Token);
                             }
 
                             if (debugInfoType.HasFlag(DebugInfoPackageContent.LogFile))
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 url += $"&type={type}";
 
             if (databases.Count > 0)
-                url += $"&database={WebUtility.UrlEncode(string.Join("&database=", databases))}";
+                url += $"&database={Uri.EscapeDataString(string.Join("&database=", databases))}";
 
             var rawStreamCommand = new GetRawStreamResultCommand(url);
             var requestExecutionTask = requestExecutor.ExecuteAsync(rawStreamCommand, context);
