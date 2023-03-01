@@ -256,7 +256,7 @@ namespace Raven.Server.Rachis
 
                             _engine.ForTestingPurposes?.BeforeCastingForRealElection();
 
-                            var castVoteInTermWithShouldGrantVoteCommand = new ElectorCastVoteInTermWithShouldGrantVoteCommand(_engine, this, rv, lastLogIndex);
+                            var castVoteInTermWithShouldGrantVoteCommand = new ElectorCastVoteInTermWithShouldGrantVoteCommand(_engine, rv, lastLogIndex);
                             _engine.TxMerger.Enqueue(castVoteInTermWithShouldGrantVoteCommand).Wait();
 
                             var result = castVoteInTermWithShouldGrantVoteCommand.VoteResult;
@@ -308,53 +308,6 @@ namespace Raven.Server.Rachis
             public string DeclineReason;
             public bool DeclineVote;
             public long VotedTerm;
-        }
-
-        internal HandleVoteResult ShouldGrantVote(ClusterOperationContext context, long lastIndex, RequestVote rv)
-        {
-            var result = new HandleVoteResult();
-            var lastLogIndexUnderWriteLock = _engine.GetLastEntryIndex(context);
-            var lastLogTermUnderWriteLock = _engine.GetTermFor(context, lastLogIndexUnderWriteLock);
-
-            if (lastLogIndexUnderWriteLock != lastIndex)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = "Log was changed";
-                return result;
-            }
-
-            if (lastLogTermUnderWriteLock > rv.LastLogTerm)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = $"My last log term {lastLogTermUnderWriteLock}, is higher than yours {rv.LastLogTerm}.";
-                return result;
-            }
-
-            if (lastLogIndexUnderWriteLock > rv.LastLogIndex)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = $"Vote declined because my last log index {lastLogIndexUnderWriteLock} is more up to date than yours {rv.LastLogIndex}";
-                return result;
-            }
-
-            var (whoGotMyVoteIn, votedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
-            result.VotedTerm = votedTerm;
-
-            if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}";
-                return result;
-            }
-
-            if (votedTerm >= rv.Term)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = $"Already voted in {rv.LastLogTerm}, for another node in higher term: {votedTerm}";
-                return result;
-            }
-
-            return result;
         }
 
         public void Dispose()
