@@ -1,20 +1,8 @@
-﻿using BenchmarkDotNet.Running;
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
-using System.Diagnostics;
-using System.Text;
-using BenchmarkDotNet.Columns;
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Jobs;
-using BenchmarkDotNet.Loggers;
-using BenchmarkDotNet.Validators;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
-using Raven.Server.Rachis;
-using Raven.Tests.Core.Utils.Entities;
-using Raven.Server;
-using Org.BouncyCastle.Asn1.X509;
 
 namespace ServerStoreTxMerger.Benchmark;
 
@@ -72,7 +60,7 @@ public class ServerStoreTxMergerBenchRealClusterTests
     }
 
 
-    private MyOutputHelper? _testOutputHelper = new MyOutputHelper();
+    private readonly MyOutputHelper? _testOutputHelper = new MyOutputHelper();
     private ActualClusterTests? _tests;
 
 
@@ -86,13 +74,17 @@ public class ServerStoreTxMergerBenchRealClusterTests
     [Benchmark]
     public async Task ClusterTest()
     {
+        if (_tests == null)
+        {
+            throw new InvalidOperationException("\'_tests\' cannot be null");
+        }
         await _tests.Test(DocsArrays[DocsGroup]);
     }
 
     [IterationCleanup(Targets = new[] { nameof(ClusterTest) })]
     public void AfterTest()
     {
-        _tests.Dispose();
+        _tests?.Dispose();
     }
 
 }
@@ -100,9 +92,7 @@ public class ServerStoreTxMergerBenchRealClusterTests
 
 public class ActualClusterTests : ClusterTestBase
 {
-    private List<RavenServer> _nodes;
-    private RavenServer _leader;
-    private DocumentStore _store;
+    private DocumentStore? _store;
 
     public ActualClusterTests(ITestOutputHelper output) : base(output)
     {
@@ -110,12 +100,17 @@ public class ActualClusterTests : ClusterTestBase
 
     public async Task Initialize(int nodesCount)
     {
-        (_nodes, _leader) = await CreateRaftCluster(numberOfNodes: nodesCount, watcherCluster: true, shouldRunInMemory: false);
-        _store = GetDocumentStore(new Options() { Server = _leader, ReplicationFactor = nodesCount });
+        var (nodes, leader) = await CreateRaftCluster(numberOfNodes: nodesCount, watcherCluster: true, shouldRunInMemory: false);
+        _store = GetDocumentStore(new Options() { Server = leader, ReplicationFactor = nodesCount });
     }
 
     public async Task Test(Doc[] docs)
     {
+        if (_store == null)
+        {
+            throw new InvalidOperationException("store cannot be null");
+        }
+
         var tasks = new HashSet<Task>();
 
         for (int index = 0; index < docs.Length; index++)
@@ -145,8 +140,6 @@ public class ActualClusterTests : ClusterTestBase
 
     public override void Dispose()
     {
-        _leader = null;
-        _nodes = null;
         _store = null;
         base.Dispose();
     }

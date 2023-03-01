@@ -1,19 +1,7 @@
-﻿using BenchmarkDotNet.Running;
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
-using System.Diagnostics;
-using System.Text;
-using BenchmarkDotNet.Columns;
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Jobs;
-using BenchmarkDotNet.Loggers;
-using BenchmarkDotNet.Validators;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Session;
 using Raven.Server.Rachis;
-using Raven.Tests.Core.Utils.Entities;
-using Org.BouncyCastle.Asn1.X509;
 
 namespace ServerStoreTxMerger.Benchmark;
 
@@ -72,7 +60,7 @@ public class ServerStoreTxMergerBenchTests
     }
 
 
-    private MyOutputHelper? _testOutputHelper = new MyOutputHelper();
+    private readonly MyOutputHelper? _testOutputHelper = new MyOutputHelper();
     private ActualTests? _tests;
 
 
@@ -86,20 +74,24 @@ public class ServerStoreTxMergerBenchTests
     [Benchmark]
     public async Task Test()
     {
+        if (_tests == null)
+        {
+            throw new InvalidOperationException("\'_tests\' cannot be null");
+        }
         await _tests.Test(CmdsArrays[CommandsGroup]);
     }
 
     [IterationCleanup(Targets = new[] { nameof(Test) })]
     public void AfterTest()
     {
-        _tests.Dispose();
+        _tests?.Dispose();
     }
 
 }
 
 public class ActualTests : RachisConsensusTestBase
 {
-    private RachisConsensus<CountingStateMachine> _leader;
+    private RachisConsensus<CountingStateMachine>? _leader;
 
     public ActualTests(ITestOutputHelper output) : base(output)
     {
@@ -112,10 +104,13 @@ public class ActualTests : RachisConsensusTestBase
 
     public async Task Test(TestCommandWithLargeData[] cmds)
     {
-        var tasks = new HashSet<Task>();
-        for (var i = 0; i < cmds.Length; i++)
+        if (_leader == null)
         {
-            var cmd = cmds[i];
+            throw new InvalidOperationException("leader cannot be null");
+        }
+        var tasks = new HashSet<Task>();
+        foreach (var cmd in cmds)
+        {
             var t = _leader.PutAsync(cmd);
             tasks.Add(t);
 
