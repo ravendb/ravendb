@@ -657,7 +657,7 @@ namespace Raven.Server.Rachis
                 if (ambassador.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                TryModifyTopologyAsync(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter).GetAwaiter().GetResult();
+                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out _);
 
                 break;
             }
@@ -851,6 +851,13 @@ namespace Raven.Server.Rachis
             Promotable,
             NonVoter,
             Remove
+        }
+
+        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task,
+            bool validateNotInTopology = false)
+        {
+            (bool success, task) = TryModifyTopologyAsync(nodeTag, nodeUrl, modification, validateNotInTopology).GetAwaiter().GetResult();
+            return success;
         }
 
         public async Task<(bool Success, Task Task)> TryModifyTopologyAsync(string nodeTag, string nodeUrl, TopologyModification modification, bool validateNotInTopology = false)
