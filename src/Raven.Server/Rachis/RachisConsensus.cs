@@ -676,7 +676,9 @@ namespace Raven.Server.Rachis
 
         public void SetNewState(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
         {
-            SetNewStateAsync(rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose).GetAwaiter().GetResult();
+            var command = new SetNewStateCommand(this, rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose);
+            TxMerger.EnqueueSync(command);
+            _leadershipTimeChanged.SetAndResetAtomically();
         }
 
         public async Task SetNewStateAsync(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)

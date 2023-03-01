@@ -112,7 +112,7 @@ namespace Raven.Server.Rachis
             RefreshAmbassadors(clusterTopology, connections);
 
             _leaderLongRunningWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ThreadNames.ForConsensusLeader($"Consensus Leader - {_engine.Tag} in term {Term}", _engine.Tag, Term));
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(Run, null, ThreadNames.ForConsensusLeader($"Consensus Leader - {_engine.Tag} in term {Term}", _engine.Tag, Term));
         }
 
         private int _steppedDown;

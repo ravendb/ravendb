@@ -10,6 +10,7 @@ using Raven.Server.ServerWide;
 using Sparrow.Threading;
 using Raven.Server.Utils;
 using Raven.Server.Rachis.Commands;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Rachis
 {
@@ -20,7 +21,7 @@ namespace Raven.Server.Rachis
         private List<CandidateAmbassador> _voters = new List<CandidateAmbassador>();
         private readonly ManualResetEvent _peersWaiting = new ManualResetEvent(false);
         private PoolOfThreads.LongRunningWork _longRunningWork;
-        public long RunRealElectionAtTerm { get; private set; }
+        public long RunRealElectionAtTerm { get; internal set; }
 
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         public bool Running => _running.IsRaised();
@@ -36,7 +37,7 @@ namespace Raven.Server.Rachis
             return $"Candidate {_engine.Tag} ({Thread.CurrentThread.ManagedThreadId})";
         }
 
-        public long ElectionTerm { get; private set; }
+        public long ElectionTerm { get; internal set; }
 
         private void Run(object obj)
         {
@@ -248,10 +249,8 @@ namespace Raven.Server.Rachis
 
         private void CastVoteForSelf(long electionTerm, string reason, bool setStateChange = true)
         {
-            var command = new CandidateCastVoteInTermCommand(_engine, electionTerm, reason);
+            var command = new CandidateCastVoteInTermCommand(this, _engine, electionTerm, reason);
             _engine.TxMerger.EnqueueSync(command);
-
-            ElectionTerm = RunRealElectionAtTerm = electionTerm;
 
             if (_engine.Log.IsInfoEnabled)
             {

@@ -9,11 +9,5 @@
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\test\FastTests\FastTests.csproj" />
     <ProjectReference Include="..\..\test\Tests.Infrastructure\Tests.Infrastructure.csproj" />
-	<ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
-    <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
-    <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
-    <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
-    <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
-    <ProjectReference Include="..\..\tools\Raven.Debug\Raven.Debug.csproj" />
   </ItemGroup>
 </Project>

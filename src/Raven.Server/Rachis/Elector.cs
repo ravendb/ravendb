@@ -27,7 +27,7 @@ namespace Raven.Server.Rachis
         {
             _engine.AppendElector(this);
 
-            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, ThreadNames.ForElector($"Elector for candidate {_connection.Source}", _connection.Source));
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(HandleVoteRequest, null, ThreadNames.ForElector($"Elector for candidate {_connection.Source}", _connection.Source));
         }
 
         public override string ToString()
@@ -257,7 +257,7 @@ namespace Raven.Server.Rachis
                             _engine.ForTestingPurposes?.BeforeCastingForRealElection();
 
                             var castVoteInTermWithShouldGrantVoteCommand = new ElectorCastVoteInTermWithShouldGrantVoteCommand(_engine, rv, lastLogIndex);
-                            _engine.TxMerger.Enqueue(castVoteInTermWithShouldGrantVoteCommand).Wait();
+                            _engine.TxMerger.EnqueueSync(castVoteInTermWithShouldGrantVoteCommand);
 
                             var result = castVoteInTermWithShouldGrantVoteCommand.VoteResult;
 

@@ -1,4 +1,7 @@
-﻿using BenchmarkDotNet.Attributes;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using BenchmarkDotNet.Attributes;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 using Raven.Client.Documents;
@@ -45,7 +48,7 @@ public class ServerStoreTxMergerBenchRealClusterTests
             }
 
             string sizeStr = docSizeInBytes + " Bytes";
-            if (docSizeInBytes / 1024 * 1024 > 0)
+            if (docSizeInBytes / (1024 * 1024) > 0)
             {
                 sizeStr = docSizeInBytes / (1024 * 1024) + " MB";
             }

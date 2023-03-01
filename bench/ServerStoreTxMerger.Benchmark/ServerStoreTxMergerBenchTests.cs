@@ -1,4 +1,7 @@
-﻿using BenchmarkDotNet.Attributes;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using BenchmarkDotNet.Attributes;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 using Raven.Server.Rachis;
@@ -45,7 +48,7 @@ public class ServerStoreTxMergerBenchTests
             }
 
             string sizeStr = cmdSizeInBytes + " Bytes";
-            if (cmdSizeInBytes / 1024 * 1024 > 0)
+            if (cmdSizeInBytes / (1024 * 1024) > 0)
             {
                 sizeStr = cmdSizeInBytes / (1024 * 1024) + " MB";
             }

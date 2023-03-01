@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using Xunit.Abstractions;
 
 namespace ServerStoreTxMerger.Benchmark;

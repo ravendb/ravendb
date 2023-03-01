@@ -87,6 +87,7 @@ namespace Raven.Server.ServerWide.Context
 
         private bool _isDisposed;
 
+        //TODO: Remove this method, and related fields
         public override void Dispose()
         {
             if (_isDisposed)
