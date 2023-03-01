@@ -215,7 +215,17 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     internal static void UpdateBucketStatsForTombstones(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
     {
-        // todo : skip artificial ?
+        if (newValue.Size > 0)
+        {
+            var flags = TableValueToFlags((int)TombstoneTable.Flags, ref newValue);
+            if (flags.Contain(DocumentFlags.Artificial))
+            {
+                // we don't want to update the merged-cv of the bucket for Artificial tombstones
+                UpdateBucketStatsInternal(tx, key, value: default, changeVectorIndex: -1, sizeChange: newValue.Size - oldValue.Size);
+                return;
+            }
+        }
+
         UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)TombstoneTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
     }
 
@@ -268,6 +278,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
                 return true;
             }
 
+            var number = _documentDatabase.ShardNumber;
             merged = GetMergedChangeVectorInBucket(context, bucket);
             return false;
         }
