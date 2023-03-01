@@ -1103,6 +1103,10 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(indexDefinition.Type));
             writer.WriteString(indexDefinition.Type.ToString());
             writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(indexDefinition.Certificate));
+            writer.WriteString(indexDefinition.Certificate);
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.LockMode));
             if (indexDefinition.LockMode.HasValue)
