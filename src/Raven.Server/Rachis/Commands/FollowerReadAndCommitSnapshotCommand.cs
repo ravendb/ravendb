@@ -1,11 +1,21 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
+using Raven.Server.Documents;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Rachis.Remote;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
+using Voron.Data.BTrees;
+using Voron.Data.Tables;
+using Voron.Data;
+using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Rachis.Commands;
@@ -42,9 +52,9 @@ public class FollowerReadAndCommitSnapshotCommand : MergedTransactionCommand<Clu
             }
 
             //This is okay to ignore because we will just get the committed entries again and skip them
-            _follower.ReadInstallSnapshotAndIgnoreContent(_token);
+            ReadInstallSnapshotAndIgnoreContent(_token);
         }
-        else if (_follower.InstallSnapshot(context, _token))
+        else if (InstallSnapshot(context, _token))
         {
             if (_engine.Log.IsInfoEnabled)
             {
@@ -108,6 +118,234 @@ public class FollowerReadAndCommitSnapshotCommand : MergedTransactionCommand<Clu
         };
 
         return 1;
+    }
+
+    private bool InstallSnapshot(ClusterOperationContext context, CancellationToken token)
+    {
+        var txw = context.Transaction.InnerTransaction;
+
+        var fileName = $"snapshot.{Guid.NewGuid():N}";
+        var filePath = context.Environment.Options.DataPager.Options.TempPath.Combine(fileName);
+
+        using (var temp = new StreamsTempFile(filePath.FullPath, context.Environment))
+        using (var stream = temp.StartNewStream())
+        using (var remoteReader = _follower._connection.CreateReaderToStream(stream))
+        {
+            if (ReadSnapshot(remoteReader, context, txw, dryRun: true, token) == false)
+                return false;
+
+            stream.Seek(0, SeekOrigin.Begin);
+            using (var fileReader = new StreamSnapshotReader(stream))
+            {
+                ReadSnapshot(fileReader, context, txw, dryRun: false, token);
+            }
+        }
+
+        return true;
+    }
+
+    private unsafe bool ReadSnapshot(SnapshotReader reader, ClusterOperationContext context, Transaction txw, bool dryRun, CancellationToken token)
+    {
+        var type = reader.ReadInt32();
+        if (type == -1)
+            return false;
+
+        while (true)
+        {
+            token.ThrowIfCancellationRequested();
+
+            int size;
+            long entries;
+            switch ((RootObjectType)type)
+            {
+                case RootObjectType.None:
+                    return true;
+                case RootObjectType.VariableSizeTree:
+                    size = reader.ReadInt32();
+                    reader.ReadExactly(size);
+
+                    Tree tree = null;
+                    Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice treeName); // The Slice will be freed on context close
+
+                    entries = reader.ReadInt64();
+                    var flags = TreeFlags.FixedSizeTrees;
+
+                    if (dryRun == false)
+                    {
+                        txw.DeleteTree(treeName);
+                        tree = txw.CreateTree(treeName);
+                    }
+
+                    if (_follower._connection.Features.MultiTree)
+                        flags = (TreeFlags)reader.ReadInt32();
+
+                    for (long i = 0; i < entries; i++)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        // read key
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+
+                        using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice valKey))
+                        {
+                            switch (flags)
+                            {
+                                case TreeFlags.None:
+
+                                    // this is a very specific code to block receiving 'CompareExchangeByExpiration' which is a multi-value tree
+                                    // while here we expect a normal tree
+                                    if (SliceComparer.Equals(valKey, CompareExchangeExpirationStorage.CompareExchangeByExpiration))
+                                        throw new InvalidOperationException($"{valKey} is a multi-tree, please upgrade the leader node.");
+
+                                    // read value
+                                    size = reader.ReadInt32();
+                                    reader.ReadExactly(size);
+
+                                    if (dryRun == false)
+                                    {
+                                        using (tree.DirectAdd(valKey, size, out byte* ptr))
+                                        {
+                                            fixed (byte* pBuffer = reader.Buffer)
+                                            {
+                                                Memory.Copy(ptr, pBuffer, size);
+                                            }
+                                        }
+                                    }
+                                    break;
+                                case TreeFlags.MultiValueTrees:
+                                    var multiEntries = reader.ReadInt64();
+                                    for (int j = 0; j < multiEntries; j++)
+                                    {
+                                        token.ThrowIfCancellationRequested();
+
+                                        size = reader.ReadInt32();
+                                        reader.ReadExactly(size);
+
+                                        if (dryRun == false)
+                                        {
+                                            using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice multiVal))
+                                            {
+                                                tree.MultiAdd(valKey, multiVal);
+                                            }
+                                        }
+                                    }
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException($"Got unkonwn type '{type}'");
+                            }
+                        }
+                    }
+                    break;
+                case RootObjectType.Table:
+
+                    size = reader.ReadInt32();
+                    reader.ReadExactly(size);
+
+                    TableValueReader tvr;
+                    Table table = null;
+                    if (dryRun == false)
+                    {
+                        Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
+                            out Slice tableName);//The Slice will be freed on context close
+                        var tableTree = txw.ReadTree(tableName, RootObjectType.Table);
+
+                        // Get the table schema
+                        var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                        var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+                        if (schemaPtr == null)
+                            throw new InvalidOperationException(
+                                "When trying to install snapshot, found missing table " + tableName);
+
+                        var schema = TableSchema.ReadFrom(txw.Allocator, schemaPtr, schemaSize);
+
+                        table = txw.OpenTable(schema, tableName);
+
+                        // delete the table
+                        while (true)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (table.SeekOnePrimaryKey(Slices.AfterAllKeys, out tvr) == false)
+                                break;
+                            table.Delete(tvr.Id);
+                        }
+                    }
+
+                    entries = reader.ReadInt64();
+                    for (long i = 0; i < entries; i++)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+
+                        if (dryRun == false)
+                        {
+                            fixed (byte* pBuffer = reader.Buffer)
+                            {
+                                tvr = new TableValueReader(pBuffer, size);
+                                table.Insert(ref tvr);
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+            }
+
+            type = reader.ReadInt32();
+        }
+    }
+
+    private void ReadInstallSnapshotAndIgnoreContent(CancellationToken token)
+    {
+        var reader = _follower._connection.CreateReader();
+        while (true)
+        {
+            token.ThrowIfCancellationRequested();
+
+            var type = reader.ReadInt32();
+            if (type == -1)
+                return;
+
+            int size;
+            long entries;
+            switch ((RootObjectType)type)
+            {
+                case RootObjectType.None:
+                    return;
+                case RootObjectType.VariableSizeTree:
+
+                    size = reader.ReadInt32();
+                    reader.ReadExactly(size);
+
+                    entries = reader.ReadInt64();
+                    for (long i = 0; i < entries; i++)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+                    }
+                    break;
+                case RootObjectType.Table:
+
+                    size = reader.ReadInt32();
+                    reader.ReadExactly(size);
+
+                    entries = reader.ReadInt64();
+                    for (long i = 0; i < entries; i++)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+                    }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+            }
+        }
     }
 
     public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
