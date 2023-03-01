@@ -28,13 +28,13 @@ using Voron.Impl;
 
 namespace Raven.Server.Rachis
 {
-    public class Follower : IDisposable
+    public partial class Follower : IDisposable
     {
         private static int _uniqueId;
 
         private readonly RachisConsensus _engine;
         private readonly long _term;
-        internal readonly RemoteConnection _connection;
+        private readonly RemoteConnection _connection;
         private PoolOfThreads.LongRunningWork _followerLongRunningWork;
 
         private readonly string _debugName;

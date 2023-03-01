@@ -40,7 +40,7 @@ namespace Raven.Server.Rachis
     /// </summary>
     public partial class Leader : IDisposable
     {
-        internal TaskCompletionSource<object> _topologyModification;
+        private TaskCompletionSource<object> _topologyModification;
         private readonly RachisConsensus _engine;
 
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
@@ -48,7 +48,7 @@ namespace Raven.Server.Rachis
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource<object> _errorOccurred = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        internal readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
+        private readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
 
         private MultipleUseFlag _hasNewTopology = new MultipleUseFlag();
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
