@@ -520,12 +520,12 @@ namespace Raven.Server.Rachis
                     return;// can't commit until at least one entry from our term has been published
 
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
-
-                var command = new LeaderApplyCommand(this, _engine, _lastCommit, maxIndexOnQuorum);
-                _engine.TxMerger.EnqueueSync(command);
-
-                _lastCommit = command.LastAppliedCommit;
             }
+
+            var command = new LeaderApplyCommand(this, _engine, _lastCommit, maxIndexOnQuorum);
+            _engine.TxMerger.EnqueueSync(command);
+
+            _lastCommit = command.LastAppliedCommit;
 
             foreach (var kvp in _entries)
             {
