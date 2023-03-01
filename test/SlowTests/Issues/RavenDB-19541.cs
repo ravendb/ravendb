@@ -111,7 +111,7 @@ public class RavenDB_19541 : RavenTestBase
         using var store = GetDocumentStoreWithDocuments();
         using var session = store.OpenSession();
 
-        var query = session.Query<FullData, CapsLockIndex>().Where(i => i.Age < 5).Select(i => new {i.FirstName, i.LastName});
+        var query = session.Query<FullData, CapsLockIndex>().Where(i => i.Age < 5).Select(i => new PersonData{FirstName = i.FirstName,LastName = i.LastName});
         var single = query.ToList();
         Assert.Equal(1, single.Count);
         var singleCopy = query.ToList();
@@ -123,7 +123,13 @@ public class RavenDB_19541 : RavenTestBase
         var secondQuery = query.Select(i => i.FirstName);
         AssertResult(() => secondQuery.ToString()); // should throw
     }
-    
+
+    private record class PersonData
+    {
+        public string FirstName { get; set; } 
+        public string LastName { get; set; }
+    };
+
     private IDocumentSession OpenSessionAndGetProjectIntoQuery(IDocumentStore store, out IRavenQueryable<ProjectionInto> projectIntoQuery)
     {
         var session = store.OpenSession();
