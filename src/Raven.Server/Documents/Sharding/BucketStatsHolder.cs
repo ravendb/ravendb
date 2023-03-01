@@ -40,8 +40,7 @@ namespace Raven.Server.Documents.Sharding
             var changeVector = TableValueToChangeVector(changeVectorIndex, ref value);
             if (_mergedChangeVectors.TryGetValue(bucket, out var currentMergedCv))
             {
-                var mergedCvStr = ChangeVectorUtils.MergeVectors(currentMergedCv, changeVector);
-                changeVector = _ctx.GetChangeVector(mergedCvStr);
+                changeVector = currentMergedCv.MergeWith(changeVector, _ctx);
             }
 
             _mergedChangeVectors[bucket] = changeVector;
@@ -88,11 +87,8 @@ namespace Raven.Server.Documents.Sharding
                     {
                         using (cvScope)
                         {
-                            // update merged change vector
-                            var mergedCv = cvSlice.HasValue
-                                ? ChangeVectorUtils.MergeVectors(cvSlice.ToString(), changeVector)
-                                : changeVector;
-                            cvScope = Slice.From(tx.Allocator, mergedCv, out cvSlice);
+                            changeVector = changeVector.MergeWith(cvSlice.HasValue ? cvSlice.ToString() : null, _ctx);
+                            cvScope = Slice.From(tx.Allocator, changeVector, out cvSlice);
                         }
                     }
 
