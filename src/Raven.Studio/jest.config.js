@@ -13,7 +13,7 @@ module.exports = {
     "testRegex": [ "(/__tests__/.*|(\\.|/)(spec))\\.[jt]sx?$" ],
     'transform': {
         '.*\.tsx?$': 'ts-jest',
-        "^.+\\.html?$": "html-loader-jest"
+        "^.+\\.html?$": "<rootDir>/typescript/test/htmlLoader.js"
     },
     "setupFiles": [
         "./scripts/setup_jest.js",

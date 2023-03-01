@@ -5,11 +5,18 @@ import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { DatabasesCounter } from "./partials/DatabasesCounter";
 import { NoDatabases } from "./partials/NoDatabases";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
-import { useChanges } from "hooks/useChanges";
 import { Col, Row } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { loadDatabaseDetails, selectActiveDatabase, selectAllDatabases } from "components/common/shell/databasesSlice";
+import {
+    compactDatabase,
+    loadDatabaseDetails,
+    openCreateDatabaseFromRestoreDialog,
+    selectActiveDatabase,
+    selectAllDatabases,
+} from "components/common/shell/databasesSlice";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
+import router from "plugins/router";
+import appUrl from "common/appUrl";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -23,8 +30,13 @@ function filterDatabases(databases: DatabaseSharedInfo[], criteria: DatabaseFilt
     return databases;
 }
 
+interface DatabasesPageProps {
+    compact?: string;
+    restore?: boolean;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function DatabasesPage() {
+export function DatabasesPage(props: DatabasesPageProps) {
     const activeDatabase = useAppSelector(selectActiveDatabase);
     const databases = useAppSelector(selectAllDatabases);
 
@@ -34,7 +46,6 @@ export function DatabasesPage() {
         searchText: "",
     }));
 
-    const { serverNotifications } = useChanges();
     const { nodeTags } = useClusterTopologyManager();
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
@@ -88,6 +99,24 @@ export function DatabasesPage() {
             setSelectedDatabaseNames((s) => s.concat(db.name));
         }
     };
+
+    useEffect(() => {
+        if (props.compact) {
+            const toCompact = databases.find((x) => x.name === props.compact);
+            if (toCompact) {
+                dispatch(compactDatabase(toCompact));
+            }
+        }
+        if (props.restore) {
+            dispatch(openCreateDatabaseFromRestoreDialog());
+        }
+
+        // normalize url (strip extra params)
+        router.navigate(appUrl.forDatabases(), {
+            trigger: false,
+            replace: true,
+        });
+    }, [props.compact, props.restore, databases, dispatch]);
 
     const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 
