@@ -406,9 +406,6 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception e2)
                 {
-                    if (e2 is AggregateException ae2)
-                        e2 = ae2.ExtractSingleInnerException();
-
                     if (_engine.Log.IsOperationsEnabled)
                     {
                         _engine.Log.Operations("After leadership failure, could not setup switch to candidate state", e2);
@@ -1007,22 +1004,6 @@ namespace Raven.Server.Rachis
         public override string ToString()
         {
             return $"Leader {_engine.Tag} in term {Term}";
-        }
-
-        internal static string GenerateNodeTag(ClusterTopology clusterTopology)
-        {
-            if (clusterTopology.LastNodeId.Length == 0)
-            {
-                return "A";
-            }
-
-            if (clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1 > 'Z')
-            {
-                return clusterTopology.LastNodeId + "A";
-            }
-
-            var lastChar = (char)(clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1);
-            return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
         }
 
         public void SetStateOf(long index, Action<TaskCompletionSource<(long Index, object Result)>> onNotify)

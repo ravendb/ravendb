@@ -45,7 +45,7 @@ public class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOpera
 
         if (_nodeTag == null)
         {
-            _nodeTag = Leader.GenerateNodeTag(clusterTopology);
+            _nodeTag = GenerateNodeTag(clusterTopology);
         }
 
         var newVotes = new Dictionary<string, string>(clusterTopology.Members);
@@ -103,7 +103,6 @@ public class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOpera
             _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, _leader.Term, _nodeTag);
         }
 
-        Index = index;
         // after commit but still under the lock
         context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
         {
@@ -113,9 +112,23 @@ public class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOpera
         return 1;
     }
 
-    public long Index = -1;
+    private static string GenerateNodeTag(ClusterTopology clusterTopology)
+    {
+        if (clusterTopology.LastNodeId.Length == 0)
+        {
+            return "A";
+        }
 
-    public void AfterCommit(long index)
+        if (clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1 > 'Z')
+        {
+            return clusterTopology.LastNodeId + "A";
+        }
+
+        var lastChar = (char)(clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1);
+        return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
+    }
+
+    private void AfterCommit(long index)
     {
         var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
         _leader._entries[index] = new Leader.CommandState
