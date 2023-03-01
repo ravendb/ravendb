@@ -524,7 +524,7 @@ public static class QueryBuilderHelper
 
     internal static FieldMetadata GetFieldMetadata(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping,
         FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
-        bool exact = false, bool isSorting = false, bool hasBoost = false)
+        bool exact = false, bool isSorting = false, bool hasBoost = false, bool handleSearch = false)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
         FieldMetadata metadata;
