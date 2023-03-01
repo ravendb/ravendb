@@ -13,7 +13,15 @@ import { RichPanelDetailItem, RichPanelName } from "../../../common/RichPanel";
 import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
-import { Button, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownToggle } from "reactstrap";
+import {
+    Button,
+    ButtonGroup,
+    Dropdown,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    UncontrolledDropdown,
+} from "reactstrap";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     db: database;
@@ -157,7 +165,7 @@ export function OngoingTaskStatus(props: {
 }) {
     const { task, canEdit, toggleState } = props;
     return (
-        <Dropdown>
+        <UncontrolledDropdown>
             <DropdownToggle
                 caret
                 disabled={!canEdit}
@@ -174,7 +182,7 @@ export function OngoingTaskStatus(props: {
                     Disable
                 </DropdownItem>
             </DropdownMenu>
-        </Dropdown>
+        </UncontrolledDropdown>
     );
 }
 
