@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -109,8 +110,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var timeoutInSecPerNode = GetIntValueQueryString("timeoutInSecPerNode", false) ?? 60;
             var clusterOperationToken = CreateOperationToken();
-            var type = GetStringQueryString("type", false);
-            var databases = GetStringValuesQueryString("databases", required: false);
+            var type = GetStringQueryString("type", required: false);
+            var databases = GetStringValuesQueryString("database", required: false);
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
 
             await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", Operations.Operations.OperationType.DebugPackage, async _ =>
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
             var debugInfoType = GetDebugInfoType();
-            var databases = GetStringValuesQueryString("databases", required: false);
+            var databases = GetStringValuesQueryString("database", required: false);
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
             var token = CreateOperationToken();
 
@@ -186,17 +187,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             var localEndpointClient = new LocalEndpointClient(Server);
 
-                            if (debugInfoType.HasFlag(DebugInfoContents.ServerWide))
+                            if (debugInfoType.HasFlag(DebugInfoPackageContent.ServerWide))
                             {
                                 await WriteServerInfo(archive, context, localEndpointClient, token.Token);
                             }
 
-                            if (debugInfoType.HasFlag(DebugInfoContents.Databases))
+                            if (debugInfoType.HasFlag(DebugInfoPackageContent.Databases))
                             {
                                 await WriteForAllLocalDatabases(archive, context, localEndpointClient, databases, token: token.Token);
                             }
 
-                            if (debugInfoType.HasFlag(DebugInfoContents.LogFile))
+                            if (debugInfoType.HasFlag(DebugInfoPackageContent.LogFile))
                             {
                                 await WriteLogFile(archive, token.Token);
                             }
@@ -215,13 +216,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }, operationId, token: token);
         }
 
-        private DebugInfoContents GetDebugInfoType()
+        private DebugInfoPackageContent GetDebugInfoType()
         {
-            var type = GetStringQueryString("type", false);
+            var type = GetStringQueryString("type", required: false);
             if (string.IsNullOrEmpty(type))
-                return DebugInfoContents.Default;
+                return DebugInfoPackageContent.Default;
 
-            if (Enum.TryParse(type, out DebugInfoContents debugInfoType) == false)
+            if (Enum.TryParse(type, out DebugInfoPackageContent debugInfoType) == false)
                 throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
 
             return debugInfoType;
@@ -257,13 +258,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context, RequestExecutor requestExecutor, long operationId, OperationCancelToken token, int timeoutInSec, string type, StringValues databases)
         {
-            
             var url = $"/admin/debug/info-package?operationId={operationId}";
             if (type != null)
                 url += $"&type={type}";
 
-            if (string.IsNullOrEmpty(databases) == false)
-                url += $"&databases=${string.Join("&databases=", databases)}";
+            if (databases.Count > 0)
+                url += $"&database={WebUtility.UrlEncode(string.Join("&database=", databases))}";
 
             var rawStreamCommand = new GetRawStreamResultCommand(url);
             var requestExecutionTask = requestExecutor.ExecuteAsync(rawStreamCommand, context);
@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     var allDatabases = ServerStore.Cluster.GetDatabaseNames(context);
 
-                    if (string.IsNullOrEmpty(databases) == false && databases.Any())
+                    if (databases.Count > 0)
                     {
                         return allDatabases.Intersect(databases).ToHashSet();
                     }
@@ -502,7 +502,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [Flags]
-        public enum DebugInfoContents
+        public enum DebugInfoPackageContent
         {
             ServerWide = 0x1,
             Databases = 0x2,
