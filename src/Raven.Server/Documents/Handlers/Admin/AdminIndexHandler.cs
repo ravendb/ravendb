@@ -73,10 +73,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                     indexDefinition.Name = indexDefinition.Name?.Trim();
 
                     var source = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
+                    
+                    var clientCert = GetCurrentCertificate();
+
+                    indexDefinition.Certificate = clientCert?.FriendlyName;
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        var clientCert = GetCurrentCertificate();
 
                         var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
                         auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {source} at {DateTime.UtcNow}");
