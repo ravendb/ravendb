@@ -12,25 +12,17 @@ public class QuantizationTest : RavenTestBase
     {
     }
 
-    public static IEnumerable<object[]> AllShorts => Enumerable.Range(12341, 1).Select(i => new object[] {(short)i});
-        // new List<object[]>
-        // {
-        //     new object[] { 1, 2, 3 },
-        //     new object[] { -4, -6, -10 },
-        //     new object[] { -2, 2, 0 },
-        //     new object[] { int.MinValue, -1, int.MaxValue },
-        // };
-    
-    [Theory]
-    [MemberData(nameof(AllShorts))]
-    public void CanEncodeAndDecodeEveryNumberUnderShort(short value)
+    [Fact]
+    public void CanEncodeAndDecodeEveryNumberUnderShort()
     {
-        var quantized = EntryIdEncodings.FrequencyQuantizationMatinsa(value);
-        
-        Assert.True(quantized <= byte.MaxValue); //In range
+        for (short value = 1; value < short.MaxValue; ++value)
+        {
+            var quantized = EntryIdEncodings.FrequencyQuantization(value);
 
-        var decoded = EntryIdEncodings.FrequencyDecodeFromQuantization(quantized);
-        
-        Assert.Equal(value, decoded);
+            Assert.True(quantized <= byte.MaxValue); //In range
+
+            var decoded = EntryIdEncodings.FrequencyReconstructionFromQuantization(quantized);
+            Assert.False(decoded <= 0);
+        }
     }
 }

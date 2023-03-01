@@ -23,20 +23,12 @@ public static class EntryIdEncodings
     private const byte ContainerTypeOffset = 2;
     private const long MaxEntryId = 1L << 54;
 
-    // Quantization parameters:
-    private const long Min = 0;
-    private const long Max = 255;
-    private const long QuantizationMax = 256 - 1;
-
-    // ReSharper disable once PossibleLossOfFraction
-    private const double QuantizationStep = (Max - Min) / (double)QuantizationMax;
-
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static long Encode(long entryId, long count, TermIdMask containerType)
+    public static long Encode(long entryId, short count, TermIdMask containerType)
     {
-        Debug.Assert(entryId < MaxEntryId);        
-        
-        return count << ContainerTypeOffset | entryId << EntryIdOffset | (long)containerType;
+        Debug.Assert(entryId < MaxEntryId);
+
+        return FrequencyQuantization(count) << ContainerTypeOffset | entryId << EntryIdOffset | (long)containerType;
     }
 
     /// <summary>
@@ -46,7 +38,7 @@ public static class EntryIdEncodings
     /// <returns></returns>
     public static (long EntryId, short Frequency) Decode(long entryId)
     {
-        return (entryId >> EntryIdOffset, (short)((entryId >> ContainerTypeOffset) & Mask));
+        return (entryId >> EntryIdOffset, FrequencyReconstructionFromQuantization(((entryId >> ContainerTypeOffset) & Mask)));
     }
 
     /// <summary>
@@ -71,8 +63,9 @@ public static class EntryIdEncodings
             ref var frequency = ref Unsafe.Add(ref MemoryMarshal.GetReference(frequencies), idX);
             entryId = entryId << EntryIdOffset | FrequencyQuantization(frequency) << ContainerTypeOffset;
         }
+
         return;
-        
+
         Classic:
         for (int i = 0; i < entries.Length; ++i)
         {
@@ -97,56 +90,49 @@ public static class EntryIdEncodings
     {
         for (int i = 0; i < matches.Length; ++i)
         {
-            frequencies[i] = (short)((matches[i] >> ContainerTypeOffset) & Mask);
+            frequencies[i] = FrequencyReconstructionFromQuantization((short)((matches[i] >> ContainerTypeOffset) & Mask));
             matches[i] >>= EntryIdOffset;
         }
     }
 
-    private static readonly long[] Steps = Enumerable.Range(0, 16).Select(i => (long)Math.Pow(2, 4 + 2 * i)).ToArray(); 
+    // 4 bit - exp (as 2^(4 + 2i) per step
+    // 4 bit - mantissa
+    private static readonly long[] Step = Enumerable.Range(0, 16).Select(i => (long)Math.Pow(2, 4 + 2 * i)).ToArray();
+
+    private static readonly long[] StepSize = Enumerable.Range(0, 16).Select(i =>
+        i == 0
+            ? 16
+            : (Step[i] - Step[i - 1])).ToArray();
+
+    private static readonly double[] LevelSizeInStep = StepSize.Select(i => i / 16D).ToArray();
+
+    private static readonly short[] FrequencyTable = Enumerable.Range(0, byte.MaxValue).Select(i => FrequencyReconstructionFromQuantizationFromFunction(i)).ToArray();
+    
+    internal static long FrequencyQuantization(short frequency)
+    {
+        if (frequency < 16) //shortcut
+            return frequency;
+
+        int level = 0;
+        for (level = 0; level < 16 && frequency >= Step[level]; ++level)
+        {
+        } // look up for range
+
+        var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
+        Debug.Assert((long)mod < 16);
+        return ((long)(level << 4)) | (long)mod;
+    }
+
+    internal static short FrequencyReconstructionFromQuantization(long encoded) => FrequencyTable[encoded];
 
     
-    internal static long FrequencyQuantizationMatinsa(short freq)
+    internal static short FrequencyReconstructionFromQuantizationFromFunction(long encoded)
     {
-        int level;
-        for (level = 0; level < 16; ++level)
-            if (freq < Steps[level])
-                break;
-
+        var level = (encoded & (0b1111 << 4)) >> 4;
         if (level == 0)
-        {
-            Debug.Assert(freq <= 0b1111);
-            return freq;
-        }
+            return (short)encoded;
 
-
-        var levelSize = Steps[level] - Steps[level - 1];
-        var sizePerStepInLevel = levelSize / 16;
-        var mod = (long)freq - levelSize;
-        
-        
-        
-        
-        var ex = freq / 16;
-        var leftPart  = (long)Math.Log2(freq);
-        Debug.Assert(leftPart > 0b1111, "Should not be bigger than 0b1111");
-        var modPart = (byte)(freq % 16);
-        Debug.Assert((leftPart << 4 | modPart) < byte.MaxValue);
-        return leftPart << 4 | modPart;
-    }
-
-    internal static short FrequencyDecodeFromQuantization(long encoded)
-    {
-        var mantissa = (short)(encoded & 0b1111);
-        var exp = (double)((encoded >> 4) & 0b1111);
-        return (short)((short)Math.Pow(2D, exp) + mantissa);
-    }
-
-    private static long FrequencyQuantization(short freq)
-    {
-        if (freq > Max)
-            return QuantizationMax; //MAX
-
-        var output = Math.Min(QuantizationMax, (long)(freq / QuantizationStep));
-        return output;
+        var mantissa = encoded & 0b1111;
+        return (short)(Step[level - 1] + LevelSizeInStep[level] * mantissa);
     }
 }
