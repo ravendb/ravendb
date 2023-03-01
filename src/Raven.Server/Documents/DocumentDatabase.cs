@@ -929,6 +929,8 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TombstoneCleaner");
 
+            DisposePeriodicDocumentsMigrator(exceptionAggregator);
+
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ReplicationLoader");
             exceptionAggregator.Execute(() =>
             {
@@ -1056,6 +1058,10 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
 
             exceptionAggregator.ThrowIfNeeded();
+        }
+
+        protected virtual void DisposePeriodicDocumentsMigrator(ExceptionAggregator exceptionAggregator)
+        {
         }
 
         public DynamicJsonValue GenerateOfflineDatabaseInfo()
