@@ -679,7 +679,7 @@ namespace Raven.Server.Rachis
                 throw new TimeoutException($"Waited for {timeout} but the command {command.RaftCommandIndex} was not applied in this time.");
             }
 
-            return t.GetAwaiter().GetResult();
+            return await t;
         }
 
         internal static ConvertResultAction GetConvertResult(CommandBase cmd)

@@ -3203,7 +3203,7 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForState(rachisState, token);
         }
 
-        public async ValueTask ClusterAcceptNewConnectionAsync(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, Action disconnect, EndPoint remoteEndpoint)
+        public async Task ClusterAcceptNewConnectionAsync(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, Action disconnect, EndPoint remoteEndpoint)
         {
             try
             {

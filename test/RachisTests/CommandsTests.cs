@@ -32,7 +32,7 @@ namespace RachisTests
                 };
 
                 var t = leader.PutAsync(cmd);
-                leader.PutAsync(cmd);
+                await leader.PutAsync(cmd);
 
                 // this should not throw timeout exception.
                 var exception = await Record.ExceptionAsync(async () => await t);
