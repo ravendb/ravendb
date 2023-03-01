@@ -908,28 +908,7 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed IndexStore");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ExpiredDocumentsCleaner");
-            exceptionAggregator.Execute(() =>
-            {
-                ExpiredDocumentsCleaner?.Dispose();
-            });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ExpiredDocumentsCleaner");
-
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing PeriodicBackupRunner");
-            exceptionAggregator.Execute(() =>
-            {
-                PeriodicBackupRunner?.Dispose();
-            });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed PeriodicBackupRunner");
-
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TombstoneCleaner");
-            exceptionAggregator.Execute(() =>
-            {
-                TombstoneCleaner?.Dispose();
-            });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TombstoneCleaner");
-
-            DisposePeriodicDocumentsMigrator(exceptionAggregator);
+            DisposeBackgroundWorkers(exceptionAggregator);
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ReplicationLoader");
             exceptionAggregator.Execute(() =>
@@ -1060,8 +1039,28 @@ namespace Raven.Server.Documents
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        protected virtual void DisposePeriodicDocumentsMigrator(ExceptionAggregator exceptionAggregator)
+        protected virtual void DisposeBackgroundWorkers(ExceptionAggregator exceptionAggregator)
         {
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ExpiredDocumentsCleaner");
+            exceptionAggregator.Execute(() =>
+            {
+                ExpiredDocumentsCleaner?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ExpiredDocumentsCleaner");
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing PeriodicBackupRunner");
+            exceptionAggregator.Execute(() =>
+            {
+                PeriodicBackupRunner?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed PeriodicBackupRunner");
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TombstoneCleaner");
+            exceptionAggregator.Execute(() =>
+            {
+                TombstoneCleaner?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TombstoneCleaner");
         }
 
         public DynamicJsonValue GenerateOfflineDatabaseInfo()
