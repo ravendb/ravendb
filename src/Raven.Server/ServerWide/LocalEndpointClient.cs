@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.ObjectPool;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Exceptions;
@@ -31,7 +32,8 @@ namespace Raven.Server.ServerWide
             _server = server;
         }
 
-        public async Task<HttpResponse> InvokeAsync(RouteInformation route, Dictionary<string, Microsoft.Extensions.Primitives.StringValues> parameters = null)
+        public async Task<HttpResponse> InvokeAsync(RouteInformation route, 
+            Dictionary<string, StringValues> parameters = null, CancellationToken cancellationToken = default)
         {
             var requestContext = new RequestHandlerContext
             {
@@ -64,7 +66,8 @@ namespace Raven.Server.ServerWide
             var (endpointHandler, databaseLoadingWaitTask) = route.TryGetHandler(requestContext);
             var handler = endpointHandler ?? await databaseLoadingWaitTask;
 
-            await handler.Invoke(requestContext);
+            var task = handler.Invoke(requestContext);
+            await task.WaitAsync(cancellationToken);
 
             var statusCode = requestContext.HttpContext.Response.StatusCode;
             if (statusCode != (int)HttpStatusCode.OK && statusCode != (int)HttpStatusCode.NotModified)
