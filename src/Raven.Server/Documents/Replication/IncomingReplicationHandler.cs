@@ -1285,7 +1285,7 @@ namespace Raven.Server.Documents.Replication
                                     // the other side will receive negative ack and will retry sending again.
                                     try
                                     {
-                                        AssertAttachmentsFromReplication(context, doc.Id, document);
+                                        AssertAttachmentsFromReplication(context, doc);
                                     }
                                     catch (MissingAttachmentException)
                                     {
@@ -1557,9 +1557,9 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+            public void AssertAttachmentsFromReplication(DocumentsOperationContext context, DocumentReplicationItem doc)
             {
-                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(document))
+                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(doc.Data))
                 {
                     if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         continue;
@@ -1577,7 +1577,8 @@ namespace Raven.Server.Documents.Replication
 
                         attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue attachmentName);
 
-                        var msg = $"Document '{id}' has attachment " +
+                        var type = doc.Flags.Contain(DocumentFlags.Revision) ? "Revision" : "Document";
+                        var msg = $"{type} '{doc.Id}' has attachment " +
                                   $"named: '{attachmentName?.ToString() ?? "unknown"}', hash: '{hash?.ToString() ?? "unknown"}' " +
                                   $"listed as one of its attachments but it doesn't exist in the attachment storage";
 
