@@ -444,7 +444,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
                     continue;
 
                 var tombstoneChangeVector = context.GetChangeVector(tombstone.ChangeVector);
-                if (ChangeVectorUtils.GetConflictStatus(tombstoneChangeVector, upTo) != ConflictStatus.AlreadyMerged)
+                if (ChangeVectorUtils.GetConflictStatus(upTo, tombstoneChangeVector) != ConflictStatus.AlreadyMerged)
                     break;
 
                 var collection = tombstone.Collection;

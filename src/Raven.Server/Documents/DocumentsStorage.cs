@@ -1716,7 +1716,7 @@ namespace Raven.Server.Documents
                     revisionsStorage.Configuration == null &&
                     flags.Contain(DocumentFlags.Resolved) == false &&
                     nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
-                    revisionsStorage.DeleteRevisionsFor(context, id);
+                    revisionsStorage.DeleteRevisionsFor(context, id, flags: documentFlags);
 
                 if (flags.Contain(DocumentFlags.HasRevisions) &&
                     revisionsStorage.Configuration != null &&
