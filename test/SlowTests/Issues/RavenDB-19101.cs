@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -47,7 +49,13 @@ public class RavenDB_19101: RavenTestBase
     [Fact]
     public void CheckIfCertificateNameIsReturned()
     {
-        using (var store = GetDocumentStore())
+        var certificates = Certificates.SetupServerAuthentication();
+        var dbName = GetDatabaseName();
+        var adminCert = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+        DoNotReuseServer();
+        
+        using (var store = GetDocumentStore(new Options { AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = s => dbName }))
         {
             using (var session = store.OpenSession())
             {
@@ -76,9 +84,9 @@ public class RavenDB_19101: RavenTestBase
                 var firstHistory = history.FirstOrDefault() as BlittableJsonReaderObject;
 
                 firstHistory.TryGet("Definition", out BlittableJsonReaderObject definition);
-                definition.TryGet("Certificate", out string certificate);
+                definition.TryGet("CertificateThumbprint", out string certificateThumbprint);
 
-                Assert.Equal(store.Certificate?.FriendlyName, certificate);
+                Assert.Equal(store.Certificate?.Thumbprint, certificateThumbprint);
             }
         }
     }
