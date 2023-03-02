@@ -147,7 +147,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             continue;
                     }
 
-                    using (SubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, deletedId, out var key))
+                    using (AbstractSubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, deletedId, out var key))
                     {
                         using var _ = Slice.External(context.Allocator, key, out var keySlice);
                         subscriptionStateTable.DeleteByKey(keySlice);
@@ -158,7 +158,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                 foreach (var documentRecord in Documents)
                 {
-                    using (SubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, documentRecord.DocumentId,
+                    using (AbstractSubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, documentRecord.DocumentId,
                                out var key))
                     {
                         using var _ = Slice.External(context.Allocator, key, out var keySlice);
@@ -235,7 +235,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                 foreach (var revisionRecord in Revisions)
                 {
-                    using (SubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndRevisionKey(context, DatabaseName, SubscriptionId, revisionRecord.DocumentId, revisionRecord.Current,
+                    using (AbstractSubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndRevisionKey(context, DatabaseName, SubscriptionId, revisionRecord.DocumentId, revisionRecord.Current,
                                out var key))
                     using (subscriptionStateTable.Allocate(out var tvb))
                     {

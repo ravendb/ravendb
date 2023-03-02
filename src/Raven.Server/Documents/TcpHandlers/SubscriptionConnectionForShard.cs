@@ -7,6 +7,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.Sharding;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

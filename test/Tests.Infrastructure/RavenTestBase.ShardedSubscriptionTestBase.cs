@@ -31,14 +31,14 @@ public partial class RavenTestBase
                     using (shard.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        return Task.FromResult(SubscriptionConnectionsStateBase.GetNumberOfResendDocuments(shard.ServerStore, store.Database, SubscriptionType.Document, id));
+                        return Task.FromResult(AbstractSubscriptionConnectionsStateBase.GetNumberOfResendDocuments(shard.ServerStore, store.Database, SubscriptionType.Document, id));
                     }
                 }, 0, timeout: 1_500_000);
                 // SubscriptionConnectionsStateBase.TryGetDocumentFromResend()
                 using (shard.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    Assert.True(result == 0, $"{string.Join(Environment.NewLine, SubscriptionConnectionsStateBase.GetResendItems(ctx, store.Database, id).Select(x=>$"{x.Id}, {x.ChangeVector}, {x.Batch}"))}");
+                    Assert.True(result == 0, $"{string.Join(Environment.NewLine, AbstractSubscriptionConnectionsStateBase.GetResendItems(ctx, store.Database, id).Select(x=>$"{x.Id}, {x.ChangeVector}, {x.Batch}"))}");
                 }
             }
         }

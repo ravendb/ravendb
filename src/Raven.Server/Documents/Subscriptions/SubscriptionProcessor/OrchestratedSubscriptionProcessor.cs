@@ -23,7 +23,7 @@ public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<O
     public override void InitializeProcessor()
     {
         base.InitializeProcessor();
-        _state = _databaseContext.Subscriptions.SubscriptionsConnectionsState[Connection.SubscriptionId];
+        _state = _databaseContext.SubscriptionsStorage.Subscriptions[Connection.SubscriptionId];
     }
 
     // should never hit this

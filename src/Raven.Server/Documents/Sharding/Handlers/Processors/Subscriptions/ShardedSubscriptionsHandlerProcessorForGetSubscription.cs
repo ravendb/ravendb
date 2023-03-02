@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
                 {
                     foreach (var sub in allSubs)
                     {
-                        var state = RequestHandler.DatabaseContext.Subscriptions.GetSubscriptionConnectionsState(context, sub.SubscriptionName);
+                        var state = RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionConnectionsState(context, sub.SubscriptionName);
                         if (state != null)
                         {
                             subscriptions.Add(sub);
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 
                 if (running)
                 {
-                    var state = RequestHandler.DatabaseContext.Subscriptions.GetSubscriptionConnectionsState(context, subscription.SubscriptionName);
+                    var state = RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionConnectionsState(context, subscription.SubscriptionName);
                     if (state == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

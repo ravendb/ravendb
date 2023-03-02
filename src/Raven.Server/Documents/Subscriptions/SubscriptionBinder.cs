@@ -31,7 +31,7 @@ public static class SubscriptionBinder
             var orch = new OrchestratedSubscriptionConnection(server, tcpConnectionOptions, onDispose, buffer);
             connection = orch;
             return new SubscriptionBinder<SubscriptionConnectionsStateOrchestrator, OrchestratedSubscriptionConnection, OrchestratorIncludesCommandImpl>(
-                tcpConnectionOptions.DatabaseContext.Subscriptions,
+                tcpConnectionOptions.DatabaseContext.SubscriptionsStorage,
                 new Lazy<SubscriptionConnectionsStateOrchestrator>(orch.GetOrchestratedSubscriptionConnectionState), orch);
         }
 

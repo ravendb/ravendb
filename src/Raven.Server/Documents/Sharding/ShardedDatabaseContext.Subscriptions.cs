@@ -1,115 +1,64 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Threading;
+﻿using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Utils;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding;
 
 public partial class ShardedDatabaseContext
 {
-    public ShardedSubscriptions Subscriptions;
+    public ShardedSubscriptions SubscriptionsStorage;
 
-    public class ShardedSubscriptions : ISubscriptionSemaphore
+    public class ShardedSubscriptions : AbstractSubscriptionStorage<SubscriptionConnectionsStateOrchestrator>
     {
         private readonly ShardedDatabaseContext _context;
-        private readonly ServerStore _serverStore;
-        private readonly string _databaseName;
 
-        public readonly SemaphoreSlim ConcurrentConnectionsSemiSemaphore;
-
-        public readonly ConcurrentDictionary<long, SubscriptionConnectionsStateOrchestrator> SubscriptionsConnectionsState =
-            new ConcurrentDictionary<long, SubscriptionConnectionsStateOrchestrator>();
-
-        public ShardedSubscriptions(ShardedDatabaseContext context, ServerStore serverStore)
+        public ShardedSubscriptions(ShardedDatabaseContext context, ServerStore serverStore) : base(serverStore, context.Configuration.Subscriptions.MaxNumberOfConcurrentConnections)
         {
             _context = context;
-            _serverStore = serverStore;
-            _databaseName = context.DatabaseName;
-            ConcurrentConnectionsSemiSemaphore = new SemaphoreSlim(context.Configuration.Subscriptions.MaxNumberOfConcurrentConnections);
+        }
+
+        public override void Initialize(string name)
+        {
+            _databaseName = _context.DatabaseName;
+            _logger = LoggingSource.Instance.GetLogger<ShardedSubscriptions>(_databaseName);
+        }
+
+        protected override void DropSubscriptionConnections(SubscriptionConnectionsStateOrchestrator state, SubscriptionException ex)
+        {
+            state.DisposeWorkers();
+            foreach (var subscriptionConnection in state.GetConnections())
+            {
+                state.DropSingleConnection(subscriptionConnection, ex);
+            }
+        }
+
+        protected override void SetConnectionException(SubscriptionConnectionsStateOrchestrator state, SubscriptionException ex)
+        {
+            foreach (var connection in state.GetConnections())
+            {
+                // this is just to set appropriate exception, the connections will be dropped on state dispose
+                connection.ConnectionException = ex;
+            }
+        }
+
+        protected override string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus)
+        {
+            return _serverStore.WhoseTaskIsIt(databaseRecord.Sharding.Orchestrator.Topology, taskStatus, taskStatus);;
+        }
+
+        protected override bool SubscriptionChangeVectorHasChanges(SubscriptionConnectionsStateOrchestrator state, SubscriptionState taskStatus)
+        {
+            // TODO: egor check if we can drop sharded subscription on CV change (so it reconnects)
+            return false;
         }
 
         public void Update(RawDatabaseRecord databaseRecord)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-                "RavenDB-19089 This is almost identical as the one from the subscription storage");
-
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                //checks which subscriptions should be dropped because of the database record change
-                foreach (var subscriptionStateKvp in SubscriptionsConnectionsState)
-                {
-                    var subscriptionName = subscriptionStateKvp.Value.SubscriptionName;
-                    if (subscriptionName == null)
-                        continue;
-
-                    var id = subscriptionStateKvp.Key;
-                    var subscriptionConnectionsState = subscriptionStateKvp.Value;
-
-                    using var subscriptionStateRaw = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateRaw(context, _databaseName, subscriptionName);
-                    if (subscriptionStateRaw == null)
-                    {
-                        subscriptionConnectionsState.DropSubscription(new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
-                        continue;
-                    }
-
-                    var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionStateRaw);
-                    if (subscriptionState.Disabled)
-                    {
-                        subscriptionConnectionsState.DropSubscription(new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
-                        continue;
-                    }
-
-                    //make sure we only drop old connection and not new ones just arriving with the updated query
-                    if (subscriptionConnectionsState != null && subscriptionState.Query != subscriptionConnectionsState.Query)
-                    {
-                        subscriptionConnectionsState.DropSubscription(new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted", canReconnect: true));
-                        continue;
-                    }
-                    
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19089 check modifying of starting point");
-                    /*
-                    if (subscriptionState.LastClientConnectionTime == null && 
-                        subscriptionState.ChangeVectorForNextBatchStartingPoint != subscriptionConnectionsState.LastChangeVectorSent)
-                    {
-                        subscriptionConnectionsState.DropSubscription(new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
-                        continue;
-                    }
-                    */
-
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19089 create subscription WhosTaskIsIt");
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19089 Need to handle NodeTag, currently is isn't used for sharded because it is shared");
-
-                    var topology = databaseRecord.Sharding.Orchestrator.Topology;
-                    var whoseTaskIsIt = _serverStore.WhoseTaskIsIt(topology, subscriptionState, subscriptionState);
-                    if (whoseTaskIsIt != _serverStore.NodeTag)
-                    {
-                        subscriptionConnectionsState.DropSubscription(
-                            new SubscriptionDoesNotBelongToNodeException("Subscription operation was stopped, because it's now under a different server's responsibility"));
-                    }
-                }
-            }
+            HandleDatabaseRecordChange(databaseRecord);
         }
-
-        public SubscriptionConnectionsStateOrchestrator GetSubscriptionConnectionsState<T>(TransactionOperationContext<T> context, string subscriptionName) where T : RavenTransaction
-        {
-            var subscriptionState = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, subscriptionName);
-
-            if (SubscriptionsConnectionsState.TryGetValue(subscriptionState.SubscriptionId, out var concurrentSubscription) == false)
-                return null;
-
-            return concurrentSubscription;
-        }
-
-        public bool TryEnterSubscriptionsSemaphore() => ConcurrentConnectionsSemiSemaphore.Wait(0);
-
-        public void ReleaseSubscriptionsSemaphore() => ConcurrentConnectionsSemiSemaphore.Release();
     }
 }

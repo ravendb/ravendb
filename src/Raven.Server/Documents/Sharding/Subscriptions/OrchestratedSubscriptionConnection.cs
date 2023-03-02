@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
         public SubscriptionConnectionsStateOrchestrator GetOrchestratedSubscriptionConnectionState()
         {
-            var subscriptions = _databaseContext.Subscriptions.SubscriptionsConnectionsState;
+            var subscriptions = _databaseContext.SubscriptionsStorage.Subscriptions;
             return _state = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateOrchestrator(_serverStore, _databaseContext, subId));
         }
 
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             // no op
         }
 
-        protected override async Task<bool> WaitForChangedDocsAsync(SubscriptionConnectionsStateBase state, Task pendingReply)
+        protected override async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsStateBase state, Task pendingReply)
         {
             // nothing was sent to the client, but we need to let the shard know he can continue
             await NotifyShardAboutBatchCompletion();

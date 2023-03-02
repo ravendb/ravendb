@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 
         protected override SubscriptionConnectionsDetails GetConnectionDetails(TransactionOperationContext context, string subscriptionName)
         {
-            var state = RequestHandler.DatabaseContext.Subscriptions.GetSubscriptionConnectionsState(context, subscriptionName);
+            var state = RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionConnectionsState(context, subscriptionName);
             if (state == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

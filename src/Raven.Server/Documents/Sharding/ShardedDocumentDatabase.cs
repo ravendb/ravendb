@@ -10,6 +10,8 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding.Smuggler;
+using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -62,6 +64,11 @@ public class ShardedDocumentDatabase : DocumentDatabase
     protected override ReplicationLoader CreateReplicationLoader()
     {
         return new ShardReplicationLoader(this, ServerStore);
+    }
+
+    protected override ShardSubscriptionStorage CreateSubscriptionStorage(ServerStore serverStore)
+    {
+        return new ShardSubscriptionStorage(this, serverStore);
     }
 
     internal override void SetIds(DatabaseTopology topology, string shardedDatabaseId)
