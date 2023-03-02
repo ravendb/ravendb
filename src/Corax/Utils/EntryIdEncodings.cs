@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow.Binary;
+using Sparrow.Server.Binary;
 
 namespace Corax.Utils;
 
@@ -117,7 +119,7 @@ public static class EntryIdEncodings
         for (level = 0; level < 16 && frequency >= Step[level]; ++level)
         {
         } // look up for range
-
+        
         var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
         Debug.Assert((long)mod < 16);
         return ((long)(level << 4)) | (long)mod;
@@ -135,4 +137,7 @@ public static class EntryIdEncodings
         var mantissa = encoded & 0b1111;
         return (short)(Step[level - 1] + LevelSizeInStep[level] * mantissa);
     }
+    
+    //Posting list contains encoded ids only but in matches we deal with decoded.
+    internal static long PrepareIdForPruneInPostingList(long entryId) => entryId << EntryIdEncodings.EntryIdOffset + 1;
 }
