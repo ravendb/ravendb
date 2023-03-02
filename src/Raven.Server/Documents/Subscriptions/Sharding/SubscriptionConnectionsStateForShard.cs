@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
-namespace Raven.Server.Documents.Subscriptions;
+namespace Raven.Server.Documents.Subscriptions.Sharding;
 
 public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
 {
@@ -57,7 +57,7 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
         return base.RecordBatchInternal(command);
     }
 
-    
+
     public bool HasDocumentFromResend()
     {
         using (_server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))

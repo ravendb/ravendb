@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                         return;
                     }
                     
-                    resendItems = SubscriptionConnectionsStateBase.GetResendItems(context, RequestHandler.DatabaseName, subscriptionState.SubscriptionId);
+                    resendItems = AbstractSubscriptionConnectionsStateBase.GetResendItems(context, RequestHandler.DatabaseName, subscriptionState.SubscriptionId);
                     activeBatches = GetActiveBatches(context, subscriptionState);
 
                     if (activeBatches == null)

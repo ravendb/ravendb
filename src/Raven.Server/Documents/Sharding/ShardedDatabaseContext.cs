@@ -75,7 +75,10 @@ namespace Raven.Server.Documents.Sharding
             Cluster = new ShardedCluster(this);
             Changes = new ShardedDocumentsChanges(this);
             Operations = new ShardedOperations(this);
-            Subscriptions = new ShardedSubscriptions(this, serverStore);
+
+            SubscriptionsStorage = new ShardedSubscriptions(this, serverStore);
+            SubscriptionsStorage.Initialize(DatabaseName);
+
             QueryRunner = new ShardedQueryRunner();
             Smuggler = new ShardedSmugglerContext(this, serverStore);
 
@@ -107,7 +110,7 @@ namespace Raven.Server.Documents.Sharding
 
             Indexes.Update(record, index);
 
-            Subscriptions.Update(record);
+            SubscriptionsStorage.Update(record);
 
             Interlocked.Exchange(ref _record, record);
 
@@ -166,7 +169,7 @@ namespace Raven.Server.Documents.Sharding
 
             exceptionAggregator.Execute(() => AllOrchestratorNodesExecutor?.Dispose());
 
-            foreach (var connection in Subscriptions.SubscriptionsConnectionsState)
+            foreach (var connection in SubscriptionsStorage.Subscriptions)
                 exceptionAggregator.Execute(() => connection.Value.Dispose());
 
             exceptionAggregator.Execute(() => _databaseShutdown.Dispose());

@@ -148,7 +148,7 @@ namespace Raven.Server.Documents
                 IndexStore = CreateIndexStore(serverStore);
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
-                SubscriptionStorage = new SubscriptionStorage(this, serverStore);
+                SubscriptionStorage = CreateSubscriptionStorage(serverStore);
                 Metrics = new MetricCounters();
                 MetricCacher = new DatabaseMetricCacher(this);
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
@@ -183,6 +183,11 @@ namespace Raven.Server.Documents
         protected virtual IndexStore CreateIndexStore(ServerStore serverStore)
         {
             return new IndexStore(this, serverStore);
+        }
+
+        protected virtual SubscriptionStorage CreateSubscriptionStorage(ServerStore serverStore)
+        {
+            return new SubscriptionStorage(this, serverStore);
         }
 
         protected virtual byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, Name);

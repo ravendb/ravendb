@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
                 }
 
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-19079 Make this identical to the normal EP");
-                if (RequestHandler.DatabaseContext.Subscriptions.SubscriptionsConnectionsState.TryRemove(subscriptionId.Value, out var state))
+                if (RequestHandler.DatabaseContext.SubscriptionsStorage.Subscriptions.TryRemove(subscriptionId.Value, out var state))
                 {
                     state.Dispose();
                 }
