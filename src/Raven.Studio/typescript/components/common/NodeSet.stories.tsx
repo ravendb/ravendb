@@ -32,61 +32,71 @@ export function NodeSets() {
                 <NodeSetLabel color="warning" icon="orchestrator">
                     Orchestrators
                 </NodeSetLabel>
-                <NodeSetItem icon="zombie" color="danger">
-                    A
-                </NodeSetItem>
-                <NodeSetItem icon="node" color="node">
-                    B
-                </NodeSetItem>
+                <NodeSetList>
+                    <NodeSetItem icon="zombie" color="danger">
+                        A
+                    </NodeSetItem>
+                    <NodeSetItem icon="node" color="node">
+                        B
+                    </NodeSetItem>
+                </NodeSetList>
             </NodeSet>
             <HrHeader>Shards</HrHeader>
             <NodeSet color="shard" className="m-1">
                 <NodeSetLabel color="shard" icon="shard">
                     #1
                 </NodeSetLabel>
-                <NodeSetItem icon="node" color="node">
-                    A
-                </NodeSetItem>
-                <NodeSetItem icon="node" color="node">
-                    B
-                </NodeSetItem>
+                <NodeSetList>
+                    <NodeSetItem icon="node" color="node">
+                        A
+                    </NodeSetItem>
+                    <NodeSetItem icon="node" color="node">
+                        B
+                    </NodeSetItem>
+                </NodeSetList>
             </NodeSet>
             <NodeSet color="shard" className="m-1">
                 <NodeSetLabel color="shard" icon="shard">
                     #2
                 </NodeSetLabel>
-                <NodeSetItem icon="node" color="node">
-                    A
-                </NodeSetItem>
-                <NodeSetItem icon="node" color="node">
-                    B
-                </NodeSetItem>
-                <NodeSetItem icon="node" color="node">
-                    DEV
-                </NodeSetItem>
+                <NodeSetList>
+                    <NodeSetItem icon="node" color="node">
+                        A
+                    </NodeSetItem>
+                    <NodeSetItem icon="node" color="node">
+                        B
+                    </NodeSetItem>
+                    <NodeSetItem icon="node" color="node">
+                        DEV
+                    </NodeSetItem>
+                </NodeSetList>
             </NodeSet>
             <HrHeader>Nodes</HrHeader>
             <NodeSet color="node" className="m-1">
                 <NodeSetLabel color="node" icon="node">
                     PROD
                 </NodeSetLabel>
-                <NodeSetItem icon="shard" color="shard">
-                    #1
-                </NodeSetItem>
-                <NodeSetItem icon="shard" color="shard">
-                    #2
-                </NodeSetItem>
+                <NodeSetList>
+                    <NodeSetItem icon="shard" color="shard">
+                        #1
+                    </NodeSetItem>
+                    <NodeSetItem icon="shard" color="shard">
+                        #2
+                    </NodeSetItem>
+                </NodeSetList>
             </NodeSet>
             <NodeSet color="node" className="m-1">
                 <NodeSetLabel color="node" icon="node">
                     DEV
                 </NodeSetLabel>
-                <NodeSetItem icon="shard" color="shard">
-                    #2
-                </NodeSetItem>
-                <NodeSetItem icon="shard" color="shard">
-                    #3
-                </NodeSetItem>
+                <NodeSetList>
+                    <NodeSetItem icon="shard" color="shard">
+                        #2
+                    </NodeSetItem>
+                    <NodeSetItem icon="shard" color="shard">
+                        #3
+                    </NodeSetItem>
+                </NodeSetList>
             </NodeSet>
         </div>
     );

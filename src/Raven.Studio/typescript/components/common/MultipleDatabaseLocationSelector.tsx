@@ -1,17 +1,20 @@
 ﻿import React, { useState } from "react";
-import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetListCard } from "./NodeSet";
+import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetListCard, NodeSetList } from "./NodeSet";
 import { Checkbox } from "./Checkbox";
 import { CheckboxTriple } from "components/common/CheckboxTriple";
-import { Label } from "reactstrap";
+import { Card, Label } from "reactstrap";
+import { Icon } from "./Icon";
+import classNames from "classnames";
 
 interface MultipleDatabaseLocationSelectorProps {
     locations: databaseLocationSpecifier[];
     selectedLocations: databaseLocationSpecifier[];
     setSelectedLocations: React.Dispatch<React.SetStateAction<databaseLocationSpecifier[]>>;
+    className?: string;
 }
 
 export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocationSelectorProps) {
-    const { locations, selectedLocations, setSelectedLocations } = props;
+    const { locations, selectedLocations, setSelectedLocations, className } = props;
 
     const [uniqId] = useState(() => _.uniqueId("location-selector-"));
 
@@ -68,53 +71,99 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
     const uniqueNodeTags = [...new Set(locations.map((x) => x.nodeTag))];
 
     return (
-        <div className="bs5">
-            <CheckboxTriple onChanged={toggleAllNodes} state={nodesSelectionState()} title="Select all or none" />
-
-            {uniqueNodeTags.map((nodeTag, idx) => {
-                const nodeId = uniqId + idx;
-                return (
-                    <div key={nodeId}>
-                        <NodeSet color="shard" className="my-1">
-                            <Label className="m-0 p-1 d-flex flex-column align-items-center">
-                                <NodeSetLabel icon="node" color="node">
-                                    {nodeTag}
-                                </NodeSetLabel>
-                                <Checkbox
-                                    toggleSelection={() => toggleNode(nodeTag)}
-                                    selected={isNodeSelected(nodeTag)}
-                                />
-                            </Label>
-
-                            <NodeSetListCard>
-                                {locations
-                                    .filter((x) => x.nodeTag === nodeTag)
-                                    .map((location) => {
-                                        if (location.shardNumber == null) {
-                                            return null;
-                                        }
-
-                                        return (
-                                            <Label
-                                                key={nodeId + "-shard-" + location.shardNumber}
-                                                className="m-0 p-1 d-flex flex-column align-items-center"
-                                            >
-                                                <NodeSetItem color="shard" icon="shard">
-                                                    {location.shardNumber}
-                                                </NodeSetItem>
+        <>
+            {locations[0].shardNumber == null ? (
+                <>
+                    <NodeSet className={classNames(className)}>
+                        <NodeSetLabel>
+                            <CheckboxTriple
+                                onChanged={toggleAllNodes}
+                                state={nodesSelectionState()}
+                                title="Select all or none"
+                            />
+                        </NodeSetLabel>
+                        <NodeSetList>
+                            {uniqueNodeTags.map((nodeTag, idx) => {
+                                const nodeId = uniqId + idx;
+                                return (
+                                    <NodeSetItem key={nodeId}>
+                                        <Label htmlFor={nodeId}>
+                                            <Icon icon="node" color="node" />
+                                            {nodeTag}
+                                            <div className="d-flex justify-content-center">
                                                 <Checkbox
-                                                    selected={isShardSelected(location)}
-                                                    toggleSelection={() => toggleShard(location)}
-                                                    color="shard"
+                                                    id={nodeId}
+                                                    toggleSelection={() => toggleNode(nodeTag)}
+                                                    selected={isNodeSelected(nodeTag)}
                                                 />
+                                            </div>
+                                        </Label>
+                                    </NodeSetItem>
+                                );
+                            })}
+                        </NodeSetList>
+                    </NodeSet>
+                </>
+            ) : (
+                <>
+                    <CheckboxTriple
+                        onChanged={toggleAllNodes}
+                        state={nodesSelectionState()}
+                        title="Select all or none"
+                    />
+
+                    {uniqueNodeTags.map((nodeTag, idx) => {
+                        const nodeId = uniqId + idx;
+                        return (
+                            <div key={nodeId}>
+                                <NodeSet color="shard" className={classNames(className, "mt-1")}>
+                                    <Card>
+                                        <NodeSetLabel>
+                                            <Label htmlFor={nodeId}>
+                                                <Icon icon="node" color="node" />
+                                                {nodeTag}
+                                                <div className="d-flex justify-content-center">
+                                                    <Checkbox
+                                                        id={nodeId}
+                                                        toggleSelection={() => toggleNode(nodeTag)}
+                                                        selected={isNodeSelected(nodeTag)}
+                                                    />
+                                                </div>
                                             </Label>
-                                        );
-                                    })}
-                            </NodeSetListCard>
-                        </NodeSet>
-                    </div>
-                );
-            })}
-        </div>
+                                        </NodeSetLabel>
+                                    </Card>
+                                    <NodeSetList>
+                                        {locations
+                                            .filter((x) => x.nodeTag === nodeTag)
+                                            .map((location) => {
+                                                if (location.shardNumber == null) {
+                                                    return null;
+                                                }
+
+                                                return (
+                                                    <NodeSetItem key={nodeId + "-shard-" + location.shardNumber}>
+                                                        <Label htmlFor={nodeId + "-shard-" + location.shardNumber}>
+                                                            <Icon icon="shard" color="shard" />
+                                                            {location.shardNumber}
+                                                            <div className="d-flex justify-content-center">
+                                                                <Checkbox
+                                                                    selected={isShardSelected(location)}
+                                                                    toggleSelection={() => toggleShard(location)}
+                                                                    color="shard"
+                                                                    id={nodeId + "-shard-" + location.shardNumber}
+                                                                />
+                                                            </div>
+                                                        </Label>
+                                                    </NodeSetItem>
+                                                );
+                                            })}
+                                    </NodeSetList>
+                                </NodeSet>
+                            </div>
+                        );
+                    })}
+                </>
+            )}
+        </>
     );
 }
