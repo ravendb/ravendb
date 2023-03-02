@@ -107,11 +107,7 @@ namespace Raven.Server.Rachis
 
             _leaderLongRunningWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null,
-                    new ThreadNames.ThreadInfo
-                    {
-                        FullName = $"Consensus Leader - {_engine.Tag} in term {Term}", 
-                        Details = new ThreadNames.ThreadDetails.ConsensusLeader(_engine.Tag, Term)
-                    });
+                    ThreadNames.ForConsensusLeader($"Consensus Leader - {_engine.Tag} in term {Term}", _engine.Tag, Term));
         }
 
         private int _steppedDown;

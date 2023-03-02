@@ -84,11 +84,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     // we don't want to crash the process so we don't propagate this exception.
                 }
             }
-                , null, new ThreadNames.ThreadInfo
-                {
-                    FullName = _name,
-                    Details = new ThreadNames.ThreadDetails.HeartbeatsWorker(_leader, _term)
-                });
+                , null, ThreadNames.ForHeartbeatsWorker(_name, _leader, _term));
         }
 
         public void CollectDatabasesStatusReport()

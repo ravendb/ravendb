@@ -71,11 +71,7 @@ namespace Raven.Server.Rachis
         public void Start()
         {
             _candidateAmbassadorLongRunningWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, new ThreadNames.ThreadInfo
-                {
-                    FullName = $"Candidate Ambassador for {_engine.Tag} > {_tag}",
-                    Details = new ThreadNames.ThreadDetails.CandidateAmbassador(_engine.Tag, _tag)
-                });
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ThreadNames.ForCandidateAmbassador($"Candidate Ambassador for {_engine.Tag} > {_tag}", _engine.Tag, _tag));
         }
 
         public void Dispose()

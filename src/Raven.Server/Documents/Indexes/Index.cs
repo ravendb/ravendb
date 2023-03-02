@@ -906,11 +906,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     ReportUnexpectedIndexingError(e);
                 }
-            }, null, new ThreadNames.ThreadInfo
-            {
-                FullName = IndexingThreadName,
-                Details = new ThreadNames.ThreadDetails.Index(Name, _indexStorage.DocumentDatabase.Name)
-            });
+            }, null, ThreadNames.ForIndex(IndexingThreadName, Name, _indexStorage.DocumentDatabase.Name));
 
             RollIfNeeded();
         }

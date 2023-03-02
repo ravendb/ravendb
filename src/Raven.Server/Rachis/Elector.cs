@@ -26,11 +26,7 @@ namespace Raven.Server.Rachis
         {
             _engine.AppendElector(this);
 
-            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, new ThreadNames.ThreadInfo
-            {
-                FullName = $"Elector for candidate {_connection.Source}",
-                Details = new ThreadNames.ThreadDetails.Elector(_connection.Source)
-            });
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, ThreadNames.ForElector($"Elector for candidate {_connection.Source}", _connection.Source));
         }
 
         public override string ToString()

@@ -91,11 +91,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     // nothing we can do here
                 }
-            }, null, new ThreadNames.ThreadInfo
-            {
-                FullName = $"Cluster observer for term {_term}",
-                Details = new ThreadNames.ThreadDetails.ClusterObserver(_term)
-            });
+            }, null, ThreadNames.ForClusterObserver($"Cluster observer for term {_term}", _term));
         }
 
         public bool Suspended = false; // don't really care about concurrency here
