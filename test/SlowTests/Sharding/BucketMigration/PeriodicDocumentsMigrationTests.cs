@@ -47,7 +47,7 @@ namespace SlowTests.Sharding.BucketMigration
                     session.SaveChanges();
                 }
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocuments();
+                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -122,7 +122,7 @@ namespace SlowTests.Sharding.BucketMigration
                 session.SaveChanges();
             }
 
-            await db.PeriodicDocumentsMigrator.ExecuteMoveDocuments();
+            await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
 
             Assert.True(WaitForValue(() =>
             {
@@ -178,7 +178,7 @@ namespace SlowTests.Sharding.BucketMigration
                     session.SaveChanges();
                 }
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocuments();
+                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -220,7 +220,7 @@ namespace SlowTests.Sharding.BucketMigration
                 session.SaveChanges();
             }
 
-            await db.PeriodicDocumentsMigrator.ExecuteMoveDocuments();
+            await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
 
             var id = await store.Subscriptions.CreateAsync<User>();
             var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -287,7 +287,7 @@ namespace SlowTests.Sharding.BucketMigration
                     session.SaveChanges();
                 }
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocuments();
+                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -338,7 +338,7 @@ namespace SlowTests.Sharding.BucketMigration
                     session.SaveChanges();
                 }
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocuments();
+                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -389,7 +389,7 @@ namespace SlowTests.Sharding.BucketMigration
                 await SetupReplicationAsync(dest, source);
                 await EnsureReplicatingAsync(dest, source);
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocuments();
+                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -461,7 +461,7 @@ namespace SlowTests.Sharding.BucketMigration
                 b1.Mend();
                 b2.Mend();
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocuments();
+                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {

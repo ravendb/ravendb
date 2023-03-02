@@ -23,10 +23,10 @@ namespace Raven.Server.Documents.Sharding.Background
             if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
                 return;
 
-            await ExecuteMoveDocuments();
+            await ExecuteMoveDocumentsAsync();
         }
 
-        internal async Task ExecuteMoveDocuments()
+        internal async ValueTask ExecuteMoveDocumentsAsync()
         {
             try
             {
@@ -67,12 +67,7 @@ namespace Raven.Server.Documents.Sharding.Background
                 }
 
                 if (found)
-                    await MoveDocumentsToShard(bucket, moveToShard);
-            }
-            catch (OperationCanceledException)
-            {
-                // this will stop processing
-                throw;
+                    await MoveDocumentsToShardAsync(bucket, moveToShard);
             }
             catch (Exception e)
             {
@@ -83,7 +78,7 @@ namespace Raven.Server.Documents.Sharding.Background
             }
         }
 
-        private async Task MoveDocumentsToShard(int bucket, int moveToShard)
+        private async ValueTask MoveDocumentsToShardAsync(int bucket, int moveToShard)
         {
             var cmd = new StartBucketMigrationCommand(bucket, _database.ShardNumber, moveToShard, _database.ShardedDatabaseName,
                 $"{Guid.NewGuid()}/{bucket}");
