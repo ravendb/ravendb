@@ -201,7 +201,7 @@ public unsafe struct Bm25Relevance : IDisposable
         static void PostingListCalculateScoreDynamically(ref Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
         {
             bm25._currentId = bm25._bufferCapacity;
-            while (bm25._setIterator.Fill(bm25.Matches, out var read, pruneGreaterThanOptimization: matches[^1]) && read > 0)
+            while (bm25._setIterator.Fill(bm25.Matches, out var read, pruneGreaterThanOptimization: EntryIdEncodings.PrepareIdForPruneInPostingList(matches[^1])) && read > 0)
             {
                 bm25._currentId = read;
                 CalculateScoreFromMemory(ref bm25, matches, scores, boostFactor);
