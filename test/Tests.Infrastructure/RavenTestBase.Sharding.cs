@@ -51,7 +51,7 @@ public partial class RavenTestBase
             {
                 r.Sharding ??= new ShardingConfiguration();
 
-                if (shards == null)
+                if (shards == null && r.Sharding.Shards == null)
                 {
                     r.Sharding.Shards = new Dictionary<int, DatabaseTopology>()
                     {
@@ -59,11 +59,11 @@ public partial class RavenTestBase
                         {1, new DatabaseTopology()},
                         {2, new DatabaseTopology()},
                     };
-                }
-                else
+                } else if (shards != null)
                 {
                     r.Sharding.Shards = shards;
                 }
+
             };
             return _parent.GetDocumentStore(shardedOptions, caller);
         }
