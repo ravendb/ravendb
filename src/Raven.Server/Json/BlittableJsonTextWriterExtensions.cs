@@ -1104,8 +1104,8 @@ namespace Raven.Server.Json
             writer.WriteString(indexDefinition.Type.ToString());
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(indexDefinition.Certificate));
-            writer.WriteString(indexDefinition.Certificate);
+            writer.WritePropertyName(nameof(indexDefinition.CertificateThumbprint));
+            writer.WriteString(indexDefinition.CertificateThumbprint);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.LockMode));

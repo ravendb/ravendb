@@ -76,11 +76,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                     
                     var clientCert = GetCurrentCertificate();
 
-                    indexDefinition.Certificate = clientCert?.FriendlyName;
+                    indexDefinition.CertificateThumbprint = clientCert?.Thumbprint;
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-
                         var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
                         auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {source} at {DateTime.UtcNow}");
                     }

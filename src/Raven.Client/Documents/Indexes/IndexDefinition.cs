@@ -358,7 +358,7 @@ namespace Raven.Client.Documents.Indexes
             internal set => _indexType = value;
         }
         
-        public string Certificate { get; set; }
+        public string CertificateThumbprint { get; set; }
 
         /// <summary>
         /// Remove the default values that we don't actually need
@@ -518,7 +518,7 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
-            definition.Certificate = Certificate;
+            definition.CertificateThumbprint = CertificateThumbprint;
             definition.LockMode = LockMode;
             definition.Fields = fields;
             definition.Name = Name;
