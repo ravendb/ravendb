@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,9 +10,12 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
@@ -20,6 +24,7 @@ using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -225,18 +230,73 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     {
         var rewriteForPaging = Query.Offset is > 0;
         var rewriteForProjectionFromMapReduceIndex = true;
-        var rewriteForProjectionFromAutoMapReduceIndex = true;
+        var rewriteForProjectionFromAutoMapReduceQuery = true;
 
         var query = Query.Metadata.Query;
         var isProjectionQuery = query.Select?.Count > 0 ||
                                 query.SelectFunctionBody.FunctionText != null;
 
-        var rewriteForFilterForMapReduceOrAutoMapReduceIndex = query.Filter != null && (IsMapReduceIndex || IsAutoMapReduceQuery);
+        var rewriteForFilterForMapReduceIndexOrAutoMapReduceQuery = false;
+        var rewriteForLimitWithOrderByInMapReduce = false;
+        List<string> setOrderByFieldsForMapReduce = null;
+
+        if (IsMapReduceIndex || IsAutoMapReduceQuery)
+        {
+            rewriteForFilterForMapReduceIndexOrAutoMapReduceQuery = query.Filter != null;
+
+            if (query.Limit != null)
+            {
+                List<string> groupByFields;
+
+                if (IsAutoMapReduceQuery)
+                {
+                    groupByFields = Query.Metadata.GroupBy.Select(x => x.Name.Value).ToList();
+                }
+                else
+                {
+                    Debug.Assert(IsMapReduceIndex);
+                    var index = RequestHandler.DatabaseContext.Indexes.GetIndex(Query.Metadata.IndexName);
+                    if (index == null)
+                        IndexDoesNotExistException.ThrowFor(Query.Metadata.IndexName);
+
+                    if (index.Type.IsAutoMapReduce())
+                    {
+                        var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)index.Definition;
+                        groupByFields = autoMapReduceIndexDefinition.GroupByFields.Keys.ToList();
+                    }
+                    else
+                    {
+                        if (index.Type.IsStaticMapReduce() == false)
+                            throw new InvalidOperationException($"Index '{Query.Metadata.IndexName}' is not a map-reduce index");
+
+                        var compiled = ((StaticIndexInformationHolder)index).Compiled;
+                        groupByFields = compiled.GroupByFields.Select(x => x.Name).ToList();
+                    }
+                }
+
+                if (query.OrderBy != null)
+                {
+                    // we have a limit and order by fields
+                    // we need to get all results if the order by isn't done on the group by fields
+
+                    var orderByFields = Query.Metadata.OrderBy.Select(x => x.Name.Value).ToList();
+                    rewriteForLimitWithOrderByInMapReduce = groupByFields.Count != orderByFields.Count ||
+                                                            groupByFields.Intersect(orderByFields).Count() != orderByFields.Count;
+                }
+                else
+                {
+                    // we have a limit but we didn't set the order by fields, this can produce wrong results
+                    // we are going to order by the group by fields
+
+                    setOrderByFieldsForMapReduce = groupByFields;
+                }
+            }
+        }
 
         if (isProjectionQuery == false)
         {
             rewriteForProjectionFromMapReduceIndex = false;
-            rewriteForProjectionFromAutoMapReduceIndex = false;
+            rewriteForProjectionFromAutoMapReduceQuery = false;
         }
         else
         {
@@ -244,7 +304,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 rewriteForProjectionFromMapReduceIndex = false;
 
             if (IsAutoMapReduceQuery == false)
-                rewriteForProjectionFromAutoMapReduceIndex = false;
+                rewriteForProjectionFromAutoMapReduceQuery = false;
             else
             {
                 if (query.Select?.Count > 0)
@@ -268,18 +328,44 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         if (rewriteForPaging == false 
             && rewriteForProjectionFromMapReduceIndex == false 
-            && rewriteForProjectionFromAutoMapReduceIndex == false
-            && rewriteForFilterForMapReduceOrAutoMapReduceIndex == false)
+            && rewriteForProjectionFromAutoMapReduceQuery == false
+            && rewriteForFilterForMapReduceIndexOrAutoMapReduceQuery == false
+            && rewriteForLimitWithOrderByInMapReduce == false
+            && setOrderByFieldsForMapReduce == null)
             return queryTemplate;
 
         var clone = Query.Metadata.Query.ShallowCopy();
 
         DynamicJsonValue modifications = new(queryTemplate);
 
-        if (rewriteForFilterForMapReduceOrAutoMapReduceIndex)
+        if (rewriteForFilterForMapReduceIndexOrAutoMapReduceQuery)
         {
             clone.Filter = null;
             clone.FilterLimit = null;
+        }
+
+        if (rewriteForLimitWithOrderByInMapReduce)
+        {
+            clone.Offset = null;
+            clone.Limit = null;
+            clone.OrderBy = null;
+
+            modifications.Remove(nameof(IndexQueryServerSide.Start));
+            modifications.Remove(nameof(IndexQueryServerSide.PageSize));
+
+            rewriteForPaging = false;
+        }
+        else if (setOrderByFieldsForMapReduce != null)
+        {
+            clone.OrderBy = new List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)>();
+            Query.Metadata.OrderBy = new OrderByField[setOrderByFieldsForMapReduce.Count];
+
+            for (var i = 0; i < setOrderByFieldsForMapReduce.Count; i++)
+            {
+                var field = setOrderByFieldsForMapReduce[i];
+                clone.OrderBy.Add((new FieldExpression(new List<StringSegment> { field }), OrderByFieldType.Implicit, Ascending: true));
+                Query.Metadata.OrderBy[i] = new OrderByField(new QueryFieldName(field, isQuoted: false), OrderByFieldType.Implicit, ascending: true);
+            }
         }
 
         if (rewriteForPaging)
@@ -329,14 +415,45 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             clone.SelectFunctionBody = default;
             clone.DeclaredFunctions = null;
         }
-        else if (rewriteForProjectionFromAutoMapReduceIndex)
+        else if (rewriteForProjectionFromAutoMapReduceQuery)
         {
+            var missingGroupByFieldsFromProjection = Query.Metadata.GroupBy.Select(x => x.Name.Value).ToHashSet();
+            var groupByFieldsCount = missingGroupByFieldsFromProjection.Count;
+            var hasKeyField = false;
+
             for (int i = 0; i < clone.Select.Count; i++)
             {
+                var expression = clone.Select[i].Expression;
+                switch (expression)
+                {
+                    case FieldExpression fe:
+                        missingGroupByFieldsFromProjection.Remove(fe.FieldValue);
+                        break;
+                    case MethodExpression me:
+                    {
+                        if (me.ToString() == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+                            hasKeyField = true;
+                        break;
+                    }
+                }
+
                 if (clone.Select[i].Alias is null)
                     continue;
 
-                clone.Select[i] = (clone.Select[i].Expression, null);
+                clone.Select[i] = (expression, null);
+            }
+
+            if (hasKeyField == false || groupByFieldsCount != 1)
+            {
+                // we must have the group by fields in order for the re-reduce to work
+                // for example: select sum("Count"), key() as Name
+                // if we have more than 1 reduce key, it will returned as a compound value
+                // which isn't good for us because we need the actual fields in order to re-reduce
+                // the only case when we don't need this is when we have only 1 reduce key
+                foreach (var field in missingGroupByFieldsFromProjection)
+                {
+                    clone.Select.Add((new FieldExpression(new List<StringSegment> { field }), null));
+                }
             }
         }
 
