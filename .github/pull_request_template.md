@@ -57,5 +57,5 @@ _Please delete below the options that are not relevant_
 
 ### UI work
 
-- It requires further work in the Studio
+- It requires further work in the Studio. Please mark the issue on YouTrack using `Studio Required` tag.
 - No UI work is needed
