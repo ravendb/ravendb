@@ -177,7 +177,7 @@ namespace SlowTests.Server.Documents.Indexing
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
                 Assert.Equal(FieldIndexing.Search, index.Fields["Name"].Indexing);
-                RavenTestHelper.AssertEqualRespectingNewLines(@"docs.Users.Select(doc => new { Age = doc.Age, Email = doc.Email, Name = doc.Name })", index.Maps.First());
+                Assert.Equal(@"docs.Users.Select(doc => new { Age = doc.Age, Email = doc.Email, Name = doc.Name })", index.Maps.First());
             }
         }
 
@@ -301,7 +301,6 @@ select new
     Email = doc.Email,
     Name = doc.Name
 }", index.Maps.First());
-
             }
         }
 

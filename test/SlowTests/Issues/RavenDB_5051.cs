@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                     ? "from c in docs.Companies\r\nselect new\r\n{\n    Name = c.Name\r\n}"
                     : "from c in docs.Companies\r\nselect new\r\n{\r\n    Name = c.Name\r\n}";
 
-                Assert.Equal(expected, result.Expression);
+                RavenTestHelper.AssertEqualRespectingNewLines(expected, result.Expression);
             }
         }
 
