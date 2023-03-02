@@ -22,6 +22,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public string Source { get; set; }
 
+        public string CertificateThumbprint { get; set; }
+
         public int RevisionsToKeep { get; set; }
 
         public PutIndexesCommand()
@@ -45,7 +47,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (Static != null)
             {
                 foreach (var definition in Static)
-                    record.AddIndex(definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultStaticDeploymentMode ?? IndexDeploymentMode.Parallel);
+                    record.AddIndex(definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultStaticDeploymentMode ?? IndexDeploymentMode.Parallel, CertificateThumbprint);
             }
 
             if (Auto != null)
