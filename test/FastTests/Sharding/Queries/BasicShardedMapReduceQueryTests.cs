@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -147,6 +148,398 @@ select sum(""Count"") as Sum, key() as Name")
 
                     Assert.Equal(0, queryResult.Count);
                     Assert.Equal(1, stats.SkippedResults);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Map_Reduce_With_Limit()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+                store.ExecuteIndex(new UserMapReduceWithTwoReduceKeys());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jane", LastName = "Doe", Count = 10 }, "users/1");
+                    session.Store(new User { Name = "Jane", LastName = "Doe", Count = 10 }, "users/2");
+                    session.Store(new User { Name = "Grisha", LastName = "Kotler", Count = 21 }, "users/3$3");
+                    session.Store(new User { Name = "Jane", LastName = "Doe", Count = 10 }, "users/4$3");
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal(21, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .Skip(1)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(30, queryResult[0].Sum);
+
+                    var queryResult2 = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
+                            .Take(1)
+                            .ToList();
+
+                    Assert.Equal(1, queryResult2.Count);
+                    Assert.Equal("Grisha", queryResult2[0].Name);
+                    Assert.Equal("Kotler", queryResult2[0].LastName);
+                    Assert.Equal(21, queryResult2[0].Sum);
+
+                    queryResult2 = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
+                        .Skip(1)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal("Doe", queryResult2[0].LastName);
+                    Assert.Equal(30, queryResult[0].Sum);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Auto_Map_Reduce_With_Limit()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jane", LastName = "Doe", Count = 10 }, "users/1");
+                    session.Store(new User { Name = "Jane", LastName = "Doe", Count = 10 }, "users/2");
+                    session.Store(new User { Name = "Grisha", LastName = "Kotler", Count = 21 }, "users/3$3");
+                    session.Store(new User { Name = "Jane", LastName = "Doe", Count = 10 }, "users/4$3");
+                    session.SaveChanges();
+
+                    var queryResult = session.Advanced.RawQuery<UserMapReduce.Result>(
+                            @"
+from Users
+group by Name
+select sum(""Count"") as Sum, key() as Name
+limit 1")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal(21, queryResult[0].Sum);
+
+                    queryResult = session.Advanced.RawQuery<UserMapReduce.Result>(
+                            @"
+from Users
+group by Name
+select sum(""Count"") as Sum, key() as Name
+limit 1, 1")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(30, queryResult[0].Sum);
+
+                    var queryResult2 = session.Advanced.RawQuery<UserMapReduceWithTwoReduceKeys.Result>(
+                            @"
+from Users
+group by Name
+select sum(""Count"") as Sum, Name, LastName
+limit 1")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult2.Count);
+                    Assert.Equal("Grisha", queryResult2[0].Name);
+                    Assert.Equal(21, queryResult2[0].Sum);
+
+                    queryResult2 = session.Advanced.RawQuery<UserMapReduceWithTwoReduceKeys.Result>(
+                            @"
+from Users
+group by Name
+select sum(""Count"") as Sum, Name, LastName
+limit 1, 1")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult2.Count);
+                    Assert.Equal("Jane", queryResult2[0].Name);
+                    Assert.Equal(30, queryResult2[0].Sum);
+
+                    var queryResult3 = session.Advanced.RawQuery<UserMapReduceWithTwoReduceKeys.CompoundResult>(
+                            @"
+from Users
+group by Name, LastName
+select sum(""Count"") as Sum, key() as Name
+limit 1")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult3.Count);
+
+                    var properties = (IDictionary<string, object>)queryResult3[0].Name;
+                    Assert.Equal("Grisha", properties[nameof(UserMapReduceWithTwoReduceKeys.Result.Name)]);
+                    Assert.Equal("Kotler", properties[nameof(UserMapReduceWithTwoReduceKeys.Result.LastName)]);
+                    Assert.Equal(21, queryResult3[0].Sum);
+
+                    queryResult3 = session.Advanced.RawQuery<UserMapReduceWithTwoReduceKeys.CompoundResult>(
+                            @"
+from Users
+group by Name, LastName
+select sum(""Count"") as Sum, key() as Name
+limit 1, 1")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult3.Count);
+
+                    properties = (IDictionary<string, object>)queryResult3[0].Name;
+                    Assert.Equal("Jane", properties[nameof(UserMapReduceWithTwoReduceKeys.Result.Name)]);
+                    Assert.Equal("Doe", properties[nameof(UserMapReduceWithTwoReduceKeys.Result.LastName)]);
+                    Assert.Equal(30, queryResult3[0].Sum);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Map_Reduce_With_Order_By_On_Non_Reduce_Key_With_Take()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/1");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/2");
+                    session.Store(new User { Name = "Grisha", Count = 21 }, "users/3$3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/4$3");
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .OrderByDescending(x => x.Sum)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(30, queryResult[0].Sum);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Auto_Map_Reduce_With_Order_By_On_Non_Reduce_Key_With_Take()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/1");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/2");
+                    session.Store(new User { Name = "Grisha", Count = 21 }, "users/3$3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/4$3");
+                    session.SaveChanges();
+
+                    var queryResult = session.Advanced.RawQuery<UserMapReduce.Result>(
+                            @"
+from Users
+group by Name
+order by Count as long desc
+select sum(""Count"") as Sum, key() as Name
+limit 1")
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(30, queryResult[0].Sum);
+
+                    var queryResult2 = session.Advanced.RawQuery<UserMapReduce.Result>(
+                            $@"
+from index ""{stats.IndexName}"" as o
+order by o.Count as long desc
+select {{
+    Name: o.Name,
+    Sum: o.Count
+}}
+limit 1
+")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult2.Count);
+                    Assert.Equal("Jane", queryResult2[0].Name);
+                    Assert.Equal(30, queryResult2[0].Sum);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Map_Reduce_With_Order_By_On_Non_Reduce_Key_With_Skip_And_Take()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/1");
+                    session.Store(new User { Name = "Grisha", Count = 11 }, "users/2");
+                    session.Store(new User { Name = "Grisha", Count = 10 }, "users/3$3");
+                    session.Store(new User { Name = "A", Count = 12 }, "users/4$3");
+                    session.Store(new User { Name = "B", Count = 12 }, "users/5$3");
+                    session.Store(new User { Name = "C", Count = 12 }, "users/6$3");
+                    session.Store(new User { Name = "D", Count = 12 }, "users/7$3");
+                    session.Store(new User { Name = "E", Count = 12 }, "users/8$3");
+                    session.Store(new User { Name = "F", Count = 12 }, "users/9$3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/10$3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/11$3");
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .OrderByDescending(x => x.Sum)
+                        .Skip(1)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal(21, queryResult[0].Sum);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Auto_Map_Reduce_With_Order_By_On_Non_Reduce_Key_With_Skip_And_Take()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/1");
+                    session.Store(new User { Name = "Grisha", Count = 11 }, "users/2");
+                    session.Store(new User { Name = "Grisha", Count = 10 }, "users/3$3");
+                    session.Store(new User { Name = "A", Count = 12 }, "users/4$3");
+                    session.Store(new User { Name = "B", Count = 12 }, "users/5$3");
+                    session.Store(new User { Name = "C", Count = 12 }, "users/6$3");
+                    session.Store(new User { Name = "D", Count = 12 }, "users/7$3");
+                    session.Store(new User { Name = "E", Count = 12 }, "users/8$3");
+                    session.Store(new User { Name = "F", Count = 12 }, "users/9$3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/10$3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/11$3");
+                    session.SaveChanges();
+
+                    var queryResult = session.Advanced.RawQuery<UserMapReduce.Result>(
+                            @"
+from Users
+group by Name
+order by Count as long desc
+select sum(""Count"") as Sum, key() as Name
+limit 1, 1")
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal(21, queryResult[0].Sum);
+
+                    var queryResult2 = session.Advanced.RawQuery<UserMapReduce.Result>(
+                            $@"
+from index ""{stats.IndexName}"" as o
+order by o.Count as long desc
+select {{
+    Name: o.Name,
+    Sum: o.Count
+}}
+limit 1, 1
+")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult2.Count);
+                    Assert.Equal("Grisha", queryResult2[0].Name);
+                    Assert.Equal(21, queryResult2[0].Sum);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Map_Reduce_With_Order_By_On_Reduce_Key_With_Take()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/1");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/2");
+                    session.Store(new User { Name = "Grisha", Count = 21 }, "users/3$3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/4$3");
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .OrderByDescending(x => x.Name)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(30, queryResult[0].Sum);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Auto_Map_Reduce_With_Order_By_On_Reduce_Key_With_Take()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/1");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/2");
+                    session.Store(new User { Name = "Grisha", Count = 21 }, "users/3$3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/4$3");
+                    session.SaveChanges();
+
+                    var queryResult = session.Advanced.RawQuery<UserMapReduce.Result>(
+                            @"
+from Users
+group by Name
+order by Name desc
+select sum(""Count"") as Sum, key() as Name
+limit 1")
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(30, queryResult[0].Sum);
+
+                    WaitForUserToContinueTheTest(store);
+                    var queryResult2 = session.Advanced.RawQuery<UserMapReduce.Result>(
+                    $@"
+from index ""{stats.IndexName}"" as o
+order by o.Name desc
+select {{
+    Name: o.Name,
+    Sum: o.Count
+}}
+limit 1
+")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult2.Count);
+                    Assert.Equal("Jane", queryResult2[0].Name);
+                    Assert.Equal(30, queryResult2[0].Sum);
                 }
             }
         }
@@ -469,6 +862,45 @@ select project(o)")
                     select new Result
                     {
                         Name = g.Key,
+                        Sum = g.Sum(x => x.Sum)
+                    };
+            }
+        }
+
+        private class UserMapReduceWithTwoReduceKeys : AbstractIndexCreationTask<User, UserMapReduceWithTwoReduceKeys.Result>
+        {
+            public class Result
+            {
+                public string Name;
+                public string LastName;
+                public int Sum;
+            }
+
+            public class CompoundResult
+            {
+                public ExpandoObject Name;
+                public int Sum;
+            }
+
+            public UserMapReduceWithTwoReduceKeys()
+            {
+                Map = users =>
+                    from user in users
+                    select new Result
+                    {
+                        Name = user.Name,
+                        LastName = user.LastName,
+                        Sum = user.Count
+                    };
+
+                Reduce = results =>
+                    from result in results
+                    group result by new {result.Name, result.LastName}
+                    into g
+                    select new Result
+                    {
+                        Name = g.Key.Name,
+                        LastName = g.Key.LastName,
                         Sum = g.Sum(x => x.Sum)
                     };
             }
