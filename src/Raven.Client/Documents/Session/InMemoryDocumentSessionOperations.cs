@@ -2243,9 +2243,59 @@ more responsive application.
             return true;
         }
 
-        protected void RefreshInternal<T>(T entity, RavenCommand<GetDocumentsResult> cmd, DocumentInfo documentInfo)
+        protected void BuildEntityDocInfoByIdHolder<T>(
+            IEnumerable<T> entities,
+            out Dictionary<string, (object Entity, DocumentInfo Info)> idsEntitiesPairs
+        )
         {
-            var document = (BlittableJsonReaderObject)cmd.Result.Results[0];
+            idsEntitiesPairs = new();
+            foreach (var entity in entities)
+            {
+                if (DocumentsByEntity.TryGetValue(entity, out var docInfo) == false)
+                    ThrowCouldNotRefreshDocument("Cannot refresh a transient instance");
+                idsEntitiesPairs[docInfo.Id] = (entity, docInfo);
+            }
+        }
+
+        protected void RefreshEntities(
+            GetDocumentsCommand command,
+            Dictionary<string, (object Entity, DocumentInfo Info)> idsEntitiesPairs
+        )
+        {
+            List<(object Entity, DocumentInfo Info, BlittableJsonReaderObject Result)> list = new();
+            var hasDeleted = false;
+            var resultsCollection = command.Result.Results;
+
+            foreach (BlittableJsonReaderObject result in resultsCollection)
+            {
+                if (result == null)
+                {
+                    hasDeleted = true;
+                    break;
+                }
+                var id = result.GetMetadata().GetId();
+                if (idsEntitiesPairs.TryGetValue(id, out var tuple) == false)
+                    ThrowCouldNotRefreshDocument($"Could not refresh an entity, the server returned an invalid id: '{id}'. Should not happen!");
+                list.Add((tuple.Entity, tuple.Info, result));
+            }
+
+            if (hasDeleted)
+                ThrowCouldNotRefreshDocument("Some of the requested documents are no longer exists and were probably deleted");
+
+            foreach (var tuple in list)
+            {
+                RefreshInternal(tuple.Entity, tuple.Result, tuple.Info);
+            }
+        }
+
+        internal static void ThrowCouldNotRefreshDocument(string msg)
+        {
+            throw new InvalidOperationException(msg);
+        }
+
+        protected void RefreshInternal<T>(T entity, BlittableJsonReaderObject cmdResult, DocumentInfo documentInfo)
+        {
+            var document = cmdResult;
             if (document == null)
                 throw new InvalidOperationException("Document '" + documentInfo.Id +
                                                     "' no longer exists and was probably deleted");

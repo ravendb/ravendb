@@ -351,6 +351,9 @@ namespace Corax.Queries
                 {
                     match.UnlikelyGrowBuffer(match._bufferSize);
                     excessSpace = match._bufferSize - totalMatches;
+                    
+                    // Since the buffer is gonna grow, we need to update all local variables.
+                    buffer = match._buffer;
                 }
 
                 // We will get more batches until we are done getting matches.
@@ -358,7 +361,7 @@ namespace Corax.Queries
                 if (bTotalMatches == 0)
                 {
                     // If we are done, we know that we can sort, remove duplicates and prepare the output buffer.
-                    totalMatches = ((TSorter)default).Execute(ref match, new Span<long>(match._buffer, totalMatches));
+                    totalMatches = ((TSorter)default).Execute(ref match, new Span<long>(buffer, totalMatches));
 
                     match.TotalResults = totalMatches;
                     match._currentIdx = 0;

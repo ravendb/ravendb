@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -13,6 +15,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -56,15 +59,30 @@ namespace Raven.Client.Documents.Session
         {
             using (AsyncTaskHolder())
             {
-                DocumentInfo documentInfo;
-                if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+                if (DocumentsByEntity.TryGetValue(entity, out var documentInfo) == false)
                     throw new InvalidOperationException("Cannot refresh a transient instance");
                 IncrementRequestCount();
 
                 var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
                 await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
 
-                RefreshInternal(entity, command, documentInfo);
+                var commandResult = (BlittableJsonReaderObject)command.Result.Results[0];
+                RefreshInternal(entity, commandResult, documentInfo);
+            }
+        }
+
+        public async Task RefreshAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
+        {
+            using (AsyncTaskHolder())
+            {
+                BuildEntityDocInfoByIdHolder(entities, out var idsEntitiesPairs);
+
+                IncrementRequestCount();
+
+                var command = new GetDocumentsCommand(idsEntitiesPairs.Keys.ToArray(), includes: null, metadataOnly: false);
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo, token).ConfigureAwait(false);
+
+                RefreshEntities(command, idsEntitiesPairs);
             }
         }
 

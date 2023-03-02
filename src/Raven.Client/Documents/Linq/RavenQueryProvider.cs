@@ -50,10 +50,12 @@ namespace Raven.Client.Documents.Linq
             LinqQueryHighlightings highlightings,
             bool isMapReduce,
             DocumentConventions conventions,
-            HashSet<FieldToFetch> fieldsToFetch = null
+            HashSet<FieldToFetch> fieldsToFetch = null,
+            bool isProjectInto = false
             )
         {
             FieldsToFetch = fieldsToFetch ?? new HashSet<FieldToFetch>();
+            IsProjectInto = isProjectInto;
             OriginalQueryType = originalQueryType;
 
             _queryGenerator = queryGenerator;
@@ -63,6 +65,7 @@ namespace Raven.Client.Documents.Linq
             _highlightings = highlightings;
             _isMapReduce = isMapReduce;
             _conventions = conventions;
+            
         }
 
         /// <summary>
@@ -113,7 +116,8 @@ namespace Raven.Client.Documents.Linq
                     _highlightings,
                     _isMapReduce,
                     _conventions,
-                    FieldsToFetch);
+                    FieldsToFetch,
+                    IsProjectInto);
 
             ravenQueryProvider.Customize(_customizeQuery);
 
@@ -308,7 +312,7 @@ namespace Raven.Client.Documents.Linq
                 _highlightings,
                 _indexName,
                 _collectionName,
-                FieldsToFetch,
+                new(FieldsToFetch),
                 _isMapReduce,
                 OriginalQueryType,
                 _conventions,

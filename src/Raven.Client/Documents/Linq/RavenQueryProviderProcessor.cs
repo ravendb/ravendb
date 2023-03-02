@@ -2535,6 +2535,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitSelect(Expression operand)
         {
+            if (FieldsToFetch is {Count: > 0})
+                ThrowProjectionIsAlreadyDone();
+
             var lambdaExpression = operand as LambdaExpression;
             var body = lambdaExpression != null ? lambdaExpression.Body : operand;
             switch (body.NodeType)
@@ -2573,9 +2576,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
         }
+        
+        private static void ThrowProjectionIsAlreadyDone()
+        {
+            throw new InvalidOperationException("Projection is already done. You should not project your result twice.");
+        }
 
         private void SelectCall(Expression body, LambdaExpression lambdaExpression)
         {
+            FieldsToFetch?.Clear();
+
             if (body is MethodCallExpression call)
             {
                 if (LinqPathProvider.IsTimeSeriesCall(call))
@@ -2609,13 +2619,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 throw new NotSupportedException($"Using constructor with parameters in projection is not supported. {memberInitExpression}");
             
             _newExpressionType = memberInitExpression.NewExpression.Type;
+            FieldsToFetch?.Clear();
 
             if (_declareBuilder != null)
             {
                 AddReturnStatementToOutputFunction(memberInitExpression);
                 return;
             }
-
+            
             if (FromAlias != null)
             {
                 //lambda 2 js
@@ -2670,7 +2681,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     AddFromAlias(lambdaExpression?.Parameters[0].Name);
                 }
 
-                FieldsToFetch.Clear();
+                FieldsToFetch?.Clear();
                 _jsSelectBody = TranslateSelectBodyToJs(memberInitExpression);
 
                 break;
@@ -2687,6 +2698,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             _newExpressionType = newExpression.Type;
+            FieldsToFetch?.Clear();
 
             if (_declareBuilder != null)
             {
@@ -2747,7 +2759,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     AddFromAlias(lambdaExpression?.Parameters[0].Name);
                 }
 
-                FieldsToFetch.Clear();
+                FieldsToFetch?.Clear();
                 _jsSelectBody = TranslateSelectBodyToJs(newExpression);
                 break;
             }
@@ -2758,9 +2770,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var memberExpression = ((MemberExpression)body);
 
             var selectPath = GetSelectPath(memberExpression);
+            FieldsToFetch?.Clear(); // this overwrite any previous projection
             AddToFieldsToFetch(selectPath, selectPath);
 
-            if (_insideSelect == 1)
+            if (_insideSelect == 1 && FieldsToFetch != null)
             {
                 foreach (var fieldToFetch in FieldsToFetch)
                 {
@@ -3915,7 +3928,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public object Execute(Expression expression)
         {
             _chainedWhere = false;
-
+            if (_isProjectInto == false)
+                FieldsToFetch?.Clear();
             DocumentQuery = (IAbstractDocumentQuery<T>)GetDocumentQueryFor(expression);
             if (_newExpressionType == typeof(T))
                 return ExecuteQuery<T>();

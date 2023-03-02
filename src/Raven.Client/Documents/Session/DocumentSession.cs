@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -14,6 +15,7 @@ using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -30,7 +32,7 @@ namespace Raven.Client.Documents.Session
         /// property to avoid cluttering the API
         /// </remarks>
         public IAdvancedSessionOperations Advanced => this;
-        
+
         /// <summary>
         /// Access the eager operations
         /// </summary>
@@ -135,15 +137,32 @@ namespace Raven.Client.Documents.Session
         /// <param name="entity">The entity.</param>
         public void Refresh<T>(T entity)
         {
-            DocumentInfo documentInfo;
-            if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
-                throw new InvalidOperationException("Cannot refresh a transient instance");
+            if (DocumentsByEntity.TryGetValue(entity, out var documentInfo) == false)
+                ThrowCouldNotRefreshDocument("Cannot refresh a transient instance");
             IncrementRequestCount();
 
             var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
-            RefreshInternal(entity, command, documentInfo);
+            var commandResult = (BlittableJsonReaderObject)command.Result.Results[0];
+            RefreshInternal(entity, commandResult, documentInfo);
+        }
+
+        /// <summary>
+        /// Refreshes the specified entities from Raven server.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="entities">The entities.</param>
+        public void Refresh<T>(IEnumerable<T> entities)
+        {
+            BuildEntityDocInfoByIdHolder(entities, out var idsEntitiesPairs);
+
+            IncrementRequestCount();
+
+            var command = new GetDocumentsCommand(idsEntitiesPairs.Keys.ToArray(), includes: null, metadataOnly: false);
+            RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
+
+            RefreshEntities(command, idsEntitiesPairs);
         }
 
         /// <summary>

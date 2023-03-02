@@ -30,7 +30,9 @@ public class RavenDB_19440 : RavenTestBase
         {
             using var session = store.OpenSession();
             var query = (IQueryable<Data>)session.Query<Data, DataIndex>();
-            var q = query.ProjectInto<Dto>().Select(i => new Dto() {Id = i.Id, Name = i.Name});
+            var q = query
+                .ProjectInto<Dto>()
+                .Select(i => new Dto() {Id = i.Id, Name = i.Name});
             AssertResult(() => q.ToString());
         }
     }
@@ -44,7 +46,8 @@ public class RavenDB_19440 : RavenTestBase
         using var session = store.OpenSession();
         var q = session.Query<DtoExt>().Customize(customization => customization.WaitForNonStaleResults())
             .Where(i => i.SecondName == "kaszebe")
-            .Select(i => new Dto2Ext() {Name = i.Name, SecondName = i.SecondName}).Select(i => new DtoExt() {Name = i.SecondName, SecondName = i.Name});
+            .Select(i => new Dto2Ext() {Name = i.Name, SecondName = i.SecondName})
+            .Select(i => new DtoExt() {Name = i.SecondName, SecondName = i.Name});
         AssertResult(() => q.ToString());
     }
 

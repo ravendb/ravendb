@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session.Operations.Lazy;
@@ -47,6 +48,13 @@ namespace Raven.Client.Documents.Session
         /// <param name="entity">Instance of an entity that will be refreshed</param>
         /// <param name="token">The cancellation token.</param>
         Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken));
+
+        /// <summary>
+        ///     Updates entity with latest changes from server
+        /// </summary>
+        /// <param name="entities">Collection of instances of an entity that will be refreshed</param>
+        /// <param name="token">The cancellation token.</param>
+        Task RefreshAsync<T>(IEnumerable<T> entities, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Query the specified index using provided raw query
