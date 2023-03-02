@@ -131,7 +131,8 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
             {
                 if (operation.MissingDocumentIncludes is { Count: > 0 })
                 {
-                    await HandleMissingDocumentIncludes(operation.MissingDocumentIncludes, result);
+                    await HandleMissingDocumentIncludesAsync(Context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext,
+                        operation.MissingDocumentIncludes, result, MetadataOnly, Token);
                 }
             }
 
@@ -139,5 +140,5 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
         }
     }
 
-    protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
+    protected override ShardedQueryCommand CreateCommand(int shardNumber, string query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 }

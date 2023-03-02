@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Commands.Batches;
@@ -16,7 +17,7 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
     private readonly IndexBatchOptions _indexBatchOptions;
     private readonly ReplicationBatchOptions _replicationBatchOptions;
 
-    private readonly List<Stream> _commands = new List<Stream>();
+    public readonly List<SingleShardedCommand> Commands = new List<SingleShardedCommand>();
     public readonly List<int> PositionInResponse = new List<int>();
 
     private List<Stream> _attachmentStreams;
@@ -31,7 +32,7 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
 
     public void AddCommand(SingleShardedCommand command)
     {
-        _commands.Add(command.CommandStream);
+        Commands.Add(command);
         PositionInResponse.Add(command.PositionInResponse);
 
         if (command.AttachmentStream != null)
@@ -87,7 +88,7 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
                 {
                     writer.WriteStartObject();
 
-                    await writer.WriteArrayAsync("Commands", _commands);
+                    await writer.WriteArrayAsync("Commands", Commands.Select(c => c.CommandStream));
 
                     writer.WriteEndObject();
                 }
@@ -119,8 +120,8 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
 
     public void Dispose()
     {
-        foreach (var command in _commands)
-            command?.Dispose();
+        foreach (var command in Commands)
+            command.CommandStream?.Dispose();
 
         if (_uniqueAttachmentStreams != null)
         {

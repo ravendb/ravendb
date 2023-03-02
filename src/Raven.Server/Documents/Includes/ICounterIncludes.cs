@@ -1,7 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Sparrow.Json;
-using System.Collections.Generic;
 
 namespace Raven.Server.Documents.Includes;
 
@@ -12,4 +12,8 @@ public interface ICounterIncludes
     Dictionary<string, string[]> IncludedCounterNames { get; }
 
     int Count { get; }
+
+    long GetCountersSize();
+
+    long GetCountersCount();
 }

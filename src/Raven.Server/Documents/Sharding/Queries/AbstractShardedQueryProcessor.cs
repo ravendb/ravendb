@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
@@ -29,9 +30,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 {
     const string LimitToken = "__raven_limit";
 
-    private Dictionary<int, BlittableJsonReaderObject> _queryTemplates;
+    private Dictionary<int, string> _queryTemplates;
     private Dictionary<int, TCommand> _commands;
-    private readonly bool _metadataOnly;
     private readonly bool _indexEntriesOnly;
     private readonly bool _ignoreLimit;
     private readonly string _raftUniqueRequestId;
@@ -44,6 +44,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     protected readonly bool IsMapReduceIndex;
     protected readonly bool IsAutoMapReduceQuery;
     protected readonly long? ExistingResultEtag;
+    protected readonly bool MetadataOnly;
 
     protected AbstractShardedQueryProcessor(
         TransactionOperationContext context,
@@ -57,7 +58,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     {
         RequestHandler = requestHandler;
         Query = query;
-        _metadataOnly = metadataOnly;
+        MetadataOnly = metadataOnly;
         _indexEntriesOnly = indexEntriesOnly;
         _ignoreLimit = ignoreLimit;
         Token = token;
@@ -123,8 +124,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         // - For collection queries that specify startsWith by id(), we need to send to all shards
         // - For collection queries without any where clause, we need to send to all shards
         // - For indexes, we sent to all shards
-
-        var queryTemplate = Query.ToJson(Context);
+        
+        using var queryTemplate = Query.ToJson(Context);
 
         if (Query.Metadata.IsCollectionQuery && Query.Metadata.DeclaredFunctions is null or { Count: 0 })
         {
@@ -141,23 +142,26 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         if (_queryTemplates == null)
         {
-            RewriteQueryIfNeeded(ref queryTemplate);
+            using var rewrittenQuery = RewriteQueryIfNeeded(queryTemplate);
 
             _queryTemplates = new(RequestHandler.DatabaseContext.ShardCount);
 
+            // need to do this only once because the query is the same for all shards
+            var queryStr = rewrittenQuery.ToString();
+
             foreach (var shardNumber in RequestHandler.DatabaseContext.ShardsTopology.Keys)
             {
-                _queryTemplates.Add(shardNumber, queryTemplate);
+                _queryTemplates.Add(shardNumber, queryStr);
             }
         }
-
+        
         return ValueTask.CompletedTask;
     }
 
-    private Dictionary<int, TCommand> CreateQueryCommands(Dictionary<int, BlittableJsonReaderObject> preProcessedQueries, QueryTimingsScope scope)
+    private Dictionary<int, TCommand> CreateQueryCommands(Dictionary<int, string> preProcessedQueries, QueryTimingsScope scope)
     {
         var commands = new Dictionary<int, TCommand>(preProcessedQueries.Count);
-
+        
         foreach (var (shard, query) in preProcessedQueries)
         {
             commands.Add(shard, CreateCommand(shard, query, scope));
@@ -171,20 +175,21 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         return _commands ??= CreateQueryCommands(_queryTemplates, scope);
     }
 
-    protected abstract TCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope);
+    protected abstract TCommand CreateCommand(int shardNumber, string query, QueryTimingsScope scope);
 
-    protected ShardedQueryCommand CreateShardedQueryCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope)
+    protected ShardedQueryCommand CreateShardedQueryCommand(int shardNumber, string query, QueryTimingsScope scope)
     {
         return new ShardedQueryCommand(
-            Context.ReadObject(query, "query"),
+            query,
             Query,
             scope?.For($"Shard_{shardNumber}"),
-            _metadataOnly,
+            MetadataOnly,
             _indexEntriesOnly,
             _ignoreLimit,
             Query.Metadata.IndexName,
             canReadFromCache: ExistingResultEtag != null,
-            _raftUniqueRequestId);
+            _raftUniqueRequestId,
+            RequestHandler.ServerStore.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan);
     }
 
     protected virtual void AssertQueryExecution()
@@ -204,7 +209,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    private void RewriteQueryIfNeeded(ref BlittableJsonReaderObject queryTemplate)
+    private BlittableJsonReaderObject RewriteQueryIfNeeded(BlittableJsonReaderObject queryTemplate)
     {
         var rewriteForPaging = Query.Offset is > 0;
         var rewriteForProjectionFromMapReduceIndex = true;
@@ -248,7 +253,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
 
         if (rewriteForPaging == false && rewriteForProjectionFromMapReduceIndex == false && rewriteForProjectionFromAutoMapReduceIndex == false)
-            return;
+            return queryTemplate;
 
         var clone = Query.Metadata.Query.ShallowCopy();
 
@@ -316,10 +321,10 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         queryTemplate.Modifications = modifications;
 
-        queryTemplate = Context.ReadObject(queryTemplate, "modified-query");
+        return Context.ReadObject(queryTemplate, "modified-query");
     }
 
-    private Dictionary<int, BlittableJsonReaderObject> GenerateLoadByIdQueries(IEnumerable<Slice> ids)
+    private Dictionary<int, string> GenerateLoadByIdQueries(IEnumerable<Slice> ids)
     {
         const string listParameterName = "p0";
 
@@ -385,7 +390,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             queryText += $" {selectClause}";
         }
 
-        Dictionary<int, BlittableJsonReaderObject> queryTemplates = new();
+        Dictionary<int, string> queryTemplates = new();
 
         var shards = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, ids);
 
@@ -402,7 +407,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 [nameof(IndexQuery.Query)] = queryText
             };
 
-            queryTemplates[shardId] = Context.ReadObject(q, "query");
+            queryTemplates[shardId] = Context.ReadObject(q, "query").ToString();
 
             IEnumerable<string> GetIds()
             {
@@ -416,11 +421,28 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         return queryTemplates;
     }
 
-    protected async Task HandleMissingDocumentIncludes<T, TIncludes>(HashSet<string> missingIncludes, QueryResult<List<T>, List<TIncludes>> result)
+    protected async ValueTask HandleMissingDocumentIncludesAsync<T, TIncludes>(TransactionOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext, HashSet<string> missingIncludes,
+        QueryResult<List<T>, List<TIncludes>> result, bool metadataOnly, CancellationToken token)
     {
-        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, missingIncludes);
-        var missingIncludesOp = new FetchDocumentsFromShardsOperation(Context, RequestHandler, missingIncludeIdsByShard, null, null, counterIncludes: default, null, null, null, _metadataOnly);
-        var missingResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, Token);
+        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(context, databaseContext, missingIncludes);
+        await HandleMissingDocumentIncludesInternalAsync(context, request, databaseContext, result, metadataOnly, missingIncludeIdsByShard, token);
+    }
+
+    public static async ValueTask HandleMissingDocumentIncludesAsync<T, TIncludes>(JsonOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext, HashSet<string> missingIncludes,
+        QueryResult<List<T>, List<TIncludes>> result, bool metadataOnly, CancellationToken token)
+    {
+        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(databaseContext, missingIncludes);
+        await HandleMissingDocumentIncludesInternalAsync(context, request, databaseContext, result, metadataOnly, missingIncludeIdsByShard, token);
+    }
+
+    private static async Task HandleMissingDocumentIncludesInternalAsync<T, TIncludes>(JsonOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext,
+        QueryResult<List<T>, List<TIncludes>> result, bool metadataOnly, Dictionary<int, ShardLocator.IdsByShard<string>> missingIncludeIdsByShard,
+        CancellationToken token)
+    {
+        var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, request, databaseContext, missingIncludeIdsByShard, includePaths: null,
+            includeRevisions: null, counterIncludes: default, timeSeriesIncludes: null,
+            compareExchangeValueIncludes: null, etag: null, metadataOnly);
+        var missingResult = await databaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, token);
 
         var blittableIncludes = result.Includes as List<BlittableJsonReaderObject>;
         var documentIncludes = result.Includes as List<Document>;

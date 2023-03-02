@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
@@ -13,13 +13,18 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeTimeSeriesCommand : ITimeSeriesIncludes
+    public class IncludeTimeSeriesCommand : AbstractIncludeTimeSeriesCommand
     {
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, HashSet<AbstractTimeSeriesRange>> _timeSeriesRangesBySourcePath;
         private readonly Dictionary<string, Dictionary<string, (long Count, DateTime Start, DateTime End)>> _timeSeriesStatsPerDocumentId;
 
-        public readonly Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results;
+        public Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results;
+
+        protected IncludeTimeSeriesCommand()
+        {
+            Results = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
+        }
 
         public IncludeTimeSeriesCommand(DocumentsOperationContext context, Dictionary<string, HashSet<AbstractTimeSeriesRange>> timeSeriesRangesBySourcePath)
         {
@@ -30,7 +35,7 @@ namespace Raven.Server.Documents.Includes
             Results = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
         }
 
-        public int Count => Results.Count;
+        public override int Count => Results?.Count ?? 0;
 
         public void Fill(Document document)
         {
@@ -174,7 +179,7 @@ namespace Raven.Server.Documents.Includes
             }
         }
 
-        public async ValueTask<int> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
+        public override async ValueTask<int> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
         {
             int size = 0;
             writer.WriteStartObject();
@@ -195,6 +200,11 @@ namespace Raven.Server.Documents.Includes
             writer.WriteEndObject();
 
             return size;
+        }
+
+        public override long GetEntriesCountForStats()
+        {
+            return Results.Sum(x => x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length)));
         }
     }
 }

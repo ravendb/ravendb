@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
             using (var token = RequestHandler.CreateOperationToken())
             {
                 return await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
-                    new ShardedCounterBatchOperation(RequestHandler.HttpContext, commandsPerShard), token.Token);
+                    new ShardedCounterBatchOperation(RequestHandler.HttpContext.Request, commandsPerShard), token.Token);
             }
         }
 
@@ -63,16 +63,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
 
     internal readonly struct ShardedCounterBatchOperation : IShardedOperation<CountersDetail>
     {
-        private readonly HttpContext _httpContext;
+        private readonly HttpRequest _request;
         private readonly Dictionary<int, CounterBatchOperation.CounterBatchCommand> _commandsPerShard;
         
-        internal ShardedCounterBatchOperation(HttpContext httpContext, Dictionary<int, CounterBatchOperation.CounterBatchCommand> commandsPerShard)
+        internal ShardedCounterBatchOperation(HttpRequest request, Dictionary<int, CounterBatchOperation.CounterBatchCommand> commandsPerShard)
         {
-            _httpContext = httpContext;
+            _request = request;
             _commandsPerShard = commandsPerShard;
         }
 
-        public HttpRequest HttpRequest => _httpContext.Request;
+        public HttpRequest HttpRequest => _request;
 
         public CountersDetail Combine(Dictionary<int, ShardExecutionResult<CountersDetail>> results)
         {

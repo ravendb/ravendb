@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public abstract class QueryResultServerSide<T> : QueryResult<List<T>, List<T>>
+    public abstract class QueryResultServerSide<T> : QueryResult<List<T>, List<T>>, IDisposable
     {
         protected QueryResultServerSide(long? indexDefinitionRaftIndex)
         {
@@ -106,5 +106,9 @@ namespace Raven.Server.Documents.Queries
         public abstract void AddRevisionIncludes(IRevisionIncludes revisions);
        
         public abstract IRevisionIncludes GetRevisionIncludes();
+
+        public virtual void Dispose()
+        {
+        }
     }
 }

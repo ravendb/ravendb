@@ -756,7 +756,16 @@ class appUrl {
             instruction.config.moduleId = appUrl.defaultModule;
         });
     }
-
+    
+    static toExternalDatabaseUrl(db: DatabaseSharedInfo, url: string) {
+        // we have to redirect to different node, let's find first member where selected database exists
+        const firstNode = db.nodes[0];
+        if (!firstNode) {
+            return "";
+        }
+        return appUrl.toExternalUrl(firstNode.nodeUrl, url);
+    }
+    
     static toExternalUrl(serverUrl: string, localLink: string) {
         return serverUrl + "/studio/index.html" + localLink;
     }

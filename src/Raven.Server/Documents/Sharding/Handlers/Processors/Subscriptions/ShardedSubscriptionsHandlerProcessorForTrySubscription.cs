@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
                 writer.WriteEndArray();
                 writer.WriteComma();
                 writer.WritePropertyName("Includes");
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major, "https://issues.hibernatingrhinos.com/issue/RavenDB-16279");
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Minor, "need to add missing includes https://issues.hibernatingrhinos.com/issue/RavenDB-20024");
                 writer.WriteStartObject();
                 writer.WriteEndObject();
                 writer.WriteEndObject();

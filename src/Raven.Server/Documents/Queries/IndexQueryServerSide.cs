@@ -41,7 +41,6 @@ namespace Raven.Server.Documents.Queries
         [JsonDeserializationIgnore]
         public long? FilterLimit { get; set; }
 
-
         [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
 
@@ -198,28 +197,28 @@ namespace Raven.Server.Documents.Queries
             {
                 if (result.Metadata.Query.Offset != null)
                 {
-                    var start = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    var start = QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
                     result.Offset = start;
-                    result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
+                    result.Start = result.Start != 0 || json.TryGet(nameof(Start), out long _)
                         ? Math.Max(start, result.Start)
                         : start;
                 }
 
                 if (result.Metadata.Query.Limit != null)
                 {
-                    var limit = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    var limit = Math.Min(int.MaxValue, QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue));
                     result.Limit = limit;
                     result.PageSize = Math.Min(limit, result.PageSize);
                 }
 
                 if (result.Metadata.Query.FilterLimit != null)
                 {
-                    result.FilterLimit = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
+                    result.FilterLimit = Math.Min(int.MaxValue, QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue));
                 }
             }
         }
 
-        public static async Task<IndexQueryServerSide> CreateAsync(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties = false, string clientQueryId = null, string overrideQuery = null)
+        public static async Task<IndexQueryServerSide> CreateAsync(HttpContext httpContext, long start, long pageSize, JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties = false, string clientQueryId = null, string overrideQuery = null)
         {
             IndexQueryServerSide result = null;
             try
@@ -302,22 +301,21 @@ namespace Raven.Server.Documents.Queries
             {
                 if (result.Metadata.Query.Offset != null)
                 {
-                    var offset = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    var offset = QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
                     result.Offset = offset;
                     result.Start = start + offset;
                 }
 
                 if (result.Metadata.Query.Limit != null)
                 {
-                    pageSize = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    pageSize = Math.Min(int.MaxValue, QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue));
                     result.Limit = pageSize;
                     result.PageSize = Math.Min(result.PageSize, pageSize);
                 }
 
                 if (result.Metadata.Query.FilterLimit != null)
                 {
-                    result.FilterLimit =
-                        (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
+                    result.FilterLimit = Math.Min(int.MaxValue, QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue));
                 }
             }
         }

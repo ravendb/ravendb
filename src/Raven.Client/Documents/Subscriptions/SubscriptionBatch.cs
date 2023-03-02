@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -20,11 +21,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         private bool _sessionOpened;
 
-        internal override void Initialize(BatchFromServer batch)
+        internal override ValueTask InitializeAsync(BatchFromServer batch)
         {
             _sessionOpened = false;
 
-            base.Initialize(batch);
+            return base.InitializeAsync(batch);
         }
 
         public IDocumentSession OpenSession()

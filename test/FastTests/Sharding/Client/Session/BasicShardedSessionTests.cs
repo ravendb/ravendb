@@ -394,6 +394,161 @@ namespace FastTests.Sharding.Client.Session
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public async Task CanRetryServerSideId()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var orchestrator = Sharding.GetOrchestrator(store.Database);
+                orchestrator.ForTestingPurposesOnly();
+
+                var u = new User { Name = "foo" };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(u, "users/");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var loaded = await session.LoadAsync<User>(u.Id);
+                    Assert.Equal("foo", loaded.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching | RavenTestCategory.Sharding)]
+        public async Task CanRetryBatchPatch()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var orchestrator = Sharding.GetOrchestrator(store.Database);
+                orchestrator.ForTestingPurposesOnly();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/2");
+                    await session.StoreAsync(new User { Name = "Oren" }, "users/3");
+                    await session.StoreAsync(new User { Name = "Aviv" }, "users/4");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ids = new List<string>
+                    {
+                        "users/1",
+                        "users/3"
+                    };
+
+                    session.Advanced.Defer(new BatchPatchCommandData(ids, new PatchRequest
+                    {
+                        Script = "this.Name = 'test';"
+                    }, null));
+
+                    session.Advanced.Defer(new BatchPatchCommandData(new List<string> { "users/4" }, new PatchRequest
+                    {
+                        Script = "this.Name = 'test2';"
+                    }, null));
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u1 = await session.LoadAsync<User>("users/1");
+                    var u2 = await session.LoadAsync<User>("users/2");
+                    var u3 = await session.LoadAsync<User>("users/3");
+                    var u4 = await session.LoadAsync<User>("users/4");
+
+                    Assert.Equal("test", u1.Name);
+                    Assert.Equal("Karmel", u2.Name);
+                    Assert.Equal("test", u3.Name);
+                    Assert.Equal("test2", u4.Name);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u2 = await session.LoadAsync<User>("users/2");
+
+                    session.Advanced.Defer(new BatchPatchCommandData(new List<(string Id, string ChangeVector)> { (u2.Id, "invalidCV") }, new PatchRequest
+                    {
+                        Script = "this.Name = 'test2';"
+                    }, null));
+
+                    await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching | RavenTestCategory.Sharding)]
+        public async Task CanRetryAttachment()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var orchestrator = Sharding.GetOrchestrator(store.Database);
+                orchestrator.ForTestingPurposesOnly();
+
+                var names = new[]
+                {
+                    "background-photo.jpg",
+                    "fileNAME_#$1^%_בעברית.txt",
+                    "profile.png",
+                };
+                var u = new User { Name = "foo" };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/2");
+                    await session.StoreAsync(new User { Name = "Oren" }, "users/3");
+                    await session.StoreAsync(u,"users/");
+
+                    await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                    await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                    {
+                        session.Advanced.Attachments.Store("users/1", names[0], backgroundStream, "ImGgE/jPeG");
+                        session.Advanced.Attachments.Store("users/2", names[1], fileStream);
+                        session.Advanced.Attachments.Store("users/3", names[2], profileStream, "image/png");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (var i = 0; i < names.Length; i++)
+                    {
+                        var user = await session.LoadAsync<User>("users/" + (i + 1));
+                        var metadata = session.Advanced.GetMetadataFor(user);
+                        Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                        var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                        Assert.Equal(1, attachments.Length);
+                        var attachment = attachments[0];
+                        Assert.Equal(names[i], attachment.GetString(nameof(AttachmentName.Name)));
+                        var hash = attachment.GetString(nameof(AttachmentName.Hash));
+                        if (i == 0)
+                        {
+                            Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
+                            Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
+                        }
+                        else if (i == 1)
+                        {
+                            Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
+                            Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
+                        }
+                        else if (i == 2)
+                        {
+                            Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
+                            Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
+                        }
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations_With_Array_In_Object()
         {
             using (var store = Sharding.GetDocumentStore())

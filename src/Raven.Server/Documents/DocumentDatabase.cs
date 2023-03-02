@@ -330,6 +330,10 @@ namespace Raven.Server.Documents
             CompareExchangeStorage.Initialize(Name);
         }
 
+        protected virtual void InitializeAndStartPeriodicDocumentsMigrator()
+        {
+        }
+
         protected virtual ReplicationLoader CreateReplicationLoader()
         {
             return new ReplicationLoader(this, _serverStore);
@@ -373,6 +377,7 @@ namespace Raven.Server.Documents
                 OnDatabaseRecordChanged(record);
                 InitializeSubscriptionStorage();
                 InitializeCompareExchangeStorage();
+                InitializeAndStartPeriodicDocumentsMigrator();
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
@@ -903,26 +908,7 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed IndexStore");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ExpiredDocumentsCleaner");
-            exceptionAggregator.Execute(() =>
-            {
-                ExpiredDocumentsCleaner?.Dispose();
-            });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ExpiredDocumentsCleaner");
-
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing PeriodicBackupRunner");
-            exceptionAggregator.Execute(() =>
-            {
-                PeriodicBackupRunner?.Dispose();
-            });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed PeriodicBackupRunner");
-
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TombstoneCleaner");
-            exceptionAggregator.Execute(() =>
-            {
-                TombstoneCleaner?.Dispose();
-            });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TombstoneCleaner");
+            DisposeBackgroundWorkers(exceptionAggregator);
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ReplicationLoader");
             exceptionAggregator.Execute(() =>
@@ -1051,6 +1037,30 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
 
             exceptionAggregator.ThrowIfNeeded();
+        }
+
+        protected virtual void DisposeBackgroundWorkers(ExceptionAggregator exceptionAggregator)
+        {
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ExpiredDocumentsCleaner");
+            exceptionAggregator.Execute(() =>
+            {
+                ExpiredDocumentsCleaner?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ExpiredDocumentsCleaner");
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing PeriodicBackupRunner");
+            exceptionAggregator.Execute(() =>
+            {
+                PeriodicBackupRunner?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed PeriodicBackupRunner");
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TombstoneCleaner");
+            exceptionAggregator.Execute(() =>
+            {
+                TombstoneCleaner?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TombstoneCleaner");
         }
 
         public DynamicJsonValue GenerateOfflineDatabaseInfo()
@@ -1996,6 +2006,8 @@ namespace Raven.Server.Documents
             internal bool ForceSendTombstones = false;
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
+
+            internal bool EnableWritesToTheWrongShard = false;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

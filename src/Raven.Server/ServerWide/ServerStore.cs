@@ -169,7 +169,7 @@ namespace Raven.Server.ServerWide
             _server = server;
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Critical, "Handle server certificate changes");
-            _clusterRequestExecutor = new Lazy<ClusterRequestExecutor>(() => ClusterRequestExecutor.Create(new[] { Server.WebUrl }, Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
+            _clusterRequestExecutor = new Lazy<ClusterRequestExecutor>(() => ClusterRequestExecutor.Create(new[] { GetNodeHttpServerUrl() }, Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
 
             IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
 

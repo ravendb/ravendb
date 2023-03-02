@@ -15,11 +15,9 @@ import { FlexGrow } from "components/common/FlexGrow";
 import app from "durandal/app";
 import addNewShardToDatabaseGroup from "viewmodels/resources/addNewShardToDatabaseGroup";
 import { StickyHeader } from "components/common/StickyHeader";
-import { useAsync } from "react-async-hook";
-import { LoadingView } from "components/common/LoadingView";
-import { LoadError } from "components/common/LoadError";
 import { selectDatabaseByName } from "components/common/shell/databasesSlice";
 import { useAppSelector } from "components/store";
+import { ShardedDatabaseSharedInfo } from "components/models/databases";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -55,20 +53,9 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const dbSharedInfo = useAppSelector(selectDatabaseByName(db.name));
 
-    const fetchDynamicNodesDistribution = useCallback(async () => {
-        //TODO: waiting for: RavenDB-19876
-        return false;
-    }, [databasesService, db.name]);
-
-    const {
-        value: dynamicDatabaseDistribution,
-        toggle: toggleDynamicDatabaseDistribution,
-        setValue: setDynamicDatabaseDistribution,
-    } = useBoolean(false);
-
-    const { status: dynamicDistributionLoadStatus, reset } = useAsync(fetchDynamicNodesDistribution, null, {
-        onSuccess: (r) => setDynamicDatabaseDistribution(r),
-    });
+    const { value: dynamicDatabaseDistribution, toggle: toggleDynamicDatabaseDistribution } = useBoolean(
+        dbSharedInfo.dynamicNodesDistribution
+    );
 
     const settingsUniqueId = useId("settings");
 
@@ -90,38 +77,35 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     );
     const enableDynamicDatabaseDistribution = isOperatorOrAbove() && !dynamicDatabaseDistributionWarning;
 
-    if (dynamicDistributionLoadStatus === "loading") {
-        return <LoadingView />;
-    }
-
-    if (dynamicDistributionLoadStatus === "error") {
-        return <LoadError refresh={reset} />;
-    }
-
     return (
         <>
             <StickyHeader>
                 <div className="flex-horizontal">
-                    <UncontrolledButtonWithDropdownPanel buttonText="Settings">
-                        <>
-                            <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
-                                <div className="form-switch form-check-reverse">
-                                    <Input
-                                        id={settingsUniqueId}
-                                        type="switch"
-                                        role="switch"
-                                        disabled={!enableDynamicDatabaseDistribution}
-                                        checked={dynamicDatabaseDistribution}
-                                        onChange={changeDynamicDatabaseDistribution}
-                                    />
-                                    Allow dynamic database distribution
-                                </div>
-                            </Label>
-                            {dynamicDatabaseDistributionWarning && (
-                                <div className="bg-faded-warning px-4 py-2">{dynamicDatabaseDistributionWarning}</div>
-                            )}
-                        </>
-                    </UncontrolledButtonWithDropdownPanel>
+                    {!db.isSharded() && (
+                        <UncontrolledButtonWithDropdownPanel buttonText="Settings">
+                            <>
+                                <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
+                                    <div className="form-switch form-check-reverse">
+                                        <Input
+                                            id={settingsUniqueId}
+                                            type="switch"
+                                            role="switch"
+                                            disabled={!enableDynamicDatabaseDistribution}
+                                            checked={dynamicDatabaseDistribution}
+                                            onChange={changeDynamicDatabaseDistribution}
+                                        />
+                                        Allow dynamic database distribution
+                                    </div>
+                                </Label>
+                                {dynamicDatabaseDistributionWarning && (
+                                    <div className="bg-faded-warning px-4 py-2">
+                                        {dynamicDatabaseDistributionWarning}
+                                    </div>
+                                )}
+                            </>
+                        </UncontrolledButtonWithDropdownPanel>
+                    )}
+
                     <FlexGrow />
                     {db.isSharded() && (
                         <Button color="shard" onClick={addNewShard}>
@@ -134,32 +118,13 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
             <div className="content-margin">
                 {db.isSharded() ? (
                     <React.Fragment key="sharded-db">
-                        <OrchestratorsGroup
-                            nodes={dbSharedInfo.nodes}
-                            db={db}
-                            deletionInProgress={dbSharedInfo.deletionInProgress}
-                        />
-                        {db.shards().map((shard) => {
-                            //TODO: deletionInProgress - waiting for RavenDB-19876
-                            return (
-                                <ShardsGroup
-                                    key={shard.name}
-                                    nodes={shard.nodes()}
-                                    db={shard}
-                                    deletionInProgress={[]}
-                                    lockMode={dbSharedInfo.lockMode}
-                                />
-                            );
+                        <OrchestratorsGroup db={dbSharedInfo} />
+                        {(dbSharedInfo as ShardedDatabaseSharedInfo).shards.map((shard) => {
+                            return <ShardsGroup key={shard.name} db={shard} />;
                         })}
                     </React.Fragment>
                 ) : (
-                    <NodeGroup
-                        key="non-sharded-db"
-                        nodes={dbSharedInfo.nodes}
-                        db={db}
-                        deletionInProgress={dbSharedInfo.deletionInProgress}
-                        lockMode={dbSharedInfo.lockMode}
-                    />
+                    <NodeGroup key="non-sharded-db" db={dbSharedInfo} />
                 )}
             </div>
         </>

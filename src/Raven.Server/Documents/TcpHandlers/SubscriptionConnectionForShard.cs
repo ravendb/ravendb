@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -63,6 +65,24 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         return result;
     }
 
+    public override AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<DatabaseIncludesCommandImpl> connection)
+    {
+        if (connection is SubscriptionConnectionForShard shardConnection)
+        {
+            var database = connection.TcpConnection.DocumentDatabase as ShardedDocumentDatabase;
+            var server = database.ServerStore;
+
+            if (connection.Subscription.Revisions)
+            {
+                return new ShardedRevisionsDatabaseSubscriptionProcessor(server, database, shardConnection);
+            }
+
+            return new ShardedDocumentsDatabaseSubscriptionProcessor(server, database, shardConnection);
+        }
+
+        throw new InvalidOperationException($"Expected to create a processor for '{nameof(SubscriptionConnectionForShard)}', but got: '{connection.GetType().Name}'.");
+    }
+
     protected override async Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
     {
         var vector = context.GetChangeVector(lastChangeVectorSentInThisBatch);
@@ -111,4 +131,9 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
             subscriptionState.ShardingState.NodeTagPerShard.TryGetValue(ShardName, out var tag);
             return tag;
         });
+
+    protected override void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
+    {
+        includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
+    }
 }

@@ -56,5 +56,5 @@ public class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<Shard
 
     protected override ShardedMapReduceQueryResultsMerger CreateMapReduceQueryResultsMerger(ShardedIndexEntriesQueryResult result) => new ShardedMapReduceIndexEntriesQueryResultsMerger(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context, Token);
 
-    protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
+    protected override ShardedQueryCommand CreateCommand(int shardNumber, string query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 }

@@ -303,20 +303,17 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     public void OnNext(BlittableJsonReaderObject value)
     {
-        using (value)
+        BlittableJsonReaderObject copy;
+        lock (this)
         {
-            BlittableJsonReaderObject copy;
-            lock (this)
-            {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Major, "avoid this lock here");
-                copy = value.Clone(_queueContext);
-            }
-
-            AddToQueue(new SendQueueItem
-            {
-                ValueToSend = copy
-            });
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Major, "avoid this lock here");
+            copy = value.Clone(_queueContext);
         }
+
+        AddToQueue(new SendQueueItem
+        {
+            ValueToSend = copy
+        });
     }
 
     public override void Dispose()

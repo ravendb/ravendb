@@ -218,7 +218,7 @@
                 </div>
             </div>
             <div class="tabs margin-top">
-                <ul class="nav nav-tabs" role="tablist" id="tabsId">
+                <ul class="nav nav-tabs d-flex" role="tablist" id="tabsId">
                     <li role="presentation" class="active" id="fieldsTab">
                         <a href="#fields" aria-controls="fields" role="tab" data-toggle="tab">
                             <i class="icon-admin-logs"></i><span>Fields</span>
@@ -256,7 +256,7 @@
                             <button class="btn btn-default" data-bind="click: addField, requiredAccess: 'DatabaseReadWrite'">
                                 <i class="icon-plus"></i><span>Add field</span>
                             </button>
-                            <button class="btn btn-info" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions(), requiredAccess: 'DatabaseReadWrite'">
+                            <button class="btn btn-info margin-left-xs" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions(), requiredAccess: 'DatabaseReadWrite'">
                                 <i class="icon-plus"></i><span>Add default field options</span>
                             </button>
                             <span class="has-error margin-left margin-left-sm" data-bind="visible: editedIndex().hasDuplicateFieldsNames()">
@@ -278,8 +278,8 @@
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="configure">
-                        <div class="row margin-left margin-bottom">
-                            <button type="button" data-bind="click: addConfigurationOption, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info margin-left">
+                        <div class="margin-bottom">
+                            <button type="button" data-bind="click: addConfigurationOption, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info">
                                 <i class="icon-plus"></i>
                                 <span>Add customized indexing configuration</span>
                             </button>
@@ -334,8 +334,8 @@
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="additionalAssemblies">
-                        <div class="row margin-left margin-bottom">
-                            <button type="button" data-bind="click: addAssembly, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info margin-left">
+                        <div class="margin-bottom">
+                            <button type="button" data-bind="click: addAssembly, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info">
                                 <i class="icon-plus"></i> <span>Add Assembly</span>
                             </button>
                             <a href="#" data-bind="click: additionalAssemblySyntaxHelp" class="margin-left margin-left-sm"><small>Syntax <i class="icon-help"></i></small></a>

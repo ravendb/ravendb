@@ -3,8 +3,8 @@ import { NodeInfo } from "components/models/databases";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 
-export function useGroup(nodes: NodeInfo[]) {
-    const [fixOrder, setFixOrder] = useState(false); //TODO: init with data from RavenDB-19876
+export function useGroup(nodes: NodeInfo[], initialFixOrder: boolean) {
+    const [fixOrder, setFixOrder] = useState(initialFixOrder);
     const [newOrder, setNewOrder] = useState<NodeInfo[]>([]);
     const [sortableMode, setSortableMode] = useState(false);
     const { nodeTags: clusterNodeTags } = useClusterTopologyManager();

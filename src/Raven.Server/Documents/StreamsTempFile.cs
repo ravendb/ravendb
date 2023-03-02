@@ -170,11 +170,13 @@ namespace Raven.Server.Documents
                 var safeFileHandle = new SafeFileHandle(_parent._file.InnerStream.SafeFileHandle.DangerousGetHandle(), ownsHandle: false);
                 Stream stream = new FileStream(safeFileHandle, FileAccess.Read);
                 stream.Seek(_startPosition, SeekOrigin.Begin);
+                var relativePosition = _startPosition;
                 if (_stream is TempCryptoStream tcs)
                 {
+                    relativePosition = 0;
                     stream = new TempCryptoStream(stream, tcs);
                 }
-                limitedStream = new LimitedStream(stream, Length, _startPosition, _startPosition);
+                limitedStream = new LimitedStream(stream, Length, relativePosition, relativePosition);
 
                 return new DisposableAction(() =>
                 {
@@ -186,19 +188,43 @@ namespace Raven.Server.Documents
                 });
             }
 
+            public LimitedStream CreateReaderStream()
+            {
+                var streamDispose = CreateReaderStream(out var stream);
+                stream._disposable = new LimitedStreamDisposable(streamDispose);
+                return stream;
+            }
+
             public LimitedStream CreateDisposableReaderStream(IDisposable onDisposable)
             {
                 var streamDispose = CreateReaderStream(out var stream);
-                var disposableAction = new DisposableAction(() =>
+                stream._disposable = new LimitedStreamDisposable(streamDispose, onDisposable);
+                return stream;
+            }
+            
+            private readonly struct LimitedStreamDisposable : IDisposable
+            {
+                private readonly IDisposable _streamDispose;
+                private readonly IDisposable _parentDisposable;
+
+                public LimitedStreamDisposable(IDisposable streamDispose)
                 {
-                    using (onDisposable)
-                    using (streamDispose)
+                    _streamDispose = streamDispose;
+                }
+
+                public LimitedStreamDisposable(IDisposable streamDispose, IDisposable parentDisposable) : this(streamDispose)
+                {
+                    _parentDisposable = parentDisposable;
+                }
+
+                public void Dispose()
+                {
+                    using (_parentDisposable)
+                    using (_streamDispose)
                     {
                         
                     }
-                });
-                stream._disposable = disposableAction;
-                return stream;
+                }
             }
         }
 

@@ -13,7 +13,9 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         public long MigrationIndex;
         public string Node;
 
-        public DestinationMigrationConfirmCommand(){}
+        public DestinationMigrationConfirmCommand()
+        {
+        }
 
         public DestinationMigrationConfirmCommand(int bucket, long migrationIndex, string node, string database, string raftId) : base(database, raftId)
         {
@@ -41,6 +43,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             {
                 migration.Status = MigrationStatus.OwnershipTransferred;
                 migration.ConfirmationIndex = etag;
+
                 record.MoveBucket(migration.Bucket, migration.DestinationShard);
             }
         }

@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
@@ -11,13 +12,13 @@ namespace Raven.Server.Documents.Sharding.Commands.Querying;
 
 public abstract class AbstractShardedQueryCommand<TResult, TParameters> : AbstractQueryCommand<TResult, TParameters>, IRaftCommand
 {
-    private readonly BlittableJsonReaderObject _query;
+    private readonly string _query;
 
     public readonly QueryTimingsScope Scope;
 
     protected readonly string IndexName;
     protected AbstractShardedQueryCommand(
-        BlittableJsonReaderObject query,
+        string query,
         IndexQueryBase<TParameters> indexQuery,
         QueryTimingsScope scope,
         bool metadataOnly,
@@ -25,8 +26,9 @@ public abstract class AbstractShardedQueryCommand<TResult, TParameters> : Abstra
         bool ignoreLimit,
         string indexName,
         bool canReadFromCache,
-        string raftUniqueRequestId)
-        : base(indexQuery, true, metadataOnly, indexEntriesOnly, ignoreLimit)
+        string raftUniqueRequestId,
+        TimeSpan globalHttpClientTimeout)
+        : base(indexQuery, true, metadataOnly, indexEntriesOnly, ignoreLimit, globalHttpClientTimeout)
     {
         _query = query;
         Scope = scope;
@@ -51,6 +53,6 @@ public abstract class AbstractShardedQueryCommand<TResult, TParameters> : Abstra
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "let's create a server-side query class here and use same code as for QueryCommand");
 
-        return new StringContent(_query.ToString(), Encoding.UTF8, "application/json");
+        return new StringContent(_query, Encoding.UTF8, "application/json");
     }
 }

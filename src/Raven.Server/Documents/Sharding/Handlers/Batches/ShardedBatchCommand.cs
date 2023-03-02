@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Batches;
 
@@ -16,6 +19,10 @@ public class ShardedBatchCommand : IBatchCommand
 {
     private readonly TransactionOperationContext _context;
     private readonly ShardedDatabaseContext _databaseContext;
+    
+    private Dictionary<int, ShardedSingleNodeBatchCommand> _batchPerShard;
+    private object[] _result;
+    public DynamicJsonArray Result => new DynamicJsonArray(_result);
 
     public List<BufferedCommand> BufferedCommands;
     public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
@@ -29,15 +36,59 @@ public class ShardedBatchCommand : IBatchCommand
 
     public bool IsClusterTransaction { get; set; }
     
-    public HashSet<int> Skip;
-
     internal ShardedBatchCommand(TransactionOperationContext context, ShardedDatabaseContext databaseContext)
     {
         _context = context;
         _databaseContext = databaseContext;
     }
 
-    public IEnumerator<SingleShardedCommand> GetCommands(ShardedBatchBehavior behavior)
+    public Dictionary<int, ShardedSingleNodeBatchCommand> GetCommands(ShardedBatchBehavior behavior, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions)
+    {
+        var commands = _batchPerShard == null ? GetNewCommands(behavior) : GetRetryCommands();
+
+        var resultSize = 0;
+        _batchPerShard ??= new Dictionary<int, ShardedSingleNodeBatchCommand>();
+        foreach (var c in commands)
+        {
+            var shardNumber = c.ShardNumber;
+            if (_batchPerShard.TryGetValue(shardNumber, out var shardedBatchCommand) == false)
+            {
+                shardedBatchCommand = new ShardedSingleNodeBatchCommand(shardNumber, indexBatchOptions, replicationBatchOptions);
+                _batchPerShard.Add(shardNumber, shardedBatchCommand);
+            }
+
+            shardedBatchCommand.AddCommand(c);
+            resultSize++;
+        }
+
+        _result ??= new object[resultSize];
+        return _batchPerShard;
+    }
+
+    public void MarkShardAsComplete(JsonOperationContext context, int shardNumber)
+    {
+        _batchPerShard.Remove(shardNumber, out var command);
+        command!.AssembleShardedReply(context, _result);
+        command.Dispose();
+    }
+
+    private IEnumerator<SingleShardedCommand> GetRetryCommands()
+    {
+        var failed = _batchPerShard.Values.ToList();
+        _batchPerShard.Clear();
+        foreach (var failedShard in failed)
+        {
+            foreach (var command in failedShard.Commands)
+            {
+                foreach (var retry in command.Retry(_databaseContext, _context))
+                {
+                    yield return retry;
+                }
+            }
+        }
+    }
+
+    private IEnumerator<SingleShardedCommand> GetNewCommands(ShardedBatchBehavior behavior)
     {
         int? previousBucket = null;
         string previousDocumentId = null;
@@ -49,14 +100,10 @@ public class ShardedBatchCommand : IBatchCommand
             var cmd = ParsedCommands[index];
             var bufferedCommand = BufferedCommands[index];
 
+            (int ShardNumber, int Bucket) result;
+            int shardNumber;
             if (cmd.Type == CommandType.BatchPATCH)
             {
-                if (Skip?.Contains(positionInResponse) == true)
-                {
-                    positionInResponse++;
-                    continue;
-                }
-
                 var idsByShard = new Dictionary<int, List<(string Id, string ChangeVector)>>();
                 foreach (var cmdId in cmd.Ids)
                 {
@@ -68,7 +115,7 @@ public class ShardedBatchCommand : IBatchCommand
 
                     bjro.TryGet(nameof(ICommandData.ChangeVector), out string expectedChangeVector);
 
-                    var result = _databaseContext.GetShardNumberAndBucketFor(_context, id);
+                    result = _databaseContext.GetShardNumberAndBucketFor(_context, id);
                     if (idsByShard.TryGetValue(result.ShardNumber, out var list) == false)
                         idsByShard[result.ShardNumber] = list = new List<(string Id, string ChangeVector)>();
 
@@ -79,20 +126,19 @@ public class ShardedBatchCommand : IBatchCommand
 
                 foreach (var kvp in idsByShard)
                 {
-                    yield return new SingleShardedCommand
+                    var list = kvp.Value;
+                    shardNumber = _databaseContext.ForTestingPurposes?.ModifyShardNumber(kvp.Key) ?? kvp.Key;
+
+                    yield return new BatchPatchSingleShardedCommand
                     {
-                        ShardNumber = kvp.Key,
-                        CommandStream = bufferedCommand.ModifyBatchPatchStream(kvp.Value),
+                        ShardNumber = shardNumber,
+                        BufferedCommand = bufferedCommand,
+                        List = list,
+                        CommandStream = bufferedCommand.ModifyBatchPatchStream(list),
                         PositionInResponse = positionInResponse++
                     };
                 }
 
-                continue;
-            }
-
-            if (Skip?.Contains(positionInResponse) == true)
-            {
-                positionInResponse++;
                 continue;
             }
 
@@ -103,14 +149,17 @@ public class ShardedBatchCommand : IBatchCommand
                 commandStream = bufferedCommand.ModifyIdentityStream(cmd);
             }
 
-            var cmdResult = GetShardNumberForCommandType(cmd, bufferedCommand.IsServerSideIdentity, out var documentId);
+            result = GetShardNumberForCommandType(cmd, bufferedCommand.IsServerSideIdentity, out var documentId);
             var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
 
-            AssertBehavior(behavior, cmd.Type, ref previousDocumentId, ref previousBucket, cmdResult.Bucket, documentId);
+            AssertBehavior(behavior, cmd.Type, ref previousDocumentId, ref previousBucket, result.Bucket, documentId);
+
+            shardNumber = _databaseContext.ForTestingPurposes?.ModifyShardNumber(result.ShardNumber) ?? result.ShardNumber;
 
             yield return new SingleShardedCommand
             {
-                ShardNumber = cmdResult.ShardNumber,
+                Id = cmd.Id,
+                ShardNumber = shardNumber,
                 AttachmentStream = stream,
                 CommandStream = commandStream,
                 PositionInResponse = positionInResponse++

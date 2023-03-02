@@ -5,9 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions.Sharding;
-using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.Documents.Handlers.Batches;
-using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -21,21 +19,23 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
 
     private readonly ShardedDatabaseContext _databaseContext;
     private readonly BufferedCommandCopier _bufferedCommandCopier;
+    private readonly Lazy<StreamsTempFile> _streamsTempFile;
 
     public ShardedBatchCommandsReader(ShardedDatabaseRequestHandler handler) :
             base(handler, handler.DatabaseContext.DatabaseName, handler.DatabaseContext.IdentityPartsSeparator, new BatchRequestParser())
     {
         _databaseContext = handler.DatabaseContext;
         BatchRequestParser.CommandParsingObserver = _bufferedCommandCopier = new BufferedCommandCopier();
+        _streamsTempFile = new Lazy<StreamsTempFile>(() => ServerStore.GetTempFile($"{_databaseContext.DatabaseName}.attachment", "sharded", _databaseContext.Encrypted));
     }
 
     public override async ValueTask SaveStreamAsync(JsonOperationContext context, Stream input)
     {
         Streams ??= new List<Stream>();
-        var attachment = ServerStore.GetTempFile($"{_databaseContext.DatabaseName}.attachment", "sharded", _databaseContext.Encrypted).StartNewStream();
+        var attachment = _streamsTempFile.Value.StartNewStream();
         await input.CopyToAsync(attachment, Handler.AbortRequestToken);
         await attachment.FlushAsync(Handler.AbortRequestToken);
-        Streams.Add(attachment);
+        Streams.Add(((StreamsTempFile.InnerStream)attachment).CreateReaderStream());
     }
 
     public override async Task<BatchRequestParser.CommandData> ReadCommandAsync(
@@ -96,5 +96,21 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
             AttachmentStreams = Streams,
             IsClusterTransaction = IsClusterTransactionRequest
         };
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        if (Streams != null)
+        {
+            foreach (var stream in Streams)
+            {
+                stream.Dispose();
+            }
+        }
+
+        if (_streamsTempFile.IsValueCreated)
+            _streamsTempFile.Value.Dispose();
     }
 }

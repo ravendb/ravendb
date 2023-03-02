@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -14,7 +13,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeDocumentsCommand
+    public class IncludeDocumentsCommand : AbstractIncludeDocumentsCommand
     {
         private readonly DocumentsStorage _storage;
         private readonly DocumentsOperationContext _context;
@@ -26,6 +25,7 @@ namespace Raven.Server.Documents.Includes
         private HashSet<string> _idsToIgnore;
 
         public DocumentsOperationContext Context => _context;
+        public override int Count => _includedIds?.Count ?? 0;
 
         public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, string[] includes, bool isProjection)
         {
@@ -35,8 +35,6 @@ namespace Raven.Server.Documents.Includes
             _isProjection = isProjection;
         }
 
-        internal bool HasIncludesIds() => _includedIds?.Count > 0;
-        
         public void AddRange(HashSet<string> ids, string documentId)
         {
             AddToIgnore(documentId);

@@ -56,8 +56,10 @@ dialog.addContext('bootstrapModal', {
 
             $('#bootstrapModal').modal(options);
             
+            $(".modal-backdrop").addClass("bs3");
+            
             if ($("body").hasClass("fullscreen")) {
-                $('.modal-backdrop').appendTo('.modal-root');   
+                $('.modal-backdrop ').appendTo('.modal-root');   
             }
             
             $('#bootstrapModal').on('hidden.bs.modal', () => {

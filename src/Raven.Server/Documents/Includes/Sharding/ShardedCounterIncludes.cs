@@ -3,21 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Includes.Sharding;
 
-public class ShardedCounterIncludes : ICounterIncludes
+public class ShardedCounterIncludes : AbstractIncludeCountersCommand
 {
+    private readonly CancellationToken _token;
     private Dictionary<string, List<BlittableJsonReaderObject>> _countersByDocumentId;
     private Dictionary<string, HashSet<string>> _includedCounterNames;
 
+    public ShardedCounterIncludes(CancellationToken token = default)
+    {
+        _token = token;
+    }
+
     public HashSet<string> MissingCounterIncludes { get; set; }
 
-    public Dictionary<string, string[]> IncludedCounterNames => _includedCounterNames.ToDictionary(x => x.Key, x => x.Value.ToArray());
+    public override Dictionary<string, string[]> IncludedCounterNames => _includedCounterNames.ToDictionary(x => x.Key, x => x.Value.ToArray());
 
-    public int Count => _countersByDocumentId?.Count ?? 0;
+    public override int Count => _countersByDocumentId?.Count ?? 0;
 
     public void AddResults(BlittableJsonReaderObject results, Dictionary<string, string[]> includedCounterNames, JsonOperationContext contextToClone)
     {
@@ -86,7 +93,7 @@ public class ShardedCounterIncludes : ICounterIncludes
         counters.Add(counter);
     }
 
-    public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
+    public override async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
     {
         writer.WriteStartObject();
 
@@ -121,5 +128,30 @@ public class ShardedCounterIncludes : ICounterIncludes
         }
 
         writer.WriteEndObject();
+    }
+
+    public void Gather(List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> list,
+        ClusterOperationContext clusterOperationContext)
+    {
+        foreach (var item in list)
+        {
+            using (item.Includes)
+            {
+                _token.ThrowIfCancellationRequested();
+                AddResults(item.Includes, item.IncludedCounterNames, clusterOperationContext);
+            }
+        }
+    }
+
+    public override long GetCountersSize()
+    {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Minor, "RavenDB-16279: for task stats in studio should we calculate the stats from each shard or orchestrator");
+        return 0L;
+    }
+
+    public override long GetCountersCount()
+    {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Minor, "RavenDB-16279: for task stats in studio should we calculate the stats from each shard or orchestrator");
+        return 0L;
     }
 }

@@ -15,14 +15,19 @@ public class ShardedDocumentPutAction : DocumentPutAction
     }
 
     // TODO need to make sure we check that for counters/TS/etc...
-    protected override void ValidateId(Slice lowerId)
+    public override void ValidateId(Slice lowerId)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle write documents to the wrong shard");
         var config = _documentDatabase.ShardingConfiguration;
         var bucket = ShardHelper.GetBucketFor(config, lowerId);
         var shard = ShardHelper.GetShardNumberFor(config, bucket);
         if (shard != _documentDatabase.ShardNumber)
+        {
+            if (_documentDatabase.ForTestingPurposes != null && _documentDatabase.ForTestingPurposes.EnableWritesToTheWrongShard)
+                return;
+
             throw new ShardMismatchException($"Document '{lowerId}' belongs to bucket '{bucket}' on shard #{shard}, but PUT operation was performed on shard #{_documentDatabase.ShardNumber}.");
+        }
     }
 
     protected override unsafe void CalculateSuffixForIdentityPartsSeparator(string id, ref char* idSuffixPtr, ref int idSuffixLength, ref int idLength)

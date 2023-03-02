@@ -12,7 +12,6 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 {
@@ -25,7 +24,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         {
         }
 
-        public override IDisposable InitializeForNewBatch(ClusterOperationContext clusterContext, out SubscriptionIncludeCommands includesCommands)
+        public override IDisposable InitializeForNewBatch(ClusterOperationContext clusterContext, out DatabaseIncludesCommandImpl includesCommands)
         {
             var release = base.InitializeForNewBatch(clusterContext, out includesCommands);
 
@@ -46,8 +45,8 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         {
             if (ShouldSend(item, out var reason, out var exception, out var result))
             {
-                if (IncludesCmd != null && Run != null)
-                    IncludesCmd.AddRange(Run.Includes, result.Id);
+                if (IncludesCmd != null && IncludesCmd.IncludeDocumentsCommand != null && Run != null)
+                    IncludesCmd.IncludeDocumentsCommand.AddRange(Run.Includes, result.Id);
 
                 if (result.Data != null)
                     Fetcher.MarkDocumentSent();
@@ -55,7 +54,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 return (result, null);
             }
 
-            if (Logger.IsInfoEnabled) 
+            if (Logger.IsInfoEnabled)
                 Logger.Info(reason, exception);
 
             if (exception != null)
@@ -75,7 +74,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         protected abstract bool ShouldSend(T item, out string reason, out Exception exception, out Document result);
     }
 
-    public abstract class DatabaseSubscriptionProcessor : SubscriptionProcessor
+    public abstract class DatabaseSubscriptionProcessor : AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl>
     {
         protected readonly Size MaximumAllowedMemory;
 
@@ -93,18 +92,16 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             Database = database;
             MaximumAllowedMemory = new Size(Database.Is32Bits ? 4 : 32, SizeUnit.Megabytes);
         }
-        
+
         public override void InitializeProcessor()
         {
             base.InitializeProcessor();
-            
+
             SubscriptionConnectionsState = Database.SubscriptionStorage.Subscriptions[Connection.SubscriptionId];
             Active = SubscriptionConnectionsState.GetActiveBatches();
         }
 
-        public override IDisposable InitializeForNewBatch(
-            ClusterOperationContext clusterContext,
-            out SubscriptionIncludeCommands includesCommands)
+        public override IDisposable InitializeForNewBatch(ClusterOperationContext clusterContext, out DatabaseIncludesCommandImpl includesCommands)
         {
             var release = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocsContext);
             try
@@ -119,21 +116,76 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 throw;
             }
         }
-        
 
-        protected override SubscriptionIncludeCommands CreateIncludeCommands()
+        protected override DatabaseIncludesCommandImpl CreateIncludeCommands()
         {
-            var includeCommands = new SubscriptionIncludeCommands();
+            var includes = CreateIncludeCommandsInternal(Database, DocsContext, Connection, Connection.Subscription);
+            return includes;
+        }
 
-            if (Connection.SupportedFeatures.Subscription.Includes)
-                includeCommands.IncludeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, DocsContext, Connection.Subscription.Includes,
-                    isProjection: string.IsNullOrWhiteSpace(Connection.Subscription.Script) == false);
-            if (Connection.SupportedFeatures.Subscription.CounterIncludes && Connection.Subscription.CounterIncludes != null)
-                includeCommands.IncludeCountersCommand = new IncludeCountersCommand(Database, DocsContext, Connection.Subscription.CounterIncludes);
-            if (Connection.SupportedFeatures.Subscription.TimeSeriesIncludes && Connection.Subscription.TimeSeriesIncludes != null)
-                includeCommands.IncludeTimeSeriesCommand = new IncludeTimeSeriesCommand(DocsContext, Connection.Subscription.TimeSeriesIncludes.TimeSeries);
+        internal static DatabaseIncludesCommandImpl CreateIncludeCommandsInternal(DocumentDatabase database, DocumentsOperationContext context,
+            ISubscriptionConnection connection, SubscriptionConnection.ParsedSubscription subscription)
+        {
+            var hasIncludes = TryCreateIncludesCommand(database, context, connection, subscription, out IncludeCountersCommand includeCounters, out IncludeDocumentsCommand includeDocuments, out IncludeTimeSeriesCommand includeTimeSeries);
 
-            return includeCommands;
+            var includes = hasIncludes ? new DatabaseIncludesCommandImpl(includeDocuments, includeTimeSeries, includeCounters) : null;
+            return includes;
+        }
+
+        public static bool TryCreateIncludesCommand(DocumentDatabase database, DocumentsOperationContext context, ISubscriptionConnection connection,
+            SubscriptionConnection.ParsedSubscription subscription, out IncludeCountersCommand includeCounters, out IncludeDocumentsCommand includeDocuments, out IncludeTimeSeriesCommand includeTimeSeries)
+        {
+            includeTimeSeries = null;
+            includeCounters = null;
+            includeDocuments = null;
+
+            bool hasIncludes = false;
+            if (connection == null)
+            {
+                if (subscription.Includes != null)
+                {
+                    // test subscription with includes
+                    includeDocuments = new IncludeDocumentsCommand(database.DocumentsStorage, context, subscription.Includes,
+                        isProjection: string.IsNullOrWhiteSpace(subscription.Script) == false);
+                    hasIncludes = true;
+                }
+            }
+            else if (connection.SupportedFeatures.Subscription.Includes)
+            {
+                includeDocuments = new IncludeDocumentsCommand(database.DocumentsStorage, context, subscription.Includes,
+                    isProjection: string.IsNullOrWhiteSpace(subscription.Script) == false);
+                hasIncludes = true;
+            }
+
+            if (subscription.CounterIncludes != null)
+            {
+                if (connection != null && connection.SupportedFeatures.Subscription.CounterIncludes)
+                {
+                    includeCounters = new IncludeCountersCommand(database, context, subscription.CounterIncludes);
+                    hasIncludes = true;
+                }
+                else
+                {
+                    includeCounters = new IncludeCountersCommand(database, context, subscription.CounterIncludes);
+                    hasIncludes = true;
+                }
+            }
+
+            if (subscription.TimeSeriesIncludes != null)
+            {
+                if (connection != null && connection.SupportedFeatures.Subscription.TimeSeriesIncludes)
+                {
+                    includeTimeSeries = new IncludeTimeSeriesCommand(context, subscription.TimeSeriesIncludes.TimeSeries);
+                    hasIncludes = true;
+                }
+                else
+                {
+                    includeTimeSeries = new IncludeTimeSeriesCommand(context, subscription.TimeSeriesIncludes.TimeSeries);
+                    hasIncludes = true;
+                }
+            }
+
+            return hasIncludes;
         }
 
         protected void InitializeScript()

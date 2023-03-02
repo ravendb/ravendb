@@ -45,7 +45,7 @@ namespace Raven.Server.ServerWide.Commands
                 record.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
             }
 
-            if (FromNodes != null && FromNodes.Length > 0) 
+            if (FromNodes != null && FromNodes.Length > 0)
             {
                 foreach (var node in FromNodes)
                 {
@@ -93,7 +93,7 @@ namespace Raven.Server.ServerWide.Commands
                 }
             }
         }
-        
+
         private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record, DatabaseTopology topology, int? shardNumber, DeletionInProgressStatus deletionInProgressStatus)
         {
             var allNodes = topology.AllNodes.Distinct();
@@ -104,7 +104,7 @@ namespace Raven.Server.ServerWide.Commands
                     record.DeletionInProgress[DatabaseRecord.GetKeyForDeletionInProgress(node, shardNumber)] = deletionInProgressStatus;
             }
 
-            return new DatabaseTopology {Stamp = record.Topology?.Stamp, ReplicationFactor = 0};
+            return new DatabaseTopology { Stamp = topology.Stamp, ReplicationFactor = 0 };
         }
 
         private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node, int? shardNumber, DeletionInProgressStatus deletionInProgressStatus)
@@ -135,7 +135,7 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(ShardNumber)] = ShardNumber;
             if (FromNodes != null)
             {
-              json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);
+                json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);
             }
         }
     }

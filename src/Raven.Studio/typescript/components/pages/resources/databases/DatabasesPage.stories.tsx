@@ -5,6 +5,10 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
 import { mockStore } from "test/mocks/store/MockStore";
+import { mockHooks } from "test/mocks/hooks/MockHooks";
+import { mockServices } from "test/mocks/services/MockServices";
+import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
     title: "Pages/Databases",
@@ -12,12 +16,29 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof DatabasesPage>;
 
-export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
+function commonInit() {
+    const { useClusterTopologyManager } = mockHooks;
+    useClusterTopologyManager.with_Cluster();
+
     accessManager.default.securityClearance("ClusterAdmin");
-
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+}
 
-    mockStore.databases.with_Sharded();
+function getDatabaseNamesForNode(nodeTag: string, dto: DatabaseSharedInfo): string[] {
+    if (dto.sharded) {
+        const shardedDto = dto as ShardedDatabaseSharedInfo;
+        return shardedDto.shards.map((x) => (x.nodes.some((n) => n.tag === nodeTag) ? x.name : null)).filter((x) => x);
+    }
+
+    return dto.nodes.some((x) => x.tag === nodeTag) ? [dto.name] : [];
+}
+
+export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
+    commonInit();
+
+    const value = mockStore.databases.with_Sharded();
+
+    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>
@@ -27,10 +48,11 @@ export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
 };
 
 export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
-    accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+    commonInit();
 
-    mockStore.databases.with_Cluster();
+    const value = mockStore.databases.with_Cluster();
+
+    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>
@@ -40,12 +62,13 @@ export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
 };
 
 export const WithDeletion: ComponentStory<typeof DatabasesPage> = () => {
-    accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+    commonInit();
 
-    mockStore.databases.with_Cluster((x) => {
+    const value = mockStore.databases.with_Cluster((x) => {
         x.deletionInProgress = ["Z"];
     });
+
+    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>
@@ -55,10 +78,61 @@ export const WithDeletion: ComponentStory<typeof DatabasesPage> = () => {
 };
 
 export const Single: ComponentStory<typeof DatabasesPage> = () => {
-    accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+    commonInit();
 
-    mockStore.databases.with_Single();
+    const value = mockStore.databases.with_Single();
+
+    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+
+    return (
+        <div style={{ height: "100vh", overflow: "auto" }}>
+            <DatabasesPage />
+        </div>
+    );
+};
+
+export const CompactDatabaseAuto: ComponentStory<typeof DatabasesPage> = () => {
+    commonInit();
+
+    const value = mockStore.databases.with_Single();
+
+    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+
+    return (
+        <div style={{ height: "100vh", overflow: "auto" }}>
+            <DatabasesPage compact={value.name} />
+        </div>
+    );
+};
+
+function assignNodeType(tag: string): databaseGroupNodeType {
+    switch (tag) {
+        case "B":
+            return "Promotable";
+        case "C":
+            return "Rehab";
+        default:
+            return "Member";
+    }
+}
+
+export const DifferentNodeStates: ComponentStory<typeof DatabasesPage> = () => {
+    commonInit();
+
+    const clusterDb = DatabasesStubs.nonShardedClusterDatabase().toDto();
+    clusterDb.nodes.forEach((n) => (n.type = assignNodeType(n.tag)));
+
+    const shardedDb = DatabasesStubs.shardedDatabase().toDto() as ShardedDatabaseSharedInfo;
+    shardedDb.nodes.forEach((n) => (n.type = assignNodeType(n.tag)));
+    shardedDb.shards.forEach((s) => {
+        s.nodes.forEach((n) => {
+            n.type = assignNodeType(n.tag);
+        });
+    });
+
+    mockStore.databases.withDatabases([clusterDb, shardedDb]);
+
+    mockServices.databasesService.withGetDatabasesState(() => [clusterDb.name, ...shardedDb.shards.map((x) => x.name)]);
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>

@@ -21,7 +21,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Batches;
 
-public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationContext>
+public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationContext> : IDisposable
     where TBatchCommand : IBatchCommand
     where TOperationContext : JsonOperationContext
 {
@@ -242,5 +242,9 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
     {
         throw new InvalidOperationException($"You cannot use change vector ({commandData.ChangeVector}) " +
                                             $"when using identity in the document ID ({commandData.Id}).");
+    }
+
+    public virtual void Dispose()
+    {
     }
 }

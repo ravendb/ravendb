@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+import { DatabaseSharedInfo, NodeInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
@@ -41,6 +41,7 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import useBoolean from "hooks/useBoolean";
 import { DatabaseDistribution } from "components/pages/resources/databases/partials/DatabaseDistribution";
 import { ValidDatabasePropertiesPanel } from "components/pages/resources/databases/partials/ValidDatabasePropertiesPanel";
+import { DatabaseNodeSetItem } from "components/pages/resources/databases/partials/DatabaseNodeSetItem";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -95,14 +96,6 @@ function badgeText(db: DatabaseSharedInfo) {
     return "Online";
 }
 
-function toExternalUrl(db: DatabaseSharedInfo, url: string) {
-    // we have to redirect to different node, let's find first member where selected database exists
-    const firstNode = db.nodes[0];
-    if (!firstNode) {
-        return "";
-    }
-    return appUrl.toExternalUrl(firstNode.nodeUrl, url);
-}
 interface DatabaseTopologyProps {
     db: DatabaseSharedInfo;
 }
@@ -124,9 +117,7 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
                         Orchestrators
                     </NodeSetLabel>
                     {db.nodes.map((node) => (
-                        <NodeSetItem key={node.tag} icon={iconForNodeType(node.type)} color="node" title={node.type}>
-                            {node.tag}
-                        </NodeSetItem>
+                        <DatabaseNodeSetItem key={node.tag} node={node} />
                     ))}
                 </NodeSet>
 
@@ -137,15 +128,19 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
                                 <NodeSetLabel color="shard" icon="shard">
                                     #{extractShardNumber(shard.name)}
                                 </NodeSetLabel>
-                                {shard.nodes.map((node) => {
+                                {shard.nodes.map((node) => (
+                                    <DatabaseNodeSetItem key={node.tag} node={node} />
+                                ))}
+                                {shard.deletionInProgress.map((node) => {
                                     return (
                                         <NodeSetItem
-                                            key={node.tag}
-                                            icon={iconForNodeType(node.type)}
-                                            color="node"
-                                            title={node.type}
+                                            key={"deletion-" + node}
+                                            icon="trash"
+                                            color="warning"
+                                            title="Deletion in progress"
+                                            extraIconClassName="pulse"
                                         >
-                                            {node.tag}
+                                            {node}
                                         </NodeSetItem>
                                     );
                                 })}
@@ -161,16 +156,7 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
                 <NodeSet className="m-1">
                     <NodeSetLabel icon="database">Nodes</NodeSetLabel>
                     {db.nodes.map((node) => {
-                        return (
-                            <NodeSetItem
-                                key={node.tag}
-                                icon={iconForNodeType(node.type)}
-                                color="node"
-                                title={node.type}
-                            >
-                                {node.tag}
-                            </NodeSetItem>
-                        );
+                        return <DatabaseNodeSetItem key={node.tag} node={node} />;
                     })}
                     {db.deletionInProgress.map((node) => {
                         return (
@@ -191,19 +177,6 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
     }
 }
 
-function iconForNodeType(type: databaseGroupNodeType) {
-    switch (type) {
-        case "Member":
-            return "dbgroup-member";
-        case "Rehab":
-            return "dbgroup-rehab";
-        case "Promotable":
-            return "dbgroup-promotable";
-        default:
-            assertUnreachable(type);
-    }
-}
-
 export function DatabasePanel(props: DatabasePanelProps) {
     const { db, selected, toggleSelection } = props;
     const activeDatabase = useAppSelector(selectActiveDatabase);
@@ -217,10 +190,14 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const [lockChanges, setLockChanges] = useState(false);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
-    const documentsUrl = db.currentNode.relevant ? localDocumentsUrl : toExternalUrl(db, localDocumentsUrl);
+    const documentsUrl = db.currentNode.relevant
+        ? localDocumentsUrl
+        : appUrl.toExternalDatabaseUrl(db, localDocumentsUrl);
 
     const localManageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
-    const manageGroupUrl = db.currentNode.relevant ? localManageGroupUrl : toExternalUrl(db, localManageGroupUrl);
+    const manageGroupUrl = db.currentNode.relevant
+        ? localManageGroupUrl
+        : appUrl.toExternalDatabaseUrl(db, localManageGroupUrl);
 
     const canNavigateToDatabase = !db.disabled;
 
@@ -254,7 +231,6 @@ export function DatabasePanel(props: DatabasePanelProps) {
             await dispatch(deleteDatabases(confirmation.databases, confirmation.keepFiles));
         }
     };
-
     const onCompactDatabase = async () => {
         reportEvent("databases", "compact");
         dispatch(compactDatabase(db));

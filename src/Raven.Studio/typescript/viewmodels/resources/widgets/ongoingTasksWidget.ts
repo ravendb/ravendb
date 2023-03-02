@@ -8,6 +8,7 @@ import genUtils = require("common/generalUtils");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import multiNodeTagsColumn = require("widgets/virtualGrid/columns/multiNodeTagsColumn");
 import taskItem = require("models/resources/widgets/taskItem");
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.OngoingTasksPayload> {
 
@@ -203,7 +204,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 headerTitle: "Tasks count"
             }),
 
-            new textColumn<taskItem>(grid, x => x.isTitleItem() ? "" : x.databaseName(), "Database", "30%", {
+            new textColumn<taskItem>(grid, x => x.isTitleItem() ? "" : DatabaseUtils.formatName(x.databaseName()), "Database", "30%", {
                 title: x => x.databaseName()
             }),
 

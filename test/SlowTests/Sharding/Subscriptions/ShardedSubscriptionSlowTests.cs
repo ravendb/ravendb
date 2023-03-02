@@ -13,6 +13,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Replication;
@@ -490,7 +491,246 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Theory(Skip = "TODO add include")]
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanUseSubscriptionWithDocumentIncludes(bool diff)
+        {
+            DoNotReuseServer();
+            Server.ServerStore.Sharding.BlockPrefixedSharding = false;
+
+            var ops = diff
+                ? new Options
+                {
+                    ModifyDatabaseRecord = record =>
+                    {
+                        record.Sharding ??= new ShardingConfiguration();
+                        record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                        {
+                            new PrefixedShardingSetting { Prefix = "people/", Shards = new List<int> { 0 } },
+                            new PrefixedShardingSetting { Prefix = "dogs/", Shards = new List<int> { 1, 2 } }
+                        };
+                    }
+                }
+                : null;
+            using (var store = Sharding.GetDocumentStore(ops))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Arava"
+                    }, "people/1");
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Owner = "people/1"
+                    });
+                    session.SaveChanges();
+                }
+                var id = store.Subscriptions.Create(new SubscriptionCreationOptions
+                {
+                    Query = @"from Dogs include Owner"
+                });
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Dog>(id))
+                {
+                    var mre = new AsyncManualResetEvent();
+                    var r = sub.Run(batch =>
+                    {
+                        Assert.NotEmpty(batch.Items);
+                        using (var s = batch.OpenSession())
+                        {
+                            foreach (var item in batch.Items)
+                            {
+                                s.Load<Person>(item.Result.Owner);
+                                var dog = s.Load<Dog>(item.Id);
+                                Assert.Same(dog, item.Result);
+                            }
+                            Assert.Equal(0, s.Advanced.NumberOfRequests);
+                        }
+                        mre.Set();
+                    });
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    await sub.DisposeAsync();
+                    await r;// no error
+                }
+
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        public void CanUseSubscriptionWithCountersIncludesWhenAllExist()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                string name = store.Subscriptions
+                    .Create(new SubscriptionCreationOptions<Company>() { Includes = builder => builder.IncludeAllCounters() });
+
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Id = "companies/1", Name = "HR" };
+                    session.Store(company);
+                    session.CountersFor(company).Increment("Likes", 322);
+                    session.CountersFor(company).Increment("Dislikes", 228);
+                    session.SaveChanges();
+                }
+
+                var mre = new ManualResetEventSlim();
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(name);
+
+                long? likes = null;
+                long? dislikes = null;
+                int? numberOfRequests = null;
+
+                var t = worker.Run(batch =>
+                {
+                    using (var session = batch.OpenSession())
+                    {
+                        var company = session.Load<Company>("companies/1");
+                        var counters = session.CountersFor(company);
+                        likes = counters.Get("Likes");
+                        dislikes = counters.Get("Dislikes");
+                        numberOfRequests = session.Advanced.NumberOfRequests;
+                    }
+
+                    mre.Set();
+                });
+
+                var result = WaitForValue(() => mre.Wait(TimeSpan.FromSeconds(500)), true);
+                if (result == false && t.IsFaulted)
+                    Assert.True(result, $"t.IsFaulted: {t.Exception}, {t.Exception?.InnerException}");
+
+                Assert.True(result);
+
+                Assert.Equal(322, likes);
+                Assert.Equal(228, dislikes);
+                Assert.Equal(0, numberOfRequests);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        public void CanUseSubscriptionWithCountersIncludesWhenWithNonExisting()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                string name = store.Subscriptions
+                        .Create(new SubscriptionCreationOptions<Company>()
+                        {
+                            Includes = builder => builder.IncludeCounters(new[] {  "Likes", "Subscribes" })
+                        });
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Id = "companies/1", Name = "HR" };
+                    session.Store(company);
+                    session.CountersFor(company).Increment("Likes", 322);
+                    session.CountersFor(company).Increment("Dislikes", 228);
+                    session.SaveChanges();
+                }
+
+                var mre = new ManualResetEventSlim();
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(name);
+
+                long? likes = null;
+                long? subscribes = 0;
+                int? numberOfRequests = null;
+                var t = worker.Run(batch =>
+                {
+                    using (var session = batch.OpenSession())
+                    {
+                        var company = session.Load<Company>("companies/1");
+                        likes = session.CountersFor(company).Get("Likes");
+                        subscribes = session.CountersFor(company).Get("Subscribes");
+                        numberOfRequests = session.Advanced.NumberOfRequests;
+                    }
+
+                    mre.Set();
+                });
+
+                var result = WaitForValue(() => mre.Wait(TimeSpan.FromSeconds(500)), true);
+                if (result == false && t.IsFaulted)
+                    Assert.True(result, $"t.IsFaulted: {t.Exception}, {t.Exception?.InnerException}");
+
+                Assert.True(result);
+
+                Assert.Equal(322, likes);
+                Assert.Equal(null, subscribes);
+                Assert.Equal(0, numberOfRequests);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CanUseSubscriptionWithCountersIncludesWhenWithAllNonExist(bool single)
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                string name = null;
+                if (single == false)
+                {
+                    name = store.Subscriptions
+                        .Create(new SubscriptionCreationOptions<Company>() { Includes = builder => builder.IncludeCounters(new []{"Shares", "Subscribes"}) });
+                }
+                else
+                {
+                    name = store.Subscriptions
+                        .Create(new SubscriptionCreationOptions<Company>() { Includes = builder => builder.IncludeCounter("Shares") });
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Id = "companies/1", Name = "HR" };
+                    session.Store(company);
+                    session.CountersFor(company).Increment("Likes", 322);
+                    session.CountersFor(company).Increment("Dislikes", 228);
+                    session.SaveChanges();
+                }
+
+                var mre = new ManualResetEventSlim();
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(name);
+
+                long? shares = 0;
+                long? subscribes = 0;
+                int? numberOfRequests = null;
+                var t = worker.Run(batch =>
+                {
+                    using (var session = batch.OpenSession())
+                    {
+                        var company = session.Load<Company>("companies/1");
+                        shares = session.CountersFor(company).Get("Shares");
+                        if (single == false)
+                        {
+                            subscribes = session.CountersFor(company).Get("Subscribes");
+                        }
+                        numberOfRequests = session.Advanced.NumberOfRequests;
+                    }
+
+                    mre.Set();
+                });
+
+                var result = WaitForValue(() => mre.Wait(TimeSpan.FromSeconds(500)), true);
+                if (result == false && t.IsFaulted)
+                    Assert.True(result, $"t.IsFaulted: {t.Exception}, {t.Exception?.InnerException}");
+
+                Assert.True(result);
+
+                Assert.Equal(null, shares);
+                if (single == false)
+                {
+                    Assert.Equal(null, subscribes);
+                }
+                else
+                {
+                    Assert.Equal(0, subscribes);
+                }
+
+                Assert.Equal(0, numberOfRequests);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
         [InlineData(true)]
         [InlineData(false)]
         public void CanCreateSubscriptionWithIncludeTimeSeries_All_LastRange(bool byTime)
@@ -568,6 +808,85 @@ namespace SlowTests.Sharding.Subscriptions
                     Assert.True(result, $"t.IsFaulted: {t.Exception}, {t.Exception?.InnerException}");
 
                 Assert.True(result);
+            }
+        }
+
+        [Theory(Skip = "RavenDB-19889")]
+        //[RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void SubscriptionWithIncludeAllCountersOfDocumentAndOfRelatedDocument(bool diff)
+        {
+            DoNotReuseServer();
+            Server.ServerStore.Sharding.BlockPrefixedSharding = false;
+
+            var ops = diff
+                ? new Options
+                {
+                    ModifyDatabaseRecord = record =>
+                    {
+                        record.Sharding ??= new ShardingConfiguration();
+                        record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                        {
+                            new PrefixedShardingSetting { Prefix = "people/", Shards = new List<int> { 0 } },
+                            new PrefixedShardingSetting { Prefix = "dogs/", Shards = new List<int> { 1, 2 } }
+                        };
+                    }
+                }
+                : null;
+            using (var store = Sharding.GetDocumentStore(ops))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { Name = "Arava" }, "people/1");
+                    session.Store(new Dog { Name = "Oscar", Owner = "people/1" }, "dogs/1");
+                    // session.Store(new Person { Name = "Arava2" }, "people/2");
+                    // session.Store(new Dog { Name = "Oscar2", Owner = "people/2" }, "dogs/2");
+
+                    session.CountersFor("people/1").Increment("Dogs");
+                    //   session.CountersFor("people/2").Increment("Dogs");
+                    session.CountersFor("dogs/1").Increment("Barks", 15);
+                    //  session.CountersFor("dogs/2").Increment("Barks", 32);
+
+                    session.SaveChanges();
+                }
+
+                var id = store.Subscriptions.Create(new SubscriptionCreationOptions { Query = @"from Dogs as dog include counters(dog),counters(dog.Owner)" });
+
+                /* Example from queries: 
+                   Assert.Equal("from 'Orders' as x " +
+                "include counters(x),counters(x.Employee)"*/
+
+                var mre = new ManualResetEventSlim();
+                var worker = store.Subscriptions.GetSubscriptionWorker<Dog>(id);
+
+                int? numberOfRequests = null;
+                Dictionary<string, long?> dic1 = null;
+                Dictionary<string, long?> dic2 = null;
+                var t = worker.Run(batch =>
+                {
+                    using (var session = batch.OpenSession())
+                    {
+                        //      var person = session.Load<Person>("people/1");
+                        dic1 = session.CountersFor("people/1").GetAll();
+                        dic2 = session.CountersFor("dogs/1").GetAll();
+                        numberOfRequests = session.Advanced.NumberOfRequests;
+                    }
+
+                    mre.Set();
+                });
+
+                var result = WaitForValue(() => mre.Wait(TimeSpan.FromSeconds(500)), true);
+                if (result == false && t.IsFaulted)
+                    Assert.True(result, $"t.IsFaulted: {t.Exception}, {t.Exception?.InnerException}");
+
+                Assert.True(result);
+                Assert.Equal(1, dic1.Count);
+                Assert.Equal(1, dic1["Dogs"]);
+                Assert.Equal(1, dic2.Count);
+                Assert.Equal(15, dic2["Barks"]);
+
+                Assert.Equal(0, numberOfRequests);
             }
         }
 
@@ -734,5 +1053,10 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
+        private class Dog
+        {
+            public string Name;
+            public string Owner;
+        }
     }
 }

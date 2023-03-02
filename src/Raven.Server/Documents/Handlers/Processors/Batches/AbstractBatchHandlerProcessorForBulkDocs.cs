@@ -41,8 +41,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
         var indexBatchOptions = GetIndexBatchOptions();
         var replicationBatchOptions = GetReplicationBatchOptions();
 
-        var commandsReader = GetCommandsReader();
-
+        using (var commandsReader = GetCommandsReader())
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         {
             var contentType = HttpContext.Request.ContentType;

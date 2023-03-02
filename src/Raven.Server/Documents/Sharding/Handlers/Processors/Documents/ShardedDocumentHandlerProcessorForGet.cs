@@ -43,7 +43,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
         string[] compareExchangeValuesAsArray = compareExchangeValues;
         var idsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, ids);
-        var op = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShard, includePaths, revisions, counters, timeSeries, compareExchangeValuesAsArray, etag, metadataOnly);
+        var op = new FetchDocumentsFromShardsOperation(context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext, idsByShard, includePaths, revisions, counters, timeSeries, compareExchangeValuesAsArray, etag, metadataOnly);
         var shardedReadResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op, CancellationToken);
 
         if (ids.Count == 1 && shardedReadResult.Result?.Documents.Count == 0)
@@ -71,7 +71,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         if (result.MissingIncludes?.Count > 0)
         {
             var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, result.MissingIncludes);
-            var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, RequestHandler, missingIncludeIdsByShard, includePaths: null, includeRevisions: null, counterIncludes: default, timeSeriesIncludes: null, compareExchangeValueIncludes: null, etag: null, metadataOnly: metadataOnly);
+            var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext, missingIncludeIdsByShard, includePaths: null, includeRevisions: null, counterIncludes: default, timeSeriesIncludes: null, compareExchangeValueIncludes: null, etag: null, metadataOnly: metadataOnly);
             var missingResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, CancellationToken);
 
             foreach (var (id, missing) in missingResult.Result.Documents)

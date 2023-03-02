@@ -3,23 +3,25 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Includes.Sharding;
 
-public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
+public class ShardedTimeSeriesIncludes : AbstractIncludeTimeSeriesCommand
 {
     private readonly bool _supportsMissingIncludes;
-
-    public ShardedTimeSeriesIncludes(bool supportsMissingIncludes)
+    private readonly CancellationToken _token;
+    public ShardedTimeSeriesIncludes(bool supportsMissingIncludes, CancellationToken token = default)
     {
         _supportsMissingIncludes = supportsMissingIncludes;
+        _token = token;
     }
 
     private Dictionary<string, BlittableJsonReaderObject> _resultsByDocumentId;
 
-    public int Count => _resultsByDocumentId.Count;
+    public override int Count => _resultsByDocumentId?.Count ?? 0;
 
     public Dictionary<string, List<TimeSeriesRange>> MissingTimeSeriesIncludes { get; set; }
 
@@ -106,7 +108,7 @@ public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
         _resultsByDocumentId.TryAdd(docId, timeSeries);
     }
 
-    public async ValueTask<int> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
+    public override async ValueTask<int> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
     {
         int size = 0;
         writer.WriteStartObject();
@@ -131,5 +133,23 @@ public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
         writer.WriteEndObject();
 
         return size;
+    }
+
+    public override long GetEntriesCountForStats()
+    {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Minor, "RavenDB-16279: for task stats in studio should we calculate the stats from each shard or orchestrator");
+        return 0L;
+    }
+
+    public void Gather(List<BlittableJsonReaderObject> list, ClusterOperationContext clusterOperationContext)
+    {
+        foreach (var item in list)
+        {
+            using (item)
+            {
+                _token.ThrowIfCancellationRequested();
+                AddResults(item, clusterOperationContext);
+            }
+        }
     }
 }

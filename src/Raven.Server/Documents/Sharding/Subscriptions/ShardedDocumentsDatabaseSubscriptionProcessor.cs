@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Nest;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
@@ -97,5 +98,13 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         var result = await SubscriptionConnectionsState.RecordBatchDocuments(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch);
         Skipped = result.Skipped as HashSet<string>;
         return result.Index;
+    }
+
+    protected override ShardIncludesCommandImpl CreateIncludeCommands()
+    {
+        var hasIncludes = TryCreateIncludesCommand(Database, DocsContext, Connection, Connection.Subscription, out IncludeCountersCommand includeCounters, out IncludeDocumentsCommand includeDocuments, out IncludeTimeSeriesCommand includeTimeSeries);
+        var includes = hasIncludes ? new ShardIncludesCommandImpl(includeDocuments, includeTimeSeries, includeCounters) : null;
+
+        return includes;
     }
 }

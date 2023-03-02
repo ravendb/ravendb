@@ -60,5 +60,28 @@ namespace FastTests.Utils
                 position += prev - pos;
             }
         }
+
+        
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public void Should_properly_seek(int seed)
+        {
+            var r = new Random(seed);
+
+            var bytes = new byte[r.Next(128, 1024 * 1024)];
+            r.NextBytes(bytes);
+
+            var ms = new MemoryStream(bytes);
+            var entireStream = new LimitedStream(ms, ms.Length, 0, 0);
+            Assert.Equal(bytes, entireStream.ReadData());
+
+            var p = r.Next(0, bytes.Length - 1);
+            entireStream.Seek(p, SeekOrigin.Begin);
+
+            var x = new Span<byte>(bytes, p, bytes.Length - p);
+            var y = new Span<byte>(entireStream.ReadData());
+
+            Assert.True(x.SequenceEqual(y));
+        }
     }
 }

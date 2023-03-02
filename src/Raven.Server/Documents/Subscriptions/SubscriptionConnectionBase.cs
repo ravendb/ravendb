@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
@@ -19,6 +18,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Subscriptions.Stats;
+using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -34,19 +34,13 @@ using Voron.Global;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public abstract class SubscriptionConnectionBase : IDisposable
+    public abstract class SubscriptionConnectionBase<TIncludesCommand> : ISubscriptionConnection 
+        where TIncludesCommand : AbstractIncludesCommand
     {
         private static readonly byte[] Heartbeat = Encoding.UTF8.GetBytes("\r\n");
         private static readonly StringSegment DataSegment = new StringSegment("Data");
-        private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));
-        private static readonly StringSegment CounterIncludesSegment = new StringSegment(nameof(QueryResult.CounterIncludes));
-        private static readonly StringSegment TimeSeriesIncludesSegment = new StringSegment(nameof(QueryResult.TimeSeriesIncludes));
-        private static readonly StringSegment IncludedCounterNamesSegment = new StringSegment(nameof(QueryResult.IncludedCounterNames));
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
-        private static readonly StringSegment TypeSegment = new StringSegment("Type");
 
-        public const long NonExistentBatch = -1;
-        public const int WaitForChangedDocumentsTimeoutInMs = 3000;
         public readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(1);
 
         protected readonly ServerStore _serverStore;
@@ -62,23 +56,23 @@ namespace Raven.Server.Documents.Subscriptions
         public SubscriptionException ConnectionException;
         public long SubscriptionId { get; set; }
         public readonly string DatabaseName;
-        public readonly TcpConnectionOptions TcpConnection;
-        public readonly CancellationTokenSource CancellationTokenSource;
+        public TcpConnectionOptions TcpConnection { get; }
+        public CancellationTokenSource CancellationTokenSource { get; }
 
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
         public readonly string ClientUri;
 
         public string WorkerId => _options.WorkerId ??= Guid.NewGuid().ToString();
-        public SubscriptionState SubscriptionState;
-        public SubscriptionConnection.ParsedSubscription Subscription;
+        public SubscriptionState SubscriptionState { get; private set; }
+        public SubscriptionConnection.ParsedSubscription Subscription { get; private set; }
 
-        public readonly TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
+        public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; }
         public readonly SubscriptionStatsCollector Stats;
 
-        public Task SubscriptionConnectionTask;
+        public Task SubscriptionConnectionTask { get; set; }
         private MemoryStream _buffer = new MemoryStream();
 
-        protected SubscriptionProcessor.SubscriptionProcessor Processor;
+        protected AbstractSubscriptionProcessor<TIncludesCommand> Processor;
 
         internal TestingStuff ForTestingPurposes;
 
@@ -125,9 +119,11 @@ namespace Raven.Server.Documents.Subscriptions
             return null;
         }
 
+        public abstract AbstractSubscriptionProcessor<TIncludesCommand> CreateProcessor(SubscriptionConnectionBase<TIncludesCommand> connection);
+
         public async Task ProcessSubscriptionAsync<TState, TConnection>(TState state)
-            where TState : SubscriptionConnectionsStateBase<TConnection>
-            where TConnection : SubscriptionConnectionBase
+            where TState : SubscriptionConnectionsStateBase<TConnection, TIncludesCommand>
+            where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Starting to process subscription"));
             if (_logger.IsInfoEnabled)
@@ -135,7 +131,7 @@ namespace Raven.Server.Documents.Subscriptions
                 _logger.Info($"Starting processing documents for subscription {SubscriptionId} received from {ClientUri}");
             }
 
-            using (Processor = SubscriptionProcessor.SubscriptionProcessor.Create(this))
+            using (Processor = CreateProcessor(this))
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
 
@@ -147,7 +143,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                     if (ForTestingPurposes?.PauseConnection != null)
                         await ForTestingPurposes.PauseConnection.WaitAsync();
-                    
+
                     var inProgressBatchStats = Stats.CreateInProgressBatchStats();
 
                     using (var batchScope = inProgressBatchStats.CreateScope())
@@ -209,7 +205,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected virtual void OnError(Exception e) { }
 
-        protected List<(Document Document, Exception Exception)> CurrentBatch = new ();
+        protected List<(Document Document, Exception Exception)> CurrentBatch = new();
 
         /// <summary>
         /// Iterates on a batch in document collection, process it and send documents if found any match
@@ -217,8 +213,8 @@ namespace Raven.Server.Documents.Subscriptions
         /// <returns>Whether succeeded finding any documents to send</returns>
         private async Task<bool> TrySendingBatchToClient<TState, TConnection>(TState state, Stopwatch sendingCurrentBatchStopwatch,
             SubscriptionBatchStatsScope batchScope, SubscriptionBatchStatsAggregator batchStatsAggregator)
-            where TState : SubscriptionConnectionsStateBase<TConnection>
-            where TConnection : SubscriptionConnectionBase
+            where TState : SubscriptionConnectionsStateBase<TConnection, TIncludesCommand>
+            where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
             if (await state.WaitForSubscriptionActiveLock(300) == false)
             {
@@ -290,19 +286,17 @@ namespace Raven.Server.Documents.Subscriptions
                                     }
                                 }
 
-                                await WriteIncludedDocumentsAsync(writer, context, batchScope, includeCommand.IncludeDocumentsCommand);
-
-                                WriteIncludedCounters(writer, context, batchScope, includeCommand.IncludeCountersCommand);
-
-                                await WriteIncludedTimeSeriesAsync(writer, context, batchScope, includeCommand.IncludeTimeSeriesCommand);
+                                if (includeCommand != null)
+                                {
+                                    await includeCommand.WriteIncludesAsync(writer, context, batchScope, CancellationTokenSource.Token);
+                                }
 
                                 WriteEndOfBatch(writer);
 
                                 AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Flushing sent docs to client"));
 
-                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, docsToFlush, endOfBatch: true,
-                                    CancellationTokenSource.Token);
-                            } 
+                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, docsToFlush, endOfBatch: true, CancellationTokenSource.Token);
+                            }
                         }
                     }
                 }
@@ -316,12 +310,12 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        private static void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, (Document Doc, Exception Exception) result,
-            SubscriptionProcessor.SubscriptionProcessor.SubscriptionIncludeCommands includeCommand)
+        private void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, (Document Doc, Exception Exception) result,
+            TIncludesCommand includeCommand)
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
+            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(ISubscriptionConnection.TypeSegment));
             writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
@@ -344,15 +338,14 @@ namespace Raven.Server.Documents.Subscriptions
             }
             else
             {
-                includeCommand.IncludeDocumentsCommand?.Gather(result.Doc);
-                includeCommand.IncludeCountersCommand?.Fill(result.Doc);
-                includeCommand.IncludeTimeSeriesCommand?.Fill(result.Doc);
-
+                GatherIncludesForDocument(includeCommand, result.Doc);
                 writer.WriteDocument(context, result.Doc, metadataOnly: false);
             }
 
             writer.WriteEndObject();
         }
+
+        protected abstract void GatherIncludesForDocument(TIncludesCommand includeDocuments, Document document);
 
         public async Task ReportExceptionAsync(SubscriptionError error, Exception e)
         {
@@ -986,84 +979,6 @@ namespace Raven.Server.Documents.Subscriptions
         protected abstract void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last);
         protected abstract string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument);
         protected abstract Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch);
-
-        private async Task WriteIncludedTimeSeriesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
-            IncludeTimeSeriesCommand includeTimeSeriesCommand)
-        {
-            if (includeTimeSeriesCommand != null)
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
-                writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                var size = await includeTimeSeriesCommand.WriteIncludesAsync(writer, context, CancellationTokenSource.Token);
-
-                batchScope.RecordIncludedTimeSeriesInfo(includeTimeSeriesCommand.Results.Sum(x =>
-                    x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length))), size);
-
-                writer.WriteEndObject();
-            }
-        }
-
-        private static void WriteIncludedCounters(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
-            IncludeCountersCommand includeCountersCommand)
-        {
-            if (includeCountersCommand != null)
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
-                writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(CounterIncludesSegment));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(CounterIncludesSegment));
-                writer.WriteCounters(includeCountersCommand.Results);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
-                writer.WriteIncludedCounterNames(includeCountersCommand.IncludedCounterNames);
-
-                var size = includeCountersCommand.IncludedCounterNames.Sum(kvp =>
-                               kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //IncludedCounterNames
-                           + includeCountersCommand.Results.Sum(kvp =>
-                               kvp.Value.Sum(counter => counter == null
-                                       ? 0
-                                       : counter.CounterName.Length
-                                         + counter.DocumentId.Length
-                                         + sizeof(long) //Etag
-                                         + sizeof(long) //Total Value
-                               ));
-                batchScope.RecordIncludedCountersInfo(includeCountersCommand.Results.Sum(x => x.Value.Count), size);
-
-                writer.WriteEndObject();
-            }
-        }
-
-        private static async Task WriteIncludedDocumentsAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
-            IncludeDocumentsCommand includeDocumentsCommand)
-        {
-            if (includeDocumentsCommand != null && includeDocumentsCommand.HasIncludesIds())
-            {
-                var includes = new List<Document>();
-                includeDocumentsCommand.Fill(includes, includeMissingAsNull: false);
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
-                writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(IncludesSegment));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(IncludesSegment));
-
-                var (count, sizeInBytes) = await writer.WriteIncludesAsync(context, includes);
-
-                batchScope.RecordIncludedDocumentsInfo(count, sizeInBytes);
-
-                writer.WriteEndObject();
-            }
-        }
 
         internal static void WriteEndOfBatch(AsyncBlittableJsonTextWriter writer)
         {

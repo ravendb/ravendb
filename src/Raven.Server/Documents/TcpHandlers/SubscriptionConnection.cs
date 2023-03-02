@@ -14,12 +14,14 @@ using Esprima;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -44,7 +46,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public const string BatchWaitForAcknowledge = "BatchWaitForAcknowledge";
     }
 
-    public class SubscriptionConnection : SubscriptionConnectionBase
+    public class SubscriptionConnection : SubscriptionConnectionBase<DatabaseIncludesCommandImpl>
     {
         private static readonly TimeSpan InitialConnectionTimeout = TimeSpan.FromMilliseconds(16);
 
@@ -58,7 +60,7 @@ namespace Raven.Server.Documents.TcpHandlers
             : base(tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable, database, tcpConnection.DocumentDatabase.DatabaseShutdown)
         {
             _database = tcpConnection.DocumentDatabase;
-            CurrentBatchId = NonExistentBatch;
+            CurrentBatchId = ISubscriptionConnection.NonExistentBatch;
         }
 
         protected SubscriptionConnectionsState _subscriptionConnectionsState;
@@ -429,6 +431,11 @@ namespace Raven.Server.Documents.TcpHandlers
                 ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.PreviouslyRecordedChangeVector, lastChangeVectorSentInThisBatch);
         }
 
+        protected virtual void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
+        {
+            includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: false);
+        }
+
         protected virtual StatusMessageDetails GetDefault()
         {
             return new StatusMessageDetails
@@ -437,6 +444,28 @@ namespace Raven.Server.Documents.TcpHandlers
                 ClientType = "'client worker'",
                 SubscriptionType = "subscription"
             };
+        }
+
+        public override AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<DatabaseIncludesCommandImpl> connection)
+        {
+            if (connection is SubscriptionConnection subscriptionConnection)
+            {
+                var database = connection.TcpConnection.DocumentDatabase;
+                var server = database.ServerStore;
+                if (connection.Subscription.Revisions)
+                {
+                    return new RevisionsDatabaseSubscriptionProcessor(server, database, subscriptionConnection);
+                }
+
+                return new DocumentsDatabaseSubscriptionProcessor(server, database, subscriptionConnection);
+            }
+
+            throw new InvalidOperationException($"Expected to create a processor for '{nameof(SubscriptionConnection)}', but got: '{connection.GetType().Name}'.");
+        }
+
+        protected override void GatherIncludesForDocument(DatabaseIncludesCommandImpl includeDocuments, Document document)
+        {
+            includeDocuments?.GatherIncludesForDocument(document);
         }
 
         protected override string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState) => _serverStore.WhoseTaskIsIt(topology, subscriptionState, subscriptionState);

@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Commands
         private readonly bool _indexEntriesOnly;
         private readonly bool _ignoreLimit;
 
-        protected AbstractQueryCommand(IndexQueryBase<TParameters> indexQuery, bool canCache, bool metadataOnly, bool indexEntriesOnly, bool ignoreLimit)
+        protected AbstractQueryCommand(IndexQueryBase<TParameters> indexQuery, bool canCache, bool metadataOnly, bool indexEntriesOnly, bool ignoreLimit, TimeSpan globalHttpClientTimeout)
         {
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
@@ -29,10 +29,10 @@ namespace Raven.Client.Documents.Commands
             if (indexQuery.WaitForNonStaleResultsTimeout.HasValue && indexQuery.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
             {
                 var timeout = indexQuery.WaitForNonStaleResultsTimeout.Value;
-                if (timeout < RequestExecutor.GlobalHttpClientTimeout) // if it is greater than it will throw in RequestExecutor
+                if (globalHttpClientTimeout.Milliseconds >= 0 && timeout < globalHttpClientTimeout) // if it is greater than it will throw in RequestExecutor
                 {
-                    timeout = RequestExecutor.GlobalHttpClientTimeout - timeout > AdditionalTimeToAddToTimeout
-                        ? timeout.Add(AdditionalTimeToAddToTimeout) : RequestExecutor.GlobalHttpClientTimeout; // giving the server an opportunity to finish the response
+                    timeout = globalHttpClientTimeout - timeout > AdditionalTimeToAddToTimeout
+                        ? timeout.Add(AdditionalTimeToAddToTimeout) : globalHttpClientTimeout; // giving the server an opportunity to finish the response
                 }
 
                 Timeout = timeout;
@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Commands
         private readonly InMemoryDocumentSessionOperations _session;
 
         public QueryCommand(InMemoryDocumentSessionOperations session, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) 
-            : base(indexQuery, indexQuery.DisableCaching == false, metadataOnly, indexEntriesOnly, ignoreLimit: false)
+            : base(indexQuery, indexQuery.DisableCaching == false, metadataOnly, indexEntriesOnly, ignoreLimit: false, session.RequestExecutor.GlobalHttpClientTimeout)
         {
             _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
             _session = session ?? throw new ArgumentNullException(nameof(session));

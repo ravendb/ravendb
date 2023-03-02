@@ -9,4 +9,6 @@ public interface ITimeSeriesIncludes
     ValueTask<int> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token);
 
     int Count { get; }
+
+    long GetEntriesCountForStats();
 }

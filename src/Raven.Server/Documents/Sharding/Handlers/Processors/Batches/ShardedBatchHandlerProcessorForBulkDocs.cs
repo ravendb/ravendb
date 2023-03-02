@@ -28,34 +28,14 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
         var batchBehavior = GetBatchBehavior();
 
         var retries = 5;
-        object[] result = null;
         while (true)
         {
             try
             {
-                var resultSize = 0;
-                var batchPerShard = new Dictionary<int, ShardedSingleNodeBatchCommand>(); // TODO sharding : consider cache those
-                foreach (var c in command.GetCommands(batchBehavior))
-                {
-                    var shardNumber = c.ShardNumber;
-                    if (batchPerShard.TryGetValue(shardNumber, out var shardedBatchCommand) == false)
-                    {
-                        shardedBatchCommand = new ShardedSingleNodeBatchCommand(shardNumber, indexBatchOptions, replicationBatchOptions);
-                        batchPerShard.Add(shardNumber, shardedBatchCommand);
-                    }
+                var commands = command.GetCommands(batchBehavior, indexBatchOptions, replicationBatchOptions);
+                var op = new ShardedBatchOperation(HttpContext, context, commands, command);
 
-                    shardedBatchCommand.AddCommand(c);
-                    resultSize++;
-                }
-
-                result ??= new object[resultSize];
-                var op = new SingleNodeShardedBatchOperation(HttpContext, context, batchPerShard, command, result);
-
-                var error = await RequestHandler.ShardExecutor.ExecuteParallelAndIgnoreErrorsForShardsAsync(batchPerShard.Keys.ToArray(), op);
-                if (error == null)
-                    return new DynamicJsonArray(result);
-
-                throw error;
+                return await RequestHandler.ShardExecutor.ExecuteParallelAndIgnoreErrorsForShardsAsync(commands.Keys.ToArray(), op);
             }
             catch (ShardMismatchException) when (retries > 0)
             {

@@ -30,12 +30,14 @@ class nonShardedDatabase extends database {
         
         const nodes = [
             ...topology.Members.map(x => this.mapNode(topology, x, "Member")),
-            ...topology.Promotables.map(x => this.mapNode(topology, x, "Member")),
-            ...topology.Rehabs.map(x => this.mapNode(topology, x, "Member")),
+            ...topology.Promotables.map(x => this.mapNode(topology, x, "Promotable")),
+            ...topology.Rehabs.map(x => this.mapNode(topology, x, "Rehab")),
         ];
         
         this.nodes(nodes);
         this.relevant(nodes.some(x => x.tag === nodeTag));
+        this.fixOrder(incomingCopy.NodesTopology.PriorityOrder.length > 0);
+        this.dynamicNodesDistribution(topology.DynamicNodesDistribution);
     }
 }
 

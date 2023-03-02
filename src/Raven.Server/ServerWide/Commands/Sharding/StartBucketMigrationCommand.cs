@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Client.Documents.Subscriptions;
+﻿using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
@@ -15,6 +14,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 {
     public class StartBucketMigrationCommand : UpdateDatabaseCommand
     {
+        public int? SourceShard;
         public int DestinationShard;
         public int Bucket;
 
@@ -30,9 +30,14 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             DestinationShard = destShard;
         }
 
+        public StartBucketMigrationCommand(int bucket, int sourceShard, int destShard, string database, string raftId) : this(bucket, destShard, database, raftId)
+        {
+            SourceShard = sourceShard;
+        }
+
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            var sourceShard = ShardHelper.GetShardNumberFor(record.Sharding, Bucket);
+            var sourceShard = SourceShard ?? ShardHelper.GetShardNumberFor(record.Sharding, Bucket);
             if (sourceShard == DestinationShard)
                 return; // nothing to do
 
@@ -100,6 +105,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void FillJson(DynamicJsonValue json)
         {
+            json[nameof(SourceShard)] = SourceShard;
             json[nameof(DestinationShard)] = DestinationShard;
             json[nameof(Bucket)] = Bucket;
         }

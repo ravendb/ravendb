@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
     {
         private readonly SubscriptionConnection.ParsedSubscription _subscription;
 
-        public TestDocumentsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionState state, SubscriptionConnection.ParsedSubscription subscription, SubscriptionWorkerOptions options, EndPoint endpoint) : 
+        public TestDocumentsDatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionState state, SubscriptionConnection.ParsedSubscription subscription, SubscriptionWorkerOptions options, EndPoint endpoint) :
             base(server, database, connection: null)
         {
             _subscription = subscription;
@@ -22,20 +22,9 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             RemoteEndpoint = endpoint;
         }
 
-        protected override SubscriptionIncludeCommands CreateIncludeCommands()
+        protected override DatabaseIncludesCommandImpl CreateIncludeCommands()
         {
-            var includes = new SubscriptionIncludeCommands();
-
-            if (_subscription.Includes != null)
-                includes.IncludeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, DocsContext, _subscription.Includes,
-                    isProjection: string.IsNullOrWhiteSpace(_subscription.Script) == false);
-
-            if (_subscription.CounterIncludes != null)
-                includes.IncludeCountersCommand = new IncludeCountersCommand(Database, DocsContext, _subscription.CounterIncludes);
-
-            if (_subscription.TimeSeriesIncludes?.TimeSeries != null)
-                includes.IncludeTimeSeriesCommand = new IncludeTimeSeriesCommand(DocsContext, _subscription.TimeSeriesIncludes.TimeSeries);
-
+            var includes = CreateIncludeCommandsInternal(Database, DocsContext, Connection, _subscription);
             return includes;
         }
 
@@ -79,20 +68,9 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             SubscriptionConnectionsState = SubscriptionConnectionsState.CreateDummyState(Database.DocumentsStorage, SubscriptionState);
         }
 
-        protected override SubscriptionIncludeCommands CreateIncludeCommands()
+        protected override DatabaseIncludesCommandImpl CreateIncludeCommands()
         {
-            var includes = new SubscriptionIncludeCommands();
-
-            if (_subscription.Includes != null)
-                includes.IncludeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, DocsContext, _subscription.Includes,
-                    isProjection: string.IsNullOrWhiteSpace(_subscription.Script) == false);
-
-            if (_subscription.CounterIncludes != null)
-                includes.IncludeCountersCommand = new IncludeCountersCommand(Database, DocsContext, _subscription.CounterIncludes);
-
-            if (_subscription.TimeSeriesIncludes?.TimeSeries != null)
-                includes.IncludeTimeSeriesCommand = new IncludeTimeSeriesCommand(DocsContext, _subscription.TimeSeriesIncludes.TimeSeries);
-
+            var includes = CreateIncludeCommandsInternal(Database, DocsContext, Connection, _subscription);
             return includes;
         }
 

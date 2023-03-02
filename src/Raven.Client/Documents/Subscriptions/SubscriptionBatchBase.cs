@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
@@ -68,7 +69,7 @@ public abstract class SubscriptionBatchBase<T>
 
     protected abstract void EnsureDocumentId(T item, string id);
 
-    internal virtual void Initialize(BatchFromServer batch)
+    internal virtual ValueTask InitializeAsync(BatchFromServer batch)
     {
         _includes = batch.Includes;
         _counterIncludes = batch.CounterIncludes;
@@ -128,5 +129,7 @@ public abstract class SubscriptionBatchBase<T>
                 Revision = revision
             });
         }
+
+        return default;
     }
 }

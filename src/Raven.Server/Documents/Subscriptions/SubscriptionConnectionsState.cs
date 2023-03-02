@@ -9,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Util;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
@@ -21,7 +22,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionConnectionsState : SubscriptionConnectionsStateBase<SubscriptionConnection>
+    public class SubscriptionConnectionsState : SubscriptionConnectionsStateBase<SubscriptionConnection, DatabaseIncludesCommandImpl>
     {
         private readonly SubscriptionStorage _subscriptionStorage;
         public DocumentDatabase DocumentDatabase => _subscriptionStorage._db;
@@ -100,7 +101,7 @@ namespace Raven.Server.Documents.Subscriptions
             foreach (var connection in _connections)
             {
                 var batch = connection.CurrentBatchId;
-                if (batch == SubscriptionConnectionBase.NonExistentBatch)
+                if (batch == ISubscriptionConnection.NonExistentBatch)
                     continue;
 
                 set.Add(batch);
@@ -195,7 +196,7 @@ namespace Raven.Server.Documents.Subscriptions
         private async Task NoopAcknowledgeSubscription()
         {
             var command = GetAcknowledgeSubscriptionBatchCommand(nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                SubscriptionConnectionBase.NonExistentBatch, docsToResend: null);
+                ISubscriptionConnection.NonExistentBatch, docsToResend: null);
                 
             var (etag, _) = await _server.SendToLeaderAsync(command);
             await WaitForIndexNotificationAsync(etag);
@@ -271,7 +272,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var localLastNoopAckTicks = Interlocked.Read(ref _lastNoopAckTicks);
                 var nowTicks = DateTime.Now.Ticks;
-                if ((nowTicks - localLastNoopAckTicks) / TimeSpan.TicksPerMillisecond < SubscriptionConnectionBase.WaitForChangedDocumentsTimeoutInMs)
+                if ((nowTicks - localLastNoopAckTicks) / TimeSpan.TicksPerMillisecond < ISubscriptionConnection.WaitForChangedDocumentsTimeoutInMs)
                 {
                     return _lastNoopAckTask;
                 }

@@ -13,9 +13,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Executors;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Extensions;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -23,8 +21,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 {
     public readonly struct FetchDocumentsFromShardsOperation : IShardedReadOperation<GetDocumentsResult, GetShardedDocumentsResult>
     {
-        private readonly TransactionOperationContext _context;
-        private readonly ShardedDatabaseRequestHandler _handler;
+        private readonly JsonOperationContext _context;
         private readonly ShardedDatabaseContext _databaseContext;
         private readonly Dictionary<int, ShardLocator.IdsByShard<string>> _idsByShards;
         private readonly string[] _includePaths;
@@ -34,8 +31,9 @@ namespace Raven.Server.Documents.Sharding.Operations
         private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
 
-        public FetchDocumentsFromShardsOperation(TransactionOperationContext context,
-            ShardedDatabaseRequestHandler handler,
+        public FetchDocumentsFromShardsOperation(JsonOperationContext context,
+            HttpRequest httpRequest,
+            ShardedDatabaseContext databaseContext,
             Dictionary<int, ShardLocator.IdsByShard<string>> idsByShards,
             string[] includePaths,
             RevisionIncludeField includeRevisions,
@@ -46,8 +44,8 @@ namespace Raven.Server.Documents.Sharding.Operations
             bool metadataOnly)
         {
             _context = context;
-            _handler = handler;
-            _databaseContext = handler.DatabaseContext;
+            HttpRequest = httpRequest;
+            _databaseContext = databaseContext;
             _idsByShards = idsByShards;
             ExpectedEtag = etag;
             _includePaths = includePaths;
@@ -58,6 +56,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             _metadataOnly = metadataOnly;
         }
 
+        public HttpRequest HttpRequest { get; }
         public string ExpectedEtag { get; }
 
         public GetShardedDocumentsResult CombineResults(Dictionary<int, ShardExecutionResult<GetDocumentsResult>> results)
@@ -65,7 +64,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             var docs = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var fromStudio = HttpRequest.IsFromStudio();
+            var fromStudio = HttpRequest?.IsFromStudio() ?? false;
             
             ShardedRevisionIncludes revisionIncludes = null;
             ShardedCounterIncludes counterIncludes = null;
@@ -156,8 +155,6 @@ namespace Raven.Server.Documents.Sharding.Operations
                 CompareExchangeValueIncludes = compareExchangeValueIncludes?.Results
             };
         }
-
-        public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
         public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_idsByShards[shardNumber].Ids.ToArray(), _includePaths,
             counterIncludes: _counterIncludes.Count > 0 ? _counterIncludes.ToArray() : null,

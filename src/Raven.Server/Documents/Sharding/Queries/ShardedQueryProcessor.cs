@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
@@ -76,17 +77,20 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
             {
                 if (operation.MissingDocumentIncludes is { Count: > 0 })
                 {
-                    await HandleMissingDocumentIncludes(operation.MissingDocumentIncludes, result);
+                    await HandleMissingDocumentIncludesAsync(Context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext,
+                        operation.MissingDocumentIncludes, result, MetadataOnly, Token);
                 }
 
                 if (operation.MissingCounterIncludes is { Count: > 0 })
                 {
-                    await HandleMissingCounterInclude(operation.MissingCounterIncludes, result);
+                    await HandleMissingCounterIncludeAsync(Context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext,
+                        operation.MissingCounterIncludes, result, Token);
                 }
 
                 if (operation.MissingTimeSeriesIncludes is { Count: > 0 })
                 {
-                    await HandleMissingTimeSeriesIncludes(operation.MissingTimeSeriesIncludes, result);
+                    await HandleMissingTimeSeriesIncludesAsync(Context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext,
+                        operation.MissingTimeSeriesIncludes, result, Token);
                 }
             }
 
@@ -106,7 +110,7 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
         }
     }
 
-    private async Task HandleMissingCounterInclude(HashSet<string> missingCounterIncludes, ShardedQueryResult result)
+    public static async ValueTask HandleMissingCounterIncludeAsync(TransactionOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext, HashSet<string> missingCounterIncludes, ShardedQueryResult result, CancellationToken token)
     {
         var counterBatch = new CounterBatch();
 
@@ -144,7 +148,7 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
 
         var commandsPerShard = new Dictionary<int, CounterBatchOperation.CounterBatchCommand>();
 
-        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, missingCounterIncludes);
+        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(context, databaseContext, missingCounterIncludes);
         foreach (var (shardNumber, idsByShard) in shardsToPositions)
         {
             var countersBatchForShard = new CounterBatch()
@@ -161,22 +165,23 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
             commandsPerShard[shardNumber] = new CounterBatchOperation.CounterBatchCommand(countersBatchForShard);
         }
 
-        var counterIncludes = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
-            new ShardedCounterBatchOperation(RequestHandler.HttpContext, commandsPerShard), Token);
+        var counterIncludes = await databaseContext.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
+            new ShardedCounterBatchOperation(request, commandsPerShard), token);
 
         foreach (var counterInclude in counterIncludes.Counters)
         {
             if (counterInclude == null)
                 continue;
 
-            ((ShardedCounterIncludes)result.GetCounterIncludes()).AddMissingCounter(counterInclude.DocumentId, Context.ReadObject(counterInclude.ToJson(), counterInclude.DocumentId));
+            ((ShardedCounterIncludes)result.GetCounterIncludes()).AddMissingCounter(counterInclude.DocumentId, context.ReadObject(counterInclude.ToJson(), counterInclude.DocumentId));
         }
     }
-    private async Task HandleMissingTimeSeriesIncludes(Dictionary<string, List<TimeSeriesRange>> missingTimeSeriesIncludes, ShardedQueryResult result)
+
+    public static async ValueTask HandleMissingTimeSeriesIncludesAsync(TransactionOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext, Dictionary<string, List<TimeSeriesRange>> missingTimeSeriesIncludes, ShardedQueryResult result, CancellationToken token)
     {
         var commandsPerShard = new Dictionary<int, GetMultipleTimeSeriesRangesCommand>();
 
-        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, missingTimeSeriesIncludes.Keys);
+        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(context, databaseContext, missingTimeSeriesIncludes.Keys);
 
         foreach (var (shardNumber, idsByShard) in shardsToPositions)
         {
@@ -190,15 +195,15 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
             commandsPerShard[shardNumber] = new GetMultipleTimeSeriesRangesCommand(rangesForShard);
         }
 
-        var timeSeriesIncludes = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
-            new ShardedTimeSeriesOperation(RequestHandler.HttpContext, commandsPerShard), Token);
+        var timeSeriesIncludes = await databaseContext.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
+            new ShardedTimeSeriesOperation(request, commandsPerShard), token);
 
         foreach (var tsInclude in timeSeriesIncludes.Results)
         {
             if (tsInclude == null)
                 continue;
 
-            ((ShardedTimeSeriesIncludes)result.GetTimeSeriesIncludes()).AddMissingTimeSeries(tsInclude.Id, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(tsInclude.Values, Context));
+            ((ShardedTimeSeriesIncludes)result.GetTimeSeriesIncludes()).AddMissingTimeSeries(tsInclude.Id, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(tsInclude.Values, context));
         }
 
     }
