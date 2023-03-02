@@ -83,8 +83,7 @@ public class RavenDB_19101: RavenTestBase
 
                 var firstHistory = history.FirstOrDefault() as BlittableJsonReaderObject;
 
-                firstHistory.TryGet("Definition", out BlittableJsonReaderObject definition);
-                definition.TryGet("CertificateThumbprint", out string certificateThumbprint);
+                firstHistory.TryGet("CertificateThumbprint", out string certificateThumbprint);
 
                 Assert.Equal(store.Certificate?.Thumbprint, certificateThumbprint);
             }

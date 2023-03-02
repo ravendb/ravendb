@@ -184,6 +184,10 @@ namespace Raven.Server.Documents.Handlers
                     w.WritePropertyName(nameof(IndexHistoryEntry.Definition));
                     w.WriteIndexDefinition(c, entry.Definition);
                     w.WriteComma();
+                    
+                    w.WritePropertyName(nameof(IndexHistoryEntry.CertificateThumbprint));
+                    w.WriteString(entry.CertificateThumbprint);
+                    w.WriteComma();
 
                     w.WritePropertyName(nameof(IndexHistoryEntry.CreatedAt));
                     w.WriteDateTime(entry.CreatedAt, isUtc: true);

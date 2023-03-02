@@ -76,8 +76,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                     
                     var clientCert = GetCurrentCertificate();
 
-                    indexDefinition.CertificateThumbprint = clientCert?.Thumbprint;
-
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
                         var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
@@ -109,7 +107,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    var index = await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
+                    var index = await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", clientCert?.Thumbprint, source);
 
                     createdIndexes.Add((indexDefinition.Name, index));
                 }

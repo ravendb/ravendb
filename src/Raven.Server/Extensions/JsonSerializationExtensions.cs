@@ -14,7 +14,8 @@ namespace Raven.Server.Extensions
             {
                 [nameof(IndexHistoryEntry.Source)] = entry.Source, 
                 [nameof(IndexHistoryEntry.CreatedAt)] = entry.CreatedAt,
-                [nameof(IndexHistoryEntry.Definition)] = entry.Definition.ToJson()
+                [nameof(IndexHistoryEntry.Definition)] = entry.Definition.ToJson(),
+                [nameof(IndexHistoryEntry.CertificateThumbprint)] = entry.CertificateThumbprint
             };
             
             if (entry.RollingDeployment != null)
@@ -47,7 +48,6 @@ namespace Raven.Server.Extensions
             result[nameof(IndexDefinition.Reduce)] = definition.Reduce;
             result[nameof(IndexDefinition.Type)] = definition.Type.ToString();
             result[nameof(IndexDefinition.Maps)] = new DynamicJsonArray(definition.Maps);
-            result[nameof(IndexDefinition.CertificateThumbprint)] = definition.CertificateThumbprint;
             result[nameof(IndexDefinition.ClusterState)] = new DynamicJsonValue()
             {
                 [nameof(IndexDefinition.ClusterState.LastStateIndex)] = definition.ClusterState?.LastStateIndex ?? 0
