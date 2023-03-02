@@ -327,11 +327,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     localUploadStatus.Exception = (exception ?? e).ToString();
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, new ThreadNames.ThreadInfo
-            {
-                FullName = threadName,
-                Details = new ThreadNames.ThreadDetails.UploadBackupFile(_settings.DatabaseName, targetName, _settings.TaskName)
-            });
+            }, null, ThreadNames.ForUploadBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
 
             _threads.Add(thread);
         }
@@ -366,11 +362,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, new ThreadNames.ThreadInfo
-            {
-                FullName = threadName,
-                Details = new ThreadNames.ThreadDetails.DeleteBackupFile(_settings.DatabaseName, targetName, _settings.TaskName)
-            });
+            }, null, ThreadNames.ForDeleteBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
 
             _threads.Add(thread);
         }

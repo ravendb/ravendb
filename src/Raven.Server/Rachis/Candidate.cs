@@ -295,11 +295,7 @@ namespace Raven.Server.Rachis
 
         public void Start()
         {
-            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, new ThreadNames.ThreadInfo
-            {
-                FullName = "Candidate for - " + _engine.Tag,
-                Details = new ThreadNames.ThreadDetails.Candidate(_engine.Tag)
-            });
+            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ThreadNames.ForCandidate("Candidate for - " + _engine.Tag, _engine.Tag));
         }
 
         public void Dispose()

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Formats.Asn1;
+﻿using System.Collections.Concurrent;
 using Sparrow.Platform;
 
 namespace Sparrow.Server.Utils;
@@ -11,16 +9,10 @@ public static class ThreadNames
 
     public static string GetNameToUse(ThreadInfo threadInfo)
     {
-        if (PlatformDetails.RunningOnPosix == false)
+        if (PlatformDetails.RunningOnPosix == false) 
             return threadInfo.FullName;
 
         return threadInfo.Details.GetShortName();
-    }
-
-    public static string GetShortName(ThreadDetails.IThreadDetails threadDetails)
-    {
-        return threadDetails.GetShortName();
-        
     }
 
     public static void AddFullThreadName(long id, string fullName)
@@ -32,7 +24,182 @@ public static class ThreadNames
     {
         FullThreadNames.TryRemove(id, out var _);
     }
-    
+
+    public static ThreadInfo ForElector(string threadName, string source)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.Elector(source)
+        };
+    }
+
+    public static ThreadInfo ForEtlProcess(string threadName, string tag, string name)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.EtlProcess(tag, name)
+        };
+    }
+
+    public static ThreadInfo ForIndex(string threadName, string idxName, string dbName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.Index(idxName, dbName)
+        };
+    }
+
+    public static ThreadInfo ForUploadBackupFile(string threadName, string dbName, string targetName, string taskName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.UploadBackupFile(dbName, targetName, taskName)
+        };
+    }
+
+    public static ThreadInfo ForDeleteBackupFile(string threadName, string dbName, string targetName, string taskName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.DeleteBackupFile(dbName, targetName, taskName)
+        };
+    }
+
+    public static ThreadInfo ForBackupTask(string threadName, string dbName, string taskName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.BackupTask(dbName, taskName)
+        };
+    }
+
+    public static ThreadInfo ForIncomingReplication(string threadName, string dbName, string sourceDbName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.IncomingReplication(dbName, sourceDbName)
+        };
+    }
+
+    public static ThreadInfo ForOutgoingReplication(string threadName, string databaseName, string destination, bool pullReplicationAsHub = false)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.OutgoingReplication(databaseName, destination, pullReplicationAsHub)
+        };
+    }
+
+    public static ThreadInfo ForTransactionMerging(string threadName, string name)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.TransactionMerging(name)
+        };
+    }
+
+    public static ThreadInfo ForCandidate(string threadName, string engineTag)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.Candidate(engineTag)
+        };
+    }
+
+    public static ThreadInfo ForCandidateAmbassador(string threadName, string engineTag, string tag)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.CandidateAmbassador(engineTag, tag)
+        };
+    }
+
+    public static ThreadInfo ForFollower(string threadName, string connection, long term)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.Follower(connection, term)
+        };
+    }
+
+    public static ThreadInfo ForFollowerAmbassador(string threadName, string tag, string term)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.FollowerAmbassador(tag, term)
+        };
+    }
+
+    public static ThreadInfo ForConsensusLeader(string threadName, string engineTag, long term)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.ConsensusLeader(engineTag,  term)
+        };
+    }
+
+    public static ThreadInfo ForHeartbeatsSupervisor(string threadName, string serverNodeTag, string clusterTag, long term)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.HeartbeatsSupervisor(serverNodeTag, clusterTag, term)
+        };
+    }
+
+    public static ThreadInfo ForHeartbeatsWorker(string threadName, string leader, long term)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.HeartbeatsWorker(leader, term)
+        };
+    }
+
+    public static ThreadInfo ForClusterObserver(string threadName, long term)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.ClusterObserver(term)
+        };
+    }
+
+    public static ThreadInfo ForClusterMaintenanceSetupTask(string threadName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.ClusterMaintenanceSetupTask()
+        };
+    }
+
+    public static ThreadInfo ForUpdateTopologyChangeNotificationTask(string threadName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.UpdateTopologyChangeNotificationTask()
+        };
+    }
+
+    public static ThreadInfo ForBackup(string threadName, string backupName, string databaseName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.Backup(backupName, databaseName)
+        };
+    }
+    public static ThreadInfo ForCpuCreditsMonitoring(string threadName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.CpuCreditsMonitoring()
+        };
+    }
+
+    public static ThreadInfo ForPullReplicationAsSink(string threadName, string destinationDatabase, string destinationUrl)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.PullReplicationAsSink(destinationDatabase, destinationUrl)
+        };
+    }
+
     public class ThreadDetails
     {
         public interface IThreadDetails
@@ -51,7 +218,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"Elector {_source}";
+                return $"Elctr {_source}";
             }
         }
 
@@ -68,7 +235,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"{_tag} {_name}";
+                return $"Etl {_tag} {_name}";
             }
         }
 
@@ -85,7 +252,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"IX:{_dbName} {_idxName}";
+                return $"Idx {_dbName} {_idxName}";
             }
         }
 
@@ -140,7 +307,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"Backup {_dbName}";
+                return $"BkpTsk {_dbName}";
             }
         }
 
@@ -157,7 +324,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"RepInc {_dbName} from {_sourceDbName}";
+                return $"IncRep {_dbName} from {_sourceDbName}";
             }
         }
 
@@ -167,7 +334,7 @@ public static class ThreadNames
             private readonly string _destination;
             private readonly bool _pullReplicationAsHub;
 
-            public OutgoingReplication(string databaseName, string destination, bool pullReplicationAsHub = false)
+            public OutgoingReplication(string databaseName, string destination, bool pullReplicationAsHub)
             {
                 _databaseName = databaseName;
                 _destination = destination;
@@ -178,10 +345,10 @@ public static class ThreadNames
             {
                 if (_pullReplicationAsHub)
                 {
-                    return $"RepPAH {_databaseName} to {_destination}";
+                    return $"PllRepHb {_databaseName} to {_destination}";
                 }
 
-                return $"RepO {_databaseName} to {_destination}";
+                return $"OutRpl {_databaseName} to {_destination}";
             }
         }
 
@@ -196,7 +363,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"TXMRG {_name}";
+                return $"TxMrgr {_name}";
             }
         }
 
@@ -211,7 +378,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"Candidate for {_engineTag}";
+                return $"Cnddte for {_engineTag}";
             }
         }
 
@@ -245,7 +412,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"Follower {_connection}";
+                return $"Fllwr {_connection}";
             }
         }
 
@@ -262,7 +429,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"FollowAmb {_tag}";
+                return $"FllwrAmb {_tag}";
             }
         }
 
@@ -279,7 +446,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"ConsensusL-{_engineTag} IT {_term}";
+                return $"CnsnsLdr-{_engineTag} IT {_term}";
             }
         }
 
@@ -298,7 +465,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"HBeatS {_serverNodeTag} to {_clusterTag}";
+                return $"HrtbtSpv {_serverNodeTag} to {_clusterTag}";
             }
         }
 
@@ -315,7 +482,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"HBbeatW {_leader} IT {_term}";
+                return $"HrtbtWrkr {_leader} IT {_term}";
             }
         }
 
@@ -371,7 +538,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"Backup {_databaseName}";
+                return $"Bkp {_databaseName}";
             }
         }
 
@@ -386,10 +553,12 @@ public static class ThreadNames
                 return "CPU Credits Monitoring";
             }
         }
+
         public class PullReplicationAsSink : IThreadDetails
         {
             private readonly string _destinationDatabase;
             private readonly string _destinationUrl;
+
             public PullReplicationAsSink(string destinationDatabase, string destinationUrl)
             {
                 _destinationDatabase = destinationDatabase;
@@ -398,13 +567,18 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"RepPS {_destinationDatabase} at {_destinationUrl}";
+                return $"PllRepSnk {_destinationDatabase} at {_destinationUrl}";
             }
         }
     }
 
     public class ThreadInfo
     {
+        public ThreadInfo(string threadName)
+        {
+            FullName = threadName;
+        }
+
         public string FullName { get; set; }
 
         public ThreadDetails.IThreadDetails Details { get; set; }

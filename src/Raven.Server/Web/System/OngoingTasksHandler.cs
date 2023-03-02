@@ -507,11 +507,7 @@ namespace Raven.Server.Web.System
                                 {
                                     ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
                                 }
-                            }, null, new ThreadNames.ThreadInfo
-                            {
-                                FullName = threadName,
-                                Details = new ThreadNames.ThreadDetails.Backup(backupName, Database.Name)
-                            });
+                            }, null, ThreadNames.ForBackup(threadName, backupName, Database.Name));
                             return tcs.Task;
                         },
                         id: operationId, token: cancelToken);

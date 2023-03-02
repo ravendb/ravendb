@@ -629,11 +629,7 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Failed to run ETL {Name}", e);
                 }
-            }, null, new ThreadNames.ThreadInfo
-            {
-                FullName = threadName, 
-                Details = new ThreadNames.ThreadDetails.EtlProcess(Tag, Name)
-            });
+            }, null, ThreadNames.ForEtlProcess(threadName, Tag, Name));
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Starting {Tag} process: '{Name}'.");

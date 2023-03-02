@@ -165,11 +165,8 @@ namespace Raven.Server.Documents.Replication
         public void Start()
         {
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(Replication), null, new ThreadNames.ThreadInfo
-                {
-                    FullName = OutgoingReplicationThreadName,
-                    Details = new ThreadNames.ThreadDetails.OutgoingReplication(_database.Name, Destination.FromString(), IsPullReplicationAsHub)
-                });
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(Replication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName, 
+                    _database.Name, Destination.FromString(), IsPullReplicationAsHub));
         }
 
         public void StartPullReplicationAsHub(Stream stream, TcpConnectionHeaderMessage.SupportedFeatures supportedVersions)
@@ -179,11 +176,8 @@ namespace Raven.Server.Documents.Replication
             IsPullReplicationAsHub = true;
             OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, new ThreadNames.ThreadInfo
-                {
-                    FullName = OutgoingReplicationThreadName,
-                    Details = new ThreadNames.ThreadDetails.OutgoingReplication(_database.Name, Destination.FromString(), IsPullReplicationAsHub)
-                });
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName, 
+                    _database.Name, Destination.FromString(), IsPullReplicationAsHub));
         }
 
         private string _outgoingReplicationThreadName;

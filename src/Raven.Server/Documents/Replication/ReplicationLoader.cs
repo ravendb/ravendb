@@ -534,11 +534,7 @@ namespace Raven.Server.Documents.Replication
                 _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
 
                 PoolOfThreads.PooledThread.ResetCurrentThreadName();
-                Thread.CurrentThread.Name = ThreadNames.GetNameToUse(new ThreadNames.ThreadInfo()
-                {
-                    FullName = $"Pull Replication as Sink from {destination.Database} at {destination.Url}",
-                    Details = new ThreadNames.ThreadDetails.PullReplicationAsSink(destination.Database, destination.Url)
-                });
+                Thread.CurrentThread.Name = ThreadNames.GetNameToUse(ThreadNames.ForPullReplicationAsSink($"Pull Replication as Sink from {destination.Database} at {destination.Url}", destination.Database, destination.Url));
 
                 _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
                 IncomingReplicationAdded?.Invoke(newIncoming);

@@ -542,11 +542,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
         {
             var threadName = $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'";
-            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, threadName, tcs, onProgress), null, new ThreadNames.ThreadInfo
-            {
-                FullName = threadName,
-                Details = new ThreadNames.ThreadDetails.BackupTask(_database.Name, periodicBackup.Configuration.Name)
-            });
+            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, threadName, tcs, onProgress), null, ThreadNames.ForBackupTask(threadName,
+                _database.Name, periodicBackup.Configuration.Name));
             return tcs.Task;
         }
 

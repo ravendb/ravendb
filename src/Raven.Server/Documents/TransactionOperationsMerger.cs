@@ -73,11 +73,7 @@ namespace Raven.Server.Documents
 
         public void Start()
         {
-            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, new ThreadNames.ThreadInfo
-            {
-                FullName = TransactionMergerThreadName,
-                Details = new ThreadNames.ThreadDetails.TransactionMerging(_parent.Name)
-            });
+            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, ThreadNames.ForTransactionMerging(TransactionMergerThreadName, _parent.Name));
         }
 
         public interface IRecordableCommand
