@@ -177,11 +177,7 @@ namespace SlowTests.Server.Documents.Indexing
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
                 Assert.Equal(FieldIndexing.Search, index.Fields["Name"].Indexing);
-                Assert.Equal(@"docs.Users.Select(doc => new
-{
-Age = doc.Age, Email = doc.Email, Name = doc.Name
-})", index.Maps.First());
-
+                Assert.Equal(@"docs.Users.Select(doc => new { Age = doc.Age, Email = doc.Email, Name = doc.Name })", index.Maps.First());
             }
         }
 
@@ -301,9 +297,10 @@ Age = doc.Age, Email = doc.Email, Name = doc.Name
                 Assert.Equal(@"from doc in docs.Users
 select new
 {
-Age = doc.Age, Email = doc.Email, Name = doc.Name
+    Age = doc.Age,
+    Email = doc.Email,
+    Name = doc.Name
 }", index.Maps.First());
-
             }
         }
 
@@ -409,7 +406,12 @@ select new {
             Assert.Equal(@"from doc in docs.Products
 select new
 {
-Category = doc.Category, Name = doc.Name, PricePerUnit = doc.PricePerUnit, Supplier = doc.Supplier, UnitOnStock = LoadCompareExchangeValue(Id(doc))}"
+    Category = doc.Category,
+    Name = doc.Name,
+    PricePerUnit = doc.PricePerUnit,
+    Supplier = doc.Supplier,
+    UnitOnStock = LoadCompareExchangeValue(Id(doc))
+}"
                 , results.Suggestions.First().MergedIndex.Maps.First());
         }
 
@@ -484,7 +486,11 @@ select new
             Assert.Equal(@"from doc in docs.Orders
 select new
 {
-Company = doc.Company, Employee = doc.Employee, ShipmentLocation = CreateSpatialField(doc.ShipTo.Latitude, doc.ShipTo.Longitude), Total = doc.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))}", results.Suggestions.First().MergedIndex.Maps.First());
+    Company = doc.Company,
+    Employee = doc.Employee,
+    ShipmentLocation = CreateSpatialField(doc.ShipTo.Latitude, doc.ShipTo.Longitude),
+    Total = doc.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}", results.Suggestions.First().MergedIndex.Maps.First());
         }
 
         private IndexMergeResults GetMergeReportOfTwoIndexes(IndexDefinition index1, IndexDefinition index2)
