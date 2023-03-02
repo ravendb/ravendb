@@ -34,26 +34,32 @@ namespace FastTests.Server.Documents.Indexing
     {
         var this0 = new
         {
-        match = match, team = team
-        }
-
-        ;
+            match = match,
+            team = team
+        };
         foreach (var serie in this0.team.Series)
         {
             var this1 = new
             {
-            this0 = this0, serie = serie
-            }
-
-            ;
+                this0 = this0,
+                serie = serie
+            };
             foreach (var game in this1.serie.Games)
             {
                 yield return new
                 {
-                Player = game.Player, Pins = game.Pins, Series = 1, Score = game.Score, BestGame = game.Pins, GamesWithStats = game.Strikes != null ? 1 : 0, Strikes = game.Strikes, Misses = game.Misses, OnePinMisses = game.OnePinMisses, Splits = game.Splits, CoveredAll = game.CoveredAll ? 1 : 0
-                }
-
-                ;
+                    Player = game.Player,
+                    Pins = game.Pins,
+                    Series = 1,
+                    Score = game.Score,
+                    BestGame = game.Pins,
+                    GamesWithStats = game.Strikes != null ? 1 : 0,
+                    Strikes = game.Strikes,
+                    Misses = game.Misses,
+                    OnePinMisses = game.OnePinMisses,
+                    Splits = game.Splits,
+                    CoveredAll = game.CoveredAll ? 1 : 0
+                };
             }
         }
     }
@@ -75,18 +81,19 @@ namespace FastTests.Server.Documents.Indexing
     {
         var this0 = new
         {
-        barn = barn, household = household
-        }
-
-        ;
+            barn = barn,
+            household = household
+        };
         foreach (var member in this0.household.Members)
         {
             yield return new
             {
-            InternalId = this0.barn.InternalId, Name = this0.barn.Name, HouseholdId = this0.household.InternalId, MemberId = member.InternalId, MembersName = member.Name
-            }
-
-            ;
+                InternalId = this0.barn.InternalId,
+                Name = this0.barn.Name,
+                HouseholdId = this0.household.InternalId,
+                MemberId = member.InternalId,
+                MembersName = member.Name
+            };
         }
     }
 }")]
@@ -106,18 +113,16 @@ namespace FastTests.Server.Documents.Indexing
     {
         var this0 = new
         {
-        user = user, alias = alias
-        }
-
-        ;
+            user = user,
+            alias = alias
+        };
         if ((this0.alias.Length > 3) == false)
             continue;
         yield return new
         {
-        Length = this0.alias.Length, Aliases = this0.alias
-        }
-
-        ;
+            Length = this0.alias.Length,
+            Aliases = this0.alias
+        };
     }
 }")]
         [InlineData(@"e1.SelectMany(x1 => e2, (x1, x2) => new { x2.v })", @"foreach (var x1 in e1)
@@ -126,10 +131,8 @@ namespace FastTests.Server.Documents.Indexing
     {
         yield return new
         {
-        x2.v
-        }
-
-        ;
+            x2.v
+        };
     }
 }")]
         [InlineData(@"docs.Customers.SelectMany(c => c.Orders, (customer, order) => new {Date = order.Date, Product = order.Product})"
@@ -139,10 +142,9 @@ namespace FastTests.Server.Documents.Indexing
     {
         yield return new
         {
-        Date = order.Date, Product = order.Product
-        }
-
-        ;
+            Date = order.Date,
+            Product = order.Product
+        };
     }
 }")]
         [InlineData(@"
@@ -158,22 +160,16 @@ namespace FastTests.Server.Documents.Indexing
 {
     var u1 = new
     {
-    u0.Name
-    }
-
-    ;
+        u0.Name
+    };
     var u2 = new
     {
-    u1.Name
-    }
-
-    ;
+        u1.Name
+    };
     yield return new
     {
-    u2.Name
-    }
-
-    ;
+        u2.Name
+    };
 }")]
 
         [InlineData(@"
@@ -186,10 +182,8 @@ namespace FastTests.Server.Documents.Indexing
     {
         yield return new
         {
-        tag
-        }
-
-        ;
+            tag
+        };
     }
 }")]
         [InlineData(@"
@@ -206,10 +200,9 @@ namespace FastTests.Server.Documents.Indexing
         continue;
     yield return new
     {
-    u.Name, u.Email
-    }
-
-    ;
+        u.Name,
+        u.Email
+    };
 }")]
         [InlineData(@"from doc in docs.Foos
                                 from docBarSomeOtherDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeOtherDictionary).DefaultIfEmpty()
@@ -229,10 +222,12 @@ namespace FastTests.Server.Documents.Indexing
         {
             yield return new
             {
-            Bar_SomeOtherDictionary_Value = docBarSomeOtherDictionaryItem.Value, Bar_SomeOtherDictionary_Key = docBarSomeOtherDictionaryItem.Key, Bar_SomeDictionary_Value = docBarSomeDictionaryItem.Value, Bar_SomeDictionary_Key = docBarSomeDictionaryItem.Key, Bar = doc.Bar
-            }
-
-            ;
+                Bar_SomeOtherDictionary_Value = docBarSomeOtherDictionaryItem.Value,
+                Bar_SomeOtherDictionary_Key = docBarSomeOtherDictionaryItem.Key,
+                Bar_SomeDictionary_Value = docBarSomeDictionaryItem.Value,
+                Bar_SomeDictionary_Key = docBarSomeDictionaryItem.Key,
+                Bar = doc.Bar
+            };
         }
     }
 }")]
@@ -253,17 +248,23 @@ namespace FastTests.Server.Documents.Indexing
 {
     var p0 = new
     {
-    Name = p.Name, Category = p.Category, Ratings = p.Ratings.Select(x => x.Rate)}
-
-    ;
+        Name = p.Name,
+        Category = p.Category,
+        Ratings = p.Ratings.Select(x => x.Rate)
+    };
     yield return new
     {
-    Category = p0.Category, Books = new object[]{new
-    {
-    Name = p0.Name, MinRating = DynamicEnumerable.Min(p0.Ratings), MaxRating = DynamicEnumerable.Max(p0.Ratings)}
-    }}
-
-    ;
+        Category = p0.Category,
+        Books = new object[]
+        {
+            new
+            {
+                Name = p0.Name,
+                MinRating = DynamicEnumerable.Min(p0.Ratings),
+                MaxRating = DynamicEnumerable.Max(p0.Ratings)
+            }
+        }
+    };
 }")]
         [InlineData(@"from doc in docs.Foos
 let a = doc.Aloha
@@ -291,10 +292,12 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
                 continue;
             yield return new
             {
-            Bar_SomeOtherDictionary_Value = docBarSomeOtherDictionaryItem.Value, Bar_SomeOtherDictionary_Key = docBarSomeOtherDictionaryItem.Key, Bar_SomeDictionary_Value = docBarSomeDictionaryItem.Value, Bar_SomeDictionary_Key = docBarSomeDictionaryItem.Key, Bar = doc.Bar
-            }
-
-            ;
+                Bar_SomeOtherDictionary_Value = docBarSomeOtherDictionaryItem.Value,
+                Bar_SomeOtherDictionary_Key = docBarSomeOtherDictionaryItem.Key,
+                Bar_SomeDictionary_Value = docBarSomeDictionaryItem.Value,
+                Bar_SomeDictionary_Key = docBarSomeDictionaryItem.Key,
+                Bar = doc.Bar
+            };
         }
     }
 }")]
@@ -311,15 +314,13 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
 {
     var item = new
     {
-    Question = q, }
-
-    ;
+        Question = q,
+    };
     yield return new
     {
-    Month = item.Question.CreationDate, Users = 1
-    }
-
-    ;
+        Month = item.Question.CreationDate,
+        Users = 1
+    };
 }")]
         [InlineData(@"docs.Questions.Select(x => new
             {
@@ -332,16 +333,13 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
 {
     var x = new
     {
-    Question = x
-    }
-
-    ;
+        Question = x
+    };
     yield return new
     {
-    Month = x, Users = 1
-    }
-
-    ;
+        Month = x,
+        Users = 1
+    };
 }")]
         [InlineData(@"from q in docs.Questions
                 from a in q.Answers
@@ -365,10 +363,10 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
     {
         var dates = new
         {
-        QuestionCreatedAt = q.CreationDate, AnswerCreatedAt = a.CreationDate, Answers = q.Answers
-        }
-
-        ;
+            QuestionCreatedAt = q.CreationDate,
+            AnswerCreatedAt = a.CreationDate,
+            Answers = q.Answers
+        };
         if ((dates.QuestionCreatedAt != DateTimeOffset.MinValue) == false)
             continue;
         foreach (var answersAgain in dates.Answers)
@@ -376,10 +374,9 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
             var a = answersAgain;
             yield return new
             {
-            Answer = a, Dates = dates
-            }
-
-            ;
+                Answer = a,
+                Dates = dates
+            };
         }
     }
 }")]
@@ -400,21 +397,17 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
 {
     var first = new
     {
-    Id = q.Id, CreatedAt = q.CreatedAt
-    }
-
-    ;
+        Id = q.Id,
+        CreatedAt = q.CreatedAt
+    };
     var second = new
     {
-    first.CreatedAt
-    }
-
-    ;
+        first.CreatedAt
+    };
     yield return new
     {
-    CreatedAt = second.CreatedAt, }
-
-    ;
+        CreatedAt = second.CreatedAt,
+    };
 }")]
         public void CanOptimizeExpression(string code, string optimized)
         {
