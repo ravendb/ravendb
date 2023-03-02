@@ -1843,8 +1843,12 @@ namespace SlowTests.Sharding.Replication
                 }
 
                 await EnsureReplicatingAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2);
+
+                using (var s2 = store2.OpenSession())
+                {
+                    var u1 = s2.Load<User>(id1);
+                    Assert.Null(u1);
+                }
 
                 var databaseRecord = store2.Maintenance.ForDatabase(store2.Database).Server.Send(new GetDatabaseRecordOperation(store2.Database));
                 List<string> shardNames = ShardHelper.GetShardNames(store2.Database, databaseRecord.Sharding.Shards.Keys.AsEnumerable()).ToList();
@@ -1862,17 +1866,7 @@ namespace SlowTests.Sharding.Replication
                 }
                 
                 await Sharding.Resharding.MoveShardForId(store2, id2);
-
-                using (var s2 = store2.OpenSession())
-                {
-                    s2.Delete(id2);
-                    s2.SaveChanges();
-                }
-
-                await EnsureReplicatingAsync(store2, store1);
-                await EnsureReplicatingAsync(store2, store1);
-                await EnsureReplicatingAsync(store2, store1);
-
+               
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
             }

@@ -609,12 +609,13 @@ namespace SlowTests.Sharding.Cluster
 
                 var id = $"users/1${suffix}";
                 var oldLocation = await Sharding.GetShardNumberFor(store, id);
+                var lastProcessedEtag = 0L;
 
                 var oldLocationShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
                 using (oldLocationShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
+                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, lastProcessedEtag).ToList();
                     Assert.Equal(3, tombs.Count);
 
                     foreach (var tomb in tombs)
@@ -624,6 +625,8 @@ namespace SlowTests.Sharding.Cluster
                         Assert.NotNull(replicationItem);
                         Assert.False(replicationItem.Flags.Contain(DocumentFlags.Artificial));
                         Assert.False(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
+
+                        lastProcessedEtag = replicationItem.Etag;
                     }
                 }
 
@@ -638,17 +641,14 @@ namespace SlowTests.Sharding.Cluster
                 using (oldLocationShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
-                    Assert.Equal(4, tombs.Count);
+                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, lastProcessedEtag + 1).ToList();
+                    Assert.Equal(1, tombs.Count);
 
-                    foreach (var tomb in tombs)
-                    {
-                        var replicationItem = tomb as DocumentReplicationItem;
+                    var replicationItem = tombs[0] as DocumentReplicationItem;
 
-                        Assert.NotNull(replicationItem);
-                        Assert.True(replicationItem.Flags.Contain(DocumentFlags.Artificial));
-                        Assert.True(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
-                    }
+                    Assert.NotNull(replicationItem);
+                    Assert.True(replicationItem.Flags.Contain(DocumentFlags.Artificial));
+                    Assert.True(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
                 }
 
                 var newLocation = await Sharding.GetShardNumberFor(store, id);
