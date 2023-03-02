@@ -2,8 +2,6 @@ import { ComponentMeta } from "@storybook/react";
 import React, { useState } from "react";
 import { MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
 import { boundCopy } from "../utils/common";
-import { HrHeader } from "./HrHeader";
-import { NodeSet, NodeSetLabel, NodeSetItem } from "./NodeSet";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 
 export default {
@@ -34,6 +32,10 @@ ShardedDatabase.args = {
         {
             nodeTag: "A",
             shardNumber: 1,
+        },
+        {
+            nodeTag: "B",
+            shardNumber: 0,
         },
         {
             nodeTag: "B",

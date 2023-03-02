@@ -3,7 +3,7 @@
 .node-set {
     display: inline-flex;
     flex-wrap: wrap;
-    padding: bs5variables.$gutter-xxs bs5variables.$gutter-xs;
+    padding: bs5variables.$gutter-xxs * 0.5 bs5variables.$gutter-xs;
     border-left: 4px solid;
     border-radius: bs5variables.$border-radius;
     
@@ -13,8 +13,7 @@
     }
 
     .node-set-label {
-        margin-right: bs5variables.$gutter-xs;
-
+        margin: bs5variables.$gutter-xxs * 0.5 bs5variables.$gutter-sm * 0.5;
         i {
             transform: scale(1.2);
             margin-right: 0.2em;
@@ -26,7 +25,7 @@
     }
 
     .node-set-item {
-        margin: 0 bs5variables.$gutter-xxs;
+        margin: bs5variables.$gutter-xxs * 0.5 bs5variables.$gutter-sm * 0.5;
 
         i {
             margin-right: 0.2em;
@@ -38,5 +37,13 @@
             font-weight: 800;
             color: bs5variables.$text-emphasis-var;
         }
+    }
+    .form-label {
+        margin-bottom: 0;
+        cursor: pointer;
+    }
+    .form-check {
+        margin-top: bs5variables.$gutter-xxs;
+        min-height: 0;
     }
 }
