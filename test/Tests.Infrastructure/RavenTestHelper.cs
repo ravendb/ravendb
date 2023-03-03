@@ -158,16 +158,17 @@ namespace FastTests
 
         public static void AssertEqualRespectingNewLines(string expected, string actual)
         {
-            var converted = ConvertRespectingNewLines(expected);
-
-            Assert.Equal(converted, actual);
+            var convertedExpected = ConvertRespectingNewLines(expected);
+            var convertedActual = ConvertRespectingNewLines(actual);
+            Assert.Equal(convertedExpected, convertedActual);
         }
 
         public static void AssertStartsWithRespectingNewLines(string expected, string actual)
         {
-            var converted = ConvertRespectingNewLines(expected);
+            var convertedExpected = ConvertRespectingNewLines(expected);
+            var convertedActual = ConvertRespectingNewLines(actual);
 
-            Assert.StartsWith(converted, actual);
+            Assert.StartsWith(convertedExpected, convertedActual);
         }
 
         public static void AreEquivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual)
@@ -208,7 +209,7 @@ namespace FastTests
                 throw new XunitException(await massageFactory() + Environment.NewLine + e.Message);
             }
         }
-        
+
         private static string ConvertRespectingNewLines(string toConvert)
         {
             if (string.IsNullOrEmpty(toConvert))
