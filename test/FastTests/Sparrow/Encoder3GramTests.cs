@@ -303,6 +303,61 @@ namespace FastTests.Sparrow
 
         [Theory]
         [MemberData("RandomSeed")]
+        public void VerifyOrderPreservationAtRandomStreams(int randomSeed = 3117)
+        {
+            State state = new(64000);
+            var encoder = new HopeEncoder<Encoder3Gram<State>>(new Encoder3Gram<State>(state));
+
+            var rgn = new Random(randomSeed);
+            const int size = 1000;
+            int dictSize = rgn.Next(512);
+
+            byte[][] keysAsStrings = new byte[size][];
+            byte[][] outputBuffers = new byte[size][];
+            for (int i = 0; i < keysAsStrings.Length; i++)
+            {
+                var key = new byte[rgn.Next(100) + 2];
+                rgn.NextBytes(key);
+                keysAsStrings[i] = key;
+                outputBuffers[i] = new byte[128];
+            }
+
+            ByteKeys keys = new(keysAsStrings);
+            encoder.Train(keys, dictSize);
+
+            // Encode all keys.
+            ByteKeys inputValues = new(keysAsStrings);
+            ByteKeys outputValues = new(outputBuffers);
+            Span<int> outputValuesSizeInBits = new int[keysAsStrings.Length];
+            encoder.Encode(inputValues, outputValues, outputValuesSizeInBits);
+
+            for (int i = 0; i < keysAsStrings.Length * 2; i++)
+            {
+                var value1Idx = rgn.Next(keysAsStrings.Length - 1);
+                var value2Idx = rgn.Next(keysAsStrings.Length - 1);
+
+                var value1 = inputValues[value1Idx];
+                var value2 = inputValues[value2Idx];
+
+                var encoded1SizeInBytes = outputValuesSizeInBits[value1Idx] / 8 + (outputValuesSizeInBits[value1Idx] % 8 == 0 ? 0 : 1);
+                var encoded2SizeInBytes = outputValuesSizeInBits[value2Idx] / 8 + (outputValuesSizeInBits[value2Idx] % 8 == 0 ? 0 : 1);
+
+                var encodedValue1 = outputValues[value1Idx].Slice(0, encoded1SizeInBytes);
+                var encodedValue2 = outputValues[value2Idx].Slice(0, encoded2SizeInBytes);
+
+                var originalOrder = value1.SequenceCompareTo(value2);
+                var encodedOrder = encodedValue1.SequenceCompareTo(encodedValue2);
+
+                // Normalize to (-1,0,1)
+                originalOrder = (originalOrder < 0) ? -1 : (originalOrder > 0) ? 1 : 0;
+                encodedOrder = (encodedOrder < 0) ? -1 : (encodedOrder > 0) ? 1 : 0;
+
+                Assert.Equal(originalOrder, encodedOrder);
+            }
+        }
+
+        [Theory]
+        [MemberData("RandomSeed")]
         public void VerifyOrderPreservationDifferentSizes(int randomSeed = 3117)
         {
             State state = new(64000);
@@ -454,7 +509,68 @@ namespace FastTests.Sparrow
 
         [Theory]
         [MemberData("RandomSeed")]
-        [InlineData(39)]
+        public void EnsureEscapedSequencesWithNullsWork(int randomSeed)
+        {
+            State state = new(64000);
+            var encoder = new HopeEncoder<Encoder3Gram<State>>(new Encoder3Gram<State>(state));
+
+            var rgn = new Random(randomSeed);
+            const int size = 1000;
+            int dictSize = rgn.Next(512);
+
+            byte[][] keysAsStrings = new byte[size][];
+            for (int i = 0; i < keysAsStrings.Length; i++)
+            {
+                var key = new byte[rgn.Next(100) + 2];
+                rgn.NextBytes(key);
+                key[^1] = 0; // It has to be null terminated. 
+
+                key[rgn.Next(key.Length - 1)] = 0; // Plant a null in between. 
+
+                keysAsStrings[i] = key;
+            }
+
+            ByteKeys keys = new(keysAsStrings);
+
+            encoder.Train(keys, dictSize);
+
+            Span<byte> value = new byte[128];
+            Span<byte> decoded = new byte[128];
+
+            var escape = new byte[] { 0 };
+            int lengthInBits = encoder.Encode(escape, value);
+            var decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 0, 0 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 0, 1 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 0, 1, 1 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 1, 1, 1 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 0, 1, 1, 1 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+        }
+
+        [Theory]
+        [MemberData("RandomSeed")]
+        [InlineData(7157)]
         public void VerifyCorrectDecodingWithNulls(int randomSeed)
         {
             State state = new(64000);

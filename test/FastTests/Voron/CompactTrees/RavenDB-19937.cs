@@ -25,14 +25,16 @@ public class RavenDB_19937 : CompactTreeReplayTest
 
     [RavenTheory(RavenTestCategory.Voron)]
     [InlineData("RavenDB-19937.replay")]
+    [InlineData("RavenDB-19956.replay")]
     public unsafe void CorruptionWithAddAndRemoveValues(string filename)
     {
         foreach (var terms in ReadTermsFromResource(filename))
         {
             using var wtx = Env.WriteTransaction();
             CompactTree tree = wtx.CompactTreeFor($"{filename}");
-            foreach (var term in terms)
+            for( int i = 0; i < terms.Count; i++)
             {
+                var term = terms[i];
                 var action = term[0];
 
                 string key;
@@ -51,6 +53,9 @@ public class RavenDB_19937 : CompactTreeReplayTest
                         tree.TryRemove(key, out var old);
                         break;
                 }
+
+                tree.Verify();
+                tree.VerifyOrderOfElements();
             }
             wtx.Commit();
         }

@@ -3,6 +3,8 @@ using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Binary;
+using Sparrow.Server.Binary;
 using Sparrow.Server.Compression;
 using Voron.Exceptions;
 using Voron.Global;
@@ -183,21 +185,20 @@ namespace Voron.Data.CompactTrees
                     new NativeMemoryEncoderState(page.DataPointer + PersistentDictionaryHeader.SizeOf, header->TableSize)));
         }
 
-        public void Decode(ReadOnlySpan<byte> encodedKey, ref Span<byte> decodedKey)
+        public void Decode(int keyLengthInBits, ReadOnlySpan<byte> key, ref Span<byte> decodedKey)
         {
-            int len = _encoder.Decode(encodedKey, decodedKey);
+            int len = _encoder.Decode(keyLengthInBits, key, decodedKey);
             decodedKey = decodedKey.Slice(0, len);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Encode(ReadOnlySpan<byte> key, ref Span<byte> encodedKey)
+        public void Encode(ReadOnlySpan<byte> key, ref Span<byte> encodedKey, out int encodedKeyLengthInBits)
         {
             if (key.Length == 0)
                 throw new ArgumentException("Cannot encode an empty key!", nameof(key));
 
-            int bitsLength = _encoder.Encode(key, encodedKey);
-            int bytesLength = Math.DivRem(bitsLength, 8, out var remainder);
-            encodedKey = encodedKey.Slice(0, bytesLength + (remainder == 0 ? 0 : 1));
+            encodedKeyLengthInBits = _encoder.Encode(key, encodedKey);
+            encodedKey = encodedKey.Slice(0, Bits.ToBytes(encodedKeyLengthInBits));
         }
 
         public int GetMaxEncodingBytes(int keyLength)

@@ -111,31 +111,31 @@ unsafe partial class CompactTree
         if (current.Header->NumberOfEntries == 0)
             return;
 
-        _ = GetEncodedEntry(current.Page, current.EntriesOffsets[0], out var lastEncodedKey, out var l);
+        _ = GetEncodedEntry(current.Page, current.EntriesOffsets[0], out var lastEncodedKey, out var lastEncodedKeyLengthInBits, out var l);
 
         Span<byte> lastDecodedKey = new byte[dictionary.GetMaxDecodingBytes(lastEncodedKey.Length)];
 
         if (lastEncodedKey.Length != 0)
         {
-            dictionary.Decode(lastEncodedKey, ref lastDecodedKey);
+            dictionary.Decode(lastEncodedKeyLengthInBits, lastEncodedKey, ref lastDecodedKey);
         }
 
         for (int i = 1; i < current.Header->NumberOfEntries; i++)
         {
-            GetEncodedEntry(current.Page, current.EntriesOffsets[i], out var encodedKey, out l);
+            GetEncodedEntry(current.Page, current.EntriesOffsets[i], out var encodedKey, out var encodeKeyLengthInBits, out l);
             if (encodedKey.Length <= 0)
                 VoronUnrecoverableErrorException.Raise(_llt, "Encoded key is corrupted.");
             if (lastEncodedKey.SequenceCompareTo(encodedKey) >= 0)
                 VoronUnrecoverableErrorException.Raise(_llt, "Last encoded key does not follow lexicographically.");
 
             Span<byte> decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey.Length)];
-            dictionary.Decode(encodedKey, ref decodedKey);
+            dictionary.Decode(encodeKeyLengthInBits, encodedKey, ref decodedKey);
 
             Span<byte> reencodedKey = new byte[dictionary.GetMaxEncodingBytes(decodedKey.Length)];
-            dictionary.Encode(decodedKey, ref reencodedKey);
+            dictionary.Encode(decodedKey, ref reencodedKey, out var reencodedKeyLengthInBits);
 
             Span<byte> decodedKey1 = new byte[dictionary.GetMaxDecodingBytes(reencodedKey.Length)];
-            dictionary.Decode(encodedKey, ref decodedKey1);
+            dictionary.Decode(reencodedKeyLengthInBits, reencodedKey, ref decodedKey1);
 
             if (decodedKey1.SequenceCompareTo(decodedKey) != 0)
                 VoronUnrecoverableErrorException.Raise(_llt, "Decoded key is not equal to the previous decoded key");
@@ -147,9 +147,9 @@ unsafe partial class CompactTree
                 Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
 
                 decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey.Length)];
-                dictionary.Decode(encodedKey, ref decodedKey);
+                dictionary.Decode(encodeKeyLengthInBits, encodedKey, ref decodedKey);
 
-                dictionary.Decode(lastEncodedKey, ref lastDecodedKey);
+                dictionary.Decode(lastEncodedKeyLengthInBits, lastEncodedKey, ref lastDecodedKey);
                 VoronUnrecoverableErrorException.Raise(_llt, "Last encoded key does not follow lexicographically.");
             }
 
