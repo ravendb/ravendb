@@ -28,11 +28,7 @@ namespace SlowTests.Issues
                     Name = c.Name
                 }"));
 
-                //\r\n line terminators are expected regardless of the OS type.
-                //The underlying SyntaxFactory and Formatter classes and will produce \r\n.
-                var expected = PlatformDetails.RunningOnPosix
-                    ? "from c in docs.Companies\r\nselect new\r\n{\n    Name = c.Name\r\n}"
-                    : "from c in docs.Companies\r\nselect new\r\n{\r\n    Name = c.Name\r\n}";
+                var expected = @"from c in docs.Companies\r\nselect new\r\n{\r\n    Name = c.Name\r\n}";
 
                 RavenTestHelper.AssertEqualRespectingNewLines(expected, result.Expression);
             }
