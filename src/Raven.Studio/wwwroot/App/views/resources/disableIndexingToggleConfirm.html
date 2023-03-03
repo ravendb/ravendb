@@ -1,0 +1,42 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Toggle indexing state confirmation</h4>
+        </div>
+        <div class="modal-body">
+            <div class="margin-top"><span data-bind="text: text"></span> all indexes on this database.</div>
+            <div class="margin-top flex-horizontal padding padding-sm bg-warning text-warning">
+                <div class="flex-start"><i class="icon-warning"></i></div>
+                <div class="margin-left">
+                    After clicking <strong>Disable</strong>, the database must be reloaded in order for this indexing configuration to be in effect.<br>
+                    Without reloading, the change will NOT apply (despite being written to the database record).
+                </div>
+            </div>
+            <div class="padding padding-xs margin-top-sm bg-warning text-warning">
+                <div class="margin-left"><h4>There are two ways to reload the database:</h4>
+                    <ul>
+                        <li>
+                            <small>
+                                Disable and then enable the database from the databases view in the Studio.<br>
+                                This will reload the database on all the cluster nodes immediately.
+                            </small>
+                        </li>
+                        <li class="margin-top margin-top-sm">
+                            <small>
+                                Restart RavenDB on all nodes.<br>
+                                The database settings configuration will become effective per node that is restarted.
+                            </small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="button" class="btn btn-primary" data-bind="click: confirm, text: confirmText"></button>
+        </div>
+    </div>
+</div>

@@ -57,6 +57,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
     }, [filter, databases]);
 
     useEffect(() => {
+        //TODO: make sure we can reload details when we add/remove db
         dispatch(loadDatabaseDetails(nodeTags));
     }, [dispatch, nodeTags]);
 

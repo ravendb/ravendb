@@ -17,9 +17,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const dbState = useAppSelector(selectDatabaseState(db.name));
 
     const nonEmptyDbState = dbState
-        .filter((x) => x.status === "success")
+        .filter((x) => x.status === "success" && !x.data.loadError)
         .map((x) => x.data)
-        .filter((x) => x); //TODO: remove?
+        .filter((x) => x);
 
     const indexingErrors = sumBy(nonEmptyDbState, (x) => x?.indexingErrors ?? 0);
     const alerts = sumBy(nonEmptyDbState, (x) => x?.alerts ?? 0);
@@ -41,6 +41,8 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
             (x) => x.documentsCount
         )
     );
+
+    const hasAnyLoadError = dbState.some((x) => x.data?.loadError);
 
     //TODO: global backup status
 
@@ -122,6 +124,11 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         className="text-info"
                     >
                         <i className="icon-rocket me-1" /> {performanceHints} Performance hints
+                    </RichPanelDetailItem>
+                )}
+                {hasAnyLoadError && (
+                    <RichPanelDetailItem key="load-error" className="text-danger pulse">
+                        <i className="icon-danger me-1" /> Database has load errors!
                     </RichPanelDetailItem>
                 )}
             </div>

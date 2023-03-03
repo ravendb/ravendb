@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { DatabaseSharedInfo, NodeInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+import { DatabaseLocalInfo, DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
@@ -23,9 +23,7 @@ import {
     RichPanelSelect,
     RichPanelStatus,
 } from "components/common/RichPanel";
-import appUrl from "common/appUrl";
 import { NodeSet, NodeSetItem, NodeSetLabel } from "components/common/NodeSet";
-import assertUnreachable from "components/utils/assertUnreachable";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
     changeDatabasesLockMode,
@@ -33,15 +31,23 @@ import {
     confirmDeleteDatabases,
     confirmSetLockMode,
     confirmToggleDatabases,
+    confirmToggleIndexing,
+    confirmTogglePauseIndexing,
     deleteDatabases,
     selectActiveDatabase,
+    selectDatabaseState,
     toggleDatabases,
+    toggleIndexing,
+    togglePauseIndexing,
 } from "components/common/shell/databasesSlice";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import useBoolean from "hooks/useBoolean";
 import { DatabaseDistribution } from "components/pages/resources/databases/partials/DatabaseDistribution";
 import { ValidDatabasePropertiesPanel } from "components/pages/resources/databases/partials/ValidDatabasePropertiesPanel";
 import { DatabaseNodeSetItem } from "components/pages/resources/databases/partials/DatabaseNodeSetItem";
+import { locationAwareLoadableData } from "components/models/common";
+import { useAccessManager } from "hooks/useAccessManager";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -49,60 +55,36 @@ interface DatabasePanelProps {
     toggleSelection: () => void;
 }
 
-function getStatusColor(db: DatabaseSharedInfo) {
+function getStatusColor(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<DatabaseLocalInfo>[]) {
+    if (localInfo.some((x) => x.status === "success" && x.data.loadError)) {
+        return "danger";
+    }
+    if (localInfo.every((x) => x.status === "success" && !x.data.upTime)) {
+        return "offline";
+    }
     if (db.disabled) {
         return "warning";
     }
     return "success";
 }
 
-//TODO:
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function badgeClass(db: DatabaseSharedInfo) {
-    /* TODO Created getStatusColor() function this one might be deprecated
-     if (this.hasLoadError()) {
-                return "state-danger";
-            }
+function badgeText(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<DatabaseLocalInfo>[]) {
+    if (localInfo.some((x) => x.status === "success" && x.data.loadError)) {
+        return "Error";
+    }
+    if (localInfo.every((x) => x.status === "success" && !x.data.upTime)) {
+        return "Offline";
+    }
 
-            if (this.disabled()) {
-                return "state-warning";
-            }
-
-            if (this.online()) {
-                return "state-success";
-            }
-
-            return "state-offline"; // offline
-     */
-    return "state-success";
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function badgeText(db: DatabaseSharedInfo) {
     if (db.disabled) {
         return "Disabled";
     }
-    /* TODO
-        if (this.hasLoadError()) {
-                return "Error";
-            }
-
-            if (this.online()) {
-                return "Online";
-            }
-            return "Offline";
-     */
 
     return "Online";
 }
 
 interface DatabaseTopologyProps {
     db: DatabaseSharedInfo;
-}
-
-function extractShardNumber(dbName: string) {
-    const [, shard] = dbName.split("$", 2);
-    return shard;
 }
 
 function DatabaseTopology(props: DatabaseTopologyProps) {
@@ -126,7 +108,7 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
                         <React.Fragment key={shard.name}>
                             <NodeSet color="shard" className="m-1">
                                 <NodeSetLabel color="shard" icon="shard">
-                                    #{extractShardNumber(shard.name)}
+                                    #{DatabaseUtils.shardNumber(shard.name)}
                                 </NodeSetLabel>
                                 {shard.nodes.map((node) => (
                                     <DatabaseNodeSetItem key={node.tag} node={node} />
@@ -180,6 +162,7 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
 export function DatabasePanel(props: DatabasePanelProps) {
     const { db, selected, toggleSelection } = props;
     const activeDatabase = useAppSelector(selectActiveDatabase);
+    const dbState = useAppSelector(selectDatabaseState(db.name));
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
 
@@ -188,6 +171,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
 
     const [lockChanges, setLockChanges] = useState(false);
+
+    const [inProgressAction, setInProgressAction] = useState<string>(null);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
     const documentsUrl = db.currentNode.relevant
@@ -199,7 +184,18 @@ export function DatabasePanel(props: DatabasePanelProps) {
         ? localManageGroupUrl
         : appUrl.toExternalDatabaseUrl(db, localManageGroupUrl);
 
+    const { isOperatorOrAbove } = useAccessManager();
+
     const canNavigateToDatabase = !db.disabled;
+
+    const indexingDisabled = dbState.some((x) => x.status === "success" && x.data.indexingStatus === "Disabled");
+    const canPauseAnyIndexing = dbState.some((x) => x.status === "success" && x.data.indexingStatus === "Running");
+    const canResumeAnyPausedIndexing = dbState.some(
+        (x) => x.status === "success" && x.data?.indexingStatus === "Paused"
+    );
+
+    const canDisableIndexing = isOperatorOrAbove() && !indexingDisabled;
+    const canEnableIndexing = isOperatorOrAbove() && indexingDisabled;
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -222,7 +218,35 @@ export function DatabasePanel(props: DatabasePanelProps) {
         }
     };
 
-    //TODO: enable / disable
+    const onTogglePauseIndexing = async (pause: boolean) => {
+        reportEvent("databases", "pause-indexing");
+
+        const confirmation = await dispatch(confirmTogglePauseIndexing(db, pause));
+
+        if (confirmation.can) {
+            try {
+                setInProgressAction(pause ? "Pausing indexing" : "Resume indexing");
+                await dispatch(togglePauseIndexing(db, pause, confirmation.locations));
+            } finally {
+                setInProgressAction(null);
+            }
+        }
+    };
+
+    const onToggleDisableIndexing = async (disable: boolean) => {
+        reportEvent("databases", "toggle-indexing");
+
+        const confirmation = await dispatch(confirmToggleIndexing(db, disable));
+
+        if (confirmation.can) {
+            try {
+                setInProgressAction(disable ? "Disabling indexing" : "Enabling indexing");
+                await dispatch(toggleIndexing(db, disable));
+            } finally {
+                setInProgressAction(null);
+            }
+        }
+    };
 
     const onDelete = async () => {
         const confirmation = await dispatch(confirmDeleteDatabases([db]));
@@ -247,12 +271,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     return (
         <RichPanel
-            className={classNames("flex-row", badgeClass(db), {
+            className={classNames("flex-row", {
                 active: activeDatabase === db.name,
                 relevant: true,
             })}
         >
-            <RichPanelStatus color={getStatusColor(db)}>{badgeText(db)}</RichPanelStatus>
+            <RichPanelStatus color={getStatusColor(db, dbState)}>{badgeText(db, dbState)}</RichPanelStatus>
             <div className="flex-grow-1">
                 <div className="flex-grow-1">
                     <RichPanelHeader>
@@ -298,16 +322,6 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     </div>
                                 )}
                             </RichPanelName>
-
-                            <div className="member">
-                                {/* TODO: <!-- ko foreach: deletionInProgress -->
-                            <div>
-                                <div title="Deletion in progress" className="text-warning pulse">
-                                    <small><i className="icon-trash" /><span data-bind="text: 'Node ' + $data" /></small>
-                                </div>
-                            </div>
-                            <!-- /ko -->*/}
-                            </div>
                         </RichPanelInfo>
 
                         <RichPanelActions>
@@ -338,14 +352,26 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     <DropdownToggle caret></DropdownToggle>
                                 </ButtonGroup>
                                 <DropdownMenu end>
-                                    {/* TODO details */}
-                                    <DropdownItem style={{ display: "none" }}>
-                                        <i className="icon-pause me-1" /> Pause indexing
-                                    </DropdownItem>
-                                    {/* TODO details */}
-                                    <DropdownItem style={{ display: "none" }}>
-                                        <i className="icon-stop me-1" /> Disable indexing
-                                    </DropdownItem>
+                                    {canPauseAnyIndexing && (
+                                        <DropdownItem onClick={() => onTogglePauseIndexing(true)}>
+                                            <i className="icon-pause me-1" /> Pause indexing
+                                        </DropdownItem>
+                                    )}
+                                    {canResumeAnyPausedIndexing && (
+                                        <DropdownItem onClick={() => onTogglePauseIndexing(false)}>
+                                            <i className="icon-play me-1" /> Resume indexing
+                                        </DropdownItem>
+                                    )}
+                                    {canDisableIndexing && (
+                                        <DropdownItem onClick={() => onToggleDisableIndexing(true)}>
+                                            <i className="icon-stop me-1" /> Disable indexing
+                                        </DropdownItem>
+                                    )}
+                                    {canEnableIndexing && (
+                                        <DropdownItem onClick={() => onToggleDisableIndexing(false)}>
+                                            <i className="icon-play me-1" /> Enable indexing
+                                        </DropdownItem>
+                                    )}
                                     <DropdownItem divider />
                                     <DropdownItem onClick={onCompactDatabase}>
                                         <i className="icon-compact me-1" /> Compact database
@@ -374,8 +400,6 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         aria-haspopup="true" aria-expanded="false"
                                         data-bind="disable: isBeingDeleted() || inProgressAction(), 
                                                        visible: online() && $root.isAdminAccessByDbName($data.name)">
-                                    <span className="caret"/>
-                                    <span className="sr-only">Toggle Dropdown</span>
                                 </button>
                                 <ul className="dropdown-menu dropdown-menu-right">
                                     <li data-bind="visible: online() && !indexingPaused() && !indexingDisabled()">
@@ -388,16 +412,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                             <i className="icon-play"/> Resume indexing
                                         </a>
                                     </li>
-                                    <li data-bind="visible: !indexingDisabled() && $root.accessManager.canDisableIndexing()">
-                                        <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
-                                            <i className="icon-cancel"/> Disable indexing
-                                        </a>
-                                    </li>
-                                    <li data-bind="visible: indexingDisabled() && $root.accessManager.canDisableIndexing()">
-                                        <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
-                                            <i className="icon-play"/> Enable indexing
-                                        </a>
-                                    </li>
+                                    
                                     <li className="divider"
     data-bind="visible: $root.createIsLocalDatabaseObservable(name) &&  $root.accessManager.canCompactDatabase()"/>
                                     <li data-bind="visible: $root.createIsLocalDatabaseObservable(name)() && $root.accessManager.canCompactDatabase()">
@@ -487,19 +502,3 @@ export function DatabasePanel(props: DatabasePanelProps) {
         </RichPanel>
     );
 }
-
-/* TODO
-
-<script type="text/html" id="invalid-database-properties-template">
-    <div class="padding">
-        <div class="addons-container flex-wrap">
-            <div class="text-danger flex-grow">
-                <small>
-                    <i class="icon-exclamation"></i>
-                    <span data-bind="text: loadError"></span>
-                </small>
-            </div>
-        </div>
-    </div>
-</script>
- */

@@ -10,12 +10,12 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         super(new DatabasesService());
     }
 
-    withGetDatabasesState(databaseListProvider: (nodeTag: string) => string[]) {
+    withGetDatabasesState(databaseListProvider: (nodeTag: string) => string[], options: { loadError?: string[] } = {}) {
         this.mocks.getDatabasesState.mockImplementation(async (tag) => {
             const dbs = databaseListProvider(tag);
 
             const dtos = dbs.map((db): StudioDatabaseState => {
-                return {
+                const state: StudioDatabaseState = {
                     Name: db,
                     UpTime: "00:05:00",
                     IndexingStatus: "Running",
@@ -34,6 +34,15 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
                         HumaneSize: "2 Bytes",
                     },
                 };
+
+                if ((options.loadError || []).includes(tag)) {
+                    return {
+                        Name: db,
+                        LoadError: "This is some load error!",
+                    } as StudioDatabaseState;
+                }
+
+                return state;
             });
 
             return {

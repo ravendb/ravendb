@@ -17,6 +17,7 @@ export interface DatabaseLocalInfo {
     location: databaseLocationSpecifier;
     indexingErrors: number;
     alerts: number;
+    loadError: string;
     performanceHints: number;
     indexingStatus: IndexRunningStatus;
     documentsCount: number;

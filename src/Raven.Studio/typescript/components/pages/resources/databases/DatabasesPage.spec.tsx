@@ -4,7 +4,7 @@ import { composeStories } from "@storybook/testing-react";
 
 import * as stories from "./DatabasesPage.stories";
 
-const { Single, Cluster, Sharded, DifferentNodeStates } = composeStories(stories);
+const { Single, Cluster, Sharded, DifferentNodeStates, WithLoadError } = composeStories(stories);
 
 describe("DatabasesPage", function () {
     it("can render single view", async () => {
@@ -20,6 +20,15 @@ describe("DatabasesPage", function () {
         await screen.findByText(/Manage group/i);
 
         await screen.findByText("9 Indexing errors");
+    });
+
+    it("can render load error", async () => {
+        const { screen, fireClick } = rtlRender(<WithLoadError />);
+
+        await screen.findByText(/Manage group/i);
+
+        await fireClick(await screen.findByTitle(/Toggle distribution/i));
+        await screen.findByText(/Database has load errors/i);
     });
 
     it("can render sharded view", async () => {

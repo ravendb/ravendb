@@ -61,6 +61,22 @@ export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
     );
 };
 
+export const WithLoadError: ComponentStory<typeof DatabasesPage> = () => {
+    commonInit();
+
+    const value = mockStore.databases.with_Cluster();
+
+    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value), {
+        loadError: ["B"],
+    });
+
+    return (
+        <div style={{ height: "100vh", overflow: "auto" }}>
+            <DatabasesPage />
+        </div>
+    );
+};
+
 export const WithDeletion: ComponentStory<typeof DatabasesPage> = () => {
     commonInit();
 

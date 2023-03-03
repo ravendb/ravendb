@@ -1,6 +1,7 @@
 ﻿import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 type optsNames = {
     name: string;
@@ -15,15 +16,15 @@ type optsType = {
 class togglePauseIndexingCommand extends commandBase {
 
     private toggleAll = false;
-    private name: string;
-    private type: toggleType;
-    private location: databaseLocationSpecifier;
+    private readonly name: string;
+    private readonly type: toggleType;
+    private readonly location: databaseLocationSpecifier;
 
-    private start: boolean;
+    private readonly start: boolean;
 
-    private db: database;
+    private readonly db: database | DatabaseSharedInfo;
 
-    constructor(start: boolean, db: database, options: optsNames | optsType = null, location: databaseLocationSpecifier = undefined) {
+    constructor(start: boolean, db: database | DatabaseSharedInfo, options: optsNames | optsType = null, location: databaseLocationSpecifier = undefined) {
         super();
         this.db = db;
         this.start = start;

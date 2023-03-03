@@ -32,6 +32,7 @@ import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { useAsync } from "react-async-hook";
 
 export function useIndexesPage(database: database, stale: boolean) {
+    //TODO: use DatabaseSharedInfo?
     const locations = database.getLocations();
 
     const [bulkOperationConfirm, setBulkOperationConfirm] = useState<{

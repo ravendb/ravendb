@@ -1,10 +1,12 @@
 ﻿import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
-import React from "react";
+import React, { useRef } from "react";
 import { DatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
 import { selectDatabaseState } from "components/common/shell/databasesSlice";
 import genUtils from "common/generalUtils";
+import { UncontrolledTooltip } from "reactstrap";
+import { PopoverWithHover } from "components/common/PopoverWithHover";
 
 interface DatabaseDistributionProps {
     db: DatabaseSharedInfo;
@@ -67,7 +69,13 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
 
                             {localState.location.nodeTag}
                         </div>
-                        <div className="entries">{localState.data?.documentsCount}</div>
+                        <div className="entries">
+                            {localState.data?.loadError ? (
+                                <DatabaseLoadError error={localState.data.loadError} />
+                            ) : (
+                                localState.data?.documentsCount
+                            )}
+                        </div>
                         <div className="entries">{localState.data?.indexingErrors}</div>
                         <div className="entries">{localState.data?.indexingStatus}</div>
                         <div className="entries">{localState.data?.alerts}</div>
@@ -76,5 +84,18 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                 );
             })}
         </LocationDistribution>
+    );
+}
+
+function DatabaseLoadError(props: { error: string }) {
+    const tooltipRef = useRef<HTMLElement>();
+
+    return (
+        <strong className="text-danger" ref={tooltipRef}>
+            <i className="icon-exclamation" /> Load error
+            <PopoverWithHover target={tooltipRef.current} placement="top">
+                <div className="p-2">Unable to load database: {props.error}</div>
+            </PopoverWithHover>
+        </strong>
     );
 }
