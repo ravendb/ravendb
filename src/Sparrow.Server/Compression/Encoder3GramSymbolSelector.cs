@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -84,17 +84,7 @@ namespace Sparrow.Server.Compression
                 int pos = 0;
                 while (pos < key.Length)
                 {
-                    var boundary = key.Slice(pos, Math.Min(4, key.Length - pos));
-
-                    // To support nulls, we also need to ensure that boundary conditions are set to 0 frequency.
-                    // https://issues.hibernatingrhinos.com/issue/RavenDB-19703
-                    if (boundary is [0])
-                    {
-                        pos++; 
-                        continue;
-                    }
-                    
-                    int idx = BinarySearch(boundary, intervalBoundaries);
+                    int idx = BinarySearch(key.Slice(pos, Math.Min(4, key.Length - pos)), intervalBoundaries);
                     intervalFrequencies[idx]++;
                     pos += intervalPrefixes[idx].Length;
                 }
