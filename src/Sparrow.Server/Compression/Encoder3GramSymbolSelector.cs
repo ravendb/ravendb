@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -140,10 +140,12 @@ namespace Sparrow.Server.Compression
             // Include prefixes and boundaries for every case until we hit the most frequent start key first character. 
             FillInSingleChar(0, mostFrequentSymbols[0].StartKey[0], intervalPrefixes, intervalBoundaries);
 
-            Span<byte> localAuxiliaryKey = stackalloc byte[GramSize];
+            Span<byte> auxiliaryKey = stackalloc byte[GramSize];
 
             for (int i = 0; i < mostFrequentSymbols.Count - 1; i++)
             {
+                var localAuxiliaryKey = auxiliaryKey;
+
                 var key1 = new Symbol(mostFrequentSymbols[i].StartKey);
                 var key2 = new Symbol(mostFrequentSymbols[i + 1].StartKey);
 
