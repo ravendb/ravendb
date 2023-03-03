@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
@@ -117,7 +118,6 @@ namespace Sparrow.Server.Compression
                         int keyLength = key.Length;
                         byte* keyPtr = fixedKey;
 
-                        bool isDone = false;
                         while (keyLength > 0)
                         {
                             // Initialize the important variables.
@@ -508,7 +508,7 @@ namespace Sparrow.Server.Compression
 
             uint bot = 0;
             uint top = (uint)numberOfEntries;
-
+            
             while (top > 1)
             {
                 uint mid = top / 2;
@@ -522,6 +522,8 @@ namespace Sparrow.Server.Compression
                 top -= mid;
             }
 
+            // To guarantee that encoding always makes progress, we must ensure that every dictionary lookup is successful.
+            // https://db.cs.cmu.edu/papers/2020/zhang-sigmod2020.pdf [Page 1603]
             code = table[bot].Code;
             return table[bot].PrefixLength;
         }
