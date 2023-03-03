@@ -148,14 +148,12 @@ namespace Sparrow.Server.Collections.Persistent
 
             ref Node u = ref nodes[0];
 
-            while (length > 0)
+            int mask = 1 << (length - 1);
+
+            while (mask > 0)
             {
-                length--;
-
-                uint b = key >> (sizeof(uint) * 8 - 1);
-                key <<= 1;
-
-                if (b == 1)
+                // If the bit is set, then we are going to the right.
+                if ((key & mask) > 0)
                 {
                     if (u.RightChild == Invalid)
                     {
@@ -184,6 +182,7 @@ namespace Sparrow.Server.Collections.Persistent
                     //Console.Write("L");
                     u = ref nodes[u.LeftChild];
                 }
+                mask >>= 1;
             }
 
             u.Value = value;
@@ -249,7 +248,7 @@ namespace Sparrow.Server.Collections.Persistent
                     // In this way we just need 2 instructions to do so. 
                     var current = currentByte & (0b1000_0000 >> (currentBit % 8));
 
-                    int u = current <= 0 ? currentNode.LeftChild : currentNode.RightChild;
+                    int u = current == 0 ? currentNode.LeftChild : currentNode.RightChild;
                     currentNode = ref Unsafe.AddByteOffset(ref nodeRef, (IntPtr)(u * Unsafe.SizeOf<Node>()));
 
                     keyLength--;
@@ -257,12 +256,12 @@ namespace Sparrow.Server.Collections.Persistent
                     continue;
                 }
 
+                // If we haven't found a value in here, all this work was useless and we have an issue in the data stream. Therefore, 
+                // we will return -1 which is a totally anomalous result.
                 Unsafe.SkipInit(out value);
-                return 0;
+                return -1;
             }
 
-            // If we haven't found a value in here, all this work was useless and we have an issue in the data stream. Therefore, 
-            // we will return 0 which is a totally anomalous result.
             value = currentNode.Value;
             return currentBit;
         }

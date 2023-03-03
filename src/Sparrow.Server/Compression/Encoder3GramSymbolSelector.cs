@@ -292,14 +292,13 @@ namespace Sparrow.Server.Compression
 
             frequencyMap.Clear();
 
-            Debug.Assert(GramSize == 3, "Gram size was changed and needs to update the null rejection code here.");
-
             keys.Reset();
             while (keys.MoveNext(out var key))
             {
                 for (int j = 0; j < key.Length - GramSize + 1; j++)
                 {
                     var slice = key.Slice(j, GramSize);
+                    Debug.Assert(slice.Length == GramSize);
 
                     // To support nulls, we need to ensure that we are not going to be counting any symbol that has nulls 
                     // in it's content to force the frequency of such an even to go to 0. 
