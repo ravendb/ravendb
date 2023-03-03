@@ -37,11 +37,11 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
     {
         QueryTimingsScope pagingScope = null;
 
-        if (Query.Offset is > 0 && result.Results.Count >= Query.Offset)
+        if (Query.Offset is > 0)
         {
             using (GetPagingScope())
             {
-                var count = Math.Min(Query.Offset ?? 0, int.MaxValue);
+                var count = Math.Min(result.Results.Count, Math.Min(Query.Offset ?? 0, int.MaxValue));
                 result.Results.RemoveRange(0, (int)count);
             }
         }
