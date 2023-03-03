@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var fromStudio = HttpRequest?.IsFromStudio() ?? false;
-            
+
             ShardedRevisionIncludes revisionIncludes = null;
             ShardedCounterIncludes counterIncludes = null;
             ShardedTimeSeriesIncludes timeSeriesIncludes = null;
@@ -96,20 +96,18 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                 foreach (BlittableJsonReaderObject cmdResult in cmdResults)
                 {
-                    if (_includePaths != null)
-                    {
-                        foreach (string includePath in _includePaths)
-                        {
-                            IncludeUtil.GetDocIdFromInclude(cmdResult, includePath, missingIncludes, _databaseContext.IdentityPartsSeparator);
-                        }
-                    }
-
                     if (cmdResult == null)
                         continue;
 
+                    if (_includePaths != null)
+                    {
+                        foreach (string includePath in _includePaths)
+                            IncludeUtil.GetDocIdFromInclude(cmdResult, includePath, missingIncludes, _databaseContext.IdentityPartsSeparator);
+                    }
+
                     var docId = cmdResult.GetMetadata().GetId();
-                    var result = fromStudio ? 
-                        cmdResult.AddToMetadata(_context, Constants.Documents.Metadata.Sharding.ShardNumber, shardNumber) : 
+                    var result = fromStudio ?
+                        cmdResult.AddToMetadata(_context, Constants.Documents.Metadata.Sharding.ShardNumber, shardNumber) :
                         cmdResult.Clone(_context);
                     docs.TryAdd(docId, result);
                 }
@@ -161,7 +159,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             revisionsIncludesByChangeVector: _includeRevisions?.RevisionsChangeVectorsPaths,
             revisionIncludeByDateTimeBefore: _includeRevisions?.RevisionsBeforeDateTime,
             timeSeriesIncludes: _timeSeriesIncludes,
-            compareExchangeValueIncludes: _compareExchangeValueIncludes, 
+            compareExchangeValueIncludes: _compareExchangeValueIncludes,
             _metadataOnly);
     }
 
