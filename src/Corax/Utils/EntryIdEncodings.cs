@@ -50,7 +50,8 @@ public static class EntryIdEncodings
     {
         return (entryId >> EntryIdOffset);
     }
-
+    
+    //todo perf
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static unsafe void Encode(Span<long> entries, Span<short> frequencies, bool usePtrVersion = false)
     {
@@ -110,6 +111,7 @@ public static class EntryIdEncodings
 
     private static readonly short[] FrequencyTable = Enumerable.Range(0, byte.MaxValue).Select(i => FrequencyReconstructionFromQuantizationFromFunction(i)).ToArray();
     
+    //todo perf
     internal static long FrequencyQuantization(short frequency)
     {
         if (frequency < 16) //shortcut
@@ -140,4 +142,7 @@ public static class EntryIdEncodings
     
     //Posting list contains encoded ids only but in matches we deal with decoded.
     internal static long PrepareIdForPruneInPostingList(long entryId) => entryId << EntryIdEncodings.EntryIdOffset + 1;
+    
+    internal static long PrepareIdForSeekInPostingList(long entryId) => entryId << EntryIdEncodings.EntryIdOffset;
+
 }
