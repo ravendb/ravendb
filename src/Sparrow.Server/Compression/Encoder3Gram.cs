@@ -2,13 +2,13 @@ using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using Sparrow.Collections;
 using Sparrow.Server.Binary;
 using Sparrow.Server.Collections.Persistent;
-using IntPtr = System.IntPtr;
 
 namespace Sparrow.Server.Compression
 {
@@ -117,6 +117,7 @@ namespace Sparrow.Server.Compression
                         int keyLength = key.Length;
                         byte* keyPtr = fixedKey;
 
+                        bool isDone = false;
                         while (keyLength > 0)
                         {
                             // Initialize the important variables.
@@ -146,6 +147,11 @@ namespace Sparrow.Server.Compression
 
                             int prefixLen = Lookup(symbolValue, table, numberOfEntries, out Code code);
 
+                            // PERF: While naturally this would happen at the end of the loop, as they are not used anymore
+                            // we can do the work here instead and allow the JIT to reschedule the registers to be used on
+                            // the next block and fore-go on keep tracking of them. 
+                            keyLength -= prefixLen;
+                            keyPtr += prefixLen;
 
                             // Perform the actual encoding in a bitwise fashion. 
                             long sBuf = code.Value;
@@ -164,14 +170,40 @@ namespace Sparrow.Server.Compression
                                 bitWriterBuffer = (bitWriterBuffer << sLen) | sBuf;
                                 intBufLen += sLen;
                             }
-
-                            keyLength -= prefixLen;
-                            keyPtr += prefixLen;
                         }
 
                         intBuf[idx] = BinaryPrimitives.ReverseEndianness(bitWriterBuffer << (64 - intBufLen));
                         outputSizes[i] = ((idx << 6) + intBufLen);
                     }
+                }
+            }
+        }
+
+        public void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
+            where TSampleEnumerator : struct, IReadOnlySpanIndexer
+            where TOutputEnumerator : struct, ISpanIndexer
+        {
+            fixed (Interval3Gram* table = EncodingTable)
+            {
+                var tree = BinaryTree<short>.Open(_state.DecodingTable);
+
+                for (int i = 0; i < data.Length; i++)
+                {
+                    Span<byte> buffer =  outputBuffers[i];
+                    var reader = new BitReader(data[i]);
+                    int bits = reader.Length;
+                    var endsWithNull = false; 
+                    while (bits > 0 && endsWithNull == false)
+                    {
+                        int length = Lookup(reader, ref buffer, table, tree, out endsWithNull);
+                        if (length < 0)
+                            throw new IOException("Invalid data stream.");
+                        // Advance the reader.
+                        reader.Skip(length);
+                        bits -= length;
+                    }
+
+                    outputSize[i] = buffer.Length - buffer.Length;
                 }
             }
         }
@@ -187,75 +219,36 @@ namespace Sparrow.Server.Compression
         private static ReadOnlySpan<byte> EncodingTailMaskTable => new byte[] { 32, 16, 8, 0 };
 
 
-        public void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
+        public void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(ReadOnlySpan<int> dataBits, in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
             where TSampleEnumerator : struct, IReadOnlySpanIndexer
             where TOutputEnumerator : struct, ISpanIndexer
         {
-            ref Interval3Gram tableRef = ref EncodingTable[0];
-            var tree = BinaryTree<short>.Open(_state.DecodingTable);
-
-            byte* auxBuffer = stackalloc byte[4];
-            for (int i = 0; i < data.Length; i++)
+            fixed (Interval3Gram* table = EncodingTable)
             {
-                ref byte symbolsPtrRef = ref MemoryMarshal.GetReference(outputBuffers[i]);
-                ref byte dataRef = ref MemoryMarshal.GetReference(data[i]);
-                int bitStreamLength = data[i].Length * 8; // We convert the length to bits.
+                var tree = BinaryTree<short>.Open(_state.DecodingTable);
 
-                int readerBitIdx = 0;
-                nuint offset = 0;
-
-                while (readerBitIdx < bitStreamLength)
+                for (int i = 0; i < data.Length; i++)
                 {
-                    // This is a fundamental change on how the HOPE decoding process works. By means of removing the NGRAMs that
-                    // include NULL characters also known as byte(0) and setting the frequency of the NULL terminator when found to zero
-                    // we force the use a whole byte (or more) for representation.
-                    // 
-                    // Since in Corax we don't store the bit length but the length of the stored key; therefore the decoder
-                    // will not know when the bit stream end. For that we are using the property that the NULL character encoding
-                    // takes more than a full byte (8 bits) with all 0 bits in it. Since the encoding process ensures that unused bits are
-                    // all 0s, then we can at decoding time figure out that we have reach the end of the encoded stream. This is 
-                    // done knowing that we get an invalid prefix but we have less than 8 bits in the stream.
-                    // https://issues.hibernatingrhinos.com/issue/RavenDB-19703
-                    var currentReaderBitIdx = tree.FindCommonPrefix(ref dataRef, bitStreamLength, readerBitIdx, out var idx);
-                    if (currentReaderBitIdx == 0)
+                    Span<byte> buffer = default;
+                    var reader = new BitReader(data[i]);
+                    int bits = dataBits[i];
+                    var endsWithNull = false;
+                    while (bits > 0 && endsWithNull == false)
                     {
-                        if ((bitStreamLength - readerBitIdx) < 8)
-                            break;
-                        else
-                            goto Fail;
+                        buffer = outputBuffers[i];
+                        int length = Lookup(reader, ref buffer, table, tree, out endsWithNull);
+                        if (length < 0)
+                            throw new IOException("Invalid data stream.");
+
+                        // Advance the reader.
+                        reader.Skip(length);
+
+                        bits -= length;
                     }
 
-                    readerBitIdx = currentReaderBitIdx;
-
-                    var p = Unsafe.AddByteOffset(ref tableRef, (IntPtr)(idx * Unsafe.SizeOf<Interval3Gram>()));
-
-                    int prefixLength = p.PrefixLength;
-                    *(uint*)auxBuffer = p.BufferAndLength;
-
-                    if (prefixLength == 1)
-                    {
-                        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
-                    }
-                    else if (prefixLength == 2)
-                    {
-                        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
-                        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset + 1), auxBuffer[1]);
-                    }
-                    else
-                    {
-                        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
-                        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset + 1), auxBuffer[1]);
-                        Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset + 2), auxBuffer[2]);
-                    }
-
-                    offset += (nuint)prefixLength;
+                    outputSize[i] = buffer.Length - buffer.Length;
                 }
-
-                outputSize[i] = (int)offset;
             }
-
-            Fail:
-            throw new IOException("Invalid data stream.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -307,6 +300,11 @@ namespace Sparrow.Server.Compression
 
                     int prefixLen = Lookup(symbolValue, table, numberOfEntries, out Code code);
 
+                    // PERF: While naturally this would happen at the end of the loop, as they are not used anymore
+                    // we can do the work here instead and allow the JIT to reschedule the registers to be used on
+                    // the next block and fore-go on keep tracking of them. 
+                    keyLength -= prefixLen;
+                    keyPtr += prefixLen;
 
                     // Perform the actual encoding in a bitwise fashion. 
                     long sBuf = code.Value;
@@ -325,9 +323,6 @@ namespace Sparrow.Server.Compression
                         bitWriterBuffer = (bitWriterBuffer << sLen) | sBuf;
                         intBufLen += sLen;
                     }
-
-                    keyLength -= prefixLen;
-                    keyPtr += prefixLen;
                 }
 
                 intBuf[idx] = BinaryPrimitives.ReverseEndianness(bitWriterBuffer << (64 - intBufLen));
@@ -335,43 +330,33 @@ namespace Sparrow.Server.Compression
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Decode(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
+        {
+            return Decode(data.Length * 8, data, outputBuffer);
+        }
+
         [SkipLocalsInit]
-        public int Decode(int bitStreamLength, ReadOnlySpan<byte> data, Span<byte> outputBuffer)
+        public int Decode(int bits, ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
             ref Interval3Gram tableRef = ref EncodingTable[0];
+            ref byte symbolsPtrRef = ref outputBuffer[0];
 
             var tree = BinaryTree<short>.Open(_state.DecodingTable);
-            byte* auxBuffer = stackalloc byte[4];
-
-            ref byte symbolsPtrRef = ref outputBuffer[0];
             ref byte dataRef = ref MemoryMarshal.GetReference(data);
-            int readerBitIdx = 0;
-            nuint offset = 0;
 
+            int bitStreamLength = bits;
+            int readerBitIdx = 0;
+
+            byte* auxBuffer = stackalloc byte[4];
+            nuint offset = 0;
             while (readerBitIdx < bitStreamLength)
             {
-                // This is a fundamental change on how the HOPE decoding process works. By means of removing the NGRAMs that
-                // include NULL characters also known as byte(0) and setting the frequency of the NULL terminator when found to zero
-                // we force the use a whole byte (or more) for representation.
-                // 
-                // Since in Corax we don't store the bit length but the length of the stored key; therefore the decoder
-                // will not know when the bit stream end. For that we are using the property that the NULL character encoding
-                // takes more than a full byte (8 bits) with all 0 bits in it. Since the encoding process ensures that unused bits are
-                // all 0s, then we can at decoding time figure out that we have reach the end of the encoded stream. This is 
-                // done knowing that we get an invalid prefix but we have less than 8 bits in the stream.
-                // https://issues.hibernatingrhinos.com/issue/RavenDB-19703
-                var currentReaderBitIdx = tree.FindCommonPrefix(ref dataRef, bitStreamLength, readerBitIdx, out var idx);
-                if (currentReaderBitIdx == 0)
-                {
-                    if ((bitStreamLength - readerBitIdx) < 8)
-                        break;
-                    else
-                        goto Fail;
-                }
+                readerBitIdx = tree.FindCommonPrefix(ref dataRef, bitStreamLength, readerBitIdx, out var idx);
+                if (readerBitIdx == -1)
+                    goto Fail;
 
-                readerBitIdx = currentReaderBitIdx;
-
-                var p = Unsafe.AddByteOffset(ref tableRef, (IntPtr)(idx * Unsafe.SizeOf<Interval3Gram>()));
+                var p = Unsafe.AddByteOffset(ref tableRef, (IntPtr) (idx * Unsafe.SizeOf<Interval3Gram>()));
 
                 int prefixLength = p.PrefixLength;
                 *(uint*)auxBuffer = p.BufferAndLength;
@@ -383,13 +368,13 @@ namespace Sparrow.Server.Compression
                 else if (prefixLength == 2)
                 {
                     Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
-                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset + 1), auxBuffer[1]);
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+1), auxBuffer[1]);
                 }
                 else
                 {
                     Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
-                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset + 1), auxBuffer[1]);
-                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset + 2), auxBuffer[2]);
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+1), auxBuffer[1]);
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+2), auxBuffer[2]);
                 }
 
                 offset += (nuint)prefixLength;
@@ -502,12 +487,10 @@ namespace Sparrow.Server.Compression
 
                 entry.Code = symbolCodeList[i].Code;
 
-                uint codeValue = (uint)entry.Code.Value << (sizeof(int) * 8 - entry.Code.Length);
-                
                 maxBitSequenceLength = Math.Max(maxBitSequenceLength, entry.Code.Length);
                 minBitSequenceLength = Math.Min(minBitSequenceLength, entry.Code.Length);
 
-                tree.Add(codeValue, entry.Code.Length, (short)i);
+                tree.Add((uint)entry.Code.Value, entry.Code.Length, (short)i);
             }
 
             _entries = dictSize;

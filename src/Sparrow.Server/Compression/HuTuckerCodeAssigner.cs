@@ -225,9 +225,7 @@ namespace Sparrow.Server.Compression
 
                 if (i1 > i2)
                 {
-                    int tmp = i1;
-                    i1 = i2;
-                    i2 = tmp;
+                    (i1, i2) = (i2, i1);
                 }
 
                 s[m] = i1;

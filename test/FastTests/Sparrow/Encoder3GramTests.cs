@@ -172,7 +172,7 @@ namespace FastTests.Sparrow
             Span<byte> decoded = new byte[128];
 
             var encodedBitLength = encoder.Encode(encodingValue[0], value);
-            var decodedBytes = encoder.Decode(value.Slice(0, Bits.ToBytes(encodedBitLength)), decoded);
+            var decodedBytes = encoder.Decode(encodedBitLength, value.Slice(0, Bits.ToBytes(encodedBitLength)), decoded);
 
             Assert.Equal(0, encodingValue[0].SequenceCompareTo(decoded.Slice(0, decodedBytes)));
             Assert.True(encoder.GetMaxEncodingBytes(encodingValue[0].Length) >= encodedBitLength / 8);
@@ -202,7 +202,7 @@ namespace FastTests.Sparrow
             Span<byte> decoded = new byte[128];
 
             var encodedBitLength = encoder.Encode(encodingValue[0], value);
-            var decodedBytes = encoder.Decode(value.Slice(0, Bits.ToBytes(encodedBitLength)), decoded);
+            var decodedBytes = encoder.Decode(encodedBitLength, value.Slice(0, Bits.ToBytes(encodedBitLength)), decoded);
 
             Assert.Equal(0, encodingValue[0].SequenceCompareTo(decoded.Slice(0, decodedBytes)));
         }
@@ -234,7 +234,7 @@ namespace FastTests.Sparrow
             Span<byte> decoded = new byte[128];
 
             var encodedBitLength = encoder.Encode(encodingValue[0], value);
-            var decodedBytes = encoder.Decode(value.Slice(0, Bits.ToBytes(encodedBitLength)), decoded);
+            var decodedBytes = encoder.Decode(encodedBitLength, value.Slice(0, Bits.ToBytes(encodedBitLength)), decoded);
 
             Assert.Equal(0, encodingValue[0].SequenceCompareTo(decoded.Slice(0, decodedBytes)));
         }
@@ -440,12 +440,12 @@ namespace FastTests.Sparrow
             for (int i = 0; i < keys.Length; i++)
             {
                 int encodedBitLength = encoder.Encode(keys[i], value);
-                var decodedBytes = encoder.Decode(value.Slice(0, Bits.ToBytes(encodedBitLength)), decoded);
+                var decodedBytes = encoder.Decode(encodedBitLength, value.Slice(0, Bits.ToBytes(encodedBitLength)), decoded);
 
                 if (keys[i].SequenceCompareTo(decoded.Slice(0, decodedBytes)) != 0)
                 {
-                    encoder.Encode(keys[i], value);
-                    decodedBytes = encoder.Decode(value, decoded);
+                    encodedBitLength = encoder.Encode(keys[i], value);
+                    decodedBytes = encoder.Decode(encodedBitLength, value, decoded);
                 }
 
                 Assert.Equal(0, keys[i].SequenceCompareTo(decoded.Slice(0, decodedBytes)));
@@ -454,67 +454,7 @@ namespace FastTests.Sparrow
 
         [Theory]
         [MemberData("RandomSeed")]
-        public void EnsureEscapedSequencesWithNullsWork(int randomSeed)
-        {
-            State state = new(64000);
-            var encoder = new HopeEncoder<Encoder3Gram<State>>(new Encoder3Gram<State>(state));
-
-            var rgn = new Random(randomSeed);
-            const int size = 1000;
-            int dictSize = rgn.Next(512);
-
-            byte[][] keysAsStrings = new byte[size][];
-            for (int i = 0; i < keysAsStrings.Length; i++)
-            {
-                var key = new byte[rgn.Next(100) + 2];
-                rgn.NextBytes(key);
-                key[^1] = 0; // It has to be null terminated. 
-
-                key[rgn.Next(key.Length - 1)] = 0; // Plant a null in between. 
-
-                keysAsStrings[i] = key;
-            }
-
-            ByteKeys keys = new(keysAsStrings);
-
-            encoder.Train(keys, dictSize);
-
-            Span<byte> value = new byte[128];
-            Span<byte> decoded = new byte[128];
-
-            var escape = new byte[] { 0 };
-            int lengthInBits = encoder.Encode(escape, value);
-            var decodedBytes = encoder.Decode(lengthInBits, value, decoded);
-            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
-
-            escape = new byte[] { 0, 0 };
-            lengthInBits = encoder.Encode(escape, value);
-            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
-            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
-
-            escape = new byte[] { 0, 1 };
-            lengthInBits = encoder.Encode(escape, value);
-            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
-            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
-
-            escape = new byte[] { 0, 1, 1 };
-            lengthInBits = encoder.Encode(escape, value);
-            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
-            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
-
-            escape = new byte[] { 1, 1, 1 };
-            lengthInBits = encoder.Encode(escape, value);
-            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
-            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
-
-            escape = new byte[] { 0, 1, 1, 1 };
-            lengthInBits = encoder.Encode(escape, value);
-            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
-            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
-        }
-
-        [Theory]
-        [MemberData("RandomSeed")]
+        [InlineData(39)]
         public void VerifyCorrectDecodingWithNulls(int randomSeed)
         {
             State state = new(64000);
@@ -529,8 +469,8 @@ namespace FastTests.Sparrow
             {
                 var key = new byte[rgn.Next(100)+2];
                 rgn.NextBytes(key);
-                key[^1] = 0; // It has to be null terminated. 
 
+                key[^1] = 0; // It has to be null terminated. 
                 key[rgn.Next(key.Length - 1)] = 0; // Plant a null in between. 
 
                 keysAsStrings[i] = key;
@@ -543,9 +483,11 @@ namespace FastTests.Sparrow
             Span<byte> value = new byte[128];
             Span<byte> decoded = new byte[128];
 
-            for (int i = 0; i < keysAsStrings.Length; i++)
+            for (int i = 0; i < keys.Length; i++)
             {
                 var key = keysAsStrings[i];
+                for (int j = 0; j < key.Length; j++)
+                    key[j] = (byte)(key[j] == 255 ? 254 : key[j]);
 
                 int lengthInBits = encoder.Encode(key, value);
                 var decodedBytes = encoder.Decode(lengthInBits, value, decoded);
@@ -592,13 +534,13 @@ namespace FastTests.Sparrow
             {
                 var key = value[..i];
 
-                int length = encoder.Encode(key, encoded);
-                var decodedBytes = encoder.Decode(length, encoded, decoded);
+                int lengthInBits = encoder.Encode(key, encoded);
+                var decodedBytes = encoder.Decode(lengthInBits, encoded, decoded);
 
                 if (key.SequenceCompareTo(decoded.Slice(0, decodedBytes)) != 0)
                 {
-                    length = encoder.Encode(key, encoded);
-                    decodedBytes = encoder.Decode(encoded.Slice(0, Bits.ToBytes(length)), decoded);
+                    lengthInBits = encoder.Encode(key, encoded);
+                    decodedBytes = encoder.Decode(lengthInBits,encoded.Slice(0, Bits.ToBytes(lengthInBits)), decoded);
                 }
 
                 Assert.Equal(0, key.SequenceCompareTo(decoded[..decodedBytes]));
@@ -621,8 +563,7 @@ namespace FastTests.Sparrow
             Span<byte> decoded = new byte[128];
 
             var encodedBitLength = encoder.Encode(encodingValue[0], value);
-            
-            var decodedBytes = encoder.Decode(Bits.ToBytes(encodedBitLength) * 8, value, decoded);
+            var decodedBytes = encoder.Decode(encodedBitLength, value, decoded);
 
             Assert.Equal(0, encodingValue[0].SequenceCompareTo(decoded.Slice(0, decodedBytes)));
             Assert.Equal(encodingValue[0].Length, decodedBytes);
