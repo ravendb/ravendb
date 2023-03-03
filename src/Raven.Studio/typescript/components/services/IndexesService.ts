@@ -16,6 +16,7 @@ import getIndexesProgressCommand from "commands/database/index/getIndexesProgres
 import openFaultyIndexCommand from "commands/database/index/openFaultyIndexCommand";
 import forceIndexReplace from "commands/database/index/forceIndexReplace";
 import { DatabaseSharedInfo } from "components/models/databases";
+import toggleDisableIndexingCommand from "commands/database/index/toggleDisableIndexingCommand";
 
 export default class IndexesService {
     async getProgress(db: database, location: databaseLocationSpecifier) {
@@ -36,6 +37,22 @@ export default class IndexesService {
 
     async resetIndex(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
         await new resetIndexCommand(index.name, db, location).execute();
+    }
+
+    async pauseAllIndexes(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(false, db, null, location).execute();
+    }
+
+    async resumeAllIndexes(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(true, db, null, location).execute();
+    }
+
+    async disableAllIndexes(db: DatabaseSharedInfo) {
+        await new toggleDisableIndexingCommand(false, db).execute();
+    }
+
+    async enableAllIndexes(db: DatabaseSharedInfo) {
+        await new toggleDisableIndexingCommand(true, db).execute();
     }
 
     async enable(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {

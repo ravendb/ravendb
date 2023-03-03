@@ -14,6 +14,8 @@ import databasesManager from "common/shell/databasesManager";
 import { locationAwareLoadableData, perNodeTagLoadStatus } from "components/models/common";
 import { services } from "hooks/useServices";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import { databaseLocationComparator } from "components/utils/common";
+import disableIndexingToggleConfirm from "viewmodels/resources/disableIndexingToggleConfirm";
 
 interface DatabasesState {
     /**
@@ -99,6 +101,16 @@ export function selectDatabaseState(name: string) {
                         store.databases.localDatabaseDetailedInfo,
                         selectDatabaseInfoId(name, location)
                     );
+
+                    if (!data) {
+                        // where was change and we don't have yet new data
+                        // TODO: start fetching?
+                        return {
+                            location,
+                            status: "idle",
+                        };
+                    }
+
                     return {
                         location,
                         status: "success",
@@ -114,6 +126,58 @@ export const databasesSlice = createSlice({
     initialState,
     name: sliceName,
     reducers: {
+        disabledIndexing: (state, action: PayloadAction<string>) => {
+            state.localDatabaseDetailedInfo.ids.forEach((id) => {
+                const entity = state.localDatabaseDetailedInfo.entities[id];
+                if (entity.name === action.payload) {
+                    entity.indexingStatus = "Disabled";
+                }
+            });
+        },
+        enabledIndexing: (state, action: PayloadAction<string>) => {
+            state.localDatabaseDetailedInfo.ids.forEach((id) => {
+                const entity = state.localDatabaseDetailedInfo.entities[id];
+                if (entity.name === action.payload) {
+                    entity.indexingStatus = "Running";
+                }
+            });
+        },
+        pausedIndexing: {
+            reducer: (state, action: PayloadAction<{ databaseName: string; location: databaseLocationSpecifier }>) => {
+                state.localDatabaseDetailedInfo.ids.forEach((id) => {
+                    const entity = state.localDatabaseDetailedInfo.entities[id];
+                    if (
+                        entity.name === action.payload.databaseName &&
+                        databaseLocationComparator(entity.location, action.payload.location)
+                    ) {
+                        entity.indexingStatus = "Paused";
+                    }
+                });
+            },
+            prepare: (databaseName: string, location: databaseLocationSpecifier) => {
+                return {
+                    payload: { databaseName, location },
+                };
+            },
+        },
+        resumedIndexing: {
+            reducer: (state, action: PayloadAction<{ databaseName: string; location: databaseLocationSpecifier }>) => {
+                state.localDatabaseDetailedInfo.ids.forEach((id) => {
+                    const entity = state.localDatabaseDetailedInfo.entities[id];
+                    if (
+                        entity.name === action.payload.databaseName &&
+                        databaseLocationComparator(entity.location, action.payload.location)
+                    ) {
+                        entity.indexingStatus = "Running";
+                    }
+                });
+            },
+            prepare: (databaseName: string, location: databaseLocationSpecifier) => {
+                return {
+                    payload: { databaseName, location },
+                };
+            },
+        },
         activeDatabaseChanged: (state, action: PayloadAction<string>) => {
             state.activeDatabase = action.payload;
         },
@@ -164,6 +228,7 @@ export const databasesSlice = createSlice({
                         shardNumber: DatabaseUtils.shardNumber(db.Name),
                     },
                     alerts: db.Alerts,
+                    loadError: db.LoadError,
                     documentsCount: db.DocumentsCount,
                     indexingStatus: db.IndexingStatus,
                     indexingErrors: db.IndexingErrors,
@@ -209,6 +274,61 @@ export const openCreateDatabaseFromRestoreDialog = () => () => {
     const createDbView = new createDatabase("restore");
     app.showBootstrapDialog(createDbView);
 };
+
+export const confirmToggleIndexing =
+    (db: DatabaseSharedInfo, disable: boolean): AppAsyncThunk<{ can: boolean }> =>
+    async () => {
+        const confirmDeleteViewModel = new disableIndexingToggleConfirm(disable);
+        app.showBootstrapDialog(confirmDeleteViewModel);
+        return confirmDeleteViewModel.result;
+    };
+
+export const toggleIndexing =
+    (db: DatabaseSharedInfo, disable: boolean): AppAsyncThunk =>
+    async (dispatch, getState, getServices) => {
+        const { indexesService } = getServices();
+
+        if (disable) {
+            await indexesService.disableAllIndexes(db);
+            dispatch(databasesSlice.actions.disabledIndexing(db.name));
+        } else {
+            await indexesService.enableAllIndexes(db);
+            dispatch(databasesSlice.actions.enabledIndexing(db.name));
+        }
+    };
+
+export const confirmTogglePauseIndexing =
+    (db: DatabaseSharedInfo, pause: boolean): AppAsyncThunk<{ can: boolean; locations: databaseLocationSpecifier[] }> =>
+    async () => {
+        //TODO: context selector!
+        const msg = pause ? "pause indexing?" : "resume indexing?";
+        const result = await viewHelpers.confirmationMessage("Are you sure?", `Do you want to ` + msg);
+
+        return {
+            can: result.can,
+            locations: DatabaseUtils.getLocations(db),
+        };
+    };
+
+export const togglePauseIndexing =
+    (db: DatabaseSharedInfo, pause: boolean, locations: databaseLocationSpecifier[]): AppAsyncThunk =>
+    async (dispatch, getState, getServices) => {
+        const { indexesService } = getServices();
+
+        if (pause) {
+            const tasks = locations.map(async (l) => {
+                await indexesService.pauseAllIndexes(db, l);
+                dispatch(databasesSlice.actions.pausedIndexing(db.name, l));
+            });
+            await Promise.all(tasks);
+        } else {
+            const tasks = locations.map(async (l) => {
+                await indexesService.resumeAllIndexes(db, l);
+                dispatch(databasesSlice.actions.resumedIndexing(db.name, l));
+            });
+            await Promise.all(tasks);
+        }
+    };
 
 //TODO: report success after database deletion? - what about other actions?
 export const confirmDeleteDatabases =
