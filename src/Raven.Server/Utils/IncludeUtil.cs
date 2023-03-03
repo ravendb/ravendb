@@ -22,7 +22,7 @@ namespace Raven.Server.Utils
 
         private struct HashSetIncludeOp : IIncludeOp
         {
-            private HashSet<string> _items;
+            private readonly HashSet<string> _items;
 
             public HashSetIncludeOp(HashSet<string> items)
             {
@@ -124,6 +124,10 @@ namespace Raven.Server.Utils
                     }
                     op.Include(null, BlittableValueToString(item));
                 }
+            }
+            else if (value is null)
+            {
+                // nothing to do
             }
             else
             {
