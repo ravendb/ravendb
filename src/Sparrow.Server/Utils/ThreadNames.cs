@@ -271,7 +271,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"UBF {_dbName} to {_targetName}";
+                return $"UpBkp {_dbName} to {_targetName}";
             }
         }
 
@@ -290,7 +290,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"DBF {_dbName} from {_targetName}";
+                return $"DlBkp {_dbName} from {_targetName}";
             }
         }
 
