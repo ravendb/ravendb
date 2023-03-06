@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Sparrow.Server.Utils
@@ -16,7 +17,7 @@ namespace Sparrow.Server.Utils
 
         private class Runner
         {
-            private const string TasksExecutorThreadName = "RavenDB Tasks Executor";
+            private readonly string TasksExecutorThreadName = "Tasks Executor";
             private readonly ConcurrentQueue<(WaitCallback, object)> _actions = new ConcurrentQueue<(WaitCallback, object)>();
 
             private readonly ManualResetEventSlim _event = new ManualResetEventSlim(false);

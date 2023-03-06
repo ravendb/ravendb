@@ -6,6 +6,7 @@ using System.Threading;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using static Sparrow.Server.Platform.Pal;
 using static Sparrow.Server.Platform.PalDefinitions;
@@ -15,7 +16,7 @@ namespace Voron.Impl
 {
     public class GlobalPrefetchingBehavior
     {
-        private const string PrefetchingThreadName = "Voron Global Prefetching Thread";
+        private const string PrefetchingThreadName = "Voron Prefetching Thread";
 
         internal static readonly Lazy<GlobalPrefetchingBehavior> GlobalPrefetcher = new Lazy<GlobalPrefetchingBehavior>(() =>
         {

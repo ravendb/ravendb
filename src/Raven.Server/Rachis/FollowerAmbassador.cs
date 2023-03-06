@@ -16,6 +16,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -967,7 +968,7 @@ namespace Raven.Server.Rachis
         {
             UpdateLastMatchFromFollower(0);
             _followerAmbassadorLongRunningOperation =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ToString());
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ThreadNames.ForFollowerAmbassador(ToString(), _tag, $"{_term:#,#;;0}"));
         }
 
         public override string ToString()

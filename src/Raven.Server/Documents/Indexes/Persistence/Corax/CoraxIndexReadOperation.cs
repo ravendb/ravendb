@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly ByteStringContext _allocator;
 
         private long _entriesCount = 0;
-        
+
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
         {
             _allocator = readTransaction.Allocator;
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             public Dictionary<string, Dictionary<string, string[]>> Execute(
                 IndexQueryServerSide query, DocumentsOperationContext context,
-                IndexFieldsMapping fieldMappings, Document document) 
+                IndexFieldsMapping fieldMappings, Document document)
                 => null;
         }
 
@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 // From now on, we know we will try to skip duplicates.
                 int limit = 0;
-                
+
                 // If query start is effectively bigger than the one we are starting on. 
                 if (_query.Start > currentIdx)
                 {
@@ -329,7 +329,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         limit = ids.Length;
                 }
                 // else we left it behind, so we are going to continue going for 0. 
-                else return 0;
+                else
+                    return 0;
 
                 var distinctIds = ids.Slice(0, limit);
 
@@ -421,7 +422,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly struct NoQueryFilter : ISupportsQueryFilter
         {
             public void Dispose() { }
-            
+
             public FilterResult Apply(ref RetrieverInput input, string key) => FilterResult.Accepted;
         }
 
@@ -472,7 +473,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IEnumerable<QueryResult> QueryInternal<THighlighting, TQueryFilter, THasProjection, TDistinct>(
                     IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
                     Reference<int> totalResults, Reference<int> skippedResults, Reference<int> scannedDocuments,
-                    IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, 
+                    IQueryResultRetriever retriever, DocumentsOperationContext documentsContext,
                     Func<string, SpatialField> getSpatialField,
                     CancellationToken token)
                 where TDistinct : struct, IHasDistinct
@@ -513,7 +514,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             highlightings.Initialize(query, queryTimings);
 
             IQueryMatch queryMatch;
-            bool isBinary;
 
             QueryTimingsScope coraxScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false);
             using (coraxScope?.Start())
@@ -570,9 +570,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         continue;
                     }
 
-                    // Now we know this is a new candidate document to be return therefore, we are going to be getting the
-                    // actual data and apply the rest of the filters. 
-                    Include:
+                // Now we know this is a new candidate document to be return therefore, we are going to be getting the
+                // actual data and apply the rest of the filters. 
+                Include:
                     var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key);
 
                     var filterResult = queryFilter.Apply(ref retrieverInput, key);
@@ -632,7 +632,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         new QueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings)
                     );
                 }
-                else throw new UnsupportedOperationException($"The type {typeof(TQueryFilter)} is not supported.");
+                else
+                    throw new UnsupportedOperationException($"The type {typeof(TQueryFilter)} is not supported.");
             }
 
             QueryResult GetQueryResult(ref IdentityTracker<TDistinct> tracker, Document document, ref bool markedAsSkipped)
@@ -923,7 +924,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                         fragment = $"{preTag}{fieldFragment[tokenStart..tokenEnd]}{postTag}{fieldFragment[tokenEnd..expectedFragmentRestEnd]}";
                     }
-                    
+
                     fragments.Add(fragment);
 
                     totalFragments++;
@@ -936,7 +937,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         private static void SetupHighlighter(IndexQueryServerSide query, JsonOperationContext context, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms)
         {
-            foreach(var term in highlightingTerms)
+            foreach (var term in highlightingTerms)
             {
                 string[] nls;
                 switch (term.Value.Values)
@@ -957,7 +958,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     default:
                         throw new NotSupportedException($"The type '{term.Value.Values.GetType().FullName}' is not supported.");
                 }
-                
+
                 term.Value.Values = nls;
                 term.Value.PreTags = null;
                 term.Value.PostTags = null;
@@ -974,11 +975,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 if (numberOfPreTags != numberOfPostTags)
                     throw new InvalidOperationException("Number of pre-tags and post-tags must match.");
 
-                var fieldName = 
-                    query.Metadata.IsDynamic 
+                var fieldName =
+                    query.Metadata.IsDynamic
                         ? AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value)
                         : highlighting.Field.Value;
-                
+
                 if (highlightingTerms.TryGetValue(fieldName, out var termIndex) == false)
                 {
                     // the case when we have to create MapReduce highlighter
@@ -986,14 +987,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     termIndex.FieldName = highlighting.Field.Value;
                     termIndex.DynamicFieldName = AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value);
                     termIndex.GroupKey = options.GroupKey;
-                    highlightingTerms.Add(query.Metadata.IsDynamic ? termIndex.DynamicFieldName :  termIndex.FieldName, termIndex);
+                    highlightingTerms.Add(query.Metadata.IsDynamic ? termIndex.DynamicFieldName : termIndex.FieldName, termIndex);
                 }
 
                 if (termIndex is not null)
                     termIndex.GroupKey = options.GroupKey;
                 else
                     continue;
-                
+
                 if (numberOfPreTags > 0)
                 {
                     termIndex.PreTags = options.PreTags;
@@ -1012,10 +1013,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
             HashSet<string> results = new();
-            
+
             if (_indexSearcher.TryGetTermsOfField(_indexSearcher.FieldMetadataBuilder(field), out var terms) == false)
                 return results;
-            
+
             if (fromValue is not null)
             {
                 Span<byte> fromValueBytes = Encodings.Utf8.GetBytes(fromValue);
@@ -1044,7 +1045,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             IDisposable closeServerTransaction = null;
             TransactionOperationContext serverContext = null;
             MoreLikeThisQuery moreLikeThisQuery;
-            var isBinary = false;
             CoraxQueryBuilder.Parameters builderParameters;
 
             try
@@ -1057,7 +1057,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 using (closeServerTransaction)
                 {
-                    builderParameters = new (_indexSearcher, _allocator, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+                    builderParameters = new(_indexSearcher, _allocator, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
                         _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
                     moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(builderParameters, query.Metadata.Query.Where);
                 }
@@ -1084,7 +1084,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
             }
 
-            builderParameters = new (_indexSearcher, _allocator, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+            builderParameters = new(_indexSearcher, _allocator, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
                 _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
             using var mlt = new RavenRavenMoreLikeThis(builderParameters, options);
             long? baseDocId = null;
@@ -1098,7 +1098,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 // get the current Lucene docid for the given RavenDB doc ID
                 if (moreLikeThisQuery.BaseDocumentQuery.Fill(docsIds) == 0)
                     throw new InvalidOperationException("Given filtering expression did not yield any documents that could be used as a base of comparison");
-                
+
                 //What if we've got multiple items?
                 baseDocId = docsIds[0];
             }
@@ -1144,7 +1144,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 mltQuery = _indexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
             }
-            
+
 
 
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1170,13 +1170,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var result = retriever.Get(ref retrieverInput, token);
                     if (result.Document != null)
                     {
-                        yield return new QueryResult {Result = result.Document};
+                        yield return new QueryResult { Result = result.Document };
                     }
                     else if (result.List != null)
                     {
                         foreach (Document item in result.List)
                         {
-                            yield return new QueryResult {Result = item};
+                            yield return new QueryResult { Result = item };
                         }
                     }
                 }
@@ -1202,7 +1202,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch queryMatch;
-            bool isBinary;
             var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
             if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters)) is null)
                 yield break;

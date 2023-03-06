@@ -7,6 +7,7 @@ using System.Threading;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
@@ -86,8 +87,10 @@ namespace Raven.Server.Utils
             }
         }
 
-        public LongRunningWork LongRunning(Action<object> action, object state, string name)
+        public LongRunningWork LongRunning(Action<object> action, object state, ThreadNames.ThreadInfo threadInfo)
         {
+            var nameToUse = ThreadNames.GetNameToUse(threadInfo);
+
             if (_pool.TryDequeue(out var pooled) == false)
             {
                 MemoryInformation.AssertNotAboutToRunOutOfMemory();
@@ -95,14 +98,15 @@ namespace Raven.Server.Utils
                 pooled = new PooledThread(this);
                 var thread = new Thread(pooled.Run, PlatformDetails.Is32Bits ? 512 * Constants.Size.Kilobyte : 0)
                 {
-                    Name = name,
+                    Name = nameToUse,
                     IsBackground = true,
                 };
 
                 thread.Start();
             }
+
             pooled.StartedAt = DateTime.UtcNow;
-            return pooled.SetWorkForThread(action, state, name);
+            return pooled.SetWorkForThread(action, state, threadInfo, nameToUse);
         }
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
@@ -122,7 +126,7 @@ namespace Raven.Server.Utils
         private void Clear()
         {
             while (_pool.TryDequeue(out var pooled))
-                pooled.SetWorkForThread(null, null, null);
+                pooled.SetWorkForThread(null, null, null, null);
         }
 
         internal class PooledThread
@@ -133,6 +137,7 @@ namespace Raven.Server.Utils
             private Action<object> _action;
             private object _state;
             private string _name;
+            private ThreadNames.ThreadInfo _threadInfo;
             private readonly PoolOfThreads _parent;
             private LongRunningWork _workIsDone;
 
@@ -156,14 +161,15 @@ namespace Raven.Server.Utils
                 _parent = pool;
             }
 
-            public LongRunningWork SetWorkForThread(Action<object> action, object state, string name)
+            public LongRunningWork SetWorkForThread(Action<object> action, object state, ThreadNames.ThreadInfo threadInfo, string nameToUse)
             {
                 _action = action;
                 _state = state;
-                _name = name;
+                _threadInfo = threadInfo;
+                _name = nameToUse;
 
                 Debug.Assert(_workIsDone == null, "_workIsDone must be null here");
-                var workIsDone = new LongRunningWork(new ManualResetEvent(false), name);
+                var workIsDone = new LongRunningWork(new ManualResetEvent(false), nameToUse);
 
                 _workIsDone = workIsDone;
                 _waitForWork.Set();
@@ -182,7 +188,7 @@ namespace Raven.Server.Utils
                     while (true)
                     {
                         _waitForWork.WaitOne();
-
+                        
                         if (DoWork() == false)
                             return;
                     }
@@ -207,6 +213,7 @@ namespace Raven.Server.Utils
                 }
 
                 ResetCurrentThreadName();
+                ThreadNames.AddFullThreadName(_workIsDone.ManagedThreadId, _threadInfo.FullName);
                 Thread.CurrentThread.Name = _name;
 
                 try
@@ -219,7 +226,7 @@ namespace Raven.Server.Utils
                 {
                     if (_log.IsOperationsEnabled)
                     {
-                        _log.Operations($"An uncaught exception occurred in '{_name}' and killed the process", e);
+                        _log.Operations($"An uncaught exception occurred in '{_threadInfo.FullName}' and killed the process", e);
                     }
 
                     throw;
@@ -233,12 +240,15 @@ namespace Raven.Server.Utils
                 _action = null;
                 _state = null;
                 _workIsDone = null;
+
+                ThreadNames.RemoveFullThreadName(Thread.CurrentThread.ManagedThreadId);
                 NativeMemory.CurrentThreadStats.CurrentlyAllocatedForProcessing = 0;
 
                 ThreadLocalCleanup.Run();
 
                 ResetCurrentThreadName();
                 Thread.CurrentThread.Name = "Available Pool Thread";
+                
 
                 var resetThread = ResetThreadPriority();
                 resetThread &= ResetThreadAffinity();

@@ -1,4 +1,4 @@
-name: VersionLabel
+name: version
 
 on:
   pull_request_target
