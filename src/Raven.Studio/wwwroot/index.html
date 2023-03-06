@@ -21,11 +21,13 @@
         <style>
             body {
                 background-color: #22252b;
+                line-height: 1.61;
             }
             .splash-screen .lead {
                 text-align: center;
                 font-size: 1.25rem;
                 font-weight: 300;
+                color: #f0f4f6;
             }
             .splash-screen .spinner-box {
                 height: 80vh;
@@ -45,10 +47,6 @@
                 height: 120px;
                 background-color: #8361d4;
                 -webkit-animation: pulse 3500ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
-            }
-            .splash-screen .orbit-1 .icon-raven {
-                font-size: 300%;
-                color: #F0F4F6;
             }
             .splash-screen .orbit-2,
             .splash-screen .orbit-3 {
@@ -203,7 +201,7 @@
         <div class="splash-screen">
             <div class="spinner-box">
                 <div class="orbit orbit-1">
-                    <i class="icon-raven"></i>
+                    <img src="Content/img/splash-screen-ravendb-logo.svg" alt="Loading logo">
                 </div>
                 <div class="orbit orbit-2">
                     <i class="orbit-icon orbit-icon-2"></i>
@@ -212,7 +210,7 @@
                     <i class="orbit-icon"></i>
                 </div>
             </div>
-            <p class="lead">Building a nest</p>
+            <p class="lead">Building a NEST - New Enhanced Studio</p>
         </div>
         
         <div id="applicationHost"></div>
