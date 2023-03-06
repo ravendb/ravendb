@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Replication
                 conflictedDocs,
                 documentsContext.GetLazyString(collection), out var resolved))
             {
-                 _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, conflict);
+                 _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, incoming: conflict);
                  return true;
             }
 

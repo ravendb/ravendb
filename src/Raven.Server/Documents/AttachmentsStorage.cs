@@ -519,15 +519,6 @@ namespace Raven.Server.Documents
             _documentDatabase.Metrics.Attachments.BytesPutsPerSec.MarkSingleThreaded(stream.Length);
         }
 
-        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)
-        {
-            if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
-            {
-                var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                tree.DeleteStream(hash);
-            }
-        }
-
         private bool TryGetDocumentTableValueReaderForAttachment(DocumentsOperationContext context, string documentId,
             string name, Slice lowerDocumentId, out TableValueReader tvr)
         {
@@ -1258,9 +1249,9 @@ namespace Raven.Server.Documents
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks);
 
-            // we are running just before the delete, so we may still have 1 entry there, the one just
-            // about to be deleted
-            DeleteAttachmentStream(context, hash);
+            // We may have another operation in the same transaction that would cause us to re-create
+            // the missing references, let's move the actual stream delete to the end of the transaction
+            context.Transaction.CheckIfShouldDeleteAttachmentStream(hash);
         }
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
@@ -1375,6 +1366,18 @@ namespace Raven.Server.Documents
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
                     yield return attachment;
+                }
+            }
+        }
+
+        public void RemoveAttachmentStreamsWithoutReferences(DocumentsOperationContext context, List<Slice> attachmentHashesToMaybeDelete)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+            foreach (var hash in attachmentHashesToMaybeDelete)
+            {
+                if (GetCountOfAttachmentsForHash(context, hash) == 0)
+                {
+                    tree.DeleteStream(hash);
                 }
             }
         }
