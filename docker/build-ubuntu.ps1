@@ -170,7 +170,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
     }
 
     Write-Host "Providing deb path '$($pathToDeb)' to Dockerfile.."
-    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "path_to_deb=./$matchingFile"
+    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "PATH_TO_DEB=./$matchingFile"
     CheckLastExitCode
     
     foreach ($tag in $tags[1..$tags.Length]) {
