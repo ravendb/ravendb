@@ -74,18 +74,18 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
 
     protected void ReduceResults(ref TCombinedResult result, QueryTimingsScope scope)
     {
-        if (IsMapReduceIndex || IsAutoMapReduceQuery)
-        {
-            using (scope?.For(nameof(QueryTimingsScope.Names.Reduce)))
-            {
-                var merger = CreateMapReduceQueryResultsMerger(result);
-                result.Results = merger.Merge();
+        if (IsMapReduceIndex == false && IsAutoMapReduceQuery == false)
+            return;
 
-                if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery))
-                {
-                    // apply ordering after the re-reduce of a map-reduce index
-                    result.Results.Sort(new DocumentsComparer(Query.Metadata, extractFromData: true));
-                }
+        using (scope?.For(nameof(QueryTimingsScope.Names.Reduce)))
+        {
+            var merger = CreateMapReduceQueryResultsMerger(result);
+            result.Results = merger.Merge();
+
+            if (Query.Metadata.OrderBy?.Length > 0)
+            {
+                // apply ordering after the re-reduce of a map-reduce index
+                result.Results.Sort(new DocumentsComparer(Query.Metadata, extractFromData: true));
             }
         }
     }
