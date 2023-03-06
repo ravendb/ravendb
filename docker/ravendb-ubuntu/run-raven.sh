@@ -30,7 +30,7 @@ trap 'handle_term' TERM INT
 $COMMAND &
 COMMANDPID=$!
 
-[ -n "$RAVEN_DATABASE" ] && source ../scripts/server-utils.sh && ../scripts/create-database
+[ -n "$RAVEN_DATABASE" ] && source ../scripts/server-utils.sh && ../scripts/create-database.sh
 
 [ "$TERM_KILL_NEEDED" ] && kill -TERM "$COMMANDPID" 2>/dev/null 
 wait $COMMANDPID 2>/dev/null
