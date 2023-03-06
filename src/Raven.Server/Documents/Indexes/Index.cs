@@ -367,11 +367,11 @@ namespace Raven.Server.Documents.Indexes
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId)
+        public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId, out SearchEngineType searchEngineType)
         {
             var logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
-
             StorageEnvironment environment = null;
+            searchEngineType = SearchEngineType.None;
 
             var name = new DirectoryInfo(path).Name;
             var indexPath = path;
@@ -395,6 +395,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     type = IndexStorage.ReadIndexType(name, environment);
                     sourceType = IndexStorage.ReadIndexSourceType(name, environment);
+                    searchEngineType = IndexStorage.ReadSearchEngineType(name, environment);
                 }
                 catch (Exception e)
                 {
