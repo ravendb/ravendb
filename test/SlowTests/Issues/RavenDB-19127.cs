@@ -84,7 +84,7 @@ public class RavenDB_19127: RavenTestBase
         public string DetailId { get; set; }
         public string FriendId { get; set; }
         public IEnumerable<string> DetailIds { get; set; }
-        public List<LazyAsync.Detail> Details { get; set; }
+        public List<Detail> Details { get; set; }
         public string DetailShortId { get; set; }
         public List<string> Groups { get; set; }
     }
@@ -130,5 +130,15 @@ public class RavenDB_19127: RavenTestBase
         public string FirstName { get; }
         public string Manager { get; }
 
+    }
+
+    private class Detail
+    {
+        public Detail()
+        {
+
+        }
+        public string Id { get; set; }
+        public string Name { get; set; }
     }
 }

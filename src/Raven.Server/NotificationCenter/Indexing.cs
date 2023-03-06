@@ -66,12 +66,12 @@ namespace Raven.Server.NotificationCenter
 
             EnsureTimer();
         }
-        
+
         public void AddWarning(MismatchedReferencesLoadWarning mismatchedReferenceLoadWarningDetails)
         {
             if (CanAdd(out DateTime now) == false)
                 return;
-            
+
             _mismatchedReferencesLoadWarning = mismatchedReferenceLoadWarningDetails;
 
             EnsureTimer();
@@ -136,7 +136,7 @@ namespace Raven.Server.NotificationCenter
 
                 if (referenceLoadsHint != null)
                     _notificationCenter.Add(referenceLoadsHint);
-                
+
                 if (_mismatchedReferencesLoadWarning != null)
                 {
                     AlertRaised mismatchedReferencesAlert = GetMismatchedReferencesAlert();
@@ -182,10 +182,10 @@ namespace Raven.Server.NotificationCenter
                     PerformanceHintType.Indexing_References, NotificationSeverity.Warning, Source, details);
             }
         }
-        
+
         private AlertRaised GetMismatchedReferencesAlert()
         {
-            return AlertRaised.Create(_database, $"Loading documents with mismatched collection name in '{_mismatchedReferencesLoadWarning.IndexName}' index",
+            return AlertRaised.Create(_notificationCenter.Database, $"Loading documents with mismatched collection name in '{_mismatchedReferencesLoadWarning.IndexName}' index",
                 "We have detected usage of LoadDocument(doc, collectionName) where loaded document collection is different than given parameter.",
                 AlertType.MismatchedReferenceLoad, NotificationSeverity.Warning, Source, _mismatchedReferencesLoadWarning);
         }

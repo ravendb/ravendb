@@ -26,6 +26,7 @@ using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {

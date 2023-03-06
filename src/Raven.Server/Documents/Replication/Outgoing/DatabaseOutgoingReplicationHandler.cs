@@ -23,6 +23,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
 
@@ -83,7 +84,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return Destination.Equals(other.Destination);
         }
 
-    
+
         public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {
             switch (this)
@@ -108,7 +109,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _stream = stream;
             OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, OutgoingReplicationThreadName);
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
+                    _database.Name, Destination.FromString(), pullReplicationAsHub: true));
         }
 
         private void PullReplication()

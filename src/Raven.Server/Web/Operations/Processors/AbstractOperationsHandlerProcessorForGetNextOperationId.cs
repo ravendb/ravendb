@@ -1,8 +1,10 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Changes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Operations.Processors;
@@ -26,6 +28,9 @@ internal abstract class AbstractOperationsHandlerProcessorForGetNextOperationId<
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteNextOperationIdAndNodeTag(nextId, RequestHandler.ServerStore.NodeTag);
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    RequestHandler.AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
             }
         }
     }

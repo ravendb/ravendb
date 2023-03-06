@@ -19,12 +19,10 @@ public class MicrosoftLoggingProvider : ILoggerProvider
     private readonly MultipleUseFlag _enable = new MultipleUseFlag();
     public readonly MicrosoftLoggingConfiguration Configuration;
 
-    private readonly LoggingSource _loggingSource;
-    private readonly MultipleUseFlag _enable = new MultipleUseFlag();
-
     public bool IsActive => _enable.IsRaised();
-    public (string, SparrowLoggerWrapper)[] Loggers => _loggers.Select(x => (x.Key, x.Value)).ToArray(); 
-    
+
+    public (string, SparrowLoggerWrapper)[] Loggers => _loggers.Select(x => (x.Key, x.Value)).ToArray();
+
     public MicrosoftLoggingProvider(LoggingSource loggingSource, ServerNotificationCenter notificationCenter)
     {
         LoggingSource = loggingSource;
@@ -38,7 +36,7 @@ public class MicrosoftLoggingProvider : ILoggerProvider
             ? (categoryName[..lastDot], categoryName.Substring(lastDot + 1, categoryName.Length - lastDot - 1))
             : (categoryName, categoryName);
         var sparrowLogger = LoggingSource.GetLogger(source, loggerName);
-        var logLevel = _enable.IsRaised() 
+        var logLevel = _enable.IsRaised()
             ? Configuration.GetLogLevelForCategory(categoryName)
             : LogLevel.None;
         var newLogger = new SparrowLoggerWrapper(sparrowLogger, logLevel);
@@ -48,7 +46,7 @@ public class MicrosoftLoggingProvider : ILoggerProvider
     {
         return _loggers.Select(x => (x.Key, x.Value.MinLogLevel));
     }
-    
+
     public void ApplyConfiguration()
     {
         _enable.Raise();
@@ -57,7 +55,7 @@ public class MicrosoftLoggingProvider : ILoggerProvider
             logger.MinLogLevel = Configuration.GetLogLevelForCategory(categoryName);
         }
     }
-    
+
     public void DisableLogging()
     {
         _enable.Lower();
@@ -66,7 +64,7 @@ public class MicrosoftLoggingProvider : ILoggerProvider
             logger.MinLogLevel = LogLevel.None;
         }
     }
-    
+
     public void Dispose()
     {
         _loggers.Clear();

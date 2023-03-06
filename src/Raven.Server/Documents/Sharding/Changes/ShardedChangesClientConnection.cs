@@ -52,6 +52,9 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     private int _watchAllIndexes;
     private IDisposable _watchAllIndexesUnsubscribe;
 
+    private int _watchAggressiveCaching;
+    private IDisposable _watchAggressiveCachingUnsubscribe;
+
     private readonly ShardedDatabaseContext _context;
     private readonly bool _throttleConnection;
     private Dictionary<int, ShardedDatabaseChanges> _changes;
@@ -269,6 +272,21 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     protected override ValueTask UnwatchIndexAsync(string name, CancellationToken token)
     {
         return UnwatchInternalAsync(name, _matchingIndexes, token);
+    }
+
+    protected override async ValueTask WatchAggressiveCachingAsync(CancellationToken token)
+    {
+        await EnsureConnectedAsync(token);
+
+        var value = Interlocked.Increment(ref _watchAggressiveCaching);
+        if (value == 1)
+            _watchAggressiveCachingUnsubscribe = await WatchInternalAsync(changes => changes.ForAggressiveCaching(), token);
+    }
+
+    protected override ValueTask UnwatchAggressiveCachingAsync(CancellationToken token)
+    {
+        UnwatchInternal(ref _watchAggressiveCaching, _watchAggressiveCachingUnsubscribe);
+        return ValueTask.CompletedTask;
     }
 
     public override DynamicJsonValue GetDebugInfo()

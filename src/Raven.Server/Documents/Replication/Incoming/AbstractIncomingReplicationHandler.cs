@@ -27,6 +27,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -106,7 +107,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (_incomingWork != null)
                     return; // already set by someone else, they can start it
 
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName);
+                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, ThreadNames.ForIncomingReplication(IncomingReplicationThreadName,
+                    _databaseName, ConnectionInfo.SourceDatabaseName));
             }
 
             if (Logger.IsInfoEnabled)
