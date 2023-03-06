@@ -18,6 +18,7 @@ using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using Size = Sparrow.Size;
@@ -326,7 +327,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     localUploadStatus.Exception = (exception ?? e).ToString();
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, threadName);
+            }, null, ThreadNames.ForUploadBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
 
             _threads.Add(thread);
         }
@@ -361,7 +362,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, threadName);
+            }, null, ThreadNames.ForDeleteBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
 
             _threads.Add(thread);
         }

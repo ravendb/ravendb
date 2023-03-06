@@ -181,6 +181,28 @@ namespace Raven.Server.Documents.Handlers.Admin
                 writer.WriteObject(json);
             }
         }
+        
+        [RavenAction("/admin/logs/microsoft/state", "GET", AuthorizationStatus.Operator)]
+        public async Task GetMicrosoftLoggersState()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var provider = Server.GetService<MicrosoftLoggingProvider>();
+                var minLogLevelPerLogger = new DynamicJsonValue();
+                var respondBody = new DynamicJsonValue
+                {
+                    ["IsActive"] = provider.IsActive,
+                    ["Loggers"] = minLogLevelPerLogger
+                };
+                foreach (var (category, logger) in provider.Loggers)
+                {
+                    minLogLevelPerLogger[category] = logger.MinLogLevel;
+                }
+                var json = context.ReadObject(respondBody, "logs/configuration");
+                writer.WriteObject(json);
+            }
+        }
 
         [RavenAction("/admin/logs/microsoft/configuration", "POST", AuthorizationStatus.Operator)]
         public async Task SetMicrosoftConfiguration()

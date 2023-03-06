@@ -16,6 +16,10 @@ public class MicrosoftLoggingProvider : ILoggerProvider
     
     private readonly LoggingSource _loggingSource;
     private readonly MultipleUseFlag _enable = new MultipleUseFlag();
+
+    public bool IsActive => _enable.IsRaised();
+    public (string, SparrowLoggerWrapper)[] Loggers => _loggers.Select(x => (x.Key, x.Value)).ToArray(); 
+    
     public MicrosoftLoggingProvider(LoggingSource loggingSource, NotificationCenter.NotificationCenter notificationCenter)
     {
         _loggingSource = loggingSource;

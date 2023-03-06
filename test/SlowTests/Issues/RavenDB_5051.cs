@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
-using Sparrow.Platform;
 using Xunit;
 using Xunit.Abstractions;
 

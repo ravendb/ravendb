@@ -64,6 +64,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -928,7 +929,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     ReportUnexpectedIndexingError(e);
                 }
-            }, null, IndexingThreadName);
+            }, null, ThreadNames.ForIndex(IndexingThreadName, Name, _indexStorage.DocumentDatabase.Name));
 
             RollIfNeeded();
         }

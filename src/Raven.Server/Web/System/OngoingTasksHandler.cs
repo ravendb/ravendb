@@ -42,6 +42,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
 namespace Raven.Server.Web.System
@@ -508,7 +509,7 @@ namespace Raven.Server.Web.System
                                 {
                                     ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
                                 }
-                            }, null, threadName);
+                            }, null, ThreadNames.ForBackup(threadName, backupName, Database.Name));
                             return tcs.Task;
                         },
                         id: operationId, token: cancelToken);

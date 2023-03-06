@@ -43,6 +43,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
@@ -666,7 +667,7 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Failed to run ETL {Name}", e);
                 }
-            }, null, threadName);
+            }, null, ThreadNames.ForEtlProcess(threadName, Tag, Name));
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Starting {Tag} process: '{Name}'.");
