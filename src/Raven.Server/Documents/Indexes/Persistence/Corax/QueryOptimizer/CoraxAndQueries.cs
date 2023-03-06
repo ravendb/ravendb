@@ -14,12 +14,8 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
 {
     private readonly List<CoraxBooleanItem> _queryStack;
 
-    public CoraxAndQueries(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right,
-        IQueryScoreFunction scoreFunction) : base(indexSearcher, scoreFunction)
+    public CoraxAndQueries(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right) : base(indexSearcher)
     {
-        if (CoraxBooleanItem.CanBeMergedForAnd(left, right) == false)
-            throw new InvalidDataException($"Cannot merge {nameof(CoraxBooleanItem)}. This is bug. {Environment.NewLine}Details:{Environment.NewLine} {left}{Environment.NewLine}{Environment.NewLine}{right}");
-        
         _queryStack = new List<CoraxBooleanItem>() {left, right};
     }
 
@@ -34,16 +30,16 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
 
     public bool TryAnd(IQueryMatch item)
     {
-        if (item is CoraxBooleanItem cbi)
+        switch (item)
         {
-            if (CoraxBooleanItem.CanBeMergedForAnd(_queryStack[0], cbi) == false)
+            case CoraxBooleanQueryBase cbqb:
+                throw new InvalidOperationException($"CoraxBooleanQueryBase should be merged via {nameof(TryMerge)} method.");
+            case CoraxBooleanItem cbi:
+                _queryStack.Add(cbi);
+                return true;
+            default:
                 return false;
-
-            _queryStack.Add(cbi);
-            return true;
         }
-
-        return false;
     }
     
     public override IQueryMatch Materialize()
@@ -148,9 +144,9 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
         }
 
         Return:
-        return ScoreFunction is NullScoreFunction
+        return Boosting.HasValue == false
             ? baseMatch
-            : IndexSearcher.Boost(baseMatch, ScoreFunction);
+            : IndexSearcher.Boost(baseMatch, Boosting.Value);
     }
     
     private static int PrioritizeSort(CoraxBooleanItem firstUnaryItem, CoraxBooleanItem secondUnaryItem)
@@ -169,5 +165,5 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
         return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
     }
 
-    public new bool IsBoosting => ScoreFunction is not NullScoreFunction;
+    public new bool IsBoosting => Boosting.HasValue;
 }

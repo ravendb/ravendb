@@ -177,13 +177,7 @@ namespace SlowTests.Server.Documents.Indexing
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
                 Assert.Equal(FieldIndexing.Search, index.Fields["Name"].Indexing);
-                RavenTestHelper.AssertEqualRespectingNewLines(@"docs.Users.Select(doc => new
-{
-    Age = doc.Age,
-    Email = doc.Email,
-    Name = doc.Name
-})", index.Maps.First());
-
+                Assert.Equal(@"docs.Users.Select(doc => new { Age = doc.Age, Email = doc.Email, Name = doc.Name })", index.Maps.First());
             }
         }
 
@@ -307,7 +301,6 @@ select new
     Email = doc.Email,
     Name = doc.Name
 }", index.Maps.First());
-
             }
         }
 
@@ -376,7 +369,7 @@ select new
             };
 
             var results = GetMergeReportOfTwoIndexes(index1, index2);
-           
+
             Assert.Equal(0, results.Suggestions.Count);
             Assert.Equal("Cannot merge indexes that have a where clause", results.Unmergables[index1.Name]);
         }
@@ -406,9 +399,9 @@ select new {
 }" },
                 Type = IndexType.Map
             };
-            
+
             var results = GetMergeReportOfTwoIndexes(index1, index2);
-            
+
             Assert.Equal(1, results.Suggestions.Count);
             RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Products
 select new
@@ -457,8 +450,8 @@ select new
             Assert.Equal(1, results.Suggestions[0].CanDelete.Count);
             Assert.Equal("Orders/Totals", results.Suggestions[0].CanDelete[0]);
         }
-        
-        
+
+
         [Fact]
         public void CanMergeCorrectlyWithDifferentDocumentIdentifiers()
         {
@@ -488,7 +481,7 @@ select new
             };
 
             var results = GetMergeReportOfTwoIndexes(index2, index1);
-           
+
             Assert.Equal(1, results.Suggestions.Count);
             RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Orders
 select new
@@ -499,7 +492,7 @@ select new
     Total = doc.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
 }", results.Suggestions.First().MergedIndex.Maps.First());
         }
-        
+
         [Fact]
         public void CanMergeWhenBinaryExpressionIsInsideIndex()
         {
@@ -528,7 +521,7 @@ select new
                 Type = IndexType.Map
             };
             var results = GetMergeReportOfTwoIndexes(index2, index1);
-           
+
             Assert.Equal(1, results.Suggestions.Count);
             RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Orders
 select new
@@ -569,10 +562,10 @@ select new
             };
 
             var results = GetMergeReportOfTwoIndexes(index2, index1);
-           
+
             Assert.Equal(0, results.Suggestions.Count);
         }
-        
+
         [Fact]
         public void AutoIndexesWillNotBeIncludedInOperationOutput()
         {
@@ -625,7 +618,7 @@ select new
             var merger = new IndexMerger(dictionary);
             return merger.ProposeIndexMergeSuggestions();
         }
-        
+
         private void AssertIndexIsNotCorruptingIndexMerger<TIndex>() where TIndex : AbstractIndexCreationTask, new()
         {
             using var store = GetDocumentStore();
@@ -634,7 +627,7 @@ select new
             var whereIndex = store
                 .Maintenance
                 .Send(new GetIndexOperation(index.IndexName));
-            
+
             var dictionary = new Dictionary<string, IndexDefinition>
             {
                 {index.IndexName, whereIndex},
@@ -646,25 +639,25 @@ select new
 
         [Fact]
         public void IndexDefinitionCanContainWhereInInvocationExpressionSyntax() => AssertIndexIsNotCorruptingIndexMerger<IndexWithWhere>();
-        
+
         [Fact]
         public void IndexDefinitionCanContainLetInInvocationExpressionSyntax() => AssertIndexIsNotCorruptingIndexMerger<IndexWithSyntaxQueryLet>();
-        
+
         private class IndexWithWhere : AbstractIndexCreationTask<AutoIndexMockup>
         {
             public IndexWithWhere()
             {
-                Map = mockups => mockups.Where(i => i.Name == "Matt").Select(i => new {Name = i.Name});
+                Map = mockups => mockups.Where(i => i.Name == "Matt").Select(i => new { Name = i.Name });
             }
         }
-        
+
         private class IndexWithSyntaxQueryLet : AbstractIndexCreationTask<AutoIndexMockup>
         {
             public IndexWithSyntaxQueryLet()
             {
                 Map = mockups => from moc in mockups
-                    let x = "SuperField"
-                    select new {Name = moc.Name, X = x};
+                                 let x = "SuperField"
+                                 select new { Name = moc.Name, X = x };
             }
         }
     }

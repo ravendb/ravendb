@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Identity;
@@ -63,6 +64,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, AttachmentName> AttachmentName = GenerateJsonDeserializationRoutine<AttachmentName>();
 
         public static readonly Func<BlittableJsonReaderObject, QueryResult> QueryResult = GenerateJsonDeserializationRoutine<QueryResult>();
+        
+        public static readonly Func<BlittableJsonReaderObject, ChangesSupportedFeatures> ChangesSupportedFeatures = GenerateJsonDeserializationRoutine<ChangesSupportedFeatures>();
 
         public static readonly Func<BlittableJsonReaderObject, MoreLikeThisQueryResult> MoreLikeThisQueryResult = GenerateJsonDeserializationRoutine<MoreLikeThisQueryResult>();
 

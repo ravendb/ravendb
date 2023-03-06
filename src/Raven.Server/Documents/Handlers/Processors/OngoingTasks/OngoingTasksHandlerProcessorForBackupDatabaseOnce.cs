@@ -12,6 +12,7 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using static Raven.Server.Utils.MetricCacher.Keys;
 
@@ -79,7 +80,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         {
                             ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
                         }
-                    }, null, threadName);
+                    }, null, ThreadNames.ForBackup(threadName, backupName, RequestHandler.DatabaseName));
                     return tcs.Task;
                 },
                 token: token);

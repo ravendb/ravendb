@@ -9,6 +9,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
@@ -70,7 +71,7 @@ namespace Raven.Server.Rachis
         public void Start()
         {
             _candidateAmbassadorLongRunningWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, $"Candidate Ambassador for {_engine.Tag} > {_tag}");
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ThreadNames.ForCandidateAmbassador($"Candidate Ambassador for {_engine.Tag} > {_tag}", _engine.Tag, _tag));
         }
 
         public void Dispose()

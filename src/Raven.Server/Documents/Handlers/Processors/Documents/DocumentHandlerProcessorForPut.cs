@@ -1,8 +1,10 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
@@ -35,6 +37,9 @@ internal class DocumentHandlerProcessorForPut : AbstractDocumentHandlerProcessor
                 writer.WriteString(cmd.PutResult.ChangeVector);
 
                 writer.WriteEndObject();
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    RequestHandler.AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
             }
         }
     }

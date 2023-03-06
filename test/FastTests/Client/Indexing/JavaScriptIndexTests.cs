@@ -508,7 +508,7 @@ namespace FastTests.Client.Indexing
         }
         
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void OutputReduceToCollectionWithDeletions(Options options)
         {
             using var store = GetDocumentStore(options);
@@ -516,7 +516,7 @@ namespace FastTests.Client.Indexing
             {
                 using var session = store.OpenSession();
                 session.Delete("categories/1-A");
-                var item = session.Query<Product>().Where(i => i.Name == "Lakkalikööri").Single();
+                var item = session.Query<Product>().Customize(i => i.WaitForNonStaleResults()).Where(i => i.Name == "Lakkalikööri").Single();
                 session.Delete(item);
                 session.SaveChanges();
             }

@@ -120,6 +120,10 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
 
     protected abstract ValueTask UnwatchIndexAsync(string name, CancellationToken token);
 
+    protected abstract ValueTask WatchAggressiveCachingAsync(CancellationToken token);
+
+    protected abstract ValueTask UnwatchAggressiveCachingAsync(CancellationToken token);
+
     private ValueTask WatchOperationAsync(long operationId)
     {
         _matchingOperations.TryAdd(operationId);
@@ -195,7 +199,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
 
                             if (ms.Length > 16 * 1024)
                                 break;
-                        } while (_sendQueue.Count > 0 && sp.Elapsed < TimeSpan.FromSeconds(5));
+                        } while (_sendQueue.IsEmpty == false && sp.Elapsed < TimeSpan.FromSeconds(5));
 
                         writer.WriteEndArray();
                     }
@@ -341,16 +345,23 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
         {
             ValueToSend = new DynamicJsonValue
             {
-                ["TopologyChange"] = true
+                [nameof(ChangesSupportedFeatures.TopologyChange)] = true,
+                [nameof(ChangesSupportedFeatures.AggressiveCachingChange)] = true,
             },
             AllowSkip = false
         });
     }
 
-    protected void AddToQueue(SendQueueItem item)
+    protected void AddToQueue(SendQueueItem item, bool addIfEmpty = false)
     {
         if (DisposeToken.IsCancellationRequested)
             return;
+
+        if (addIfEmpty)
+        {
+            _sendQueue.AddIfEmpty(item);
+            return;
+        }
 
         _sendQueue.Enqueue(item);
     }
@@ -490,6 +501,14 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
         else if (Match(command, "watch-topology-change"))
         {
             await WatchTopologyAsync();
+        }
+        else if (Match(command, "watch-aggressive-caching"))
+        {
+            await WatchAggressiveCachingAsync(token);
+        }
+        else if (Match(command, "unwatch-aggressive-caching"))
+        {
+            await UnwatchAggressiveCachingAsync(token);
         }
         else
         {

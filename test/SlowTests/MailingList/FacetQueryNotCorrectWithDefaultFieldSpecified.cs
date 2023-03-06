@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,11 +20,12 @@ namespace SlowTests.MailingList
         /// <summary>
         /// Works
         /// </summary>
-        [Fact]
-        public void ShouldWorkWithEmbeddedRaven()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldWorkWithEmbeddedRaven(Options options)
         {
             //arrange
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupTestData(store);
 
@@ -40,11 +42,12 @@ namespace SlowTests.MailingList
         /// <summary>
         /// Should work but does not
         /// </summary>
-        [Fact]
-        public void ShouldWorkWithRavenServer()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldWorkWithRavenServer(Options options)
         {
             //arrange
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupTestData(store);
 

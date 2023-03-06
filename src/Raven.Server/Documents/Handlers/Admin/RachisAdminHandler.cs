@@ -12,6 +12,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Server.Commercial;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
@@ -27,6 +28,8 @@ using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.TrafficWatch;
+
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -58,6 +61,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                             cmpExchange.ContextToWriteResult = context;
                             break;
                     }
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(commandJson.ToString(), TrafficWatchChangeType.ClusterCommands);
 
                     var isClusterAdmin = IsClusterAdmin();
                     command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);

@@ -12,23 +12,43 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IDisposable
+    internal class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IObserver<AggressiveCacheChange>, IDisposable
     {
         private readonly string _databaseName;
-        private readonly IDatabaseChanges _changes;
-        private readonly IDisposable _documentsSubscription;
-        private readonly IDisposable _indexesSubscription;
+        private readonly DatabaseChanges _changes;
+        private IDisposable _documentsSubscription;
+        private IDisposable _indexesSubscription;
         private readonly RequestExecutor _requestExecutor;
+        private readonly Task _taskConnected;
+        private IDisposable _aggressiveCachingSubscription;
 
         public EvictItemsFromCacheBasedOnChanges(DocumentStore store, string databaseName)
         {
             _databaseName = databaseName;
-            _changes = store.Changes(databaseName);
             _requestExecutor = store.GetRequestExecutor(databaseName);
-            var docSub = _changes.ForAllDocuments();
-            _documentsSubscription = docSub.Subscribe(this);
-            var indexSub = _changes.ForAllIndexes();
-            _indexesSubscription = indexSub.Subscribe(this);
+            _changes = new DatabaseChanges(_requestExecutor, databaseName, onDispose: null, nodeTag: null);
+            _taskConnected = EnsureConnectedInternalAsync();
+        }
+
+        private async Task EnsureConnectedInternalAsync()
+        {
+            await _changes.EnsureConnectedNow().ConfigureAwait(false);
+            var changesSupportedFeatures = await _changes.GetSupportedFeaturesAsync().ConfigureAwait(false);
+            if (changesSupportedFeatures.AggressiveCachingChange)
+            {
+                var forAggressiveCachingChanges = _changes.ForAggressiveCaching();
+                _aggressiveCachingSubscription = forAggressiveCachingChanges.Subscribe(this);
+                await forAggressiveCachingChanges.EnsureSubscribedNow().ConfigureAwait(false);
+            }
+            else
+            {
+                var docSub = _changes.ForAllDocuments();
+                _documentsSubscription = docSub.Subscribe(this);
+                var indexSub = _changes.ForAllIndexes();
+                _indexesSubscription = indexSub.Subscribe(this);
+                await docSub.EnsureSubscribedNow().ConfigureAwait(false);
+                await indexSub.EnsureSubscribedNow().ConfigureAwait(false);
+            }
         }
 
         public void EnsureConnected()
@@ -36,11 +56,11 @@ namespace Raven.Client.Documents.Changes
             AsyncHelpers.RunSync(EnsureConnectedAsync);
         }
 
-        public Task EnsureConnectedAsync() => _changes.EnsureConnectedNow();
+        public Task EnsureConnectedAsync() => _taskConnected;
 
         public void OnNext(DocumentChange change)
         {
-            if (change.Type == DocumentChangeTypes.Put || change.Type == DocumentChangeTypes.Delete)
+            if (AggressiveCacheChange.ShouldUpdateAggressiveCache(change))
             {
                 Interlocked.Increment(ref _requestExecutor.Cache.Generation);
             }
@@ -48,10 +68,15 @@ namespace Raven.Client.Documents.Changes
 
         public void OnNext(IndexChange change)
         {
-            if (change.Type == IndexChangeTypes.BatchCompleted || change.Type == IndexChangeTypes.IndexRemoved)
+            if (AggressiveCacheChange.ShouldUpdateAggressiveCache(change))
             {
                 Interlocked.Increment(ref _requestExecutor.Cache.Generation);
             }
+        }
+
+        public void OnNext(AggressiveCacheChange value)
+        {
+            Interlocked.Increment(ref _requestExecutor.Cache.Generation);
         }
 
         public void OnError(Exception error)
@@ -66,8 +91,9 @@ namespace Raven.Client.Documents.Changes
         {
             using (_changes)
             {
-                _documentsSubscription.Dispose();
-                _indexesSubscription.Dispose();
+                _documentsSubscription?.Dispose();
+                _indexesSubscription?.Dispose();
+                _aggressiveCachingSubscription?.Dispose();
             }
         }
     }

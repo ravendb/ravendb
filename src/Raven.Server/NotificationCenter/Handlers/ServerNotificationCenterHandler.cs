@@ -5,11 +5,14 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using NuGet.Protocol;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Util;
 using Raven.Server.Dashboard;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 
 namespace Raven.Server.NotificationCenter.Handlers
@@ -35,6 +38,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                                     continue; // not valid for this, skipping
                             }
 
+                            if (TrafficWatchManager.HasRegisteredClients) 
+                                AddStringToHttpContext(action.Json.ToString(), TrafficWatchChangeType.Notifications);
+                            
                             await writer.WriteToWebSocket(action.Json);
                         }
                     }
@@ -43,12 +49,14 @@ namespace Raven.Server.NotificationCenter.Handlers
                     {
                         var action = OperationChanged.Create(null, operation.Id, operation.Description, operation.State, operation.Killable);
 
+                        if (TrafficWatchManager.HasRegisteredClients)
+                            AddStringToHttpContext(action.ToJson().ToString(), TrafficWatchChangeType.Notifications);
+                       
                         await writer.WriteToWebSocket(action.ToJson());
                     }
 
                     // update the connection with the current cluster topology
                     writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutClusterTopologyAndConnectivityChanges;
-
                     await writer.WriteNotifications(isValidFor);
                 }
             }
@@ -62,6 +70,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             var forever = GetBoolValueQueryString("forever", required: false);
             var dbForId = ServerStore.NotificationCenter.GetDatabaseFor(id);
             var isValidFor = GetDatabaseAccessValidationFunc();
+
             if (isValidFor != null && isValidFor(dbForId, true) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -83,6 +92,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             var timeInSec = GetLongQueryString("timeInSec");
             var dbForId = ServerStore.NotificationCenter.GetDatabaseFor(id);
             var isValidFor = GetDatabaseAccessValidationFunc();
+
             if (isValidFor != null && isValidFor(dbForId, true) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;

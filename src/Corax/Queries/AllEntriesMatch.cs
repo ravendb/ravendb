@@ -93,8 +93,9 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores)
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
+            //there is no sense to add anything here because this would add same value to all items in collection.
         }
 
         public QueryInspectionNode Inspect()

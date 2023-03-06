@@ -2,9 +2,11 @@
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -138,6 +140,9 @@ internal class DocumentHandlerProcessorForPatch : AbstractDocumentHandlerProcess
             }
 
             writer.WriteEndObject();
+
+            if (TrafficWatchManager.HasRegisteredClients)
+                RequestHandler.AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
         }
     }
 }

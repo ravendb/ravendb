@@ -17,13 +17,13 @@ public class EntriesModificationsTests : NoDisposalNeeded
     public void EntriesModificationsWillEraseOddDuplicates()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-        var entries = new IndexWriter.EntriesModifications(bsc);
+        var entries = new IndexWriter.EntriesModifications(bsc, 0);
         
         entries.Addition(2);
         entries.Removal(1);
         entries.Addition(3);
         entries.Removal(2);
-        entries.SortAndRemoveDuplicates();
+        entries.PrepareDataForCommiting();
 
         AssertEntriesCase(ref entries);
     }

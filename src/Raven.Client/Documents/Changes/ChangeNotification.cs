@@ -38,6 +38,21 @@ namespace Raven.Client.Documents.Changes
         }
     }
 
+    internal class AggressiveCacheChange : DatabaseChange
+    {
+        internal static readonly AggressiveCacheChange Instance = new();
+
+        internal static bool ShouldUpdateAggressiveCache(DocumentChange change)
+        {
+            return change.Type is DocumentChangeTypes.Put or DocumentChangeTypes.Delete;
+        }
+
+        internal static bool ShouldUpdateAggressiveCache(IndexChange change)
+        {
+            return change.Type is IndexChangeTypes.BatchCompleted or IndexChangeTypes.IndexRemoved;
+        }
+    }
+
     public class DocumentChange : DatabaseChange
     {
         /// <summary>
@@ -303,7 +318,7 @@ namespace Raven.Client.Documents.Changes
                 DocumentId = documentId,
                 ChangeVector = changeVector,
                 Type = (TimeSeriesChangeTypes)Enum.Parse(typeof(TimeSeriesChangeTypes), type, ignoreCase: true),
-                CollectionName = collectionName 
+                CollectionName = collectionName
             };
         }
     }
@@ -444,6 +459,8 @@ namespace Raven.Client.Documents.Changes
         Subscriptions,
         Streams,
         Documents,
-        TimeSeries
+        TimeSeries,
+        Notifications,
+        ClusterCommands
     }
 }

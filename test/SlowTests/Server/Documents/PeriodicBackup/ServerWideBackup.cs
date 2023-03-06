@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
@@ -986,34 +987,35 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 CustomSettings = new Dictionary<string, string>
                 {
-                    [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
+                    [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "3",
                     [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
                     [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
                 }
             });
-            using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
+            using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false}))
+            using (var excludedStore = GetDocumentStore(new Options { Server = server, RunInMemory = false}))
             {
+                await AssertWaitForGreaterAsync(() => server.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000);
+
                 var fullFreq = "0 2 1 1 *";
                 var incFreq = "0 2 * * 0";
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
                     FullBackupFrequency = fullFreq,
                     IncrementalBackupFrequency = incFreq,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = "test/folder"
-                    }
+                    LocalSettings = new LocalSettings {FolderPath = "test/folder"},
+                    ExcludedDatabases = new []{excludedStore.Database}
                 };
-
-                Assert.Equal(1, WaitForValue(() => server.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000));
-
                 var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
                 var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
                 Assert.NotNull(serverWideConfiguration);
                 Assert.Equal(fullFreq, serverWideConfiguration.FullBackupFrequency);
                 Assert.Equal(incFreq, serverWideConfiguration.IncrementalBackupFrequency);
-                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
 
+                await BackupNow(store, serverWideConfiguration.Name);
+
+                await AssertWaitForGreaterAsync(() => server.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000);
+                
                 // update the backup configuration
                 putConfiguration.Name = serverWideConfiguration.Name;
                 putConfiguration.TaskId = serverWideConfiguration.TaskId;
@@ -1021,25 +1023,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var oldName = result.Name;
                 result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+                await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex, TimeSpan.FromMinutes(1));
 
-                Exception ex = null;
-                try
-                {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex, TimeSpan.FromMinutes(1));
-                }
-                catch (Exception e)
-                {
-                    ex = e;
-                }
-                finally
-                {
-                    Assert.Null(ex);
-                }
-                
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record.PeriodicBackups.Count);
-                PeriodicBackupConfiguration periodicBackupConfiguration = record.PeriodicBackups.First();
-
+                var periodicBackupConfiguration = record.PeriodicBackups.First();
+                
                 var newServerWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
 
                 // compare with periodic backup task 
@@ -1055,7 +1044,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(incFreq, newServerWideConfiguration.FullBackupFrequency);
                 Assert.Equal(incFreq, newServerWideConfiguration.IncrementalBackupFrequency);
                 Assert.NotEqual(serverWideConfiguration.FullBackupFrequency, newServerWideConfiguration.FullBackupFrequency);
-                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+                
+                using (var createdAfter = GetDocumentStore(new Options {Server = server, RunInMemory = false}))
+                {
+                    await BackupNow(createdAfter, serverWideConfiguration.Name);
+                
+                    await AssertWaitForGreaterAsync(() => server.ServerStore.IdleDatabases.Count, 2, timeout: 60000, interval: 1000);
+                
+                    putConfiguration.TaskId = result.RaftCommandIndex;
+                    putConfiguration.RetentionPolicy = new RetentionPolicy {MinimumBackupAgeToKeep = TimeSpan.FromDays(10)};
+                    result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+                    await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex, TimeSpan.FromMinutes(1));
+                }
+            }
+
+            async Task BackupNow(DocumentStore store, string backupName)
+            {
+                var res = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation($"Server Wide Backup, {backupName}", OngoingTaskType.Backup));
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, res.TaskId));
             }
         }
 

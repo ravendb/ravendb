@@ -51,6 +51,9 @@ public class RavenDB_19703 : CompactTreeReplayTest
                         tree.TryRemove(key, out var old);
                         break;
                 }
+
+                tree.Verify();
+                tree.VerifyOrderOfElements();
             }
             wtx.Commit();
         }

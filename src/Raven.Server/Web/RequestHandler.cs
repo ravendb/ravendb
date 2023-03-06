@@ -374,7 +374,7 @@ namespace Raven.Server.Web
                 return null;
 
             var raw = headers[0][0] == '\"'
-                ? headers[0].AsSpan().Slice(1,  headers[0].Length - 2)
+                ? headers[0].AsSpan().Slice(1, headers[0].Length - 2)
                 : headers[0].AsSpan();
 
             var success = long.TryParse(raw, out var result);
@@ -384,18 +384,18 @@ namespace Raven.Server.Web
 
             return null;
         }
-        
+
         internal bool? GetBoolFromHeaders(string name)
         {
             var headers = HttpContext.Request.Headers[name];
             if (headers.Count == 0)
                 return null;
 
-           
+
             var raw = headers[0][0] == '\"'
-                ? headers[0].AsSpan().Slice(1,  headers[0].Length - 2)
+                ? headers[0].AsSpan().Slice(1, headers[0].Length - 2)
                 : headers[0].AsSpan();
-            
+
             var success = bool.TryParse(raw, out var result);
 
             if (success)
@@ -705,7 +705,7 @@ namespace Raven.Server.Web
                 case RavenServer.AuthenticationStatus.Expired:
                 case RavenServer.AuthenticationStatus.NotYetValid:
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
-                        return new AllowedDbs { HasAccess = true};
+                        return new AllowedDbs { HasAccess = true };
 
                     await RequestRouter.UnlikelyFailAuthorizationAsync(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
                     return new AllowedDbs { HasAccess = false };
@@ -838,7 +838,7 @@ namespace Raven.Server.Web
         {
             return new OperationCancelToken(cancelAfter, ServerStore.ServerShutdown, HttpContext.RequestAborted);
         }
-        
+
         public virtual Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
             return Task.CompletedTask;

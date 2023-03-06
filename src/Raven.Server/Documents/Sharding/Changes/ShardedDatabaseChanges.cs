@@ -213,6 +213,17 @@ internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseC
         return taskedObservable;
     }
 
+    public IChangesObservable<BlittableJsonReaderObject> ForAggressiveCaching()
+    {
+        var counter = GetOrAddConnectionState("aggressive-caching", "watch-aggressive-caching", "unwatch-aggressive-caching", null);
+
+        var taskedObservable = new ChangesObservable<BlittableJsonReaderObject, ShardedDatabaseConnectionState>(
+            counter,
+            filter: null);
+
+        return taskedObservable;
+    }
+
     protected override ShardedDatabaseConnectionState CreateDatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect) => new(onConnect, onDisconnect);
 
     protected override void ProcessNotification(string type, BlittableJsonReaderObject change)

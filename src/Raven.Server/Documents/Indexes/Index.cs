@@ -64,6 +64,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -928,7 +929,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     ReportUnexpectedIndexingError(e);
                 }
-            }, null, IndexingThreadName);
+            }, null, ThreadNames.ForIndex(IndexingThreadName, Name, _indexStorage.DocumentDatabase.Name));
 
             RollIfNeeded();
         }
@@ -2328,6 +2329,8 @@ namespace Raven.Server.Documents.Indexes
 
                             IndexFieldsPersistence.Persist(indexContext);
                             HandleReferences(tx);
+
+                            HandleMismatchedReferences();
                         }
 
                         using (stats.For(IndexingOperation.Storage.Commit))
@@ -2388,6 +2391,18 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase.NotificationCenter.Indexing.AddWarning(Name, _referenceLoadWarning);
 
             _updateReferenceLoadWarning = false;
+        }
+
+        private void HandleMismatchedReferences()
+        {
+            if (CurrentIndexingScope.Current.MismatchedReferencesWarningHandler == null || CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.IsEmpty)
+                return;
+            
+            MismatchedReferencesLoadWarning warning = new (Name, CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.GetLoadFailures());
+
+            DocumentDatabase.NotificationCenter.Indexing.AddWarning(warning);
+                
+            CurrentIndexingScope.Current.MismatchedReferencesWarningHandler = null;
         }
 
         private void DisposeIndexWriterOnError(Lazy<IndexWriteOperationBase> writeOperation)

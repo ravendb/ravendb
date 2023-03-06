@@ -9,6 +9,7 @@ public class IndexFieldBinding
     public readonly Slice FieldName;
     public readonly Slice FieldNameLong;
     public readonly Slice FieldNameDouble;
+    public readonly Slice FieldTermTotalSumField;
     public Analyzer Analyzer => _analyzer;
     private Analyzer _analyzer;
     public readonly bool HasSuggestions;
@@ -22,7 +23,7 @@ public class IndexFieldBinding
 
     public readonly FieldMetadata Metadata;
     
-    public IndexFieldBinding(int fieldId, Slice fieldName, Slice fieldNameLong, Slice fieldNameDouble, bool isFieldBindingForWriter,
+    public IndexFieldBinding(int fieldId, Slice fieldName, Slice fieldNameLong, Slice fieldNameDouble, Slice fieldTermTotalSumField, bool isFieldBindingForWriter,
         Analyzer analyzer = null, bool hasSuggestions = false,
         FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal,
         bool hasSpatial = false)
@@ -31,12 +32,13 @@ public class IndexFieldBinding
         FieldName = fieldName;
         FieldNameDouble = fieldNameDouble;
         FieldNameLong = fieldNameLong;
+        FieldTermTotalSumField = fieldTermTotalSumField;
         HasSuggestions = hasSuggestions;
         _fieldIndexingMode = fieldIndexingMode;
         HasSpatial = hasSpatial;
         _isFieldBindingForWriter = isFieldBindingForWriter;
         _analyzer = analyzer;
-        Metadata = FieldMetadata.Build(fieldName, fieldId, fieldIndexingMode, analyzer);
+        Metadata = FieldMetadata.Build(fieldName, fieldTermTotalSumField, fieldId, fieldIndexingMode, analyzer);
     }
 
     public string FieldNameAsString

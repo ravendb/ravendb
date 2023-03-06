@@ -17,6 +17,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -186,6 +187,7 @@ namespace Raven.Server.ServerWide.Maintenance
             private ClusterNodeStatusReport _lastSuccessfulReceivedReport;
             private readonly string _name;
             private PoolOfThreads.LongRunningWork _maintenanceTask;
+            private long _term;
 
             public ClusterNode(
                 string clusterTag,
@@ -205,6 +207,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 _readStatusUpdateDebugString = $"ClusterMaintenanceServer/{ClusterTag}/UpdateState/Read-Response in term {term}";
                 _name = $"Heartbeats supervisor from {_parent._server.NodeTag} to {ClusterTag} in term {term}";
                 _log = LoggingSource.Instance.GetLogger<ClusterNode>(_name);
+                _term = term;
             }
 
             public void Start()
@@ -231,7 +234,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         }
                         // we don't want to crash the process so we don't propagate this exception.
                     }
-                }, null, _name);
+                }, null, ThreadNames.ForHeartbeatsSupervisor(_name, _parent._server.NodeTag, ClusterTag, _term));
             }
 
             private void ListenToMaintenanceWorker()

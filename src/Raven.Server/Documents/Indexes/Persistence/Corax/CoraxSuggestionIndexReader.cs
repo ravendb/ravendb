@@ -1,17 +1,12 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
 using Corax.Mappings;
 using Corax.Pipeline;
-using Corax.Queries;
-using Parquet.Thrift;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -19,8 +14,6 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
 using Encoding = System.Text.Encoding;
-using Type = System.Type;
-using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -101,24 +94,24 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
             _ => _indexSearcher.Suggest(_binding.Metadata, word, sortByPopularity, StringDistanceAlgorithm.Levenshtein,
                 options.Accuracy ?? SuggestionOptions.DefaultAccuracy, options.PageSize)
         };
-        
+
         int minSize = options.PageSize * (Unsafe.SizeOf<Token>() + sizeof(float) + MaxTermSize);
         var buffer = ArrayPool<byte>.Shared.Rent(minSize);
 
         var bufferSpan = buffer.AsSpan();
-        
+
         var terms = bufferSpan.Slice(0, MaxTermSize * options.PageSize);
         int position = terms.Length;
         var score = MemoryMarshal.Cast<byte, float>(bufferSpan.Slice(position, sizeof(float) * options.PageSize));
         position += sizeof(float) * options.PageSize;
-        var tokens = MemoryMarshal.Cast<byte, Token>(bufferSpan.Slice(position, options.PageSize * Unsafe.SizeOf<Token>()));                       
+        var tokens = MemoryMarshal.Cast<byte, Token>(bufferSpan.Slice(position, options.PageSize * Unsafe.SizeOf<Token>()));
 
         match.Next(ref terms, ref tokens, ref score);
 
         var list = new List<SuggestWord>();
         for (int i = 0; i < tokens.Length; i++)
         {
-            var token= tokens[i];
+            var token = tokens[i];
 
             var suggestWord = new SuggestWord();
 
@@ -127,7 +120,7 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
             if (sortByPopularity)
             {
                 suggestWord.Score = score[i];
-                suggestWord.Freq = (int)_indexSearcher.TermAmount(_binding.Metadata, suggestWord.Term);
+                suggestWord.Freq = (int)_indexSearcher.NumberOfDocumentsUnderSpecificTerm(_binding.Metadata, suggestWord.Term);
             }
 
             list.Add(suggestWord);
