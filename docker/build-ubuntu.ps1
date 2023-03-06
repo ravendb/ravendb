@@ -36,65 +36,38 @@ function GetUbuntuVersionFromDockerfile($DockerfileDir, $DockerfileName) {
     return $ubuntuVersion.Matches.Groups[1].Value
 }
 
-function GetBuildScriptNameMatchingArchOSVer($arch, $ubuntuVersion){
+function SetupDebBuildEnvironment($arch, $ubuntuVersion){
     switch ($arch) {
         "x64" {
-            switch ($ubuntuVersion) {
-                "bionic" {
-                    $buildScriptFileName = "build-deb_ubuntu-bionic_amd64.ps1"
-                }
-                "focal" {
-                    $buildScriptFileName = "build-deb_ubuntu-focal_amd64.ps1"
-                }
-                "jammy" {
-                    $buildScriptFileName = "build-deb_ubuntu-jammy_amd64.ps1"
-                }
-                Default {
-                    Write-Error "ERROR: Unexpected Ubuntu version $($ubuntuVersion). Supported versions: bionic, focal, jammy."
-                    exit 1
-                }
-            }
+            . "..\scripts\linux\pkg\deb\set-raven-platform-amd64.ps1"
         }
         "arm64v8" {
-            switch ($ubuntuVersion) {
-                "bionic" {
-                    $buildScriptFileName = "build-deb_ubuntu-bionic_arm64.ps1"
-                }
-                "focal" {
-                    $buildScriptFileName = "build-deb_ubuntu-focal_arm64.ps1"
-                }
-                "jammy" {
-                    $buildScriptFileName = "build-deb_ubuntu-jammy_arm64.ps1"
-                }
-                Default {
-                    Write-Error "ERROR: Unsupported Ubuntu version $($ubuntuVersion) for ARM64v8 architecture. Supported version: bionic, focal, jammy."
-                    exit 1
-                }
-            }
+            . "..\scripts\linux\pkg\deb\set-raven-platform-arm64.ps1"
         }
         "arm32v7" {
-            switch ($ubuntuVersion) {
-                "bionic" {
-                    $buildScriptFileName = "build-deb_ubuntu-bionic_armhf.sh"
-                }
-                "focal" {
-                    $buildScriptFileName = "build-deb_ubuntu-focal_armhf.sh"
-                }
-                "jammy" {
-                    $buildScriptFileName = "build-deb_ubuntu-jammy_armhf.sh"
-                }
-                Default {
-                    Write-Error "ERROR: Unsupported Ubuntu version $($ubuntuVersion) for ARM32v7 architecture. Supported version: bionic, focal, jammy."
-                    exit 1
-                }
-            }
+            . "..\scripts\linux\pkg\deb\set-raven-platform-armhf.ps1"
         }
         Default {
             Write-Error "ERROR: Unsupported architecture $($arch)"
             exit 1
         }
     }
-    return $buildScriptFileName
+
+    switch ($ubuntuVersion) {
+        "bionic" {
+            . "..\scripts\linux\pkg\deb\set-ubuntu-bionic.ps1"
+        }
+        "focal" {
+            . "..\scripts\linux\pkg\deb\set-ubuntu-focal.ps1"
+        }
+        "jammy" {
+            . "..\scripts\linux\pkg\deb\set-ubuntu-jammy.ps1"
+        }
+        Default {
+            Write-Error "ERROR: Unsupported Ubuntu version $($ubuntuVersion). Supported version: bionic, focal, jammy."
+            exit 1
+        }
+    }
 }
 
 
@@ -121,8 +94,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
 
     if ([string]::IsNullOrEmpty($DebPackagePath)) {
         $ubuntuVersion = GetUbuntuVersionFromDockerfile $DockerfileDir "Dockerfile.$arch"
-        $buildScriptFileName = GetBuildScriptNameMatchingArchOSVer $arch $ubuntuVersion
-        $buildScriptPath = (Resolve-Path $(Join-Path "..\scripts\linux\pkg\deb\" $buildScriptFileName)).Path
+        SetupDebBuildEnvironment $arch $ubuntuVersion
         
         $archNameToMatch = switch ($arch) {
             "x64" { "amd64"; break }
@@ -145,10 +117,10 @@ function BuildUbuntuDockerImage ($version, $arch) {
             $env:PACKAGE_FILE_DIR = Resolve-Path $ArtifactsDir
         
             $currentScriptWorkingDirectory = $(Get-Location)
+            $buildScriptPath = (Resolve-Path "..\scripts\linux\pkg\deb\build-deb.ps1").Path
             Set-Location $(Split-Path $buildScriptPath)
     
-            Write-Host $buildScriptFileName
-            . "./$buildScriptFileName"
+            . "./build-deb.ps1"
         
             Set-Location $currentScriptWorkingDirectory
             CheckLastExitCode
