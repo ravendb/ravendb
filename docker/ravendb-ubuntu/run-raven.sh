@@ -3,7 +3,7 @@
 # 5.x -> 6.0 migration assistance
 /usr/lib/ravendb/scripts/link-legacy-datadir.sh 
 
-COMMAND="/usr/lib/ravendb/server/Raven.Server"
+COMMAND="/usr/lib/ravendb/server/Raven.Server -c /etc/ravendb/settings.json"
 [ -z "$RAVEN_ServerUrl" ] && export RAVEN_ServerUrl="http://$(hostname):8080"
 
 if [ ! -z "$RAVEN_SETTINGS" ]; then
