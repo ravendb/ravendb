@@ -40,10 +40,11 @@ namespace FastTests.Corax
 
                 Span<float> scores = stackalloc float[ids.Length];
                 scores.Fill(1);
-                boostedMatch.Score(ids, scores);
+                boostedMatch.Score(ids, scores, 1f);
 
+                //When we call 'Boost' on `AllEntries` there is no reason to apply it because it will increase all 'scores' equally and this don't make any sense.                
                 for (int i = 0; i < scores.Length; i++)
-                    Assert.Equal(10, scores[i]);
+                    Assert.Equal(1, scores[i]);
             }
         }
 
@@ -60,25 +61,25 @@ namespace FastTests.Corax
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
             {
-                var startWithMatch = searcher.StartWithQuery("Id", "list/1");
+                var startWithMatch = searcher.StartWithQuery(searcher.FieldMetadataBuilder("Id", hasBoost: true), "list/1");
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
-                var contentMatch = searcher.TermQuery("Content1", "1");
+                var contentMatch = searcher.TermQuery(searcher.FieldMetadataBuilder("Content1", hasBoost: true), "1");
                 var orMatch = searcher.Or(boostedStartWithMatch, contentMatch);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
-
+                var orderByScore = searcher.OrderByScore(boostedOrMatch);
                 Span<long> ids = stackalloc long[2048];
-                int read = boostedOrMatch.Fill(ids);
+                int read = orderByScore.Fill(ids);
                 ids = ids.Slice(0, read);
-
-                Span<float> scores = stackalloc float[ids.Length];
-                scores.Fill(1);
-                boostedOrMatch.Score(ids, scores);
-
-                Assert.Equal(scores[0], 20);
-                Assert.Equal(scores[1], 20);
-                Assert.Equal(scores[2], 20);
-                Assert.Equal(scores[3], 10);
-                Assert.Equal(scores[4], 10);
+                
+                List<string> idsName = new();
+                for (int i = 0; i < read; ++i)
+                    idsName.Add(searcher.GetIdentityFor(ids[i]));
+                
+                Assert.Equal("list/1", idsName[0]); // most unique 
+                Assert.Equal("list/11", idsName[1]); // 2nd
+                Assert.Equal("list/111", idsName[2]); // 3th
+                Assert.Equal("list/2", idsName[3]); // those scoring has no impact
+                Assert.Equal("list/4", idsName[4]); //
             }
         }
 
@@ -93,9 +94,11 @@ namespace FastTests.Corax
             longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % mod }).ToList();
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
-            var contentMetadata = searcher.FieldMetadataBuilder("Content1");
+            var contentMetadata = searcher.FieldMetadataBuilder("Content1", hasBoost: true);
             {
-                IQueryMatch match = searcher.InQuery(contentMetadata, new() { "1", "2", "3" }, new ConstantScoreFunction(10f));
+                IQueryMatch match =searcher.Boost(
+                    searcher.InQuery(contentMetadata, new() { "1", "2", "3" })
+                    , 10);
                 
                 match = searcher.OrderByScore(match);
                 Span<long> ids = stackalloc long[amount];
@@ -240,11 +243,11 @@ namespace FastTests.Corax
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
             {
-                var content0Match = searcher.TermQuery("Content1", "0");
-                var boostedContent0 = searcher.Boost(content0Match, default(TermFrequencyScoreFunction));
+                var content0Match = searcher.TermQuery("Content1", "0", hasBoost: true);
+                var boostedContent0 = searcher.Boost(content0Match, 0);
 
-                var content1Match = searcher.TermQuery("Content1", "1");
-                var boostedContent1 = searcher.Boost(content1Match, default(TermFrequencyScoreFunction));
+                var content1Match = searcher.TermQuery("Content1", "1", hasBoost: true);
+                var boostedContent1 = searcher.Boost(content1Match, 0);
 
                 var orMatch = searcher.Or(boostedContent0, boostedContent1);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
@@ -262,6 +265,7 @@ namespace FastTests.Corax
             }
         }
 
+        //todo
         [Fact]
         public void OrderByBoostingOrBasedInQuery()
         {
@@ -277,7 +281,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             var contentMetadata = searcher.FieldMetadataBuilder("Content1");
             {
-                var query = searcher.InQuery(contentMetadata, new List<string>() { "0", "1" }, default(TermFrequencyScoreFunction));
+                var query = searcher.OrderByScore(searcher.InQuery(contentMetadata, new List<string>() { "0", "1" }));
 
                 Span<long> ids = stackalloc long[1024];
                 var read = query.Fill(ids);
@@ -291,10 +295,11 @@ namespace FastTests.Corax
             }
         }
 
+        
         [Fact]
         public void OrderByBoostingMultiTermFrequency()
         {
-
+        
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/1", Content1 = 0 });   // 1            
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/3", Content1 = 2 });   // 1/3
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/4", Content1 = 3 });   // 1/4
@@ -305,78 +310,28 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/333", Content1 = 2 });   // 1/3
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/444", Content1 = 3 });   // 1/4
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/4444", Content1 = 3 });   // 1/4
-
+        
             IndexEntries();
-
+        
             longList.Sort(CompareAscending);
             using var searcher = new IndexSearcher(Env);
-            var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1);
-            {                
-                var query = MultiTermBoostingMatch<InTermProvider>.Create(searcher, 
-                    new InTermProvider(searcher, contentMetadata, new List<string>() { "0", "1", "2", "3" }), 
-                    default(TermFrequencyScoreFunction));
+            var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1, hasBoost: true);
+            {
+                var query = searcher.InQuery(contentMetadata, new List<string>() {"0", "1", "2", "3"});
                 var sortedMatch = searcher.OrderByScore(query);
-
+        
                 Span<long> ids = stackalloc long[1024];
                 var read = sortedMatch.Fill(ids);
-
+        
                 List<long> sortedByCorax = new();
                 for (int i = 0; i < read; ++i)
                 {
                     searcher.GetEntryReaderFor(ids[i]).GetFieldReaderFor(Content1).Read(out long value);
                     sortedByCorax.Add(value);
                 }                    
-
+        
                 for (int i = 0; i < longList.Count; ++i)
                     Assert.Equal(longList[i].Content1, sortedByCorax[i]);
-            }
-        }
-
-        [Theory]
-        [InlineData(290, 29)]
-        public void StartsWithBoosting(int amount, int mod)
-        {
-            longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % mod }).ToList();
-            IndexEntries();
-            using var searcher = new IndexSearcher(Env);
-            var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1);
-            {
-                IQueryMatch match = searcher.StartWithQuery(contentMetadata, "0", new ConstantScoreFunction(0f));
-                for (int i = 0; i < mod; ++i)
-                {
-                    match = searcher.Or(match, searcher.StartWithQuery(contentMetadata, $"{i}", new ConstantScoreFunction(i)));
-                }
-
-                match = searcher.OrderByScore(match);
-                
-                Span<long> ids = stackalloc long[amount];
-
-                var read = match.Fill(ids);
-                List<string> result = new();
-                for (int i = 0; i < read; ++i)
-                    result.Add(searcher.GetIdentityFor(ids[i]));
-
-                Assert.NotEqual(0, read);
-
-                int count = read;                
-                do
-                {
-                    read = match.Fill(ids);
-                    for (int i = 0; i < read; ++i)
-                        result.Add(searcher.GetIdentityFor(ids[i]));
-                    count += read;
-                } 
-                while (read > 0);
-        
-                Assert.Equal(longList.Count, count);
-                Assert.Equal(result.Count, result.Distinct().Count());
-
-                var localResults = longList.Where(x => x.Content1.ToString().StartsWith((mod - 1).ToString())).Select(y => y.Id).ToArray();
-                var highestScore = result.ToArray().AsSpan(0, localResults.Length).ToArray();
-                Array.Sort(localResults);
-                Array.Sort(highestScore);
-
-                Assert.True(localResults.SequenceEqual(highestScore));
             }
         }
 

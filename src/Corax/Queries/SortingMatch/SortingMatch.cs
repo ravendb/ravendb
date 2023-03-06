@@ -226,10 +226,10 @@ namespace Corax.Queries
 
                 var scores = MemoryMarshal.Cast<byte, float>(bufferHolder.ToSpan());
                 Debug.Assert(scores.Length == totalMatches);
-
+                scores.Fill(Bm25Relevance.InitialScoreValue);
+                
                 // We perform the scoring process. 
-                scores.Fill(1);
-                match._inner.Score(matches[0..totalMatches], scores);
+                match._inner.Score(matches[0..totalMatches], scores, 1f);
 
                 // If we need to do documents boosting then we need to modify the based on documents stored score. 
                 if (match._searcher.DocumentsAreBoosted)
@@ -389,7 +389,7 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores) 
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor) 
         {
         }
 

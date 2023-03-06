@@ -12,6 +12,10 @@ namespace Raven.Server.Web.Operations
         {
             using (var processor = new OperationsHandlerProcessorForGetNextOperationId(this))
                 await processor.ExecuteAsync();
+
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
+
         }
 
         [RavenAction("/databases/*/operations/kill", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]

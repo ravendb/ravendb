@@ -4,7 +4,7 @@ using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class DatabaseConnectionState : AbstractDatabaseConnectionState, IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>
+    internal class DatabaseConnectionState : AbstractDatabaseConnectionState, IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>, IChangesConnectionState<AggressiveCacheChange>
     {
         private event Action<DocumentChange> OnDocumentChangeNotification;
 
@@ -13,6 +13,8 @@ namespace Raven.Client.Documents.Changes
         private event Action<IndexChange> OnIndexChangeNotification;
 
         private event Action<OperationStatusChange> OnOperationStatusChangeNotification;
+
+        private event Action<AggressiveCacheChange> OnAggressiveCacheUpdateNotification;
 
         private event Action<TimeSeriesChange> OnTimeSeriesChangeNotification;
 
@@ -46,6 +48,11 @@ namespace Raven.Client.Documents.Changes
             OnOperationStatusChangeNotification?.Invoke(operationStatusChange);
         }
 
+        public void Send(AggressiveCacheChange aggressiveCacheChange)
+        {
+            OnAggressiveCacheUpdateNotification?.Invoke(aggressiveCacheChange);
+        }
+
         event Action<TimeSeriesChange> IChangesConnectionState<TimeSeriesChange>.OnChangeNotification
         {
             add => OnTimeSeriesChangeNotification += value;
@@ -76,6 +83,12 @@ namespace Raven.Client.Documents.Changes
             remove => OnDocumentChangeNotification -= value;
         }
 
+        event Action<AggressiveCacheChange> IChangesConnectionState<AggressiveCacheChange>.OnChangeNotification
+        {
+            add => OnAggressiveCacheUpdateNotification += value;
+            remove => OnAggressiveCacheUpdateNotification -= value;
+        }
+
         public override void Dispose()
         {
             base.Dispose();
@@ -84,6 +97,7 @@ namespace Raven.Client.Documents.Changes
             OnCounterChangeNotification = null;
             OnTimeSeriesChangeNotification = null;
             OnIndexChangeNotification = null;
+            OnAggressiveCacheUpdateNotification = null;
             OnOperationStatusChangeNotification = null;
         }
     }

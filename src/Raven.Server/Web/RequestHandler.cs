@@ -842,6 +842,15 @@ namespace Raven.Server.Web
         public virtual Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
             return Task.CompletedTask;
+        /// <summary>
+        /// puts the given string in TrafficWatch property of HttpContext.Items
+        /// puts the given type in TrafficWatchChangeType property of HttpContext.Items
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="type"></param>
+        public void AddStringToHttpContext(string str, TrafficWatchChangeType type)
+        {
+            HttpContext.Items["TrafficWatch"] = (str, type);
         }
     }
 }

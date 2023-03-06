@@ -55,6 +55,8 @@ import dumpRawIndexDataDetails = require("viewmodels/common/notificationCenter/d
 
 import studioSettings = require("common/settings/studioSettings");
 import optimizeIndexDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/optimizeIndexDetails");
+import mismatchedReferenceLoadDetails
+    from "viewmodels/common/notificationCenter/detailViewer/alerts/mismatchedReferenceLoadDetails";
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -174,6 +176,7 @@ class notificationCenter {
             // alerts:
             newVersionAvailableDetails,
             etlTransformOrLoadErrorDetails,
+            mismatchedReferenceLoadDetails,
 
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );

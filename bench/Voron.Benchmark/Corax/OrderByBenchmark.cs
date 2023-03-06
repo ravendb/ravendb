@@ -240,7 +240,7 @@ namespace Voron.Benchmark.Corax
         public void OrderByRuntimeQuery()
         {            
             var typeTerm = _indexSearcher.TermQuery(_typeSlice, _dogSlice);
-            var ageField = FieldMetadata.Build(_ageSlice, 2, default, default);
+            var ageField = FieldMetadata.Build(_ageSlice, default, 2, default, default);
             var ageTerm = _indexSearcher.StartWithQuery(ageField, _ageValueSlice);
             var andQuery = _indexSearcher.And(typeTerm, ageTerm);
             var query = _indexSearcher.OrderByAscending(andQuery, new OrderMetadata(ageField, true, MatchCompareFieldType.Sequence), take: TakeSize);           

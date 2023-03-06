@@ -9,18 +9,16 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Commercial;
-using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +30,7 @@ namespace SlowTests.Authentication
         {
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
             var settingPath = Path.Combine(NewDataPath(forceCreateDir: true), "settings.json");

@@ -1,4 +1,4 @@
-name: StudioLabel
+name: studio
 
 on:
   pull_request_target:

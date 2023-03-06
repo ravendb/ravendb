@@ -39,11 +39,11 @@ namespace Corax.Queries
         {
             if (_iterator.MoveNext(out termSlice, out var _) == false || termSlice.StartWith(_startWith) == false)
             {
-                term = TermMatch.CreateEmpty(_searcher.Allocator);
+                term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
 
-            term = _searcher.TermQuery(_tree, termSlice);
+            term = _searcher.TermQuery(_field, _tree, termSlice);
             return true;
         }
 

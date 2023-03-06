@@ -236,55 +236,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         protected async Task<long> SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
-                    BlittableJsonReaderObject> databaseValues, RestoreResult restoreResult, Action<IOperationProgress> onProgress)
+                    BlittableJsonReaderObject> databaseValues, SmugglerResult restoreResult, Action<IOperationProgress> onProgress)
         {
             // at this point we restored a large portion of the database or all of it	
             // we'll retry saving the database record since a failure here will cause us to abort the entire restore operation	
 
-            var index = await RunWithRetries(async () =>
-            {
-                var result = await ServerStore.WriteDatabaseRecordAsync(
-                    databaseName, databaseRecord, null, RaftIdGenerator.NewId(), databaseValues, isRestore: true);
-                return result.Index;
-            },
-                "Saving the database record",
-                "Failed to save the database record, the restore is aborted");
-
-            return await RunWithRetries(async () =>
-            {
-                await ServerStore.Cluster.WaitForIndexNotification(index, TimeSpan.FromSeconds(30));
-                return index;
-            },
-                $"Verifying that the change to the database record propagated to node {ServerStore.NodeTag}",
-                $"Failed to verify that the change to the database record was propagated to node {ServerStore.NodeTag}, the restore is aborted");
-
-            async Task<long> RunWithRetries(Func<Task<long>> action, string infoMessage, string errorMessage)
-            {
-                const int maxRetries = 10;
-                var retries = 0;
-
-                while (true)
+            var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
                 {
-                    try
-                    {
-                        OperationCancelToken.Token.ThrowIfCancellationRequested();
+                    var result = await ServerStore.WriteDatabaseRecordAsync(
+                        databaseName, databaseRecord, null, RaftIdGenerator.NewId(), databaseValues, isRestore: true);
+                    return result.Index;
+                },
+                "Saving the database record",
+                "Failed to save the database record, the restore is aborted",
+                restoreResult, onProgress, OperationCancelToken);
 
-                        restoreResult?.AddInfo(infoMessage);
-                        onProgress?.Invoke(restoreResult?.Progress);
-
-                        return await action();
-                    }
-                    catch (TimeoutException)
-                    {
-                        if (++retries < maxRetries)
-                            continue;
-
-                        restoreResult?.AddError(errorMessage);
-                        onProgress?.Invoke(restoreResult?.Progress);
-                        throw;
-                    }
-                }
-            }
+            return await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
+                {
+                    await ServerStore.Cluster.WaitForIndexNotification(index, TimeSpan.FromSeconds(30));
+                    return index;
+                },
+                $"Verifying that the change to the database record propagated to node {ServerStore.NodeTag}",
+                $"Failed to verify that the change to the database record was propagated to node {ServerStore.NodeTag}, the restore is aborted",
+                restoreResult, onProgress, OperationCancelToken);
         }
 
         protected void CreateRestoreSettings()
@@ -327,7 +301,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptionsServerSide
             {
-                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin, SkipRevisionCreation = true
+                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
+                SkipRevisionCreation = true
             };
 
             options.OperateOnTypes |= DatabaseItemType.LegacyDocumentDeletions;
@@ -471,10 +446,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected async Task ImportSingleBackupFileAsync(DocumentDatabase database,
             Action<IOperationProgress> onProgress,
             RestoreResult restoreResult,
-            string filePath, 
+            string filePath,
             JsonOperationContext context,
-            DatabaseDestination destination, 
-            DatabaseSmugglerOptionsServerSide options, 
+            DatabaseDestination destination,
+            DatabaseSmugglerOptionsServerSide options,
             bool isLastFile)
         {
             await using (var fileStream = await RestoreSource.GetStream(filePath))

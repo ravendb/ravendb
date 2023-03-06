@@ -78,6 +78,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         UnrecoverableClusterError,
         
-        MicrosoftLogsConfigurationLoadError
+        MicrosoftLogsConfigurationLoadError,
+        
+        MismatchedReferenceLoad
     }
 }

@@ -13,18 +13,13 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
     private Dictionary<FieldMetadata, List<string>> _termMatchesList; 
     private List<IQueryMatch> _complexMatches;
 
-    public CoraxOrQueries(IndexSearcher indexSearcher, IQueryScoreFunction scoreFunction) : base(indexSearcher, scoreFunction)
+    public CoraxOrQueries(IndexSearcher indexSearcher) : base(indexSearcher)
     {
     }
 
     private bool TryMerge(CoraxOrQueries other)
     {
-        bool canMerge = (other.ScoreFunction, ScoreFunction) switch
-        {
-            (NullScoreFunction, NullScoreFunction) => true,
-            (ConstantScoreFunction l, ConstantScoreFunction r) => l.Value.AlmostEquals(r.Value),
-            (_, _) => false
-        };
+        bool canMerge = EqualsScoreFunctions(other);
 
         if (canMerge == false)
             return false;
@@ -67,20 +62,35 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
             case CoraxBooleanItem cbi:
                 return TryAddItem(cbi);
             case CoraxAndQueries mao:
+                // We popup inner boosting to this
+                if (EqualsScoreFunctions(mao))
+                    mao.Boosting = null;
+                else
+                    return false;
+                
                 itemToAdd = mao.Materialize();
                 _hasBinary |= mao.HasBinary;
                 break;
+            case BoostingMatch boostingMatch:
+                if (Boosting.HasValue && Boosting.Value.AlmostEquals(boostingMatch.BoostFactor))
+                    (_complexMatches ??= new()).Add(itemToAdd);
+                else
+                    return false;
+                break;
+                
+            default:
+                    (_complexMatches ??= new()).Add(itemToAdd);
+                break;
         }
-
-        (_complexMatches ??= new()).Add(itemToAdd);
+        
         return true;
     }
 
     private bool TryAddItem(CoraxBooleanItem itemToAdd)
     {
-        if (itemToAdd.CompareScoreFunction(ScoreFunction) == false)
+        if (EqualsScoreFunctions(itemToAdd) == false)
             return false;
-
+        
         if (itemToAdd.Operation is not UnaryMatchOperation.Equals)
         {
             _unaryMatchesList ??= new();
@@ -117,16 +127,16 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
             foreach (var (field, terms) in _termMatchesList)
                 AddToQueryTree(IndexSearcher.InQuery(field, terms));
         }
-
+        
         if (_complexMatches != null)
         {
             foreach (var complex in _complexMatches ?? Enumerable.Empty<IQueryMatch>())
                 AddToQueryTree(complex);
         }
 
-        if (ScoreFunction is not NullScoreFunction && ScoreFunction != null)
-            baseQuery = IndexSearcher.Boost(baseQuery, ScoreFunction);
-
+        if (Boosting.HasValue)
+            baseQuery = IndexSearcher.Boost(baseQuery, Boosting.Value);
+        
         return baseQuery;
         
         void AddToQueryTree(IQueryMatch query)

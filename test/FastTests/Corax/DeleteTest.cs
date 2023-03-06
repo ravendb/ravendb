@@ -31,7 +31,7 @@ namespace FastTests.Corax
         [Fact]
         public void CanDelete()
         {
-            PrepareData();
+            PrepareData(batchSize: 1000);
             IndexEntries(CreateKnownFields(_bsc));
 
             Span<long> ids = stackalloc long[1024];
@@ -76,7 +76,7 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-                var match = indexSearcher.GreatThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L, default(NullScoreFunction));
+                var match = indexSearcher.GreatThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L);
                 Assert.Equal(_longList.Count, match.Fill(ids));
             }
 
@@ -89,7 +89,7 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-                var match = indexSearcher.GreatThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L, default(NullScoreFunction));
+                var match = indexSearcher.GreatThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L);
                 Assert.Equal(_longList.Count -1, match.Fill(ids));
             }
         }
@@ -240,6 +240,7 @@ namespace FastTests.Corax
             }
 
             indexWriter.Commit();
+            entryWriter.Dispose();
         }
 
         private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(

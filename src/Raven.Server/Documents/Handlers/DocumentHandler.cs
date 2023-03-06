@@ -7,10 +7,12 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
@@ -20,6 +22,12 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentHandler : DatabaseRequestHandler
     {
+        public DocumentHandler()
+        {
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("N/A", TrafficWatchChangeType.Documents);
+        }
+
         [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Head()
         {

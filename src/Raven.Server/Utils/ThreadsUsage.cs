@@ -7,6 +7,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.Utils.Cpu;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
@@ -99,8 +100,16 @@ namespace Raven.Server.Utils
                             string threadName = null;
                             if (threadAllocations.TryGetValue((ulong)thread.Id, out var threadStats))
                             {
-                                threadName = threadStats.Name ?? "Thread Pool Thread";
                                 managedThreadId = threadStats.ManagedThreadId;
+
+                                if (ThreadNames.FullThreadNames.TryGetValue(managedThreadId.Value, out var fullThreadName))
+                                {
+                                    threadName = fullThreadName;
+                                }
+                                else
+                                {
+                                    threadName = threadStats.Name ?? "Thread Pool Thread";
+                                }
                             }
 
                             var threadState = GetThreadInfoOrDefault<ThreadState?>(() => thread.ThreadState);

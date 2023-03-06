@@ -129,9 +129,9 @@ namespace Corax.Queries
             _bufferHolder = newBufferHolder;
         }
 
-        public void Score(Span<long> matches, Span<float> scores)
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
-            _inner.Score(matches, scores);
+            _inner.Score(matches, scores, boostFactor);
         }
 
         public QueryInspectionNode Inspect()

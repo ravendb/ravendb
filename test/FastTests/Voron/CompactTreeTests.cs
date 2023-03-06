@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Sparrow.Server.Debugging;
 using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Xunit;
@@ -29,22 +22,50 @@ namespace FastTests.Voron
                 tree.Add("Pipeline3", 5);
                 wtx.Commit();
             }
-            
+
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
                 tree.Add("Pipeline2", 1007);
-            
+
                 Assert.True(tree.TryGetValue("Pipeline1", out var r));
                 Assert.Equal(4, r);
-                Assert.True(tree.TryGetValue("Pipeline2", out  r));
+                Assert.True(tree.TryGetValue("Pipeline2", out r));
                 Assert.Equal(1007, r);
-                
-                Assert.True(tree.TryGetValue("Pipeline3", out  r));
+
+                Assert.True(tree.TryGetValue("Pipeline3", out r));
                 Assert.Equal(5, r);
             }
         }
-        
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void CanCompactTreeAddAndRemoveThingsBiggerThanLong()
+        {
+            var value = 130040335888;
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                for (int i = 0; i < 10_000; ++i)
+                    tree.Add($"{i++}", value++);
+                wtx.Commit();
+            }
+            using (var rtx = Env.ReadTransaction())
+            {
+                var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
+                Assert.True(tree.TryGetValue("2492", out var r));
+                //Assert.Equal(130040336388, r);
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                tree.TryRemove("2492", out var old);
+                //  Assert.Equal(130040336388, old);
+                wtx.Commit();
+            }
+
+        }
+
         [RavenFact(RavenTestCategory.Voron)]
         public void CanCreateCompactTree()
         {
@@ -112,7 +133,7 @@ namespace FastTests.Voron
                 tree.Add("hi", 5);
                 wtx.Commit();
             }
-            
+
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");

@@ -1,8 +1,10 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -40,6 +42,9 @@ internal class DocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerPr
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 context.Write(writer, documentSizeDetails.ToJson());
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    RequestHandler.AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
             }
         }
     }

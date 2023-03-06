@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -265,8 +266,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         runningBackupStatus.Version = ++_previousBackupStatus.Version;
                         // save the backup status
-                        AddInfo("Saving backup status");
-                        SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult);
+                        // create a local copy of ref `runningBackupStatus` so that it can be used in the anonymous method.
+                        var status = runningBackupStatus;
+                        SaveBackupStatus(status, _database, _logger, _backupResult, _onProgress, TaskCancelToken);
                     }
 
                     _forTestingPurposes?.AfterBackupBatchCompleted?.Invoke();
@@ -859,7 +861,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database.NotificationCenter.Dismiss(id);
         }
 
-        public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+        public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger,
+            BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
         {
             try
             {
@@ -868,8 +871,26 @@ namespace Raven.Server.Documents.PeriodicBackup
                     PeriodicBackupStatus = status
                 };
 
-                var result = AsyncHelpers.RunSync(() => documentDatabase.ServerStore.SendToLeaderAsync(command));
-                AsyncHelpers.RunSync(() => documentDatabase.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index));
+                AsyncHelpers.RunSync(async () =>
+                {
+                    var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
+                        {
+                            var result = await documentDatabase.ServerStore.SendToLeaderAsync(command);
+                            return result.Index;
+                        },
+                        infoMessage: "Saving the backup status in the cluster",
+                        errorMessage: "Failed to save the backup status in the cluster",
+                        backupResult, onProgress, operationCancelToken);
+
+                    await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
+                        {
+                            await documentDatabase.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+                            return default;
+                        },
+                        infoMessage: "Verifying that the backup status was successfully saved in the cluster",
+                        errorMessage: "Failed to verify that the backup status was successfully saved in the cluster",
+                        backupResult, onProgress, operationCancelToken);
+                });
 
                 if (logger.IsInfoEnabled)
                     logger.Info($"Periodic backup status with task id {status.TaskId} was updated");

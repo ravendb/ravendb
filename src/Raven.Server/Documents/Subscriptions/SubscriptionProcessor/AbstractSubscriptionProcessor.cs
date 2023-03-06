@@ -4,10 +4,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.Includes.Sharding;
-using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.Sharding.Subscriptions;
-using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
@@ -33,7 +29,7 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposa
     {
         Server = server;
         Connection = connection;
-        Logger = LoggingSource.Instance.GetLogger(databaseName, GetType().FullName);
+        Logger = LoggingSource.Instance.GetLogger(databaseName, connection == null ? $"{nameof(TestDocumentsDatabaseSubscriptionProcessor)}" : $"{nameof(SubscriptionProcessor)}<{connection.Options.SubscriptionName}>");
     }
 
     public virtual void InitializeProcessor()

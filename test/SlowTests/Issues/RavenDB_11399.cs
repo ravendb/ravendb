@@ -22,7 +22,8 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Different scoring method RavenDB-19603")]
         public void ShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -51,7 +52,6 @@ namespace SlowTests.Issues
                         .ToArray()
                         .Select(x => x.FirstName)
                         .ToArray();
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal("Andrew", names[0]);
                     Assert.Equal("Anne", names[1]);
                 }

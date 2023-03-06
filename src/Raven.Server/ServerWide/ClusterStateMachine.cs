@@ -4000,7 +4000,7 @@ namespace Raven.Server.ServerWide
             if (command.Value.DatabaseNames == null)
                 throw new RachisInvalidOperationException($"{nameof(ToggleDatabasesStateCommand.Parameters.DatabaseNames)} is null for command type: {type}");
 
-            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
+            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
 
             foreach (var databaseName in command.Value.DatabaseNames)
             {
@@ -4074,13 +4074,13 @@ namespace Raven.Server.ServerWide
                     using (oldDatabaseRecord)
                     {
                         var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
-                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName));
+                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName, null));
                     }
                 }
             }
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
 
         private void UpdateDatabasesWithServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
@@ -4096,8 +4096,7 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             const string dbKey = "db/";
-            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
-            long? oldTaskId = null;
+            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object perDbState)>();
 
             var allServerWideBackupNames = GetSeverWideBackupNames(context);
 
@@ -4106,55 +4105,57 @@ namespace Raven.Server.ServerWide
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     var (key, _, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
-                    var databaseName = key.Substring(dbKey.Length);
-                    var newBackups = new DynamicJsonArray();
-
-                    var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(serverWideBlittable);
-                    oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted);
-                    PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(periodicBackupConfiguration, databaseName, encrypted);
-
-                    if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups))
-                    {
-                        var isBackupToEditFound = false;
-                        foreach (BlittableJsonReaderObject backup in backups)
-                        {
-                            //Even though we rebuild the whole configurations list just one should be modified
-                            //In addition the same configuration should be modified in all databases
-                            if (isBackupToEditFound || IsServerWideBackupToEdit(backup, periodicBackupConfiguration.Name, allServerWideBackupNames) == false)
-                            {
-                                newBackups.Add(backup);
-                                continue;
-                            }
-
-                            isBackupToEditFound = true;
-
-                            if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
-                            {
-                                periodicBackupConfiguration.TaskId = taskId;
-                                oldTaskId = taskId;
-                            }
-                        }
-                    }
-
-                    if (serverWideBackupConfiguration.IsExcluded(databaseName) == false)
-                    {
-                        newBackups.Add(periodicBackupConfiguration.ToJson());
-                    }
-
                     using (oldDatabaseRecord)
                     {
-                        oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
-                        {
-                            [nameof(DatabaseRecord.PeriodicBackups)] = newBackups
-                        };
+                        var databaseName = key.Substring(dbKey.Length);
+                        var newBackups = new DynamicJsonArray();
 
+                        var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(serverWideBlittable);
+                        oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted);
+                        PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(periodicBackupConfiguration, databaseName, encrypted);
+
+                        var isBackupToEditFound = false;
+                        if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups))
+                        {
+                            foreach (BlittableJsonReaderObject backup in backups)
+                            {
+                                //Even though we rebuild the whole configurations list just one should be modified
+                                //In addition the same configuration should be modified in all databases
+                                if (isBackupToEditFound || IsServerWideBackupToEdit(backup, periodicBackupConfiguration.Name, allServerWideBackupNames) == false)
+                                {
+                                    newBackups.Add(backup);
+                                    continue;
+                                }
+
+                                isBackupToEditFound = true;
+
+                                if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
+                                {
+                                    periodicBackupConfiguration.TaskId = taskId;
+                                }
+                            }
+                        }
+
+                        long? periodicBackupTaskId = null;
+                        if (serverWideBackupConfiguration.IsExcluded(databaseName) == false)
+                        {
+                            newBackups.Add(periodicBackupConfiguration.ToJson());
+                            periodicBackupTaskId = periodicBackupConfiguration.TaskId;
+                        }
+                        else if(isBackupToEditFound == false)
+                        {
+                            continue;
+                        }
+
+                        oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord) {[nameof(DatabaseRecord.PeriodicBackups)] = newBackups};
                         var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
-                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName));
+                        
+                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName, perDbState: periodicBackupTaskId));
                     }
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? serverWideBackupConfiguration.TaskId, index, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
 
         private static bool IsServerWideBackupToEdit(BlittableJsonReaderObject databaseTask, string serverWideTaskName, HashSet<string> allServerWideTasksNames)
@@ -4242,7 +4243,7 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             const string dbKey = "db/";
-            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
+            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
@@ -4334,13 +4335,13 @@ namespace Raven.Server.ServerWide
                         };
 
                         var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
-                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName));
+                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: databaseName, null));
                     }
                 }
             }
 
             // we don't mind indexForValueChanges for ServerWideExternalReplication
-            ApplyDatabaseRecordUpdates(toUpdate, type, serverWideExternalReplication.TaskId, index, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
         
         private static unsafe HashSet<string> GetAllSeverWideExternalReplicationNames(ClusterOperationContext context)
@@ -4374,7 +4375,7 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             const string dbKey = "db/";
-            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
+            var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
             var databaseRecordTaskName = DeleteServerWideTaskCommand.GetDatabaseRecordTaskName(deleteConfiguration);
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
@@ -4463,12 +4464,12 @@ namespace Raven.Server.ServerWide
                     using (oldDatabaseRecord)
                     {
                         var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
-                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: key.Substring(dbKey.Length)));
+                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: key.Substring(dbKey.Length), null));
                     }
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
 
         private void ToggleServerWideTaskState(BlittableJsonReaderObject cmd, ToggleServerWideTaskStateCommand.Parameters parameters, ClusterOperationContext context, string type, long index)
@@ -4507,9 +4508,9 @@ namespace Raven.Server.ServerWide
                    taskNameToFind.Equals(foundTaskName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long indexForValueChanges, long index, Table items, ClusterOperationContext context)
+        private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object perDbState)> toUpdate, string type, long index, Table items, ClusterOperationContext context)
         {
-            var tasks = new List<Func<Task>> { () => Changes.OnValueChanges(indexForValueChanges, type) };
+            var tasks = new List<Func<Task>> { () => Changes.OnValueChanges(index, type) };
 
             foreach (var update in toUpdate)
             {
@@ -4519,12 +4520,12 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, update.DatabaseRecord);
                 }
 
-                tasks.Add(() => Changes.OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
+                tasks.Add(() => Changes.OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, update.perDbState));
             }
 
             ExecuteManyOnDispose(context, index, type, tasks);
         }
-
+        
         public const string SnapshotInstalled = "SnapshotInstalled";
 
         public override Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)

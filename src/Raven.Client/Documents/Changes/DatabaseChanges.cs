@@ -45,6 +45,17 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
+        internal IChangesObservable<AggressiveCacheChange> ForAggressiveCaching()
+        {
+            var counter = GetOrAddConnectionState("aggressive-caching", "watch-aggressive-caching", "unwatch-aggressive-caching", null);
+
+            var taskedObservable = new ChangesObservable<AggressiveCacheChange, DatabaseConnectionState>(
+                counter,
+                notification => true);
+
+            return taskedObservable;
+        }
+        
         public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
@@ -248,6 +259,12 @@ namespace Raven.Client.Documents.Changes
         {
             switch (type)
             {
+                case nameof(AggressiveCacheChange):
+                    foreach (var state in States.ForceEnumerateInThreadSafeManner())
+                    {
+                        state.Value.Send(AggressiveCacheChange.Instance);
+                    }
+                    break;
                 case nameof(DocumentChange):
                     var documentChange = DocumentChange.FromJson(value);
                     foreach (var state in States.ForceEnumerateInThreadSafeManner())

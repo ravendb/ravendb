@@ -36,6 +36,8 @@ namespace Raven.Server.Documents.Indexes.Static
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollectionForCompareExchange;
 
+        public MismatchedReferencesWarningHandler MismatchedReferencesWarningHandler;
+
         [ThreadStatic]
         public static CurrentIndexingScope Current;
 
@@ -222,7 +224,21 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
                 {
                     if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false)
+                    {
+                        MismatchedReferencesWarningHandler ??= new MismatchedReferencesWarningHandler();
+                        
+                        if (MismatchedReferencesWarningHandler.IsFull == false)
+                        {
+                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection);
+                        }
+
                         return DynamicNullObject.Null;
+                    }
+
+                    if (MismatchedReferencesWarningHandler?.LastLoadMismatched == true)
+                    {
+                        MismatchedReferencesWarningHandler.RemoveMismatchedReferenceOnMatchingLoad(document, id);
+                    }
                 }
 
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope

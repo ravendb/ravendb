@@ -33,7 +33,8 @@ function BuildWindowsDockerImage ($version, $WinVer) {
 
     write-host "Tags: $tags"
 
-    docker build $DockerfileDir -t $fullNameTag
+    docker build -t $fullNameTag -f "$DockerfileDir/Dockerfile.$WinVer" "$DockerfileDir"
+    CheckLastExitCode
 
     foreach ($tag in $tags[1..$tags.Length]) {
         write-host "Tag $fullNameTag as $tag"

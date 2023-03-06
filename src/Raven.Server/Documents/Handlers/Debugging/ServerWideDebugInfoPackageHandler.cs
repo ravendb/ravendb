@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/cluster-info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetClusterWideInfoPackage()
         {
-            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} Cluster Wide.zip";
+            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H-mm-ss} Cluster Wide.zip";
             HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
             HttpContext.Response.Headers[Constants.Headers.ContentType] = "application/zip";
 
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
-            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
+            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H-mm-ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
             HttpContext.Response.Headers[Constants.Headers.ContentType] = "application/zip";
 
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             var localEndpointClient = new LocalEndpointClient(Server);
 
                             await WriteServerInfo(archive, context, localEndpointClient, token.Token);
-                            await WriteForAllLocalDatabases(archive, context, localEndpointClient, token: token.Token);
+                            await WriteForAllLocalDatabases(archive, context, localEndpointClient, token.Token);
                             await WriteLogFile(archive, token.Token);
                         }
                         catch (Exception e)
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private static async Task WriteLogFile(ZipArchive archive, CancellationToken token)
         {
-            var prefix = $"{_serverWidePrefix}/{DateTime.UtcNow:yyyy-MM-dd H:mm:ss}.log";
+            var prefix = $"{_serverWidePrefix}/{DateTime.UtcNow:yyyy-MM-dd H-mm-ss}.log";
             var entry = archive.CreateEntry(prefix, CompressionLevel.Optimal);
             entry.ExternalAttributes = (int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR) << 16;
             await using (var entryStream = entry.Open())
@@ -374,21 +374,24 @@ namespace Raven.Server.Documents.Handlers.Debugging
             await DebugInfoPackageUtils.WriteDebugInfoTimesAsZipEntryAsync(debugInfoDict, archive, path);
         }
 
-        internal static async Task InvokeAndWriteToArchive(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, RouteInformation route, string path, Dictionary<string, Microsoft.Extensions.Primitives.StringValues> endpointParameters = null, CancellationToken token = default)
+        internal static async Task InvokeAndWriteToArchive(ZipArchive archive, JsonOperationContext jsonOperationContext, 
+            LocalEndpointClient localEndpointClient, RouteInformation route, string path, Dictionary<string, 
+                Microsoft.Extensions.Primitives.StringValues> endpointParameters = null, CancellationToken token = default)
         {
             try
             {
-                var response = await localEndpointClient.InvokeAsync(route, endpointParameters);
+                var response = await localEndpointClient.InvokeAsync(route, endpointParameters, token);
 
                 var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, path, response.ContentType == "text/plain" ? "txt" : "json");
                 var entry = archive.CreateEntry(entryName);
-                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+                entry.ExternalAttributes = (int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR) << 16;
 
+                // we have the response at this point, not using the cancel token here on purpose
                 await using (var entryStream = entry.Open())
                 {
                     if (response.ContentType == "text/plain")
                     {
-                        await response.Body.CopyToAsync(entryStream, token);
+                        await response.Body.CopyToAsync(entryStream);
                     }
                     else
                     {
@@ -396,11 +399,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             var endpointOutput = await jsonOperationContext.ReadForMemoryAsync(response.Body, $"read/local endpoint/{route.Path}");
                             jsonOperationContext.Write(writer, endpointOutput);
-                            await writer.FlushAsync(token);
+                            await writer.FlushAsync();
                         }
                     }
 
-                    await entryStream.FlushAsync(token);
+                    await entryStream.FlushAsync();
                 }
             }
             catch (Exception e)

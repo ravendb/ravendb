@@ -8,6 +8,7 @@ using Raven.Client.Exceptions.Changes;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -39,6 +40,9 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
     protected readonly ConcurrentDictionary<DatabaseChangesOptions, TDatabaseConnectionState> States = new();
     private int _immediateConnection;
 
+    private readonly TaskCompletionSource<ChangesSupportedFeatures> _supportedFeaturesTcs = new();
+    internal Task<ChangesSupportedFeatures> GetSupportedFeaturesAsync() => _supportedFeaturesTcs.Task;
+
     private ServerNode _serverNode;
     private int _nodeIndex;
     private Uri _url;
@@ -55,6 +59,18 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
         _onDispose = onDispose;
         _throttleConnection = throttleConnection;
         ConnectionStatusChanged += OnConnectionStatusChanged;
+
+        GetSupportedFeaturesAsync().ContinueWith(async t =>
+        {
+            if (t.Result.TopologyChange == false)
+                return;
+
+            GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
+            await RequestExecutor
+                .UpdateTopologyAsync(
+                    new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "watch-topology-change" })
+                .ConfigureAwait(false);
+        });
 
         _task = DoWork(nodeTag);
     }
@@ -422,10 +438,10 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
                         {
                             try
                             {
-                                if (json.TryGet(nameof(TopologyChange), out bool supports) && supports)
+                                if (json.TryGet(nameof(TopologyChange), out bool _))
                                 {
-                                    GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
-                                    await RequestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "watch-topology-change" }).ConfigureAwait(false);
+                                    var supportedFeatures = JsonDeserializationClient.ChangesSupportedFeatures(json);
+                                    _supportedFeaturesTcs.TrySetResult(supportedFeatures);
                                     continue;
                                 }
 

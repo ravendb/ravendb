@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
@@ -37,6 +38,7 @@ namespace Raven.Server.Documents.Changes
         private int _watchAllIndexes;
         private int _watchAllCounters;
         private int _watchAllTimeSeries;
+        private bool _aggressiveChanges;
 
         public ChangesClientConnection(WebSocket webSocket, DocumentDatabase database, bool throttleConnection, bool fromStudio)
             : base(webSocket, database.DocumentsStorage.ContextPool, database.DatabaseShutdown, throttleConnection, fromStudio)
@@ -117,6 +119,15 @@ namespace Raven.Server.Documents.Changes
             if (IsDisposed)
                 return;
 
+            if (_aggressiveChanges)
+            {
+                Debug.Assert(_watchAllDocuments == 0 && (_matchingDocuments == null || _matchingDocuments.Count == 0));
+
+                if (AggressiveCacheChange.ShouldUpdateAggressiveCache(change))
+                    PulseAggressiveCaching();
+                return;
+            }
+
             if (_watchAllDocuments > 0)
             {
                 Send(change);
@@ -151,6 +162,15 @@ namespace Raven.Server.Documents.Changes
 
         public void SendIndexChanges(IndexChange change)
         {
+            if (_aggressiveChanges)
+            {
+                Debug.Assert(_watchAllIndexes == 0 && (_matchingIndexes == null || _matchingIndexes.Count == 0));
+
+                if (AggressiveCacheChange.ShouldUpdateAggressiveCache(change))
+                    PulseAggressiveCaching();
+                return;
+            }
+
             if (_watchAllIndexes > 0)
             {
                 Send(change);
@@ -161,6 +181,20 @@ namespace Raven.Server.Documents.Changes
             {
                 Send(change);
             }
+        }
+
+        private static readonly SendQueueItem AggressiveCachingPulseValue = new()
+        {
+            AllowSkip = true,
+            ValueToSend = new DynamicJsonValue
+            {
+                ["Type"] = nameof(AggressiveCacheChange),
+            }
+        };
+
+        private void PulseAggressiveCaching()
+        {
+            AddToQueue(AggressiveCachingPulseValue, addIfEmpty: true);
         }
 
         private void Send(CounterChange change)
@@ -406,6 +440,18 @@ namespace Raven.Server.Documents.Changes
         protected override ValueTask UnwatchIndexAsync(string name, CancellationToken token)
         {
             _matchingIndexes.TryRemove(name);
+            return ValueTask.CompletedTask;
+        }
+
+        protected override ValueTask WatchAggressiveCachingAsync(CancellationToken token)
+        {
+            _aggressiveChanges = true;
+            return ValueTask.CompletedTask;
+        }
+
+        protected override ValueTask UnwatchAggressiveCachingAsync(CancellationToken token)
+        {
+            _aggressiveChanges = false;
             return ValueTask.CompletedTask;
         }
 

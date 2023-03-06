@@ -16,6 +16,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -1143,8 +1144,7 @@ namespace Raven.Server.Rachis
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(
                     action: x => Run(x),
                     state: negotiation,
-                    name: $"Follower thread from {_connection} in term {negotiation.Term}");
-
+                    ThreadNames.ForFollower($"Follower thread from {_connection} in term {negotiation.Term}", _connection.ToString(), negotiation.Term));
         }
 
         private void Run(object obj)

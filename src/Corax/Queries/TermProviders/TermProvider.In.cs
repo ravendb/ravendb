@@ -28,7 +28,7 @@ namespace Corax.Queries
             _termIndex++;
             if (_termIndex >= _terms.Count)
             {
-                term = TermMatch.CreateEmpty(_searcher.Allocator);
+                term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
             term = _searcher.TermQuery(_field, _terms[_termIndex]);

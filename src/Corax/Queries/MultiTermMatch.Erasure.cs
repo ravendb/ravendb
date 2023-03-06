@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Sparrow.Server;
 
 namespace Corax.Queries
@@ -39,10 +36,10 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores)
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
             // We ignore. Nothing to do here. 
-            _functionTable.ScoreFunc(ref this, matches, scores);
+            _functionTable.ScoreFunc(ref this, matches, scores, boostFactor);
         }
 
         public QueryInspectionNode Inspect()
@@ -56,13 +53,13 @@ namespace Corax.Queries
         {
             public readonly delegate*<ref MultiTermMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref MultiTermMatch, Span<long>, int, int> AndWithFunc;
-            public readonly delegate*<ref MultiTermMatch, Span<long>, Span<float>, void> ScoreFunc;
+            public readonly delegate*<ref MultiTermMatch, Span<long>, Span<float>, float, void> ScoreFunc;
             public readonly delegate*<ref MultiTermMatch, long> CountFunc;
 
             public FunctionTable(
                 delegate*<ref MultiTermMatch, Span<long>, int> fillFunc,
                 delegate*<ref MultiTermMatch, Span<long>, int, int> andWithFunc,
-                delegate*<ref MultiTermMatch, Span<long>, Span<float>, void> scoreFunc,
+                delegate*<ref MultiTermMatch, Span<long>, Span<float>, float, void> scoreFunc,
                 delegate*<ref MultiTermMatch, long> countFunc)
             {
                 FillFunc = fillFunc;
@@ -108,11 +105,11 @@ namespace Corax.Queries
                     return 0;
                 }
 
-                static void ScoreFunc(ref MultiTermMatch match, Span<long> matches, Span<float> scores)
+                static void ScoreFunc(ref MultiTermMatch match, Span<long> matches, Span<float> scores, float boostFactor)
                 {
                     if (match._inner is TTermMatch inner)
                     {
-                        inner.Score(matches, scores);
+                        inner.Score(matches, scores, boostFactor);
                         match._inner = inner;
                     }
                 }
@@ -126,13 +123,6 @@ namespace Corax.Queries
              where TInner : ITermProvider
         {
             return new MultiTermMatch(query, StaticFunctionCache<MultiTermMatch<TInner>>.FunctionTable);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static MultiTermMatch Create<TInner>(in MultiTermBoostingMatch<TInner> query)
-            where TInner : ITermProvider
-        {
-            return new MultiTermMatch(query, StaticFunctionCache<MultiTermBoostingMatch<TInner>>.FunctionTable);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -167,7 +157,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static MultiTermMatch CreateEmpty(ByteStringContext context)
         {
-            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(context, new EmptyTermProvider()), StaticFunctionCache<MultiTermMatch<EmptyTermProvider>>.FunctionTable);
+            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(default, context, new EmptyTermProvider()), StaticFunctionCache<MultiTermMatch<EmptyTermProvider>>.FunctionTable);
         }
     }
 }

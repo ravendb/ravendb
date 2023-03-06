@@ -540,10 +540,10 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
         return result;
     }
 
-    public void Score(Span<long> matches, Span<float> scores)
+    public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
         if (_inner.IsBoosting)
-            _inner.Score(matches, scores);
+            _inner.Score(matches, scores, boostFactor);
     }
 
     public QueryInspectionNode Inspect()

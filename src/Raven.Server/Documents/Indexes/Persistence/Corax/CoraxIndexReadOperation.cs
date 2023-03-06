@@ -329,7 +329,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         limit = ids.Length;
                 }
                 // else we left it behind, so we are going to continue going for 0. 
-                else return 0;
+                else
+                    return 0;
 
                 var distinctIds = ids.Slice(0, (int)limit);
 
@@ -517,7 +518,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             highlightings.Initialize(query, queryTimings);
 
             IQueryMatch queryMatch;
-            bool isBinary;
 
             QueryTimingsScope coraxScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false);
             OrderMetadata[] orderByFields;
@@ -526,13 +526,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, CoraxConstants.IndexSearcher.TakeAll);
 
-                if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary, out orderByFields)) is null)
+                if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out orderByFields)) is null)
                     yield break;
             }
 
             highlightings.Setup(query, documentsContext);
 
-            int coraxPageSize = CoraxGetPageSize(_indexSearcher, take, query, isBinary);
+            int coraxPageSize = CoraxGetPageSize(_indexSearcher, take, query);
             var ids = QueryPool.Rent(coraxPageSize);
             long docsToLoad = pageSize;
             long queryStart = query.Start;
@@ -645,7 +645,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         new QueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings)
                     );
                 }
-                else throw new UnsupportedOperationException($"The type {typeof(TQueryFilter)} is not supported.");
+                else
+                    throw new UnsupportedOperationException($"The type {typeof(TQueryFilter)} is not supported.");
             }
 
             QueryPool.Return(ids);
@@ -1068,7 +1069,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             IDisposable closeServerTransaction = null;
             TransactionOperationContext serverContext = null;
             MoreLikeThisQuery moreLikeThisQuery;
-            var isBinary = false;
             CoraxQueryBuilder.Parameters builderParameters;
 
             try
@@ -1083,7 +1083,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     builderParameters = new (_indexSearcher, _allocator, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
                         _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
-                    moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(builderParameters, query.Metadata.Query.Where, out isBinary);
+                    moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(builderParameters, query.Metadata.Query.Where);
                 }
             }
             finally
@@ -1151,7 +1151,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             mlt.SetFieldNames(fieldNames);
 
-            var pageSize = CoraxGetPageSize(_indexSearcher, query.PageSize, query, isBinary);
+            var pageSize = CoraxGetPageSize(_indexSearcher, query.PageSize, query);
 
             IQueryMatch mltQuery;
             if (baseDocId.HasValue)
@@ -1226,13 +1226,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch queryMatch;
-            bool isBinary;
             var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
-            if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary, out _)) is null)
+            if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out _)) is null)
                 yield break;
 
-            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary));
-            int docsToLoad = CoraxGetPageSize(_indexSearcher, pageSize, query, isBinary);
+            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query));
+            int docsToLoad = CoraxGetPageSize(_indexSearcher, pageSize, query);
             using var coraxEntryReader = new CoraxIndexedEntriesReader(_indexSearcher, _fieldMappings);
             int read;
             int i = Skip();

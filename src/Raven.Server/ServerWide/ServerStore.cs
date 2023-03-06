@@ -986,14 +986,14 @@ namespace Raven.Server.ServerWide
             }
 
             _clusterMaintenanceSetupTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
-                ClusterMaintenanceSetupTask(), null, "Cluster Maintenance Setup Task");
+                ClusterMaintenanceSetupTask(), null, ThreadNames.ForClusterMaintenanceSetupTask("Cluster Maintenance Setup Task"));
 
             const string threadName = "Update Topology Change Notification Task";
             _updateTopologyChangeNotification = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
                 ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, Logger);
                 UpdateTopologyChangeNotification();
-            }, null, threadName);
+            }, null, ThreadNames.ForUpdateTopologyChangeNotificationTask(threadName));
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
@@ -1175,7 +1175,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private Task OnDatabaseChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType _, object __)
+        private Task OnDatabaseChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType _, object state)
         {
             switch (type)
             {
@@ -1195,6 +1195,9 @@ namespace Raven.Server.ServerWide
 
                 case nameof(RemoveNodeFromDatabaseCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.RemoveNode));
+                    break;
+                case nameof(PutServerWideBackupConfigurationCommand):
+                    RescheduleTimerIfDatabaseIdle(databaseName, state);
                     break;
             }
 
@@ -1240,68 +1243,74 @@ namespace Raven.Server.ServerWide
                     LicenseManager.ReloadLicenseLimits();
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
-
-                    break;
-
-                case nameof(PutServerWideBackupConfigurationCommand):
-                    RescheduleTimerForIdleDatabases(index);
                     break;
             }
         }
 
-        private void RescheduleTimerForIdleDatabases(long taskId)
+        private void RescheduleTimerIfDatabaseIdle(string db, object state)
         {
-            if (IdleDatabases.IsEmpty)
+            if (IdleDatabases.ContainsKey(db) == false)
                 return;
 
-            foreach (var db in IdleDatabases.Keys)
+            if (state is long taskId == false)
             {
-                PeriodicBackupConfiguration backupConfig;
-                DatabaseTopology topology;
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, db))
-                {
-                    topology = rawRecord.Topology;
-                    backupConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
-
-                    if (backupConfig == null)
-                        throw new InvalidOperationException($"Could not reschedule the wakeup timer for idle database '{db}', because there is no backup task with id '{taskId}'.");
-                }
-
-                var tag = topology.WhoseTaskIsIt(Engine.CurrentState, backupConfig, null);
-                if (Engine.Tag != tag)
-                {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
-                    continue;
-                }
-
-                if (backupConfig.Disabled || backupConfig.FullBackupFrequency == null && backupConfig.IncrementalBackupFrequency == null)
-                    continue;
-
-                var now = SystemTime.UtcNow;
-                DateTime wakeup;
-                if (backupConfig.FullBackupFrequency == null)
-                {
-                    wakeup = CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency).GetNextOccurrence(now);
-                }
-                else
-                {
-                    wakeup = CrontabSchedule.Parse(backupConfig.FullBackupFrequency).GetNextOccurrence(now);
-                    if (backupConfig.IncrementalBackupFrequency != null)
-                    {
-                        var incremental = CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency).GetNextOccurrence(now);
-                        wakeup = new DateTime(Math.Min(wakeup.Ticks, incremental.Ticks));
-                    }
-                }
-
-                var dueTime = (int)(wakeup - now).TotalMilliseconds;
-                DatabasesLandlord.RescheduleDatabaseWakeup(db, dueTime, wakeup);
-
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{wakeup}', with dueTime: {dueTime} ms.");
+                Debug.Assert(state == null, 
+                    $"This is probably a bug. This method should be called only for {nameof(PutServerWideBackupConfigurationCommand)} and the state should be the database periodic backup task id.");
+                //The database is excluded from the server-wide backup.
+                return;
             }
+            
+            PeriodicBackupConfiguration backupConfig;
+            DatabaseTopology topology;
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, db))
+            {
+                topology = rawRecord.Topology;
+                backupConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
+
+                if (backupConfig == null)
+                {
+                    //`indexPerDatabase` was collected from the previous transaction. The database can be excluded in the meantime. 
+                    if(Logger.IsInfoEnabled)
+                        Logger.Info($"Could not reschedule the wakeup timer for idle database '{db}', because there is no backup task with id '{taskId}'.");
+                    return;
+                }
+            }
+
+            var tag = topology.WhoseTaskIsIt(Engine.CurrentState, backupConfig, null);
+            if (Engine.Tag != tag)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
+                return;
+            }
+
+            if (backupConfig.Disabled || backupConfig.FullBackupFrequency == null && backupConfig.IncrementalBackupFrequency == null)
+                return;
+
+            var now = SystemTime.UtcNow;
+            DateTime wakeup;
+            if (backupConfig.FullBackupFrequency == null)
+            {
+                wakeup = CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency).GetNextOccurrence(now);
+            }
+            else
+            {
+                wakeup = CrontabSchedule.Parse(backupConfig.FullBackupFrequency).GetNextOccurrence(now);
+                if (backupConfig.IncrementalBackupFrequency != null)
+                {
+                    var incremental = CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency).GetNextOccurrence(now);
+                    wakeup = new DateTime(Math.Min(wakeup.Ticks, incremental.Ticks));
+                }
+            }
+
+            var dueTime = (int)(wakeup - now).TotalMilliseconds;
+            DatabasesLandlord.RescheduleDatabaseWakeup(db, dueTime, wakeup);
+
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{wakeup}', with dueTime: {dueTime} ms.");
+
         }
 
         private void ConfirmCertificateReplacedValueChanged(long index, string type)

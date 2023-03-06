@@ -26,6 +26,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 
@@ -518,8 +519,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         periodicBackup.BackupStatus.LastFullBackupInternal = startTimeInUtc;
                     else
                         periodicBackup.BackupStatus.LastIncrementalBackupInternal = startTimeInUtc;
-
-                    BackupTask.SaveBackupStatus(periodicBackup.BackupStatus, _database, _logger, backupResult: null);
+                    
+                    BackupTask.SaveBackupStatus(periodicBackup.BackupStatus, _database, _logger, operationCancelToken: periodicBackup.CancelToken);
 
                     var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
                     if (_logger.IsOperationsEnabled)
@@ -543,7 +544,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
         {
             var threadName = $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'";
-            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, threadName, tcs, onProgress), null, threadName);
+            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, threadName, tcs, onProgress), null, ThreadNames.ForBackupTask(threadName,
+                _database.Name, periodicBackup.Configuration.Name));
             return tcs.Task;
         }
 

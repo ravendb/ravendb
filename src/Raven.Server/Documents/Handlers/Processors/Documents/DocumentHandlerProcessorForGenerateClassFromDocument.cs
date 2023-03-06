@@ -3,7 +3,9 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Changes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
@@ -39,6 +41,9 @@ internal class DocumentHandlerProcessorForGenerateClassFromDocument : AbstractDo
                 var codeGenerator = new JsonClassGenerator(lang);
                 var code = codeGenerator.Execute(document.Data);
                 await writer.WriteAsync(code);
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    RequestHandler.AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
             }
         }
     }
