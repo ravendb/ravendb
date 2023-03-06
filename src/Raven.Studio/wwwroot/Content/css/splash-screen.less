@@ -4,6 +4,11 @@
 @import "./bootstrap/variables-header.less";
 @import "./bootstrap/variables-body.less";
 
+body {
+    background-color: #22252b;
+    line-height: 1.61;
+}
+
 .splash-screen {
     @orbit-base-size: 120px;
     @orbit-icon-size: 32px;
@@ -13,6 +18,7 @@
         text-align: center;
         font-size: 1.25rem;
         font-weight: 300;
+        color: @white;
     }
 
     .spinner-box {
@@ -35,11 +41,6 @@
         height: @orbit-base-size;
         background-color: @orbit-bg-color;
         -webkit-animation: pulse 3500ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
-
-        .icon-raven {
-            font-size: 300%;
-            color: #F0F4F6;
-        }
     }
 
     .orbit-2,
