@@ -80,7 +80,8 @@ namespace Corax
 
             private short* _freqStart;
             private short* _freqEnd;
-
+            private bool _needToSortToDeleteDuplicates;
+            
             #if DEBUG
             private int _hasChangesCallCount = 0;
             private bool _preparationFinished = false;
@@ -124,7 +125,7 @@ namespace Corax
                 _sizeOfTerm = size;
                 _context = context;
                 _memoryHandler = _context.Allocate(CalculateSizeOfContainer(InitialSize), out var output);
-                
+                _needToSortToDeleteDuplicates = true;
                 _start = (long*)output.Ptr;
                 _end = _start + InitialSize;
                 _freqStart = (short*)_end;
@@ -139,7 +140,8 @@ namespace Corax
             public void Addition(long entryId, short freq = 1)
             {
                 AssertPreparationIsNotFinished();
-
+                _needToSortToDeleteDuplicates = true;
+                
                 if (_additions > 0 && *(_start + _additions - 1) == entryId)
                 {
                     ref var frequency = ref *(_freqStart + _additions - 1);
@@ -158,6 +160,7 @@ namespace Corax
             public void Removal(long entryId)
             {
                 AssertPreparationIsNotFinished();
+                _needToSortToDeleteDuplicates = true;
 
                 if (_removals > 0 && *(_end - _removals) == entryId)
                 {
@@ -223,6 +226,10 @@ namespace Corax
 
             private void DeleteAllDuplicates()
             {
+                if (_needToSortToDeleteDuplicates == false)
+                    return;
+                _needToSortToDeleteDuplicates = false;
+
                 var additions = new Span<long>(_start, _additions);
                 var freqAdditions = new Span<short>(_freqStart, _additions);
                 var removals = new Span<long>(_end - _removals, _removals);
