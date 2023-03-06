@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes.Sharding;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.Sharding;
@@ -212,28 +213,21 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
 
         using (scope?.For(nameof(QueryTimingsScope.Names.Filter)))
         {
-            var key = new CollectionQueryEnumerable.FilterKey(Query.Metadata);
-            using (RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache.GetScriptRunner(key, readOnly: true, patchRun: out var filterScriptRun))
+            var currentResults = result.Results;
+            result.Results = new List<BlittableJsonReaderObject>();
+
+            using (var queryFilter = new ShardedQueryFilter(Query, result, scope, RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Context))
             {
-                var currentResults = result.Results;
-                result.Results = new List<BlittableJsonReaderObject>();
-
-                result.ScannedResults++;
-
                 foreach (var doc in currentResults)
                 {
-                    object self = filterScriptRun.Translate(Context, doc);
-                    using (var filterResult = filterScriptRun.Run(Context, null, "execute", new[] { self, Query.QueryParameters }, scope))
-                    {
-                        if (filterResult.BooleanValue == true)
-                        {
-                            result.Results.Add(doc);
-                        }
-                        else
-                        {
-                            result.SkippedResults++;
-                        }
-                    }
+                    var filterResult = queryFilter.Apply(doc);
+                    if (filterResult == FilterResult.Skipped)
+                        continue;
+
+                    if (filterResult == FilterResult.LimitReached)
+                        break;
+
+                    result.Results.Add(doc);
                 }
             }
         }
