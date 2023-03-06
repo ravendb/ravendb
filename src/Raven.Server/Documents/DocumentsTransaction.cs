@@ -5,6 +5,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Documents
@@ -21,6 +22,8 @@ namespace Raven.Server.Documents
 
         private List<TimeSeriesChange> _timeSeriesNotifications;
 
+        private List<Slice> _attachmentHashesToMaybeDelete;
+
         private bool _replaced;
 
         private Dictionary<string, CollectionName> _collectionCache;
@@ -32,8 +35,17 @@ namespace Raven.Server.Documents
             _changes = changes;
         }
 
+        public override void BeforeCommit()
+        {
+            if (_attachmentHashesToMaybeDelete == null)
+                return;
+
+            _context.DocumentDatabase.DocumentsStorage.AttachmentsStorage.RemoveAttachmentStreamsWithoutReferences(_context, _attachmentHashesToMaybeDelete);
+        }
+
         public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsOperationContext context)
         {
+            BeforeCommit();
             _replaced = true;
             var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction(context.PersistentContext);
             return new DocumentsTransaction(context, tx, _changes);
@@ -149,6 +161,13 @@ namespace Raven.Server.Documents
             if (doc == null)
                 return;
             InnerTransaction.ForgetAbout(doc.StorageId);
+        }
+
+        internal void CheckIfShouldDeleteAttachmentStream(Slice hash)
+        {
+            var clone = hash.Clone(InnerTransaction.Allocator);
+            _attachmentHashesToMaybeDelete ??= new();
+            _attachmentHashesToMaybeDelete.Add(clone);
         }
     }
 }

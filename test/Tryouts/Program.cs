@@ -32,7 +32,7 @@ namespace Tryouts
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
                     using (var test = new AttachmentsReplication(testOutputHelper))
                     {
-                        await test.ConflictOfAttachmentAndDocument3Stores();
+                        await test.ConflictOfAttachmentAndDocument3StoresDifferentLastModifiedOrder_RevisionsDisabled_MissingAttachmentLoop();
                     }
                 }
                 catch (Exception e)
