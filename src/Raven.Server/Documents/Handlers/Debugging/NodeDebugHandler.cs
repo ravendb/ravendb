@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
@@ -82,7 +84,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var dest = GetStringQueryString("url", false) ?? GetStringQueryString("node", false);
             var topology = ServerStore.GetClusterTopology();
-            var tasks = new List<Task<PingResult>>();
+            var tasks = new List<Task<IDynamicJsonValueConvertible>>();
             if (string.IsNullOrEmpty(dest))
             {
                 foreach (var node in topology.AllNodes)
@@ -103,43 +105,71 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 writer.WritePropertyName("Result");
 
                 writer.WriteStartArray();
+
                 while (tasks.Count > 0)
                 {
                     var task = await Task.WhenAny(tasks);
                     tasks.Remove(task);
                     context.Write(writer, task.Result.ToJson());
+
                     if (tasks.Count > 0)
-                    {
                         writer.WriteComma();
-                    }
+
                     await writer.MaybeFlushAsync();
                 }
+
                 writer.WriteEndArray();
                 writer.WriteEndObject();
+            }
+        }
+
+        private class SetupAliveCommand : RavenCommand
+        {
+            private readonly string _nodeUrl;
+
+            public SetupAliveCommand(string nodeUrl)
+            {
+                _nodeUrl = nodeUrl;
+            }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{_nodeUrl}/setup/alive";
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                };
+
+                return request;
             }
         }
 
         internal class PingResult : IDynamicJsonValueConvertible
         {
             public string Url;
+            public long SetupAliveTime;
             public long TcpInfoTime;
             public long SendTime;
             public long ReceiveTime;
-            public string Error;
-            public List<string> Log = null;
+            public List<string> Errors;
+            public string SetupAliveError;
+            public List<string> Log;
 
             public DynamicJsonValue ToJson()
             {
                 var djv = new DynamicJsonValue
                 {
                     [nameof(Url)] = Url,
+                    [nameof(SetupAliveTime)] = SetupAliveTime,
                     [nameof(TcpInfoTime)] = TcpInfoTime,
                     [nameof(SendTime)] = SendTime,
                     [nameof(ReceiveTime)] = ReceiveTime,
-                    [nameof(Error)] = Error
+                    [nameof(Errors)] = Errors,
+                    [nameof(SetupAliveError)] = SetupAliveError
                 };
 
-                if(Log != null)
+                if (Log != null)
                 {
                     djv[nameof(Log)] = new DynamicJsonArray(Log);
                 }
@@ -148,34 +178,46 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task<PingResult> PingOnce(string url)
+        private async Task<IDynamicJsonValueConvertible> PingOnce(string url)
         {
             var sp = Stopwatch.StartNew();
-            var result = new PingResult
-            {
-                Url = url
-            };
+            var log = new List<string>();
+            var errors = new List<string>();
+            var result = new PingResult { Url = url, };
 
-            using (var cts = new CancellationTokenSource(ServerStore.Engine.TcpConnectionTimeout))
+            try
             {
-                var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
-                result.TcpInfoTime = sp.ElapsedMilliseconds;
-                
+                var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+                var command = new SetupAliveCommand(url);
+
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var log = new List<string>();
+                    await requestExecutor.ExecuteAsync(command, context, token: cts.Token);
+                    result.SetupAliveTime = sp.ElapsedMilliseconds;
+                }
+            }
+            catch (Exception e)
+            {
+                result.SetupAliveError = e.ToString();
+            }
 
-                    using (await TcpUtils.ConnectSecuredTcpSocket(info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy,
-                        TcpConnectionHeaderMessage.OperationTypes.Ping, NegotiationCallback, context, ServerStore.Engine.TcpConnectionTimeout, log, cts.Token))
+            try
+            {
+                using (var cts = new CancellationTokenSource(ServerStore.Engine.TcpConnectionTimeout))
+                {
+                    var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
+                    result.TcpInfoTime = sp.ElapsedMilliseconds;
+
+                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
-                    }
+                        using (await TcpUtils.ConnectSecuredTcpSocket(info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy,
+                                   TcpConnectionHeaderMessage.OperationTypes.Ping, NegotiationCallback, context, ServerStore.Engine.TcpConnectionTimeout, log, cts.Token))
+                        {
+                        }
 
-                    result.Log = log;
-
-                    async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiationCallback(string curUrl, TcpConnectionInfo tcpInfo, Stream stream,
-                        JsonOperationContext ctx, List<string> logs = null)
-                    {
-                        try
+                        async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiationCallback(string curUrl, TcpConnectionInfo tcpInfo, Stream stream,
+                            JsonOperationContext ctx, List<string> logs = null)
                         {
                             var msg = new DynamicJsonValue
                             {
@@ -197,44 +239,49 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             {
                                 TcpConnectionHeaderResponse response = JsonDeserializationServer.TcpConnectionHeaderResponse(rawResponse);
                                 result.ReceiveTime = sp.ElapsedMilliseconds;
+                                string message;
                                 logs?.Add($"response received from url {curUrl} at {result.ReceiveTime} ms.");
 
                                 switch (response.Status)
                                 {
                                     case TcpConnectionStatus.Ok:
-                                        result.Error = null;
                                         logs?.Add($"Successfully negotiated with {url}.");
                                         break;
 
                                     case TcpConnectionStatus.AuthorizationFailed:
-                                        result.Error = $"Connection to {url} failed because of authorization failure: {response.Message}";
-                                        logs?.Add(result.Error);
-                                        throw new AuthorizationException(result.Error);
+                                        message = $"Connection to {url} failed because of authorization failure: {response.Message}";
+                                        errors.Add(message);
+                                        logs?.Add(message);
+                                        throw new AuthorizationException(message);
 
                                     case TcpConnectionStatus.TcpVersionMismatch:
-                                        result.Error = $"Connection to {url} failed because of mismatching tcp version: {response.Message}";
-                                        logs?.Add(result.Error);
-                                        throw new AuthorizationException(result.Error);
+                                        message = $"Connection to {url} failed because of mismatching tcp version: {response.Message}";
+                                        errors.Add(message);
+                                        logs?.Add(message);
+                                        throw new AuthorizationException(message);
 
                                     case TcpConnectionStatus.InvalidNetworkTopology:
-                                        result.Error = $"Connection to {url} failed because of {nameof(TcpConnectionStatus.InvalidNetworkTopology)} error: {response.Message}";
-                                        logs?.Add(result.Error);
-                                        throw new InvalidNetworkTopologyException(result.Error);
-
+                                        message = $"Connection to {url} failed because of {nameof(TcpConnectionStatus.InvalidNetworkTopology)} error: {response.Message}";
+                                        errors.Add(message);
+                                        logs?.Add(message);
+                                        throw new InvalidNetworkTopologyException(message);
                                 }
                             }
-                        }
-                        catch (Exception e)
-                        {
-                            result.Error = e.ToString();
-                            logs?.Add($"Error occurred while attempting to negotiate with the server. {e.Message}");
-                            throw;
-                        }
 
-                        return null;
+                            return null;
+                        }
                     }
                 }
             }
+            catch (Exception e)
+            {
+                result.Errors = errors;
+                result.Errors.Add(e.ToString());
+                log.Add($"Error occurred while attempting to negotiate with the server. {e.Message}");
+            }
+
+            result.Log = log;
+
             return result;
         }
     }
