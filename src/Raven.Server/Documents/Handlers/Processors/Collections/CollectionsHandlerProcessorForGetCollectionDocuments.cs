@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
                 long numberOfResults;
                 long totalDocumentsSizeInBytes;
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");

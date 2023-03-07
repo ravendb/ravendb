@@ -29,12 +29,12 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
         _streamsTempFile = new Lazy<StreamsTempFile>(() => ServerStore.GetTempFile($"{_databaseContext.DatabaseName}.attachment", "sharded", _databaseContext.Encrypted));
     }
 
-    public override async ValueTask SaveStreamAsync(JsonOperationContext context, Stream input)
+    public override async ValueTask SaveStreamAsync(JsonOperationContext context, Stream input, CancellationToken token)
     {
         Streams ??= new List<Stream>();
         var attachment = _streamsTempFile.Value.StartNewStream();
-        await input.CopyToAsync(attachment, Handler.AbortRequestToken);
-        await attachment.FlushAsync(Handler.AbortRequestToken);
+        await input.CopyToAsync(attachment, token);
+        await attachment.FlushAsync(token);
         Streams.Add(((StreamsTempFile.InnerStream)attachment).CreateReaderStream());
     }
 

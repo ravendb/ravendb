@@ -684,7 +684,7 @@ namespace Raven.Server.Web.System
             {
                 await database.PeriodicBackupRunner.DelayAsync(id, delay.Value, GetCurrentCertificate(), token.Token);
             }
-            
+
             NoContentStatus();
         }
 
@@ -1299,7 +1299,7 @@ namespace Raven.Server.Web.System
             }
             var (commandline, tmpFile) = configuration.GenerateExporterCommandLine();
             var processStartInfo = new ProcessStartInfo(dataExporter, commandline);
-            var token = new OperationCancelToken(database.DatabaseShutdown, HttpContext.RequestAborted);
+            var token = CreateOperationToken();
             Task timeout = null;
             if (configuration.Timeout.HasValue)
             {

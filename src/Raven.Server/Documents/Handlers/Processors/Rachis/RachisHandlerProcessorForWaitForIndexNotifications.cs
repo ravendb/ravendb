@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Commands;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Rachis
@@ -13,9 +14,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Rachis
 
         protected override async ValueTask WaitForCommandsAsync(TransactionOperationContext _, WaitForIndexNotificationRequest commands)
         {
-            foreach (var index in commands.RaftCommandIndexes)
+            using (var token = RequestHandler.CreateOperationToken())
             {
-                await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, HttpContext.RequestAborted);
+                foreach (var index in commands.RaftCommandIndexes)
+                {
+                    await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, token.Token);
+                }
             }
         }
     }

@@ -17,7 +17,6 @@ using Raven.Server.Smuggler;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Batches;
 
@@ -85,7 +84,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         }
     }
 
-    public abstract ValueTask SaveStreamAsync(JsonOperationContext context, Stream input);
+    public abstract ValueTask SaveStreamAsync(JsonOperationContext context, Stream input, CancellationToken token);
 
     public virtual Task<BatchRequestParser.CommandData> ReadCommandAsync(
         JsonOperationContext ctx,
@@ -99,7 +98,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         return BatchRequestParser.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, token);
     }
 
-    public async Task BuildCommandsAsync(JsonOperationContext context, Stream stream, char separator)
+    public async Task BuildCommandsAsync(JsonOperationContext context, Stream stream, char separator, CancellationToken token)
     {
         var state = new JsonParserState();
         using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
@@ -109,13 +108,13 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false, DatabaseItemType.Attachments))
         {
             while (parser.Read() == false)
-                await BatchRequestParser.RefillParserBuffer(stream, buffer, parser);
+                await BatchRequestParser.RefillParserBuffer(stream, buffer, parser, token);
 
             if (state.CurrentTokenType != JsonParserToken.StartObject)
                 BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.StartObject, state);
 
             while (parser.Read() == false)
-                await BatchRequestParser.RefillParserBuffer(stream, buffer, parser);
+                await BatchRequestParser.RefillParserBuffer(stream, buffer, parser, token);
 
             if (state.CurrentTokenType != JsonParserToken.String)
                 BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -124,7 +123,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
                 BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.String, state);
 
             while (parser.Read() == false)
-                await BatchRequestParser.RefillParserBuffer(stream, buffer, parser);
+                await BatchRequestParser.RefillParserBuffer(stream, buffer, parser, token);
 
             if (state.CurrentTokenType != JsonParserToken.StartArray)
                 BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.StartArray, state);
@@ -132,7 +131,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
             while (true)
             {
                 while (parser.Read() == false)
-                    await BatchRequestParser.RefillParserBuffer(stream, buffer, parser);
+                    await BatchRequestParser.RefillParserBuffer(stream, buffer, parser, token);
 
                 if (state.CurrentTokenType == JsonParserToken.EndArray)
                     break;
@@ -143,7 +142,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
                     _commands = BatchRequestParser.IncreaseSizeOfCommandsBuffer(_index, _commands);
                 }
 
-                var commandData = await ReadCommandAsync(context, stream, state, parser, buffer, modifier, Handler.AbortRequestToken);
+                var commandData = await ReadCommandAsync(context, stream, state, parser, buffer, modifier, token);
 
                 if (commandData.Type == CommandType.PATCH)
                 {
@@ -213,7 +212,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         return commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[^1] == identityPartsSeparator;
     }
 
-    public async Task ParseMultipart(JsonOperationContext context, Stream stream, string contentType, char separator)
+    public async Task ParseMultipart(JsonOperationContext context, Stream stream, string contentType, char separator, CancellationToken token)
     {
         var boundary = MultipartRequestHelper.GetBoundary(
             MediaTypeHeaderValue.Parse(contentType),
@@ -221,18 +220,18 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         var reader = new MultipartReader(boundary, stream);
         for (var i = 0; i < int.MaxValue; i++)
         {
-            var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
+            var section = await reader.ReadNextSectionAsync(token).ConfigureAwait(false);
             if (section == null)
                 break;
 
             var bodyStream = Handler.GetBodyStream(section);
             if (i == 0)
             {
-                await BuildCommandsAsync(context, bodyStream, separator);
+                await BuildCommandsAsync(context, bodyStream, separator, token);
                 continue;
             }
 
-            await SaveStreamAsync(context, bodyStream);
+            await SaveStreamAsync(context, bodyStream, token);
         }
     }
 

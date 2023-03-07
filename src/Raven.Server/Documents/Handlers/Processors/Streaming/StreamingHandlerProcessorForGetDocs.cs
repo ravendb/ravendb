@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Streaming;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Enumerators;
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         }
 
         protected override async ValueTask GetDocumentsAndWriteAsync(DocumentsOperationContext context, int start, int pageSize, string startsWith,
-            string excludes, string matches, string startAfter)
+            string excludes, string matches, string startAfter, OperationCancelToken token)
         {
             using (context.OpenReadTransaction())
             {
@@ -55,8 +56,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     },
                     initialState);
 
-                using (var token = RequestHandler.CreateOperationToken())
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
