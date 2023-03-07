@@ -202,7 +202,7 @@ namespace Voron.Data.Tables
 
             public delegate ByteStringContext.Scope IndexEntryKeyGenerator(Transaction tx, ref TableValueReader value, out Slice slice);
 
-            public delegate void OnIndexEntryChangedDelegate(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue);
+            public delegate void OnIndexEntryChangedDelegate(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue);
 
             public OnIndexEntryChangedDelegate OnEntryChanged;
 
@@ -228,13 +228,13 @@ namespace Voron.Data.Tables
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnIndexEntryChanged(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+            public void OnIndexEntryChanged(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
             {
-                OnEntryChanged?.Invoke(tx, key, oldValue, newValue);
+                OnEntryChanged?.Invoke(tx, key, ref oldValue, ref newValue);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnIndexEntryChanged(Transaction tx, Slice key, TableValueReader oldValue, TableValueBuilder newValue)
+            public void OnIndexEntryChanged(Transaction tx, Slice key, ref TableValueReader oldValue, TableValueBuilder newValue)
             {
                 if (OnEntryChanged == null)
                     return;
@@ -245,7 +245,7 @@ namespace Voron.Data.Tables
 
                     newValue.CopyTo(buffer.Ptr);
                     var reader = newValue.CreateReader(buffer.Ptr);
-                    OnIndexEntryChanged(tx, key, oldValue, reader);
+                    OnIndexEntryChanged(tx, key, ref oldValue, ref reader);
                 }
             }
 

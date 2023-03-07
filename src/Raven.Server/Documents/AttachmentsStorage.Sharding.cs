@@ -12,6 +12,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Attachments;
+using Voron.Util;
 
 namespace Raven.Server.Documents
 {
@@ -42,9 +43,9 @@ namespace Raven.Server.Documents
                 (int)AttachmentsTable.Etag, ref tvr, out slice);
         }
 
-        internal static void UpdateBucketStatsForAttachments(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+        internal static void UpdateBucketStatsForAttachments(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
         {
-            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)AttachmentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)AttachmentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
         }
 
         private void UpdateBucketStatsOnPutOrDeleteStream(DocumentsOperationContext context, Slice attachmentKey, long sizeChange)
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents
 
             using (GetBucketFromAttachmentKey(context, attachmentKey, out var bucketSlice))
             {
-                ShardedDocumentsStorage.UpdateBucketStatsInternal(context.Transaction.InnerTransaction, key: bucketSlice, value: default, changeVectorIndex: -1, sizeChange: sizeChange);
+                ShardedDocumentsStorage.UpdateBucketStatsInternal(context.Transaction.InnerTransaction, key: bucketSlice, value: ref TableValueReaderUtils.EmptyReader, changeVectorIndex: -1, sizeChange: sizeChange);
             }
         }
 

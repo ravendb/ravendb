@@ -424,7 +424,7 @@ namespace FastTests.Voron.Tables
             return scope;
         }
 
-        internal static void UpdateStats(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+        internal static void UpdateStats(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
         {
             var tree = tx.ReadTree(StatsTree);
             var bucket = *(int*)key.Content.Ptr;
