@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static.Sharding;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Sharding;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -60,7 +61,8 @@ public class ShardedMapReduceQueryResultsMerger
 
     protected virtual List<BlittableJsonReaderObject> AggregateForStaticMapReduce(IndexInformationHolder index)
     {
-        using (CurrentIndexingScope.Current = new OrchestratorIndexingScope())
+        using (var unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Sharded//Indexes//{index.Name}"))
+        using (CurrentIndexingScope.Current = new OrchestratorIndexingScope(Context, unmanagedBuffersPool))
         {
             var compiled = ((StaticIndexInformationHolder)index).Compiled;
 
