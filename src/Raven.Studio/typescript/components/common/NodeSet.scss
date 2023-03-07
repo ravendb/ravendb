@@ -6,6 +6,11 @@
     padding: bs5variables.$gutter-xxs bs5variables.$gutter-xs;
     border-left: 4px solid;
     border-radius: bs5variables.$border-radius;
+    
+    .node-set-list {
+        display: flex;
+        flex-direction: row;
+    }
 
     .node-set-label {
         margin-right: bs5variables.$gutter-xs;

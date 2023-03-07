@@ -76,42 +76,38 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                 return (
                     <div key={nodeId}>
                         <NodeSet color="shard" className="m-1">
+                            <Label className="m-0">
+                                <NodeSetLabel icon="node" color="node">
+                                    {nodeTag}
+                                    <Checkbox
+                                        toggleSelection={() => toggleNode(nodeTag)}
+                                        selected={isNodeSelected(nodeTag)}
+                                    />
+                                </NodeSetLabel>
+                            </Label>
+
                             <NodeSetListCard>
-                                <NodeSetItem icon="node" color="node">
-                                    <Label>
-                                        {nodeTag}
-                                        <Checkbox
-                                            toggleSelection={() => toggleNode(nodeTag)}
-                                            selected={isNodeSelected(nodeTag)}
-                                        />
-                                    </Label>
-                                </NodeSetItem>
-                            </NodeSetListCard>
+                                {locations
+                                    .filter((x) => x.nodeTag === nodeTag)
+                                    .map((location) => {
+                                        if (location.shardNumber == null) {
+                                            return null;
+                                        }
 
-                            {locations
-                                .filter((x) => x.nodeTag === nodeTag)
-                                .map((location) => {
-                                    if (location.shardNumber == null) {
-                                        return null;
-                                    }
-
-                                    return (
-                                        <NodeSetLabel
-                                            key={nodeId + "-shard-" + location.shardNumber}
-                                            color="shard"
-                                            icon="shard"
-                                        >
-                                            <Label>
-                                                {location.shardNumber}
-                                                <Checkbox
-                                                    selected={isShardSelected(location)}
-                                                    toggleSelection={() => toggleShard(location)}
-                                                    color="shard"
-                                                />
+                                        return (
+                                            <Label key={nodeId + "-shard-" + location.shardNumber} className="m-0">
+                                                <NodeSetItem color="shard" icon="shard">
+                                                    {location.shardNumber}
+                                                    <Checkbox
+                                                        selected={isShardSelected(location)}
+                                                        toggleSelection={() => toggleShard(location)}
+                                                        color="shard"
+                                                    />
+                                                </NodeSetItem>
                                             </Label>
-                                        </NodeSetLabel>
-                                    );
-                                })}
+                                        );
+                                    })}
+                            </NodeSetListCard>
                         </NodeSet>
                     </div>
                 );
