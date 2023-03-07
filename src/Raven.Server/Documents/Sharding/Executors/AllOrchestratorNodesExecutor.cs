@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -20,7 +19,7 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
 
     private ClusterTopology _clusterTopology;
 
-    private readonly ConcurrentDictionary<string, RequestExecutor> _current = new ConcurrentDictionary<string, RequestExecutor>();
+    private Dictionary<string, RequestExecutor> _current = new Dictionary<string, RequestExecutor>(StringComparer.OrdinalIgnoreCase);
     private AllNodesExecutorState _state;
 
     // this executor will contact every single node in the cluster
@@ -71,41 +70,62 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
     private void UpdateExecutors(ClusterTopology cluster, OrchestratorTopology orchestrator)
     {
         var disposables = new List<IDisposable>();
-        lock (this)
+
+        var oldCurrent = _current;
+        var newCurrent = new Dictionary<string, RequestExecutor>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var node in cluster.AllNodes)
         {
-            foreach (var node in cluster.AllNodes)
+            var tag = node.Key;
+            var url = node.Value;
+
+            if (orchestrator.AllNodes.Contains(tag, StringComparer.OrdinalIgnoreCase) == false)
+                continue;
+
+            if (oldCurrent.TryGetValue(tag, out var requestExecutor) == false)
             {
-                var tag = node.Key;
-                var url = node.Value;
-
-                if (orchestrator.AllNodes.Contains(tag) == false)
-                {
-                    if (_current.TryRemove(tag, out var re))
-                        disposables.Add(re);
-
-                    continue;
-                }
-
-                if (_current.TryGetValue(tag, out var requestExecutor) == false)
-                {
-                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
-                        DocumentConventions.DefaultForServer);
-                    continue;
-                }
-
-                if (string.Equals(requestExecutor.Url, url, StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    disposables.Add(requestExecutor); // will dispose outside the lock
-                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
-                        DocumentConventions.DefaultForServer);
-                }
+                newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
+                    DocumentConventions.DefaultForServer);
+                continue;
             }
 
+            if (string.Equals(requestExecutor.Url, url, StringComparison.OrdinalIgnoreCase) == false)
+            {
+                disposables.Add(requestExecutor); // will dispose outside the lock
+                newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
+                    DocumentConventions.DefaultForServer);
+                continue;
+            }
+
+            if (_store.Server.Certificate.Certificate?.Thumbprint != requestExecutor.Certificate?.Thumbprint)
+            {
+                disposables.Add(requestExecutor);
+                newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
+                    DocumentConventions.DefaultForServer);
+                continue;
+            }
+
+            newCurrent[tag] = requestExecutor;
+        }
+
+        lock (this)
+        {
             _state = new AllNodesExecutorState
             {
                 FullRange = Enumerable.Range(0, orchestrator.Count).ToArray(),
-                Executors = _current.Values.ToArray()
+                Executors = newCurrent.Values.ToArray()
             };
+
+            _current = newCurrent;
+        }
+
+        foreach (var tag in oldCurrent.Keys)
+        {
+            if (orchestrator.AllNodes.Contains(tag, StringComparer.OrdinalIgnoreCase))
+                continue;
+
+            if (oldCurrent.TryGetValue(tag, out var re))
+                disposables.Add(re);
         }
 
         foreach (var disposable in disposables)
@@ -147,7 +167,6 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
 
     protected override void OnCertificateChange(object sender, EventArgs e)
     {
-        Dispose();
         UpdateExecutors(_clusterTopology, _record.Sharding.Orchestrator.Topology);
     }
 
