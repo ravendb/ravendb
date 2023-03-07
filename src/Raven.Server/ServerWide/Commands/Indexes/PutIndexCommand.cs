@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             // for deserialization
         }
 
-        public PutIndexCommand(IndexDefinition definition, string databaseName, string source, DateTime createdAt, string uniqueRequestId, int revisionsToKeep, IndexDeploymentMode deploymentMode, string certificateThumbprint)
+        public PutIndexCommand(IndexDefinition definition, string databaseName, string source, DateTime createdAt, string uniqueRequestId, int revisionsToKeep, IndexDeploymentMode deploymentMode)
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
@@ -28,7 +28,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             CreatedAt = createdAt;
             RevisionsToKeep = revisionsToKeep;
             DefaultDeploymentMode = deploymentMode;
-            CertificateThumbprint = certificateThumbprint;
         }
 
         public DateTime CreatedAt { get; set; }
@@ -36,8 +35,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         public string Source { get; set; }
         
         public int RevisionsToKeep { get; set; }
-        
-        public string CertificateThumbprint { get; set; }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
@@ -50,7 +47,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     throw new InvalidOperationException($"Can not add index: {Definition.Name} because an index with the same name but different casing already exist");
                 }
 
-                record.AddIndex(Definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultDeploymentMode ?? IndexDeploymentMode.Parallel, CertificateThumbprint);
+                record.AddIndex(Definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultDeploymentMode ?? IndexDeploymentMode.Parallel);
 
             }
             catch (Exception e)
@@ -66,7 +63,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(CreatedAt)] = CreatedAt;
             json[nameof(RevisionsToKeep)] = RevisionsToKeep;
             json[nameof(DefaultDeploymentMode)] = DefaultDeploymentMode;
-            json[nameof(CertificateThumbprint)] = CertificateThumbprint;
         }
 
         public override string AdditionalDebugInformation(Exception exception)

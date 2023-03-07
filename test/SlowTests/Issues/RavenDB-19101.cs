@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -6,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using HttpMethod = System.Net.Http.HttpMethod;
@@ -83,9 +85,51 @@ public class RavenDB_19101: RavenTestBase
 
                 var firstHistory = history.FirstOrDefault() as BlittableJsonReaderObject;
 
-                firstHistory.TryGet("CertificateThumbprint", out string certificateThumbprint);
+                firstHistory.TryGet("Source", out string source);
+                
+                var expectedSource = $"{Environment.MachineName} | {adminCert.Subject} [{adminCert.Thumbprint}]";
+                
+                Assert.Equal(expectedSource, source);
+            }
+        }
+    }
 
-                Assert.Equal(store.Certificate?.Thumbprint, certificateThumbprint);
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void CheckIfSourceDoesNotContainCertificateInfoWhenNotUsingAny()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User() { Name = "CoolName" });
+
+                session.SaveChanges();
+
+                var index = new DummyIndex();
+
+                index.Execute(store);
+                Indexes.WaitForIndexing(store);
+
+                session.SaveChanges();
+            }
+
+            using (var commands = store.Commands())
+            {
+                var cmd = new GetCertificateFromIndexCommand();
+                commands.Execute(cmd);
+                var res = cmd.Result;
+
+                var blit = res as BlittableJsonReaderObject;
+
+                blit.TryGet("History", out BlittableJsonReaderArray history);
+
+                var firstHistory = history.FirstOrDefault() as BlittableJsonReaderObject;
+
+                firstHistory.TryGet("Source", out string source);
+                
+                var expectedSource = $"{Environment.MachineName}";
+
+                Assert.Equal(expectedSource, source);
             }
         }
     }

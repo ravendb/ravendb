@@ -154,7 +154,7 @@ namespace Raven.Client.ServerWide
             Analyzers?.Remove(sorterName);
         }
 
-        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, IndexDeploymentMode globalDeploymentMode, string certificateThumbprint)
+        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, IndexDeploymentMode globalDeploymentMode)
         {
             var lockMode = IndexLockMode.Unlock;
 
@@ -209,7 +209,7 @@ namespace Raven.Client.ServerWide
             Indexes[definition.Name] = definition;
             var isRolling = IsRolling(definition.DeploymentMode, globalDeploymentMode);
             
-            AddIndexHistory(definition, source, revisionsToKeep, createdAt, certificateThumbprint);
+            AddIndexHistory(definition, source, revisionsToKeep, createdAt);
             
             if (isRolling)
             {
@@ -223,7 +223,7 @@ namespace Raven.Client.ServerWide
             }
         }
 
-        internal void AddIndexHistory(IndexDefinition definition, string source, int revisionsToKeep, DateTime createdAt, string certificateThumbprint, Dictionary<string, RollingIndexDeployment> rollingIndexDeployment = null, bool isFromCommand = false, bool isRolling = false)
+        internal void AddIndexHistory(IndexDefinition definition, string source, int revisionsToKeep, DateTime createdAt, Dictionary<string, RollingIndexDeployment> rollingIndexDeployment = null, bool isFromCommand = false, bool isRolling = false)
         {
             IndexesHistory ??= new();
             List<IndexHistoryEntry> history;
@@ -245,7 +245,7 @@ namespace Raven.Client.ServerWide
             
             if (isNewIndexHistory)
             {
-                var ihe = new IndexHistoryEntry {Definition = definition, CreatedAt = createdAt, Source = source, CertificateThumbprint = certificateThumbprint};
+                var ihe = new IndexHistoryEntry {Definition = definition, CreatedAt = createdAt, Source = source};
                 if (isFromCommand)
                     history.Add(ihe);
                 else
@@ -257,7 +257,6 @@ namespace Raven.Client.ServerWide
                 latestVersion.CreatedAt = createdAt;
                 latestVersion.Source = source;
                 latestVersion.RollingDeployment = rollingIndexDeployment;
-                latestVersion.CertificateThumbprint = certificateThumbprint;
             }
 
             if (history.Count > revisionsToKeep)
@@ -453,8 +452,6 @@ namespace Raven.Client.ServerWide
         public string Source { get; set; }
         
         public DateTime CreatedAt { get; set; }
-        
-        public string CertificateThumbprint { get; set; }
         
         public Dictionary<string, RollingIndexDeployment> RollingDeployment { get; set; }
     }
