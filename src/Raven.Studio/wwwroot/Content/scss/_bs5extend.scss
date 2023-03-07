@@ -1,15 +1,3 @@
-.modal-content,
-.panel,
-.dropdown-menu,
-.card,
-.popup {
-    --text-color: #{$text-color};
-    --text-muted: #{$text-muted-color};
-    --text-emphasis: #{$text-emphasis-color};
-
-    color: var(--text-color);
-}
-
 // TODO replace all panels widh cards -> remove css
 .panel {
     background-color: $panel-bg-1;

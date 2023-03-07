@@ -105,3 +105,16 @@ textarea.form-control {
 
 // Custom Utilities
 @import "../scss/layout-tools.scss";
+
+// CSS custom properties for font color (outside .bs5 to fix regressions)
+.modal-content,
+.panel,
+.dropdown-menu,
+.card,
+.popup {
+    --text-color: #{$text-color};
+    --text-muted: #{$text-muted-color};
+    --text-emphasis: #{$text-emphasis-color};
+
+    color: var(--text-color);
+}
