@@ -18,7 +18,8 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Output reduce to collection isn't supported")]
         public void ShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -76,7 +77,7 @@ namespace SlowTests.Issues
 
         // RavenDB-14884
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanCompileScriptWithSwitch(Options options)
         {
             using (var store = GetDocumentStore(options))
