@@ -74,14 +74,14 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     var ip = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
 
-                    var source = $"{ip}";
-                    
                     var clientCert = GetCurrentCertificate();
+                    
+                    string source;
 
                     if (clientCert != null)
-                    {
                         source = $"{ip} | {clientCert.Subject} [{clientCert.Thumbprint}]";
-                    }
+                    else
+                        source = $"{ip}";
                     
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
