@@ -16,6 +16,7 @@ using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Util;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Tables
@@ -618,7 +619,7 @@ namespace Voron.Data.Tables
                 var indexTree = GetTree(dynamicKeyIndexDef);
                 using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
                 {
-                    dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: value, newValue: default(TableValueReader));
+                    dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: ref value, newValue: ref TableValueReaderUtils.EmptyReader);
 
                     var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
                     if (fst.Delete(id).NumberOfEntriesDeleted == 0)
@@ -854,7 +855,7 @@ namespace Voron.Data.Tables
                     using (dynamicKeyIndexDef.GetValue(_tx, ref oldVer, out Slice oldVal))
                     using (dynamicKeyIndexDef.GetValue(_tx, newVer, out Slice newVal))
                     {
-                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, key: newVal, oldValue: oldVer, newValue: newVer);
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, key: newVal, oldValue: ref oldVer, newValue: newVer);
 
                         if (SliceComparer.AreEqual(oldVal, newVal) == false ||
                             forceUpdate)
@@ -987,7 +988,7 @@ namespace Voron.Data.Tables
                 {
                     using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
                     {
-                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: default, newValue: value);
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: ref TableValueReaderUtils.EmptyReader, newValue: ref value);
 
                         var indexTree = GetTree(dynamicKeyIndexDef);
                         var index = GetFixedSizeTree(indexTree, val, 0, dynamicKeyIndexDef.IsGlobal);

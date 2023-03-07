@@ -45,9 +45,9 @@ namespace Raven.Server.Documents
             return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)CounterTombstonesTable.CounterTombstoneKey, (int)CounterTombstonesTable.Etag, ref tvr, out slice);
         }
 
-        internal static void UpdateBucketStatsForCounters(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+        internal static void UpdateBucketStatsForCounters(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
         {
-            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)CountersTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)CountersTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
         }
     }
 }

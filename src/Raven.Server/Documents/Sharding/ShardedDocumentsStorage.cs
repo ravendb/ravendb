@@ -13,6 +13,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
+using Voron.Util;
 using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Conflicts;
 using static Raven.Server.Documents.Schemas.Counters;
@@ -196,7 +197,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         return scope;
     }
 
-    internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+    internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
     {
         int numOfDocsChanged = 0;
         if (oldValue.Size == 0)
@@ -210,10 +211,10 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             numOfDocsChanged = -1;
         }
 
-        UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)DocumentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size, numOfDocsChanged);
+        UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)DocumentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size, numOfDocsChanged);
     }
 
-    internal static void UpdateBucketStatsForTombstones(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+    internal static void UpdateBucketStatsForTombstones(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
     {
         if (newValue.Size > 0)
         {
@@ -221,15 +222,15 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             if (flags.Contain(DocumentFlags.Artificial))
             {
                 // we don't want to update the merged-cv of the bucket for Artificial tombstones
-                UpdateBucketStatsInternal(tx, key, value: default, changeVectorIndex: -1, sizeChange: newValue.Size - oldValue.Size);
+                UpdateBucketStatsInternal(tx, key, ref TableValueReaderUtils.EmptyReader, changeVectorIndex: -1, sizeChange: newValue.Size - oldValue.Size);
                 return;
             }
         }
 
-        UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)TombstoneTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+        UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)TombstoneTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
     }
 
-    internal static void UpdateBucketStatsInternal(Transaction tx, Slice key, TableValueReader value, int changeVectorIndex, long sizeChange, int numOfDocsChanged = 0)
+    internal static void UpdateBucketStatsInternal(Transaction tx, Slice key, ref TableValueReader value, int changeVectorIndex, long sizeChange, int numOfDocsChanged = 0)
     {
         if (tx.Owner is not ShardedDocumentDatabase documentDatabase)
             return;
