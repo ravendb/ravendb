@@ -3,31 +3,23 @@ using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Voron;
+using Voron.Data.Tables;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Sharding
 {
     internal unsafe class BucketStatsHolder
     {
-        private readonly Dictionary<int, Documents.BucketStats> _values = new();
-        private readonly Dictionary<int, ChangeVector> _mergedChangeVectors = new();
+        private readonly ShardedDocumentsStorage _storage;
+        private readonly Dictionary<int, Documents.BucketStats> _values;
+        private readonly Dictionary<int, ChangeVector> _mergedChangeVectors;
+        private DocumentsOperationContext _ctx;
 
-        public void UpdateBucket(IChangeVectorOperationContext ctx, int bucket, long nowTicks, long sizeChange, long numOfDocsChanged, ChangeVector changeVector)
+        public BucketStatsHolder(ShardedDocumentsStorage storage)
         {
-            UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged);
-
-            ChangeVector mergedCv;
-            if (_mergedChangeVectors.TryGetValue(bucket, out var currentMergedCv) == false)
-            {
-                mergedCv = changeVector;
-            }
-            else
-            {
-                var mergedCvStr = ChangeVectorUtils.MergeVectors(currentMergedCv, changeVector);
-                mergedCv = ctx.GetChangeVector(mergedCvStr);
-            }
-
-            _mergedChangeVectors[bucket] = mergedCv;
+            _storage = storage;
+            _values = new Dictionary<int, Documents.BucketStats>();
+            _mergedChangeVectors = new Dictionary<int, ChangeVector>();
         }
 
         public void UpdateBucket(int bucket, long nowTicks, long sizeChange, long numOfDocsChanged)
@@ -39,6 +31,20 @@ namespace Raven.Server.Documents.Sharding
             bucketStats.LastModifiedTicks = nowTicks;
 
             _values[bucket] = bucketStats;
+        }
+
+        public void UpdateBucket(int bucket, long nowTicks, long sizeChange, long numOfDocsChanged, int changeVectorIndex, ref TableValueReader value)
+        {
+            UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged);
+
+            var changeVector = TableValueToChangeVector(changeVectorIndex, ref value);
+            if (_mergedChangeVectors.TryGetValue(bucket, out var currentMergedCv))
+            {
+                var mergedCvStr = ChangeVectorUtils.MergeVectors(currentMergedCv, changeVector);
+                changeVector = _ctx.GetChangeVector(mergedCvStr);
+            }
+
+            _mergedChangeVectors[bucket] = changeVector;
         }
 
         public void UpdateBucketStatsTreeBeforeCommit(Transaction tx)
@@ -69,10 +75,7 @@ namespace Raven.Server.Documents.Sharding
                         stats.NumberOfDocuments += inMemoryStats.NumberOfDocuments;
                         stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
 
-                        if (readResult.Reader.Length > bucketStatsSize)
-                        {
-                            cvScope = Slice.From(tx.Allocator, readResult.Reader.Base + bucketStatsSize, readResult.Reader.Length - bucketStatsSize, out cvSlice);
-                        }
+                        cvScope = stats.GetMergedChangeVector(tx.Allocator, readResult.Reader, out cvSlice);
                     }
 
                     if (stats.Size == 0 && stats.NumberOfDocuments == 0)
@@ -103,8 +106,18 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
+            _ctx?.Dispose();
+            _ctx = null;
             _values.Clear();
             _mergedChangeVectors.Clear();
+        }
+
+        public ChangeVector TableValueToChangeVector(int changeVectorIndex, ref TableValueReader value)
+        {
+            if (_ctx == null)
+                _storage.ContextPool.AllocateOperationContext(out _ctx);
+
+            return DocumentsStorage.TableValueToChangeVector(_ctx, changeVectorIndex, ref value);
         }
     }
 }

@@ -7,7 +7,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -45,7 +44,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         : base(documentDatabase, addToInitLog)
     {
         _documentDatabase = documentDatabase;
-        _bucketStats = new BucketStatsHolder();
+        _bucketStats = new BucketStatsHolder(this);
 
         OnBeforeCommit += _bucketStats.UpdateBucketStatsTreeBeforeCommit;
     }
@@ -231,19 +230,16 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         var inMemoryBucketStats = documentDatabase.ShardedDocumentsStorage._bucketStats;
         if (value.Size == 0)
     {
-            // item was deleted, no need to update merged-cv
+            // item deletion or put/delete attachment stream
+            // in both cases there's no need to update the merged-cv
             inMemoryBucketStats.UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged);
             return;
                 }
 
         // item was inserted/updated 
         // need to update the merged-cv of the bucket
-        using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                {
-            var changeVector = TableValueToChangeVector(ctx, changeVectorIndex, ref value);
-            inMemoryBucketStats.UpdateBucket(ctx, bucket, nowTicks, sizeChange, numOfDocsChanged, changeVector);
-                }
-            }
+        inMemoryBucketStats.UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged, changeVectorIndex, ref value);
+    }
 
     public ChangeVector GetLastChangeVectorInBucket(DocumentsOperationContext context, int bucket)
     {
