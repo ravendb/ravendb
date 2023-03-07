@@ -33,7 +33,7 @@ public class PutIndexHistoryCommand : UpdateDatabaseCommand
         {
             foreach (var entry in IndexHistory)
             {
-                record.AddIndexHistory(entry.Definition, entry.Source, RevisionsToKeep, entry.CreatedAt, rollingIndexDeployment: entry.RollingDeployment, isFromCommand: true, certificateThumbprint: entry.CertificateThumbprint);
+                record.AddIndexHistory(entry.Definition, entry.Source, RevisionsToKeep, entry.CreatedAt, rollingIndexDeployment: entry.RollingDeployment, isFromCommand: true);
             }
         }
     }

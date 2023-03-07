@@ -14,8 +14,7 @@ namespace Raven.Server.Extensions
             {
                 [nameof(IndexHistoryEntry.Source)] = entry.Source, 
                 [nameof(IndexHistoryEntry.CreatedAt)] = entry.CreatedAt,
-                [nameof(IndexHistoryEntry.Definition)] = entry.Definition.ToJson(),
-                [nameof(IndexHistoryEntry.CertificateThumbprint)] = entry.CertificateThumbprint
+                [nameof(IndexHistoryEntry.Definition)] = entry.Definition.ToJson()
             };
             
             if (entry.RollingDeployment != null)

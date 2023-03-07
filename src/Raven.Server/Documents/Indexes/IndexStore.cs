@@ -895,7 +895,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task<long> CreateIndexInternal(IndexDefinition definition, string raftRequestId, string certificateThumbprint, string source = null)
+        public async Task<long> CreateIndexInternal(IndexDefinition definition, string raftRequestId, string source = null)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -909,8 +909,7 @@ namespace Raven.Server.Documents.Indexes
                 _documentDatabase.Time.GetUtcNow(),
                 raftRequestId,
                 _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber,
-                _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode,
-                certificateThumbprint
+                _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode
             );
 
             long index = 0;

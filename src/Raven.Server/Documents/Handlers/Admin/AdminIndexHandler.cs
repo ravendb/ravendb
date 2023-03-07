@@ -72,14 +72,21 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                     indexDefinition.Name = indexDefinition.Name?.Trim();
 
-                    var source = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
+                    var ip = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
+
+                    var source = $"{ip}";
                     
                     var clientCert = GetCurrentCertificate();
 
+                    if (clientCert != null)
+                    {
+                        source = $"{ip} | {clientCert.Subject} [{clientCert.Thumbprint}]";
+                    }
+                    
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
                         var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
-                        auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {source} at {DateTime.UtcNow}");
+                        auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {ip} at {DateTime.UtcNow}");
                     }
 
                     if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
@@ -107,7 +114,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    var index = await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", clientCert?.Thumbprint, source);
+                    var index = await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
 
                     createdIndexes.Add((indexDefinition.Name, index));
                 }
