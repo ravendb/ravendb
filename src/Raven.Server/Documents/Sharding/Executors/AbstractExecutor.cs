@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Operations;
@@ -22,11 +23,14 @@ namespace Raven.Server.Documents.Sharding.Executors
 
 public abstract class AbstractExecutor : IDisposable
 {
+    protected readonly ServerStore ServerStore;
+
     private Dictionary<int, Exception> _exceptions;
 
-    protected AbstractExecutor(ServerStore store)
+    protected AbstractExecutor([NotNull] ServerStore store)
     {
-        store.Server.ServerCertificateChanged += OnCertificateChange;
+        ServerStore = store ?? throw new ArgumentNullException(nameof(store));
+        ServerStore.Server.ServerCertificateChanged += OnCertificateChange;
     }
 
     public abstract RequestExecutor GetRequestExecutorAt(int position);
