@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,24 +23,26 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Output reduce to collection isn't supported")]
+
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = x =>
             {
-                ModifyDocumentStore = x =>
+                x.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
-                    x.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                    CustomizeJsonDeserializer = s =>
                     {
-                        CustomizeJsonDeserializer = s =>
-                        {
-                            s.Converters.Add(new IntIdConverter<UserAuth>((o, id) => o.Id = id));
-                            s.Converters.Add(new IntIdConverter<UserAuthDetails>((o, id) => o.Id = id));
-                        }
-                    };
-                    x.Conventions.FindIdentityProperty = conventionsFindIdentityProperty;
-                }
-            }))
+                        s.Converters.Add(new IntIdConverter<UserAuth>((o, id) => o.Id = id));
+                        s.Converters.Add(new IntIdConverter<UserAuthDetails>((o, id) => o.Id = id));
+                    }
+                };
+                x.Conventions.FindIdentityProperty = conventionsFindIdentityProperty;
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 new UserAndUserAuthDetails_Index().Execute(store);
                 new UserAndUserAuthDetails_JavascriptIndex().Execute(store);

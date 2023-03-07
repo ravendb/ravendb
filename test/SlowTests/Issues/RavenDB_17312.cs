@@ -17,10 +17,11 @@ public class RavenDB_17312 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-    public void JintPropertyAccessorMustGuaranteeTheOrderOfProperties()
+    [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void JintPropertyAccessorMustGuaranteeTheOrderOfProperties(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             store.ExecuteIndex(new UsersReducedByNameAndLastName());
 
@@ -44,10 +45,11 @@ public class RavenDB_17312 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-    public void PropertyAccessorMustGuaranteeTheOrderOfPropertiesMultiMapIndex()
+    [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void PropertyAccessorMustGuaranteeTheOrderOfPropertiesMultiMapIndex(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             store.ExecuteIndex(new UsersAndEmployeesReducedByNameAndLastNameJs());
             store.ExecuteIndex(new UsersAndEmployeesReducedByNameAndLastNameCSharp());
@@ -93,10 +95,11 @@ public class RavenDB_17312 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-    public void WillNotThrowOnJsIndexIfCannotExtractFieldNameFromMapDefinitionButOneFieldWasSpecifiedInOptions()
+    [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void WillNotThrowOnJsIndexIfCannotExtractFieldNameFromMapDefinitionButOneFieldWasSpecifiedInOptions(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             store.ExecuteIndex(new UsersReducedByNameAndLastNameResultsPushedToJsArray());
 
@@ -120,8 +123,9 @@ public class RavenDB_17312 : RavenTestBase
         }
     }
 
-    [Fact]
-    public void BackwardCompatibilityWithIndexVersion54001()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void BackwardCompatibilityWithIndexVersion54001(Options options)
     {
         var backupPath = NewDataPath(forceCreateDir: true);
         var fullBackupPath = Path.Combine(backupPath, "54_001_index_ver.ravendb-snapshot");
@@ -132,7 +136,7 @@ public class RavenDB_17312 : RavenTestBase
             stream.CopyTo(file);
         }
 
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             var databaseName = GetDatabaseName();
 
