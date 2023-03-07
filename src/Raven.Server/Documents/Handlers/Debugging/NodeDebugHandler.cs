@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var dest = GetStringQueryString("url", false) ?? GetStringQueryString("node", false);
             var topology = ServerStore.GetClusterTopology();
-            var tasks = new List<Task<IDynamicJsonValueConvertible>>();
+            var tasks = new List<Task<PingResult>>();
             if (string.IsNullOrEmpty(dest))
             {
                 foreach (var node in topology.AllNodes)
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public long TcpInfoTime;
             public long SendTime;
             public long ReceiveTime;
-            public List<string> Errors;
+            public string Error;
             public string SetupAliveError;
             public List<string> Log;
 
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     [nameof(TcpInfoTime)] = TcpInfoTime,
                     [nameof(SendTime)] = SendTime,
                     [nameof(ReceiveTime)] = ReceiveTime,
-                    [nameof(Errors)] = Errors,
+                    [nameof(Error)] = Error,
                     [nameof(SetupAliveError)] = SetupAliveError
                 };
 
@@ -178,11 +178,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task<IDynamicJsonValueConvertible> PingOnce(string url)
+        private async Task<PingResult> PingOnce(string url)
         {
             var sp = Stopwatch.StartNew();
             var log = new List<string>();
-            var errors = new List<string>();
             var result = new PingResult { Url = url, };
 
             try
@@ -250,19 +249,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                                     case TcpConnectionStatus.AuthorizationFailed:
                                         message = $"Connection to {url} failed because of authorization failure: {response.Message}";
-                                        errors.Add(message);
+                                        result.Error = message;
                                         logs?.Add(message);
                                         throw new AuthorizationException(message);
 
                                     case TcpConnectionStatus.TcpVersionMismatch:
                                         message = $"Connection to {url} failed because of mismatching tcp version: {response.Message}";
-                                        errors.Add(message);
+                                        result.Error = message;
                                         logs?.Add(message);
                                         throw new AuthorizationException(message);
 
                                     case TcpConnectionStatus.InvalidNetworkTopology:
                                         message = $"Connection to {url} failed because of {nameof(TcpConnectionStatus.InvalidNetworkTopology)} error: {response.Message}";
-                                        errors.Add(message);
+                                        result.Error = message;
                                         logs?.Add(message);
                                         throw new InvalidNetworkTopologyException(message);
                                 }
@@ -275,8 +274,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
             catch (Exception e)
             {
-                result.Errors = errors;
-                result.Errors.Add(e.ToString());
+                result.Error ??= e.ToString();
                 log.Add($"Error occurred while attempting to negotiate with the server. {e.Message}");
             }
 
