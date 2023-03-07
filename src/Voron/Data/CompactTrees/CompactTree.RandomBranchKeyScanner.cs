@@ -108,7 +108,7 @@ unsafe partial class CompactTree
             Success:
             key = keySpan;
             _currentSample++;
-            return key.Length != 0;
+            return true;
 
             Failure:
             key = Span<byte>.Empty;
