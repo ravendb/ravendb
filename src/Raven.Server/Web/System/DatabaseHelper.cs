@@ -86,6 +86,22 @@ namespace Raven.Server.Web.System
                 if (record.Settings != null && record.Settings.TryGetValue(key, out _))
                     throw new InvalidOperationException($"Detected '{key}' key in {nameof(DatabaseRecord.Settings)}. This is a server-wide configuration key and can only be set at server level.");
             }
+
+            if (record.IsSharded)
+            {
+                if (record.Topology != null)
+                {
+                    throw new InvalidOperationException(
+                        $"Problem trying to create a new sharded database {record.DatabaseName}."+
+                        $" Sharded database can't have field {nameof(record.Topology)} defined in its record. Only the topologies inside {nameof(record.Sharding)} are relevant.");
+                }
+            }
+            else
+            {
+                if (record.Sharding != null)
+                    throw new InvalidOperationException(
+                        $"Problem trying to create a new database {record.DatabaseName}. Can't have a sharding configuration in the record while no shards are defined.");
+            }
         }
     }
 }
