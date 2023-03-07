@@ -118,7 +118,7 @@ public abstract class AbstractExecutor : IDisposable
             if (result == null)
                 return default;
 
-            var blittable = result as BlittableJsonReaderObject; //TODO stav: dispose?
+            var blittable = result as BlittableJsonReaderObject;
             return (TCombinedResult)(object)blittable.Clone(operation.CreateOperationContext());
         }
 

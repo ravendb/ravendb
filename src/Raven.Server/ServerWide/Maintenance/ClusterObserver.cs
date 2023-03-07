@@ -277,11 +277,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         if (cleanupIndexes)
                         {
-                            foreach (var shardToState in mergedState.States)
-                            {
-                                var cleanupCommandsForDatabase = GetUnusedAutoIndexes(shardToState.Value);
+                            var cleanupCommandsForDatabase = GetUnusedAutoIndexes(mergedState.States);
                                 cleanUnusedAutoIndexesCommands.AddRange(cleanupCommandsForDatabase);
-                            }
                         }
 
                         if (cleanupTombstones)
@@ -499,54 +496,64 @@ namespace Raven.Server.ServerWide.Maintenance
             return hash.ToString("X");
         }
 
-        internal List<(UpdateDatabaseCommand Update, string Reason)> GetUnusedAutoIndexes(DatabaseObservationState databaseState)
+        internal List<(UpdateDatabaseCommand Update, string Reason)> GetUnusedAutoIndexes(Dictionary<int, DatabaseObservationState> shardStates)
         {
             const string autoIndexPrefix = "Auto/";
             var cleanupCommands = new List<(UpdateDatabaseCommand Update, string Reason)>();
-
-            if (AllDatabaseNodesHasReport(databaseState) == false)
-                return cleanupCommands;
 
             var indexes = new Dictionary<string, TimeSpan>();
 
             var lowestDatabaseUpTime = TimeSpan.MaxValue;
             var newestIndexQueryTime = TimeSpan.MaxValue;
 
-            foreach (var node in databaseState.DatabaseTopology.AllNodes)
+            foreach (var shardToState in shardStates)
             {
-                if (databaseState.Current.TryGetValue(node, out var nodeReport) == false)
+                var databaseState = shardToState.Value;
+
+                if (AllDatabaseNodesHasReport(databaseState) == false)
                     return cleanupCommands;
 
-                if (nodeReport.Report.TryGetValue(databaseState.Name, out var report) == false)
-                    return cleanupCommands;
-
-                if (report.UpTime.HasValue && lowestDatabaseUpTime > report.UpTime)
-                    lowestDatabaseUpTime = report.UpTime.Value;
-
-                foreach (var kvp in report.LastIndexStats)
+                foreach (var node in databaseState.DatabaseTopology.AllNodes)
                 {
-                    var lastQueried = kvp.Value.LastQueried;
-                    if (lastQueried.HasValue == false)
-                        continue;
+                    if (databaseState.Current.TryGetValue(node, out var nodeReport) == false)
+                        return cleanupCommands;
 
-                    if (newestIndexQueryTime > lastQueried.Value)
-                        newestIndexQueryTime = lastQueried.Value;
+                    if (nodeReport.Report.TryGetValue(databaseState.Name, out var report) == false)
+                        return cleanupCommands;
 
-                    var indexName = kvp.Key;
-                    if (indexName.StartsWith(autoIndexPrefix, StringComparison.OrdinalIgnoreCase) == false)
-                        continue;
+                    if (report.UpTime.HasValue && lowestDatabaseUpTime > report.UpTime)
+                        lowestDatabaseUpTime = report.UpTime.Value;
 
-                    if (indexes.TryGetValue(indexName, out var lq) == false || lq > lastQueried)
+                    foreach (var kvp in report.LastIndexStats)
                     {
-                        indexes[indexName] = lastQueried.Value;
+                        var lastQueried = kvp.Value.LastQueried;
+                        if (lastQueried.HasValue == false)
+                            continue;
+
+                        if (newestIndexQueryTime > lastQueried.Value)
+                            newestIndexQueryTime = lastQueried.Value;
+
+                        var indexName = kvp.Key;
+                        if (indexName.StartsWith(autoIndexPrefix, StringComparison.OrdinalIgnoreCase) == false)
+                            continue;
+
+                        if (indexes.TryGetValue(indexName, out var lq) == false || lq > lastQueried)
+                        {
+                            indexes[indexName] = lastQueried.Value;
+                        }
                     }
                 }
             }
 
             if (indexes.Count == 0)
                 return cleanupCommands;
+            
+            var rawRecord = shardStates.Values.FirstOrDefault()?.RawDatabase;
 
-            var settings = databaseState.ReadSettings();
+            if (rawRecord == null)
+                return cleanupCommands;
+
+            var settings = rawRecord.Settings;
             var timeToWaitBeforeMarkingAutoIndexAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle, _server.Configuration, settings);
             var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle, _server.Configuration, settings);
 
@@ -563,12 +570,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
 
                 var state = IndexState.Normal;
-                if (databaseState.TryGetAutoIndex(kvp.Key, out var definition) && definition.State.HasValue)
+                if (rawRecord.AutoIndexes.TryGetValue(kvp.Key, out var definition) && definition.State.HasValue)
                     state = definition.State.Value;
+
+                var shardedDatabaseName = ShardHelper.ToDatabaseName(rawRecord.DatabaseName);
 
                 if (state == IndexState.Idle && difference >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                 {
-                    var deleteIndexCommand = new DeleteIndexCommand(kvp.Key, databaseState.Name, RaftIdGenerator.NewId());
+                    var deleteIndexCommand = new DeleteIndexCommand(kvp.Key, shardedDatabaseName, RaftIdGenerator.NewId());
                     var updateReason = $"Deleting idle auto-index '{kvp.Key}' because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.";
 
                     cleanupCommands.Add((deleteIndexCommand, updateReason));
@@ -577,7 +586,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (state == IndexState.Normal && difference >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                 {
-                    var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Idle, databaseState.Name, RaftIdGenerator.NewId());
+                    var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Idle, shardedDatabaseName, RaftIdGenerator.NewId());
                     var updateReason = $"Marking auto-index '{kvp.Key}' as idle because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
 
                     cleanupCommands.Add((setIndexStateCommand, updateReason));
@@ -586,7 +595,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (state == IndexState.Idle && difference < timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                 {
-                    var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Normal, databaseState.Name, Guid.NewGuid().ToString());
+                    var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Normal, shardedDatabaseName, Guid.NewGuid().ToString());
                     var updateReason = $"Marking idle auto-index '{kvp.Key}' as normal because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
 
                     cleanupCommands.Add((setIndexStateCommand, updateReason));
@@ -869,18 +878,6 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 RawDatabase.Raw.TryGet(nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount), out long count);
                 return count;
-            }
-
-            public bool TryGetAutoIndex(string name, out AutoIndexDefinition definition)
-            {
-                BlittableJsonReaderObject autoDefinition = null;
-                definition = null;
-                RawDatabase.Raw.TryGet(nameof(DatabaseRecord.AutoIndexes), out BlittableJsonReaderObject autoIndexes);
-                if (autoIndexes?.TryGet(name, out autoDefinition) == false)
-                    return false;
-
-                definition = JsonDeserializationServer.AutoIndexDefinition(autoDefinition);
-                return true;
             }
 
             public Dictionary<string, DeletionInProgressStatus> ReadDeletionInProgress()

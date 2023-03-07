@@ -219,6 +219,22 @@ public partial class RavenTestBase
             }
         }
 
+        public async ValueTask<ShardedDocumentDatabase> GetShardDocumentDatabaseInstanceFor(string database, List<RavenServer> servers = null)
+        {
+            servers ??= _parent.GetServers();
+            foreach (var server in servers)
+            {
+                foreach (var task in server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database))
+                {
+                    var databaseInstance = await task;
+                    Debug.Assert(databaseInstance != null, $"The requested database '{database}' is null, probably you try to loaded sharded database without the $");
+                    return databaseInstance;
+                }
+            }
+
+            return null;
+        }
+
         public bool AllShardHaveDocs(IDictionary<string, List<DocumentDatabase>> servers, long count = 1L)
         {
             foreach (var kvp in servers)

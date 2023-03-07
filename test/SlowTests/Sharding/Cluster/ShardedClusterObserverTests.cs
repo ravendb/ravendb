@@ -2,12 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -235,6 +240,155 @@ namespace SlowTests.Sharding.Cluster
                     var shards = await ShardingCluster.GetShards(store);
                     return shards.Sum(s => s.Value.Members.Count);
                 }, 6);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task RavenDB_19936()
+        {
+            var database = GetDatabaseName();
+            var settings = new Dictionary<string, string>
+            {
+                { RavenConfiguration.GetKey(x => x.Indexing.CleanupInterval), "0" },
+            };
+            var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0, customSettings: settings);
+            await ShardingCluster.CreateShardedDatabaseInCluster(database, replicationFactor: 1, cluster, shards: 3);
+
+            using (var store = GetDocumentStore(new Options
+                   {
+                       Server = cluster.Leader,
+                       CreateDatabase = false,
+                       ModifyDatabaseName = _ => database,
+                   }))
+            {
+                //create auto index
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User() {Name = "Jane"});
+                    await session.SaveChangesAsync();
+
+                    await session.Advanced
+                        .AsyncRawQuery<dynamic>("from \"Users\" where search(\"Title\",$p0) select Name limit 128")
+                        .AddParameter("p0", "Jane")
+                        .Statistics(out var stat).ToListAsync();
+                }
+                
+                store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database, new Dictionary<string, string>
+                {
+                    { RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle), "0" },
+                }));
+                
+                //check history logs for thrown error
+                var errored = await WaitForValueAsync(() =>
+                {
+                    using (cluster.Leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        foreach (var entry in cluster.Leader.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
+                        {
+                            var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
+                            if (type == "SetIndexStateCommand")
+                            {
+                                return (entry[nameof(RachisLogHistory.LogHistoryColumn.ExceptionMessage)]?.ToString())?.Contains(
+                                        "Could not execute update command of type 'SetIndexStateCommand'") == true;
+                            }
+                        }
+                    }
+                    
+                    return true;
+                }, false);
+
+                Assert.False(errored);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task RavenDB_19936_EnsureAutoIndexIdleOnlyWhenIdleOnAllShards()
+        {
+            var database = GetDatabaseName();
+            var settings = new Dictionary<string, string>
+            {
+                { RavenConfiguration.GetKey(x => x.Indexing.CleanupInterval), "0" },
+            };
+            var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0, customSettings: settings);
+            await ShardingCluster.CreateShardedDatabaseInCluster(database, replicationFactor: 1, cluster, shards: 3);
+
+            using (var store = Sharding.GetDocumentStore(new Options {Server = cluster.Leader, CreateDatabase = false, ModifyDatabaseName = _ => database,}))
+            {
+                //create auto index
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User() {Name = "Jane"});
+                    await session.SaveChangesAsync();
+
+                    await session.Advanced
+                        .AsyncRawQuery<dynamic>("from \"Users\" where search(\"Title\",$p0) select Name limit 128")
+                        .AddParameter("p0", "Jane")
+                        .Statistics(out var stat).ToListAsync();
+                }
+                
+                store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database,
+                    new Dictionary<string, string> {{RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle), "0"},}));
+
+                var db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, 0), cluster.Nodes);
+                var autoIndex = db.IndexStore.GetIndexes().First();
+                
+                //make sure the index on all shards is idle
+                var idle = await WaitForValueAsync(async () =>
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.AutoIndexes.Count == 1 && IndexState.Idle == record.AutoIndexes.First().Value.State;
+                }, true);
+
+                Assert.True(idle);
+
+                for (int i = 0; i < 3; i++)
+                {
+                    db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, i), cluster.Nodes);
+                    autoIndex = db.IndexStore.GetIndexes().First();
+                    Assert.Equal(IndexState.Idle, autoIndex.State);
+                }
+
+                store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database,
+                    new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle), "30" }, }));
+
+                //run index query only on one shard
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, 0)))
+                {
+                    await session.Advanced
+                        .AsyncRawQuery<dynamic>("from \"Users\" where search(\"Title\",$p0) select Name limit 128")
+                        .AddParameter("p0", "Jane")
+                        .Statistics(out var stat).ToListAsync();
+                }
+
+                //wait for it to stop being idle on all shards
+                db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, 0), cluster.Nodes);
+                autoIndex = db.IndexStore.GetIndexes().First();
+                Assert.Equal(IndexState.Normal, autoIndex.State);
+
+                //make sure indexes on all other shards are not idle either
+                var normal = await WaitForValueAsync(async () =>
+                {
+                    var normal = true;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, i), cluster.Nodes);
+                        autoIndex = db.IndexStore.GetIndexes().First();
+                        normal = normal && (IndexState.Normal == autoIndex.State);
+                    }
+
+                    return normal;
+                }, true);
+
+                Assert.True(normal);
+
+                var normalOnRecord = await WaitForValueAsync(async () =>
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.AutoIndexes.Count == 1 && IndexState.Normal == record.AutoIndexes.First().Value.State;
+                }, true);
+
+                Assert.True(normalOnRecord);
             }
         }
     }
