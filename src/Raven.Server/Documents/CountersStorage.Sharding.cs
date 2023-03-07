@@ -49,5 +49,10 @@ namespace Raven.Server.Documents
         {
             ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)CountersTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
         }
+
+        internal static void UpdateBucketStatsForCounterTombstones(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
+        {
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)CounterTombstonesTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+        }
     }
 }

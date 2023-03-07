@@ -1,6 +1,4 @@
-﻿using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.TimeSeries;
-using Sparrow.Server;
+﻿using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -69,7 +67,7 @@ namespace Raven.Server.Documents.Schemas
                 ShardingCounterTombstonesSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = CountersStorage.GenerateBucketAndEtagIndexKeyForCounterTombstones,
-                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
+                    OnEntryChanged = CountersStorage.UpdateBucketStatsForCounterTombstones,
                     IsGlobal = true,
                     Name = CounterTombstonesBucketAndEtagSlice
                 });
