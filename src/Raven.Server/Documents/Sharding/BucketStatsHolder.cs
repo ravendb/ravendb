@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Sharding
             _mergedChangeVectors.Clear();
         }
 
-        public ChangeVector TableValueToChangeVector(int changeVectorIndex, ref TableValueReader value)
+        private ChangeVector TableValueToChangeVector(int changeVectorIndex, ref TableValueReader value)
         {
             if (_ctx == null)
                 _storage.ContextPool.AllocateOperationContext(out _ctx);

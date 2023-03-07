@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -237,15 +236,15 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         var nowTicks = documentDatabase.Time.GetUtcNow().Ticks;
         var bucket = *(int*)key.Content.Ptr;
-
         var inMemoryBucketStats = documentDatabase.ShardedDocumentsStorage._bucketStats;
+
         if (value.Size == 0)
-    {
-            // item deletion or put/delete attachment stream
-            // in both cases there's no need to update the merged-cv
+        {
+            // item deletion or put/delete attachment stream or artificial-tombstone insertion
+            // in all cases there's no need to update the merged-cv
             inMemoryBucketStats.UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged);
             return;
-                }
+        }
 
         // item was inserted/updated 
         // need to update the merged-cv of the bucket
@@ -279,7 +278,6 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
                 return true;
             }
 
-            var number = _documentDatabase.ShardNumber;
             merged = GetMergedChangeVectorInBucket(context, bucket);
             return false;
         }
