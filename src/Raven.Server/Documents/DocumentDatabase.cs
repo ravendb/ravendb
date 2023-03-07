@@ -100,7 +100,7 @@ namespace Raven.Server.Documents
         public string DatabaseGroupId;
         public string ClusterTransactionId;
 
-        private readonly Lazy<RequestExecutor> _requestExecutor;
+        private Lazy<RequestExecutor> _requestExecutor;
 
         public void ResetIdleTime()
         {
@@ -165,7 +165,8 @@ namespace Raven.Server.Documents
                 });
                 _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
                 IdentityPartsSeparator = '/';
-                _requestExecutor = new Lazy<RequestExecutor>(() => RequestExecutor.CreateForServer(new[] { ServerStore.Server.WebUrl }, Name, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
+                _requestExecutor = CreateRequestExecutor();
+                _serverStore.Server.ServerCertificateChanged += OnCertificateChange;
             }
             catch (Exception)
             {
@@ -796,6 +797,8 @@ namespace Raven.Server.Documents
 
             _databaseShutdown.Cancel();
 
+            _serverStore.Server.ServerCertificateChanged -= OnCertificateChange;
+
             ForTestingPurposes?.ActionToCallDuringDocumentDatabaseInternalDispose?.Invoke();
 
             //before we dispose of the database we take its latest info to be displayed in the studio
@@ -1236,7 +1239,7 @@ namespace Raven.Server.Documents
                                 new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
                                     documentsStorage.Environment);
                         break;
-                    
+
                     case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
                         var configurationStorage = ConfigurationStorage;
                         if (configurationStorage != null)
@@ -1808,6 +1811,17 @@ namespace Raven.Server.Documents
                 return ServerStore.Cluster.ReadDatabase(context, Name);
             }
         }
+
+        private void OnCertificateChange(object sender, EventArgs e)
+        {
+            if (_requestExecutor.IsValueCreated == false) 
+                return;
+
+            using (_requestExecutor.Value)
+                _requestExecutor = CreateRequestExecutor();
+        }
+
+        private Lazy<RequestExecutor> CreateRequestExecutor() => new(() => RequestExecutor.CreateForServer(new[] { ServerStore.Server.WebUrl }, Name, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
 
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
         {

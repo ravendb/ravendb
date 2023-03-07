@@ -3,46 +3,42 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Esprima.Ast;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
-using Sparrow.Platform;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Executors
 {
     public class ShardExecutor : AbstractExecutor
     {
-        private readonly Dictionary<int, RequestExecutor> _requestExecutors;
+        private readonly DatabaseRecord _databaseRecord;
+        private readonly string _databaseName;
+        private Dictionary<int, RequestExecutor> _requestExecutors;
         private readonly int[] _fullRange;
 
-        public ShardExecutor(ServerStore store, DatabaseRecord record, string databaseName) : base(store)
+        private readonly DocumentConventions _conventions;
+
+        public ShardExecutor(ServerStore store, [NotNull] DatabaseRecord databaseRecord, [NotNull] string databaseName) : base(store)
         {
-            _fullRange = record.Sharding.Shards.Keys.ToArray();
-            _requestExecutors = new Dictionary<int, RequestExecutor>(record.Sharding.Shards.Count);
-            var allNodes = store.GetClusterTopology().AllNodes;
-            
-            foreach ((int shardNumber, var topology) in record.Sharding.Shards)
+            _databaseRecord = databaseRecord ?? throw new ArgumentNullException(nameof(databaseRecord));
+            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
+
+            _fullRange = databaseRecord.Sharding.Shards.Keys.ToArray();
+
+            _conventions = new DocumentConventions
             {
-                var urls = topology.AllNodes.Select(tag => allNodes[tag]).ToArray();
-                _requestExecutors[shardNumber] = RequestExecutor.CreateForServer(
-                    urls,
-                    ShardHelper.ToShardName(databaseName, shardNumber),
-                    store.Server.Certificate.Certificate,
-                    new DocumentConventions()
-                    {
-                        SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
-                        MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
-                        HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
-                        UseCompression = store.Configuration.Sharding.ShardExecutorUseCompression,
-                        GlobalHttpClientTimeout = store.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan
-                    });
-            }
+                SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
+                MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
+                HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
+                UseCompression = store.Configuration.Sharding.ShardExecutorUseCompression,
+                GlobalHttpClientTimeout = store.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan
+            };
+
+            _requestExecutors = CreateExecutors();
         }
 
         public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
@@ -80,14 +76,52 @@ namespace Raven.Server.Documents.Sharding.Executors
         }
 
         public override RequestExecutor GetRequestExecutorAt(int position) => _requestExecutors[position];
+
         protected override Memory<int> GetAllPositions() => new Memory<int>(_fullRange);
+
         protected override void OnCertificateChange(object sender, EventArgs e)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19063 Handle server certificate change for ShardExecutor");
+            var oldRequestExecutors = _requestExecutors;
+
+            try
+            {
+                _requestExecutors = CreateExecutors();
+            }
+            finally
+            {
+                SafelyDisposeRequestExecutors(oldRequestExecutors);
+            }
+        }
+
+        private Dictionary<int, RequestExecutor> CreateExecutors()
+        {
+            var requestExecutors = new Dictionary<int, RequestExecutor>(_databaseRecord.Sharding.Shards.Count);
+
+            var allNodes = ServerStore.GetClusterTopology().AllNodes;
+
+            foreach ((int shardNumber, var topology) in _databaseRecord.Sharding.Shards)
+            {
+                var urls = topology.AllNodes.Select(tag => allNodes[tag]).ToArray();
+                requestExecutors[shardNumber] = RequestExecutor.CreateForServer(
+                    urls,
+                    ShardHelper.ToShardName(_databaseName, shardNumber),
+                    ServerStore.Server.Certificate.Certificate,
+                    _conventions);
+            }
+
+            return requestExecutors;
         }
 
         public override void Dispose()
         {
+            SafelyDisposeRequestExecutors(_requestExecutors);
+        }
+
+        private void SafelyDisposeRequestExecutors(Dictionary<int, RequestExecutor> requestExecutors)
+        {
+            if (requestExecutors == null)
+                return;
+
             foreach (var executor in _requestExecutors.Values)
             {
                 try
