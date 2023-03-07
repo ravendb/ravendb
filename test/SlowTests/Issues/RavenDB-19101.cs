@@ -20,9 +20,9 @@ public class RavenDB_19101: RavenTestBase
     {
     }
     
-    private class GetCertificateFromIndexCommand : RavenCommand<object>
+    private class GetIndexHistoryCommand : RavenCommand<object>
     {
-        public GetCertificateFromIndexCommand()
+        public GetIndexHistoryCommand()
         {
 
         }
@@ -75,7 +75,7 @@ public class RavenDB_19101: RavenTestBase
             
             using (var commands = store.Commands())
             {
-                var cmd = new GetCertificateFromIndexCommand();
+                var cmd = new GetIndexHistoryCommand();
                 commands.Execute(cmd);
                 var res = cmd.Result;
 
@@ -115,7 +115,7 @@ public class RavenDB_19101: RavenTestBase
 
             using (var commands = store.Commands())
             {
-                var cmd = new GetCertificateFromIndexCommand();
+                var cmd = new GetIndexHistoryCommand();
                 commands.Execute(cmd);
                 var res = cmd.Result;
 
