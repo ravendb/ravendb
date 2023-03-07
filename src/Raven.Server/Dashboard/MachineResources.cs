@@ -32,6 +32,8 @@ namespace Raven.Server.Dashboard
 
         public long CommitChargeThreshold { get; set; } // in bytes
 
+        public long TotalSwapUsage { get; set; } // in bytes
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -48,6 +50,7 @@ namespace Raven.Server.Dashboard
             json[nameof(IsWindows)] = IsWindows;
             json[nameof(LowMemoryThreshold)] = LowMemoryThreshold;
             json[nameof(CommitChargeThreshold)] = CommitChargeThreshold;
+            json[nameof(TotalSwapUsage)] = TotalSwapUsage;
 
             return json;
         }
