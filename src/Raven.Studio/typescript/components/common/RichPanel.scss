@@ -83,6 +83,10 @@
         & > i {
             margin-right: sizes.$gutter-xxs;
         }
+
+        a:not(:hover) {
+            color: inherit;
+        }
     }
 
     .value {
