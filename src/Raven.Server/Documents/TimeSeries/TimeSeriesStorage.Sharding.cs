@@ -46,5 +46,15 @@ namespace Raven.Server.Documents.TimeSeries
             return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, keyIndex: (int)DeletedRangeTable.RangeKey,
                 etagIndex: (int)DeletedRangeTable.Etag, ref tvr, out slice);
         }
+
+        internal static void UpdateBucketStatsForDeletedRanges(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+        {
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)DeletedRangeTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+        }
+
+        internal static void UpdateBucketStatsForTimeSeries(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+        {
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)TimeSeriesTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+        }
     }
 }

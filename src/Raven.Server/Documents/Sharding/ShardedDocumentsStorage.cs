@@ -5,7 +5,9 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Schemas;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -27,9 +29,8 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 {
     public static readonly Slice BucketStatsSlice;
 
-    internal Dictionary<int, Documents.BucketStats> BucketStatistics => _bucketStatistics ??= new Dictionary<int, Documents.BucketStats>();
+    private readonly BucketStatsHolder _bucketStats;
 
-    private Dictionary<int, Documents.BucketStats> _bucketStatistics;
     private readonly ShardedDocumentDatabase _documentDatabase;
 
     static ShardedDocumentsStorage()
@@ -44,7 +45,9 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         : base(documentDatabase, addToInitLog)
     {
         _documentDatabase = documentDatabase;
-        OnBeforeCommit += UpdateBucketStatsTreeBeforeCommit;
+        _bucketStats = new BucketStatsHolder();
+
+        OnBeforeCommit += _bucketStats.UpdateBucketStatsTreeBeforeCommit;
     }
 
     protected override DocumentPutAction CreateDocumentPutAction()
@@ -54,20 +57,20 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     protected override void SetDocumentsStorageSchemas()
     {
-        DocsSchema = Schemas.Documents.ShardingDocsSchemaBase;
-        TombstonesSchema = Schemas.Tombstones.ShardingTombstonesSchema;
-        CompressedDocsSchema = Schemas.Documents.ShardingCompressedDocsSchemaBase;
+        DocsSchema = ShardingDocsSchemaBase;
+        TombstonesSchema = ShardingTombstonesSchema;
+        CompressedDocsSchema = ShardingCompressedDocsSchemaBase;
 
-        AttachmentsSchema = Schemas.Attachments.ShardingAttachmentsSchemaBase;
-        ConflictsSchema = Schemas.Conflicts.ShardingConflictsSchemaBase;
-        CountersSchema = Schemas.Counters.ShardingCountersSchemaBase;
+        AttachmentsSchema = ShardingAttachmentsSchemaBase;
+        ConflictsSchema = ShardingConflictsSchemaBase;
+        CountersSchema = ShardingCountersSchemaBase;
         CounterTombstonesSchema = Schemas.CounterTombstones.ShardingCounterTombstonesSchemaBase;
 
-        TimeSeriesSchema = Schemas.TimeSeries.ShardingTimeSeriesSchemaBase;
-        TimeSeriesDeleteRangesSchema = Schemas.DeletedRanges.ShardingDeleteRangesSchemaBase;
+        TimeSeriesSchema = ShardingTimeSeriesSchemaBase;
+        TimeSeriesDeleteRangesSchema = ShardingDeleteRangesSchemaBase;
 
-        RevisionsSchema = Schemas.Revisions.ShardingRevisionsSchemaBase;
-        CompressedRevisionsSchema = Schemas.Revisions.ShardingCompressedRevisionsSchemaBase;
+        RevisionsSchema = ShardingRevisionsSchemaBase;
+        CompressedRevisionsSchema = ShardingCompressedRevisionsSchemaBase;
     }
 
     public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag, long skip = 0, long take = long.MaxValue, DocumentFields fields = DocumentFields.All)
@@ -194,23 +197,30 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         return scope;
     }
 
-    internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, long oldSize, long newSize)
+    internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
     {
         int numOfDocsChanged = 0;
-        if (oldSize == 0)
+        if (oldValue.Size == 0)
+        {
+            // a new document was inserted
             numOfDocsChanged = 1;
-        else if (newSize == 0)
+        }
+        else if (newValue.Size == 0)
+        {
+            // a document was deleted
             numOfDocsChanged = -1;
+        }
 
-        UpdateBucketStatsInternal(tx, key, oldSize, newSize, numOfDocsChanged);
+        UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)DocumentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size, numOfDocsChanged);
     }
 
-    internal static void UpdateBucketStats(Transaction tx, Slice key, long oldSize, long newSize)
+    internal static void UpdateBucketStatsForTombstones(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
     {
-        UpdateBucketStatsInternal(tx, key, oldSize, newSize, numOfDocsChanged: 0);
+        // todo : skip artificial ?
+        UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)TombstoneTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
     }
 
-    private static void UpdateBucketStatsInternal(Transaction tx, Slice key, long oldSize, long newSize, int numOfDocsChanged)
+    internal static void UpdateBucketStatsInternal(Transaction tx, Slice key, TableValueReader value, int changeVectorIndex, long sizeChange, int numOfDocsChanged = 0)
     {
         if (tx.Owner is not ShardedDocumentDatabase documentDatabase)
             return;
@@ -218,56 +228,22 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         var nowTicks = documentDatabase.Time.GetUtcNow().Ticks;
         var bucket = *(int*)key.Content.Ptr;
 
-        var inMemoryBucketStats = documentDatabase.ShardedDocumentsStorage.BucketStatistics;
-        inMemoryBucketStats.TryGetValue(bucket, out var bucketStats);
-
-        bucketStats.Size += newSize - oldSize;
-        bucketStats.NumberOfDocuments += numOfDocsChanged;
-        bucketStats.LastModifiedTicks = nowTicks;
-
-        inMemoryBucketStats[bucket] = bucketStats;
-    }
-
-    internal void UpdateBucketStatsTreeBeforeCommit(Transaction tx)
+        var inMemoryBucketStats = documentDatabase.ShardedDocumentsStorage._bucketStats;
+        if (value.Size == 0)
     {
-        if (_bucketStatistics == null)
+            // item was deleted, no need to update merged-cv
+            inMemoryBucketStats.UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged);
             return;
-
-        var tree = tx.ReadTree(BucketStatsSlice);
-        foreach ((int bucket, Documents.BucketStats inMemoryStats) in _bucketStatistics)
-        {
-            using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
-            {
-                *(int*)keyBuffer.Ptr = bucket;
-                var keySlice = new Slice(keyBuffer);
-                var readResult = tree.Read(keySlice);
-
-                Documents.BucketStats stats;
-                if (readResult == null)
-                {
-                    stats = inMemoryStats;
-                }
-                else
-                {
-                    stats = *(Documents.BucketStats*)readResult.Reader.Base;
-                    stats.Size += inMemoryStats.Size;
-                    stats.NumberOfDocuments += inMemoryStats.NumberOfDocuments;
-                    stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
                 }
 
-                if (stats.Size == 0 && stats.NumberOfDocuments == 0)
+        // item was inserted/updated 
+        // need to update the merged-cv of the bucket
+        using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
-                    tree.Delete(keySlice);
-                    continue;
+            var changeVector = TableValueToChangeVector(ctx, changeVectorIndex, ref value);
+            inMemoryBucketStats.UpdateBucket(ctx, bucket, nowTicks, sizeChange, numOfDocsChanged, changeVector);
                 }
-
-                using (tree.DirectAdd(keySlice, sizeof(Documents.BucketStats), out byte* ptr))
-                    *(Documents.BucketStats*)ptr = stats;
             }
-        }
-
-        _bucketStatistics = null;
-    }
 
     public ChangeVector GetLastChangeVectorInBucket(DocumentsOperationContext context, int bucket)
     {
@@ -282,6 +258,22 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
             var document = TableValueToDocument(context, ref result.Reader, DocumentFields.ChangeVector);
             return context.GetChangeVector(document.ChangeVector);
+        }
+    }
+
+    public ChangeVector GetMergedChangeVectorInBucket_new(DocumentsOperationContext context, int bucket)
+    {
+        var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsSlice);
+
+        using (context.Transaction.InnerTransaction.Allocator.Allocate(sizeof(int), out var keyBuffer))
+        {
+            *(int*)keyBuffer.Ptr = Bits.SwapBytes(bucket);
+            var readResult = tree.Read(new Slice(keyBuffer));
+            if (readResult == null || readResult.Reader.Length <= sizeof(Documents.BucketStats))
+                return null;
+
+            var cvStr = Encodings.Utf8.GetString(readResult.Reader.Base + sizeof(Documents.BucketStats), readResult.Reader.Length - sizeof(Documents.BucketStats));
+            return context.GetChangeVector(cvStr);
         }
     }
 

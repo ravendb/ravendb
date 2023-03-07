@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Schemas
                 ShardingCountersSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = CountersStorage.GenerateBucketAndEtagIndexKeyForCounters,
-                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
+                    OnEntryChanged = CountersStorage.UpdateBucketStatsForCounters,
                     IsGlobal = true,
                     Name = CountersBucketAndEtagSlice
                 });

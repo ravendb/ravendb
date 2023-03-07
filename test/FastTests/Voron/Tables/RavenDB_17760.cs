@@ -424,7 +424,7 @@ namespace FastTests.Voron.Tables
             return scope;
         }
 
-        internal static void UpdateStats(Transaction tx, Slice key, long oldSize, long newSize)
+        internal static void UpdateStats(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
         {
             var tree = tx.ReadTree(StatsTree);
             var bucket = *(int*)key.Content.Ptr;
@@ -441,7 +441,7 @@ namespace FastTests.Voron.Tables
                     size = *(long*)reader.Base;
                 }
 
-                size += newSize - oldSize;
+                size += newValue.Size - oldValue.Size;
 
                 using (tree.DirectAdd(keySlice, sizeof(long), out var ptr))
                 {

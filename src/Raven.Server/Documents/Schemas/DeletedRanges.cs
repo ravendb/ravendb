@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Schemas
                 ShardingDeleteRangesSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForDeletedRanges,
-                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
+                    OnEntryChanged = TimeSeriesStorage.UpdateBucketStatsForDeletedRanges,
                     IsGlobal = true,
                     Name = DeletedRangesBucketAndEtagSlice
                 });
