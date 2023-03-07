@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Streaming
@@ -13,15 +14,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         }
 
         protected abstract ValueTask GetDocumentsAndWriteAsync(TOperationContext context, int start, int pageSize, string startsWith,
-            string excludes, string matches, string startAfter);
+            string excludes, string matches, string startAfter, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
+                using (var token = RequestHandler.CreateOperationToken())
             {
                 await GetDocumentsAndWriteAsync(context, RequestHandler.GetStart(), RequestHandler.GetPageSize(), RequestHandler.GetStringQueryString("startsWith", required: false),
                     RequestHandler.GetStringQueryString("excludes", required: false), RequestHandler.GetStringQueryString("matches", required: false),
-                    RequestHandler.GetStringQueryString("startAfter", required: false));
+                    RequestHandler.GetStringQueryString("startAfter", required: false), token);
             }
         }
     }

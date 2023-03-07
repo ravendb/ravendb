@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 
             var op = new ShardedStreamDocumentsCollectionOperation(RequestHandler.HttpContext, name, etag: null, continuationToken);
             var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token);
-            using var streams = await results.Result.InitializeAsync(RequestHandler.DatabaseContext, HttpContext.RequestAborted);
+            using var streams = await results.Result.InitializeAsync(RequestHandler.DatabaseContext, token);
             var documents = GetDocuments(streams, continuationToken);
 
             long numberOfResults;

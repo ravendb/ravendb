@@ -549,11 +549,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 if (nodeTag == ServerStore.Engine.Tag)
                 {
-                    // cannot remove the leader, let's change the leader
-                    ServerStore.Engine.CurrentLeader?.StepDown();
-                    await ServerStore.Engine.WaitForState(RachisState.Follower, HttpContext.RequestAborted);
-                    RedirectToLeader();
-                    return;
+                    using (var token = CreateOperationToken())
+                    {
+                        // cannot remove the leader, let's change the leader
+                        ServerStore.Engine.CurrentLeader?.StepDown();
+                        await ServerStore.Engine.WaitForState(RachisState.Follower, token.Token);
+                        RedirectToLeader();
+                        return;
+                    }
                 }
 
                 await ServerStore.RemoveFromClusterAsync(nodeTag);

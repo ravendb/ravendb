@@ -43,6 +43,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
         using (var commandsReader = GetCommandsReader())
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
+        using (var token = RequestHandler.CreateOperationToken())
         {
             var contentType = HttpContext.Request.ContentType;
             try
@@ -50,12 +51,12 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandsReader.BuildCommandsAsync(context, RequestHandler.RequestBodyStream(), GetIdentityPartsSeparator());
+                    await commandsReader.BuildCommandsAsync(context, RequestHandler.RequestBodyStream(), GetIdentityPartsSeparator(), token.Token);
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                          contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandsReader.ParseMultipart(context, RequestHandler.RequestBodyStream(), HttpContext.Request.ContentType, GetIdentityPartsSeparator());
+                    await commandsReader.ParseMultipart(context, RequestHandler.RequestBodyStream(), HttpContext.Request.ContentType, GetIdentityPartsSeparator(), token.Token);
                 }
                 else
                     ThrowNotSupportedType(contentType);

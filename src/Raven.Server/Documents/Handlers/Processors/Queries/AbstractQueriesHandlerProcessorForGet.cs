@@ -71,7 +71,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
         {
             await writer.WriteIndexEntriesQueryResultAsync(context, result, token.Token);
         }
@@ -169,7 +169,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                         long numberOfResults;
                         long totalDocumentsSizeInBytes;
-                        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), HttpContext.RequestAborted))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
                         {
                             result.Timings = indexQuery.Timings?.ToTimings();
 
@@ -271,7 +271,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         long numberOfResults;
         long totalDocumentsSizeInBytes;
-        await using (var writer = new AsyncBlittableJsonTextWriter(operationContext, RequestHandler.ResponseBodyStream()))
+        await using (var writer = new AsyncBlittableJsonTextWriter(operationContext, RequestHandler.ResponseBodyStream(), token.Token))
         {
             (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteSuggestionQueryResultAsync(operationContext, result, token.Token);
         }
@@ -293,7 +293,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
         long numberOfResults;
-        await using (var writer = new AsyncBlittableJsonTextWriter(operationContext, RequestHandler.ResponseBodyStream()))
+        await using (var writer = new AsyncBlittableJsonTextWriter(operationContext, RequestHandler.ResponseBodyStream(), token.Token))
         {
             result.Timings = query.Timings?.ToTimings();
             numberOfResults = await writer.WriteFacetedQueryResultAsync(operationContext, result, token.Token);

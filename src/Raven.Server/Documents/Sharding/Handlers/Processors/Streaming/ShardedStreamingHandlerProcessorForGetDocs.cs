@@ -12,6 +12,7 @@ using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         }
 
         protected override async ValueTask GetDocumentsAndWriteAsync(TransactionOperationContext context, int start, int pageSize, string startsWith,
-            string excludes, string matches, string startAfter)
+            string excludes, string matches, string startAfter, OperationCancelToken token)
         {
             using (context.OpenReadTransaction())
             {
@@ -33,13 +34,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
                 var op = new ShardedStreamDocumentsOperation(HttpContext, startsWith, matches, excludes, startAfter, null, continuationToken);
                 var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-                using var streams = await results.Result.InitializeAsync(RequestHandler.DatabaseContext, HttpContext.RequestAborted);
+                using var streams = await results.Result.InitializeAsync(RequestHandler.DatabaseContext, token.Token);
 
                 IAsyncEnumerable<BlittableJsonReaderObject> documents = string.IsNullOrEmpty(startsWith) == false ? 
                     OrderDocumentsById(streams, continuationToken) : 
                     OrderDocumentsByLastModified(streams, continuationToken);
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
                 {
                     writer.WriteStartObject();
 
