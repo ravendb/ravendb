@@ -168,7 +168,7 @@ namespace Corax.Queries
             return new TermMatch(indexSearcher, ctx, 1, &FillFunc, &AndWithFunc, scoreFunc: isBoosting ? &ScoreFunc : null, inspectFunc: &InspectFunc)
             {
                 _indexSearcher = indexSearcher,
-                _current = bm25Relevance.IsInitialized 
+                _current = bm25Relevance is not null
                     ? current 
                     : EntryIdEncodings.DecodeAndDiscardFrequency(value), 
                 _currentIdx = QueryMatch.Start, 
@@ -306,7 +306,6 @@ namespace Corax.Queries
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWithFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matches) where TBoostingMode : IBoostingMarker
             {
-                var storeFrequency = term.IsBoosting && term._bm25Relevance.IsStored;
                 int matchedIdx = 0;
 
                 var it = term._set;
