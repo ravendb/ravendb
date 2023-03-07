@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
@@ -531,8 +532,11 @@ namespace Raven.Server.Utils
             return value;
         }
 
+        private static readonly List<string> _timeSpanPropertiesNames = typeof(TimeSpan).GetProperties().Select(i => i.Name).ToList();
+        private static readonly List<string> _timeOnlyPropertiesNames = typeof(TimeOnly).GetProperties().Select(i => i.Name).ToList();
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe object ConvertLazyStringValue(LazyStringValue value)
+        private static unsafe object ConvertLazyStringValue(LazyStringValue value, StringSegment member = default)
         {
             var buffer = value.Buffer;
             var size = value.Size;
@@ -543,9 +547,22 @@ namespace Raven.Server.Utils
             if (result == LazyStringParser.Result.DateTimeOffset)
                 return dto;
 
+            // TimeOnly can be parsed also as TimeSpan. To avoid that we want to know the "context".
             if (LazyStringParser.TryParseTimeSpan(buffer, size, out TimeSpan ts))
-                    return ts;
+            {
+                if (member.HasValue && _timeSpanPropertiesNames.Contains(member.Value) == false && _timeOnlyPropertiesNames.Contains(member.Value))
+                {
+                    if (LazyStringParser.TryParseTimeOnly(buffer, size, out TimeOnly timeOnly))
+                        return timeOnly;
+                }
+                
+                return ts;
+            }
+            
+            if (LazyStringParser.TryParseDateOnly(buffer, size, out DateOnly dateOnly))
+                return dateOnly;
 
+            
             return value; // ensure that the decompressed lazy string value is returned
         }
 
@@ -583,17 +600,20 @@ namespace Raven.Server.Utils
                     _ => null
                 };
                 
-                
-
-                if (LazyStringParser.TryParseTimeSpan(str, value.Length, out var ts))
+                if (output == null && LazyStringParser.TryParseTimeSpan(str, value.Length, out var ts))
                     output = ts;
-                
+
+                if (output == null && LazyStringParser.TryParseDateOnly(str, value.Length, out var dateOnly))
+                    output = dateOnly;
+
+                if (output == null && LazyStringParser.TryParseTimeOnly(str, value.Length, out var timeOnly))
+                    output = timeOnly;
             }
 
             return output != null;
         }
 
-        public static object ConvertForIndexing(object value)
+        public static object ConvertForIndexing(object value, StringSegment propertyName = default)
         {
             if (value == null)
                 return null;
@@ -609,7 +629,7 @@ namespace Raven.Server.Utils
                 lazyString = (LazyStringValue)value;
 
             if (lazyString != null)
-                return ConvertLazyStringValue(lazyString);
+                return ConvertLazyStringValue(lazyString, propertyName);
 
             if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.BlittableJsonReaderObject])
                 return TryConvertBlittableJsonReaderObject((BlittableJsonReaderObject) value);
