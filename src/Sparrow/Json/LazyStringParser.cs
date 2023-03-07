@@ -263,6 +263,9 @@ namespace Sparrow.Json
                 goto Failed;
 
             int milliseconds = 0;
+#if NET7_0_OR_GREATER
+            int microseconds = 0;
+#endif
             if (len is 16)
             {
                 if (buffer[8] is not (byte)'.')
@@ -272,16 +275,28 @@ namespace Sparrow.Json
                 if (TryParseNumber3(buffer, 9, out milliseconds) == false)
                     goto Failed;
 
-                if (TryParseNumber4(buffer, 12, out var control) == false)
+#if NET7_0_OR_GREATER
+                if (TryParseNumber3(buffer, 12, out microseconds) == false)
                     goto Failed;
                 
-                if (control is not 0)
+                
+                if (TryParseNumber(buffer + 15, 1, out var control) == false || control is not 0)
                     goto Failed;
+                
+#else
+                if (TryParseNumber4(buffer, 12, out var control) == false || control is not 0)
+                    goto Failed;
+#endif
             }
 
+#if NET7_0_OR_GREATER
+            timeOnly = new TimeOnly(hours, minutes, seconds, milliseconds, microseconds);
+#else
             timeOnly = new TimeOnly(hours, minutes, seconds, milliseconds);
-            return true;
+#endif
 
+            return true;
+            
             Failed:
             timeOnly = default;
             return false;
@@ -302,6 +317,9 @@ namespace Sparrow.Json
                 goto Failed;
 
             int milliseconds = 0;
+#if NET7_0_OR_GREATER
+            int microseconds = 0;
+#endif
             if (len is 16)
             {
                 if (buffer[8] is not '.')
@@ -311,14 +329,25 @@ namespace Sparrow.Json
                 if (TryParseNumber3(buffer, 9, out milliseconds) == false)
                     goto Failed;
 
-                if (TryParseNumber4(buffer, 12, out var control) == false)
+#if NET7_0_OR_GREATER
+                if (TryParseNumber3(buffer, 12, out microseconds) == false)
                     goto Failed;
                 
-                if (control is not 0)
+                
+                if (TryParseNumber(buffer + 15, 1, out var control) == false || control is not 0)
                     goto Failed;
+#else
+                if (TryParseNumber4(buffer, 12, out var control) == false || control is not 0)
+                    goto Failed;
+#endif
             }
 
+            #if NET7_0_OR_GREATER
+            timeOnly = new TimeOnly(hours, minutes, seconds, milliseconds, microseconds);
+            #else
             timeOnly = new TimeOnly(hours, minutes, seconds, milliseconds);
+            #endif            
+            
             return true;
 
             Failed:
