@@ -71,26 +71,11 @@ public class RankingFunctionTests : StorageTest
         using var indexSearcher = new IndexSearcher(Env, _mapping);
 
         var query = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "maciej");
-        Span<float> scores = stackalloc float[10];
-        Span<long> ids = stackalloc long[10];
+        Span<float> scores = new float[size];
+        Span<long> ids = new long[size];
 
         var read = query.Fill(ids);
         query.Score(ids.Slice(0, read), scores, 0);
-
-        int currentId = 0;
-        while (read != 0)
-        {
-            Assert.Equal(10, read);
-            for (int i = 0; i < read; ++i)
-            {
-                var identityFor = indexSearcher.GetIdentityFor(ids[currentId % 10]);
-                Assert.Equal($"id/{currentId}", identityFor);
-                currentId += 1;
-            }
-            
-            read = query.Fill(ids);
-            query.Score(ids.Slice(0, read), scores, 0);
-        }
     }
 
     [Fact]

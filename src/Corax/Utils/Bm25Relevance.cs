@@ -1,5 +1,5 @@
 using System;
-using System.Runtime.CompilerServices;
+using System.Buffers;
 using Sparrow.Extensions;
 using Sparrow.Server;
 using Voron.Data.PostingLists;
@@ -9,10 +9,13 @@ namespace Corax.Utils;
 //This is implementation of BM25F from this white-paper:
 //https://www.researchgate.net/publication/45886647_Integrating_the_Probabilistic_Models_BM25BM25F_into_Lucene
 
-public unsafe struct Bm25Relevance : IDisposable
+public unsafe class Bm25Relevance : IDisposable
 {
-    private readonly delegate*<ref Bm25Relevance, Span<long>, int, void> _processFunc;
-    private readonly delegate*<ref Bm25Relevance, Span<long>, Span<float>, float, void> _scoreFunc;
+    [ThreadStatic]
+    internal static ArrayPool<Bm25Relevance> RelevancePool; 
+    
+    private readonly delegate*<Bm25Relevance, Span<long>, int, void> _processFunc;
+    private readonly delegate*<Bm25Relevance, Span<long>, Span<float>, float, void> _scoreFunc;
 
     /// <summary>
     /// The default score array value must be bigger than 0 because of support for document boost.
@@ -43,18 +46,16 @@ public unsafe struct Bm25Relevance : IDisposable
     //In a case when we don't want to persist matches in memory we want to have possibility to load them again from disk.
     private PostingList.Iterator _setIterator;
 
-
+    private readonly IDisposable _memoryHolder;
     public readonly bool IsStored;
-    public readonly bool IsInitialized;
     private bool _isDisposed;
     private readonly int _bufferCapacity;
     private Span<long> Matches => new(_matchBuffer, _currentId);
     private Span<short> Scores => new(_scoreBuffer, _currentId);
 
     private Bm25Relevance(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection,
-        delegate*<ref Bm25Relevance, Span<long>, Span<float>, float, void> dynamicalScoreFunc)
+        delegate*<Bm25Relevance, Span<long>, Span<float>, float, void> dynamicalScoreFunc)
     {
-        IsInitialized = true;
         _termRatioToWholeCollection = (float)termRatioToWholeCollection;
         _numberOfDocuments = numberOfDocuments;
         IsStored = MaximumDocumentCapacity > numberOfDocuments;
@@ -75,7 +76,7 @@ public unsafe struct Bm25Relevance : IDisposable
             _currentId = 0;
         }
 
-        context.Allocate(_bufferCapacity * (sizeof(long) + sizeof(short)), out var buffer);
+        _memoryHolder = context.Allocate(_bufferCapacity * (sizeof(long) + sizeof(short)), out var buffer);
         _matchBuffer = (long*)buffer.Ptr;
         _scoreBuffer = (short*)(buffer.Ptr + _bufferCapacity * sizeof(long));
 
@@ -99,7 +100,7 @@ public unsafe struct Bm25Relevance : IDisposable
         if (_isDisposed)
             ThrowAlreadyDisposed();
 
-        _scoreFunc(ref this, matches, scores, boostFactor);
+        _scoreFunc(this, matches, scores, boostFactor);
     }
 
     /// <summary>
@@ -112,7 +113,7 @@ public unsafe struct Bm25Relevance : IDisposable
     /// <param name="matches">Ids of docs matched by query. Requirements: sorted</param>
     /// <param name="scores"></param>
     /// <param name="boostFactor">Scalar</param>
-    private static void CalculateScoreFromMemory(ref Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
+    private static void CalculateScoreFromMemory(Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
     {
         if (bm25._idf.AlmostEquals(0f))
             return;
@@ -136,14 +137,14 @@ public unsafe struct Bm25Relevance : IDisposable
     /// <summary>
     /// Returns decoded spans of ids.
     /// </summary>
-    public void Process(Span<long> matches, int count) => _processFunc(ref this, matches, count);
+    public void Process(Span<long> matches, int count) => _processFunc(this, matches, count);
 
-    private static void DecodeAndDiscard(ref Bm25Relevance bm25, Span<long> matches, int count)
+    private static void DecodeAndDiscard(Bm25Relevance bm25, Span<long> matches, int count)
     {
         EntryIdEncodings.DecodeAndDiscardFrequency(matches, count);
     }
 
-    private static void DecodeAndSave(ref Bm25Relevance bm25, Span<long> matches, int count)
+    private static void DecodeAndSave(Bm25Relevance bm25, Span<long> matches, int count)
     {
         EntryIdEncodings.Decode(matches.Slice(0, count),
             new(bm25._scoreBuffer + bm25._currentId, bm25._numberOfDocuments - bm25._currentId));
@@ -179,9 +180,10 @@ public unsafe struct Bm25Relevance : IDisposable
     {
         if (_isDisposed)
             return;
-
+        
         _isDisposed = true;
         _currentId = 0;
+        _memoryHolder?.Dispose();
     }
 
     public static Bm25Relevance Once(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection)
@@ -198,13 +200,13 @@ public unsafe struct Bm25Relevance : IDisposable
     public static Bm25Relevance Set(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection,
         PostingList postingList)
     {
-        static void PostingListCalculateScoreDynamically(ref Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
+        static void PostingListCalculateScoreDynamically(Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
         {
             bm25._currentId = bm25._bufferCapacity;
             while (bm25._setIterator.Fill(bm25.Matches, out var read, pruneGreaterThanOptimization: EntryIdEncodings.PrepareIdForPruneInPostingList(matches[^1])) && read > 0)
             {
                 bm25._currentId = read;
-                CalculateScoreFromMemory(ref bm25, matches, scores, boostFactor);
+                CalculateScoreFromMemory(bm25, matches, scores, boostFactor);
                 bm25._currentId = bm25._bufferCapacity;
             }
         }

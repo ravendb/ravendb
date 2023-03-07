@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -14,6 +15,7 @@ namespace Corax.Queries
     public unsafe struct MultiTermMatch<TTermProvider> : IQueryMatch
         where TTermProvider : ITermProvider
     {
+
         private const int InitialFrequencyHolders = 64;
         
         private readonly bool _isBoosting;
@@ -22,13 +24,12 @@ namespace Corax.Queries
         private long _currentIdx;
         private QueryCountConfidence _confidence;
 
-        private Bm25Relevance* _frequencyPerFieldStartPtr;
+        private Bm25Relevance[] _frequenciesHolder;
         private int _currentFreqIdx;
-        private int _frequenciesSize;
-        private IDisposable _handler;
+        private int FrequenciesHolderSize => _frequenciesHolder?.Length ?? 0;
+       
         
-        
-        internal TTermProvider _inner;
+        private TTermProvider _inner;
         private TermMatch _currentTerm;        
         private readonly ByteStringContext _context;
 
@@ -53,9 +54,8 @@ namespace Corax.Queries
             _isBoosting = field.HasBoost;
             if (_isBoosting)
             {
-                _handler = _context.Allocate(InitialFrequencyHolders * Unsafe.SizeOf<Bm25Relevance>(), out var bufferOutput);
-                _frequencyPerFieldStartPtr = (Bm25Relevance*)bufferOutput.Ptr;
-                _frequenciesSize = InitialFrequencyHolders;
+                var pool = Bm25Relevance.RelevancePool ??= ArrayPool<Bm25Relevance>.Create();
+                _frequenciesHolder = pool.Rent(InitialFrequencyHolders);
             }
         }
 
@@ -104,14 +104,12 @@ namespace Corax.Queries
 
         private void UnlikelyGrowBufferOfTermMatches()
         {
-            var handler = _context.Allocate(2 * _currentFreqIdx * Unsafe.SizeOf<Bm25Relevance>(), out var tempBuffer);
-            var newStart = (Bm25Relevance*)tempBuffer.Ptr;
-            new Span<Bm25Relevance>(_frequencyPerFieldStartPtr, _currentFreqIdx).CopyTo(new Span<Bm25Relevance>(newStart, _currentFreqIdx));
+            var pool = Bm25Relevance.RelevancePool;
+            var handler = pool.Rent(2 * FrequenciesHolderSize);
+            _frequenciesHolder.CopyTo(handler.AsSpan(0, _currentFreqIdx));
             
-            _handler.Dispose();
-            _handler = handler;
-            _frequenciesSize *= 2;
-            _frequencyPerFieldStartPtr = newStart;
+            pool.Return(_frequenciesHolder);
+            _frequenciesHolder = handler;
         }
         
 #if !DEBUG
@@ -175,14 +173,11 @@ namespace Corax.Queries
 
         private void ResetBm25Buffer()
         {
-            var begin = _frequencyPerFieldStartPtr;
-            var end = begin + _currentFreqIdx;
-
-            while (begin != end)
+            for (int idX = 0; idX < _currentFreqIdx; ++idX)
             {
-                begin->Dispose();
-                begin += 1;
-            } 
+                _frequenciesHolder[idX].Dispose();
+                _frequenciesHolder[idX] = null;
+            }
             _currentFreqIdx = 0;
         }
 
@@ -190,9 +185,9 @@ namespace Corax.Queries
         {
             if (_isBoosting && _currentTerm.Count != 0)
             {
-                if (_currentFreqIdx >= _frequenciesSize)
+                if (_currentFreqIdx >= FrequenciesHolderSize)
                     UnlikelyGrowBufferOfTermMatches();
-                *(_frequencyPerFieldStartPtr + _currentFreqIdx) = _currentTerm._bm25Relevance;
+                _frequenciesHolder[_currentFreqIdx] = _currentTerm._bm25Relevance;
                 _currentFreqIdx += 1;
             }
         }
@@ -204,17 +199,17 @@ namespace Corax.Queries
                 return;
             
             //We've to gather all data from already seen TermMatches to get proper ranking :)
-
-            var begin = _frequencyPerFieldStartPtr;
-            var end = begin + _currentFreqIdx;
-            while (begin != end)
+            for (int idX = 0; idX < _currentFreqIdx; ++idX)
             {
-                ref var beginRef = ref *begin;
-                beginRef.Score(matches, scores, boostFactor);
-                beginRef.Dispose();
-                begin += 1;
+                ref var currentRelevance = ref _frequenciesHolder[idX];
+                currentRelevance.Score(matches, scores, boostFactor);
+                currentRelevance.Dispose();
+                currentRelevance = null;
             }
             
+            Bm25Relevance.RelevancePool.Return(_frequenciesHolder);
+            _frequenciesHolder = null;
+            _currentFreqIdx = 0;
         }
 
         public QueryInspectionNode Inspect()
