@@ -47,13 +47,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentHandler : DatabaseRequestHandler
     {
-
-        public DocumentHandler()
-        {
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("N/A", TrafficWatchChangeType.Documents);
-        }
-
         [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task Head()
         {
@@ -107,7 +100,7 @@ namespace Raven.Server.Documents.Handlers
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, documentSizeDetails.ToJson());
-                    
+
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
                 }
@@ -226,7 +219,7 @@ namespace Raven.Server.Documents.Handlers
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths, isProjection: false);
             GetCountersQueryString(Database, context, out var includeCounters);
-            
+
             GetRevisionsQueryString(Database, context, out var includeRevisions);
 
             GetTimeSeriesQueryString(Database, context, out var includeTimeSeries);
@@ -246,8 +239,8 @@ namespace Raven.Server.Documents.Handlers
                     if (document == null && ids.Count == 1)
                     {
                         HttpContext.Response.StatusCode = GetStringFromHeaders(Constants.Headers.IfNoneMatch) == HttpCache.NotFoundResponse
-                        ?(int)HttpStatusCode.NotModified
-                        :(int)HttpStatusCode.NotFound;
+                        ? (int)HttpStatusCode.NotModified
+                        : (int)HttpStatusCode.NotFound;
                         return;
                     }
 
@@ -309,21 +302,21 @@ namespace Raven.Server.Documents.Handlers
 
             includeCounters = new IncludeCountersCommand(database, context, counters);
         }
-        
+
         private void GetRevisionsQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeRevisionsCommand includeRevisions)
         {
             includeRevisions = null;
-            
+
             var rif = new RevisionIncludeField();
             var revisionsByChangeVectors = GetStringValuesQueryString("revisions", required: false);
             var revisionByDateTimeBefore = GetStringValuesQueryString("revisionsBefore", required: false);
-            
+
             if (revisionsByChangeVectors.Count == 0 && revisionByDateTimeBefore.Count == 0)
                 return;
 
-            if (DateTime.TryParseExact(revisionByDateTimeBefore.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal, out var dateTime))
+            if (DateTime.TryParseExact(revisionByDateTimeBefore.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dateTime))
                 rif.RevisionsBeforeDateTime = dateTime.ToUniversalTime();
-            
+
             foreach (var changeVector in revisionsByChangeVectors)
                 rif.RevisionsChangeVectorsPaths.Add(changeVector);
 
@@ -453,12 +446,12 @@ namespace Raven.Server.Documents.Handlers
                     writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
                     await writer.WriteTimeSeriesAsync(timeseries, Database.DatabaseShutdown);
                 }
-                if(revisionByChangeVectorResults?.Count > 0 || revisionsByDateTimeResults?.Count > 0)
+                if (revisionByChangeVectorResults?.Count > 0 || revisionsByDateTimeResults?.Count > 0)
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludes));
                     writer.WriteStartArray();
-                    await writer.WriteRevisionIncludes(context:context, revisionsByChangeVector: revisionByChangeVectorResults, revisionsByDateTime: revisionsByDateTimeResults); 
+                    await writer.WriteRevisionIncludes(context: context, revisionsByChangeVector: revisionByChangeVectorResults, revisionsByDateTime: revisionsByDateTimeResults);
                     writer.WriteEndArray();
                 }
                 if (compareExchangeValues?.Count > 0)
@@ -526,7 +519,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteString(cmd.PutResult.ChangeVector);
 
                         writer.WriteEndObject();
-                       
+
                         if (TrafficWatchManager.HasRegisteredClients)
                             AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
                     }
@@ -663,7 +656,7 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     writer.WriteEndObject();
-                    
+
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
                 }
@@ -701,7 +694,7 @@ namespace Raven.Server.Documents.Handlers
                     var codeGenerator = new JsonClassGenerator(lang);
                     var code = codeGenerator.Execute(document);
                     await writer.WriteAsync(code);
-                  
+
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
                 }
