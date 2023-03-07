@@ -97,7 +97,7 @@ public class RavenDB_19545 : RavenTestBase
                     session.SaveChanges();
                 }
 
-                var entries = session.TimeSeriesFor(docId, timeSeriesName).Get(baseline.AddDays(9), baseline.AddDays(11));
+                var entries = session.TimeSeriesFor(docId, timeSeriesName).Get(baseline.AddDays(9).AddSeconds(1), baseline.AddDays(11));
                 Assert.Equal(1, entries.Length);
 
                 entries = session.TimeSeriesFor(docId, timeSeriesName).Get(null, baseline.AddDays(8));
