@@ -394,7 +394,15 @@ namespace Raven.Server.Documents.Indexes
                 {
                     type = IndexStorage.ReadIndexType(name, environment);
                     sourceType = IndexStorage.ReadIndexSourceType(name, environment);
-                    searchEngineType = IndexStorage.ReadSearchEngineType(name, environment);
+                    try
+                    {
+                        searchEngineType = IndexStorage.ReadSearchEngineType(name, environment);
+                    }
+                    catch
+                    {
+                        // Since we only want to present the index search engine to the user when it's possible, we can simply ignore it when it's not possible
+                        // (for instance, if the index dates back to the pre-Corax era).
+                    }
                 }
                 catch (Exception e)
                 {
