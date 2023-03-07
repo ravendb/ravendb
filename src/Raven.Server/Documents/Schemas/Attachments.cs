@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Schemas
                 ShardingAttachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = AttachmentsStorage.GenerateBucketAndEtagIndexKeyForAttachments,
-                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
+                    OnEntryChanged = AttachmentsStorage.UpdateBucketStatsForAttachments,
                     IsGlobal = true,
                     Name = AttachmentsBucketAndEtagSlice
                 });

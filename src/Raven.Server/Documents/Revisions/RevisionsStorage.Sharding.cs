@@ -26,5 +26,10 @@ namespace Raven.Server.Documents.Revisions
         {
             return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(tx, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
         }
+
+        internal static void UpdateBucketStatsForRevisions(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+        {
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)RevisionsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+        }
     }
 }

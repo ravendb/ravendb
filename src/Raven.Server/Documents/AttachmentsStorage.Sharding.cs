@@ -42,6 +42,11 @@ namespace Raven.Server.Documents
                 (int)AttachmentsTable.Etag, ref tvr, out slice);
         }
 
+        internal static void UpdateBucketStatsForAttachments(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
+        {
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)AttachmentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+        }
+
         private void UpdateBucketStatsOnPutOrDeleteStream(DocumentsOperationContext context, Slice attachmentKey, long sizeChange)
         {
             if (_documentDatabase is not ShardedDocumentDatabase)
@@ -49,7 +54,7 @@ namespace Raven.Server.Documents
 
             using (GetBucketFromAttachmentKey(context, attachmentKey, out var bucketSlice))
             {
-                ShardedDocumentsStorage.UpdateBucketStats(context.Transaction.InnerTransaction, bucketSlice, oldSize: 0, newSize: sizeChange);
+                ShardedDocumentsStorage.UpdateBucketStatsInternal(context.Transaction.InnerTransaction, key: bucketSlice, value: default, changeVectorIndex: -1, sizeChange: sizeChange);
             }
         }
 

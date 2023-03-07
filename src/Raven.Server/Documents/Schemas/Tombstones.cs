@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Schemas
                 ShardingTombstonesSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = ShardedDocumentsStorage.GenerateBucketAndEtagIndexKeyForTombstones,
-                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
+                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStatsForTombstones,
                     IsGlobal = true,
                     Name = TombstonesBucketAndEtagSlice
                 });
