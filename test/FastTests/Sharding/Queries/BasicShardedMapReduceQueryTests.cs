@@ -309,6 +309,7 @@ limit 1, 1")
             using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapReduce());
+                store.ExecuteIndex(new UserMapReduceJs());
 
                 using (var session = store.OpenSession())
                 {
@@ -328,6 +329,15 @@ limit 1, 1")
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jane", queryResult[0].Name);
                     Assert.Equal(30, queryResult[0].Sum);
+
+                    var queryResultJs = session.Query<UserMapReduceJs.Result, UserMapReduceJs>()
+                        .OrderByDescending(x => x.Sum)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResultJs.Count);
+                    Assert.Equal("Jane", queryResultJs[0].Name);
+                    Assert.Equal(30, queryResultJs[0].Sum);
                 }
             }
         }
@@ -384,6 +394,7 @@ limit 1
             using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapReduce());
+                store.ExecuteIndex(new UserMapReduceJs());
 
                 using (var session = store.OpenSession())
                 {
@@ -411,6 +422,16 @@ limit 1
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Grisha", queryResult[0].Name);
                     Assert.Equal(21, queryResult[0].Sum);
+
+                    var queryResultJs = session.Query<UserMapReduceJs.Result, UserMapReduceJs>()
+                        .OrderByDescending(x => x.Sum)
+                        .Skip(1)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResultJs.Count);
+                    Assert.Equal("Grisha", queryResultJs[0].Name);
+                    Assert.Equal(21, queryResultJs[0].Sum);
                 }
             }
         }
@@ -474,6 +495,7 @@ limit 1, 1
             using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapReduce());
+                store.ExecuteIndex(new UserMapReduceJs());
 
                 using (var session = store.OpenSession())
                 {
@@ -493,6 +515,15 @@ limit 1, 1
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jane", queryResult[0].Name);
                     Assert.Equal(30, queryResult[0].Sum);
+
+                    var queryResultJs = session.Query<UserMapReduceJs.Result, UserMapReduceJs>()
+                        .OrderByDescending(x => x.Name)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResultJs.Count);
+                    Assert.Equal("Jane", queryResultJs[0].Name);
+                    Assert.Equal(30, queryResultJs[0].Sum);
                 }
             }
         }
@@ -867,6 +898,40 @@ select project(o)")
             }
         }
 
+        private class UserMapReduceJs : AbstractJavaScriptIndexCreationTask
+        {
+            public class Result
+            {
+#pragma warning disable CS0649
+                public string Name;
+                public int Sum;
+#pragma warning restore CS0649
+            }
+
+            public UserMapReduceJs()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Users', function (c) {
+
+                        return {
+                            Name: c.Name,
+                            Sum: c.Count
+                        };
+                    })",
+                };
+
+                Reduce = @"groupBy(x => ({
+                        Name: x.Name
+                    })).aggregate(g => {
+                    return {
+                        Name: g.key.Name,
+                        Sum: g.values.reduce((res, val) => res + val.Sum, 0)
+                    };
+                })";
+            }
+        }
+
         private class UserMapReduceWithTwoReduceKeys : AbstractIndexCreationTask<User, UserMapReduceWithTwoReduceKeys.Result>
         {
             public class Result
@@ -878,8 +943,10 @@ select project(o)")
 
             public class CompoundResult
             {
+#pragma warning disable CS0649
                 public ExpandoObject Name;
                 public int Sum;
+#pragma warning restore CS0649
             }
 
             public UserMapReduceWithTwoReduceKeys()
