@@ -173,8 +173,8 @@ $link-color: $primary;
     $text-muted-color: $gray-700;
     $text-emphasis-color: $gray-900;
 
-    $base-text-color: $gray-700;
-    $base-text-muted-color: $gray-800;
+    $base-text-color: $gray-800;
+    $base-text-muted-color: $gray-700;
     $base-text-emphasis-color: $gray-900;
 
     $panel-header-bg: $gray-100;
@@ -344,3 +344,18 @@ $theme-colors: (
 ) !default;
 
 // scss-docs-end theme-colors-map
+
+$primary-var: var(--bs-primary);
+$secondary-var: var(--bs-secondary);
+$success-var: var(--bs-success);
+$info-var: var(--bs-info);
+$warning-var: var(--bs-warning);
+$danger-var: var(--bs-danger);
+$node-var: var(--bs-node);
+$shard-var: var(--bs-shard);
+$orchestrator-var: var(--bs-orchestrator);
+$progress-var: var(--bs-progress);
+$body-bg-var: var(--bs-body-bg-rgb);
+$text-color-var: var(--text-color);
+$text-muted-var: var(--text-muted);
+$text-emphasis-var: var(--text-emphasis);

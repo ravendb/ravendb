@@ -60,7 +60,7 @@ function getStatusColor(db: DatabaseSharedInfo, localInfo: locationAwareLoadable
         return "danger";
     }
     if (localInfo.every((x) => x.status === "success" && !x.data.upTime)) {
-        return "offline";
+        return "secondary";
     }
     if (db.disabled) {
         return "warning";
@@ -87,13 +87,39 @@ interface DatabaseTopologyProps {
     db: DatabaseSharedInfo;
 }
 
+export function AccessIcon(props: { dbAccess: string }) {
+    const { dbAccess } = props;
+    switch (dbAccess) {
+        case "DatabaseAdmin":
+            return (
+                <span title="Admin Access">
+                    <i className="icon-access-admin" />
+                </span>
+            );
+        case "DatabaseReadWrite":
+            return (
+                <span title="Read/Write Access">
+                    <i className="icon-access-read-write" />
+                </span>
+            );
+        case "DatabaseRead":
+            return (
+                <span title="Read-only Access">
+                    <i className="icon-access-read" />
+                </span>
+            );
+        default:
+            return null;
+    }
+}
+
 function DatabaseTopology(props: DatabaseTopologyProps) {
     const { db } = props;
 
     if (db.sharded) {
         const shardedDb = db as ShardedDatabaseSharedInfo;
         return (
-            <div className="px-3 py-2">
+            <div>
                 <NodeSet color="orchestrator" className="m-1">
                     <NodeSetLabel color="orchestrator" icon="orchestrator">
                         Orchestrators
@@ -134,7 +160,7 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
         );
     } else {
         return (
-            <div className="px-3 py-2">
+            <div>
                 <NodeSet className="m-1">
                     <NodeSetLabel icon="database">Nodes</NodeSetLabel>
                     {db.nodes.map((node) => {
@@ -165,6 +191,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const dbState = useAppSelector(selectDatabaseState(db.name));
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
+
+    const dbAccess: string = null; // DatabaseAdmin, DatabaseReadWrite, DatabaseRead TODO
 
     const { reportEvent } = useEventsCollector();
 
@@ -306,22 +334,19 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         <span>{db.name}</span>
                                     </a>
                                 ) : (
-                                    <div className="name">
-                                        <span title="Database is disabled">
-                                            <small>
-                                                <i
-                                                    className={
-                                                        db.currentNode.relevant
-                                                            ? "icon-database icon-addon-home"
-                                                            : "icon-database"
-                                                    }
-                                                ></i>
-                                            </small>
-                                            <span>{db.name}</span>
-                                        </span>
-                                    </div>
+                                    <span title="Database is disabled">
+                                        <i
+                                            className={
+                                                db.currentNode.relevant
+                                                    ? "icon-database icon-addon-home"
+                                                    : "icon-database"
+                                            }
+                                        ></i>
+                                        <span>{db.name}</span>
+                                    </span>
                                 )}
                             </RichPanelName>
+                            <div className="text-muted">{dbAccess && <AccessIcon dbAccess={dbAccess} />}</div>
                         </RichPanelInfo>
 
                         <RichPanelActions>
@@ -483,20 +508,22 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 color="secondary"
                                 onClick={togglePanelCollapsed}
                                 title="Toggle distribution details"
+                                className="ms-1"
                             >
-                                <i className={panelCollapsed ? "icon-expand-vertical" : "icon-collapse-vertical"} />
+                                <i className={panelCollapsed ? "icon-arrow-down" : "icon-arrow-up"} />
                             </Button>
                         </RichPanelActions>
                     </RichPanelHeader>
 
                     <ValidDatabasePropertiesPanel db={db} />
-
-                    <Collapse isOpen={!panelCollapsed}>
-                        <DatabaseDistribution db={db} />
-                    </Collapse>
-                    <Collapse isOpen={panelCollapsed}>
-                        <DatabaseTopology db={db} />
-                    </Collapse>
+                    <div className="px-3 pb-2">
+                        <Collapse isOpen={!panelCollapsed}>
+                            <DatabaseDistribution db={db} />
+                        </Collapse>
+                        <Collapse isOpen={panelCollapsed}>
+                            <DatabaseTopology db={db} />
+                        </Collapse>
+                    </div>
                 </div>
             </div>
         </RichPanel>

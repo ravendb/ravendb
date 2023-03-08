@@ -1,10 +1,9 @@
 ﻿@use "sass:math";
-@use "Content/scss/colors";
-@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
 
 .rich-panel-item {
     & + .rich-panel-item {
-        margin-top: sizes.$gutter-sm;
+        margin-top: bs5variables.$gutter-sm;
     }
 
     .rich-panel-header {
@@ -14,15 +13,15 @@
         align-items: center;
 
         .rich-panel-select {
-            width: sizes.$gutter;
-            height: sizes.$gutter;
-            margin: 0 sizes.$gutter-xxs 0 0;
+            width: bs5variables.$gutter;
+            height: bs5variables.$gutter;
+            margin: 0 bs5variables.$gutter-xxs 0 0;
             min-height: auto;
         }
 
         .rich-panel-info,
         .rich-panel-actions {
-            padding: sizes.$gutter-xs sizes.$gutter-sm;
+            padding: bs5variables.$gutter-xs bs5variables.$gutter-sm;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
@@ -33,70 +32,95 @@
             flex-grow: 1;
         }
     }
-}
 
-.rich-panel-status {
-    writing-mode: vertical-rl;
-    transform: rotate(180.1deg);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    border-radius: 0 sizes.$gutter-xxs sizes.$gutter-xxs 0 !important;
-}
+    &.active {
+        &::before {
+            $bg-offset: 3px;
+            $width: bs5variables.$gutter-sm;
 
-.rich-panel-details {
-    padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
-    padding-left: sizes.$gutter-md;
-    display: flex;
-    align-items: flex-end;
-    flex-wrap: wrap;
+            content: "selected";
+            position: absolute;
+            top: 0;
+            left: ($width * -1) + 1px;
+            border-radius: 0 bs5variables.$border-radius-lg bs5variables.$border-radius-lg 0;
+            height: 100%;
+            width: $width;
+            line-height: $width - $bg-offset;
+            z-index: 1;
+            writing-mode: vertical-rl;
+            transform: rotate(180.1deg);
+            text-align: center;
+            color: bs5variables.$black;
+            box-shadow: ($width * -1 + $bg-offset) 0px 0px 0px bs5variables.$primary-var inset;
+            font-size: bs5variables.$badge-font-size;
+            font-weight: bs5variables.$badge-font-weight;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+    }
 
-    .rich-panel-details-right {
+    .rich-panel-status {
+        writing-mode: vertical-rl;
+        transform: rotate(180.1deg);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        border-radius: 0 bs5variables.$border-radius-lg bs5variables.$border-radius-lg 0 !important;
+    }
+
+    .rich-panel-details {
+        padding: bs5variables.$gutter-xs math.div(bs5variables.$gutter, 2);
         display: flex;
-        justify-content: end;
-        flex-grow: 1;
         align-items: flex-end;
         flex-wrap: wrap;
-    }
 
-    .rich-panel-detail-item {
-        margin: sizes.$gutter-xs math.div(sizes.$gutter, 2);
-    }
-
-    .rich-panel-detail-item-sm {
-        margin: sizes.$gutter-xs math.div(sizes.$gutter, 2);
-        font-size: sizes.$font-size-sm;
-    }
-
-    .detail-item-label {
-        font-size: sizes.$font-size-xs;
-        color: colors.$text-muted-color;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        line-height: 1.1em;
-        margin-bottom: 2px;
-    }
-    .detail-item-content {
-        display: flex;
-        align-items: center;
-        line-height: 1.4em;
-
-        & > i {
-            margin-right: sizes.$gutter-xxs;
+        .rich-panel-details-right {
+            display: flex;
+            justify-content: end;
+            flex-grow: 1;
+            align-items: flex-end;
+            flex-wrap: wrap;
         }
 
-        a:not(:hover) {
-            color: inherit;
+        .rich-panel-detail-item {
+            margin: bs5variables.$gutter-xs math.div(bs5variables.$gutter, 2);
         }
-    }
 
-    .value {
-        margin-left: sizes.$gutter-xxs;
-        font-weight: bold;
-        color: colors.$text-emphasis-color;
-    }
+        .rich-panel-detail-item-sm {
+            margin: bs5variables.$gutter-xs math.div(bs5variables.$gutter, 2);
+            font-size: bs5variables.$font-size-sm;
+        }
 
-    .progress-circle .state-indicator {
-        margin-top: -3px;
-        margin-bottom: -3px;
+        .detail-item-label {
+            font-size: bs5variables.$font-size-xs;
+            color: bs5variables.$text-muted-var;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            line-height: 1.1em;
+            margin-bottom: 2px;
+        }
+        .detail-item-content {
+            display: flex;
+            align-items: center;
+            line-height: 1.4em;
+
+            & > i {
+                margin-right: bs5variables.$gutter-xxs;
+            }
+
+            a:not(:hover) {
+                color: inherit;
+            }
+        }
+
+        .value {
+            margin-left: bs5variables.$gutter-xxs;
+            font-weight: bold;
+            color: bs5variables.$text-emphasis-var;
+        }
+
+        .progress-circle .state-indicator {
+            margin-top: -3px;
+            margin-bottom: -3px;
+        }
     }
 }
