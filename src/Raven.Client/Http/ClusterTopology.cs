@@ -13,6 +13,7 @@ namespace Raven.Client.Http
             Members = members;
             Promotables = promotables;
             Watchers = watchers;
+            Witnesses = witnesses;
             LastNodeId = lastNodeId;
             Etag = index;
         }
