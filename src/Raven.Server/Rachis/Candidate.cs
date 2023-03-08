@@ -98,6 +98,10 @@ namespace Raven.Server.Rachis
                         _engine.AppendStateDisposable(this, candidateAmbassador); // concurrency exception here will dispose the current candidate and it ambassadors
                         candidateAmbassador.Start();
                     }
+                    foreach (var witness in clusterTopology.Witnesses)
+                    {
+
+                    }
                     while (_running && _engine.CurrentState == RachisState.Candidate)
                     {
                         if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)

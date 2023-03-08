@@ -642,6 +642,11 @@ namespace Raven.Server.Rachis
                                 return;
                             break;
 
+                        case Leader.TopologyModification.Witness:
+                            if (clusterTopology.Watchers.ContainsKey(tag))
+                                return;
+                            break;
+
                         case Leader.TopologyModification.Remove:
                             if (clusterTopology.Members.ContainsKey(tag) == false &&
                                 clusterTopology.Promotables.ContainsKey(tag) == false &&
@@ -1131,6 +1136,7 @@ namespace Raven.Server.Rachis
                 new Dictionary<string, string>(),
                 new Dictionary<string, string>(),
                 new Dictionary<string, string>(),
+                new Dictionary<string, string>(),
                 topology.LastNodeId,
                 -1
             );
@@ -1147,6 +1153,7 @@ namespace Raven.Server.Rachis
             {
                 return new ClusterTopology(
                     null,
+                    new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
@@ -2108,6 +2115,7 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
+                    new Dictionary<string, string>(),
                     newTag,
                     GetLastEntryIndex(ctx)
                 );
@@ -2142,6 +2150,7 @@ namespace Raven.Server.Rachis
                         {
                             [nodeTag] = Url
                         },
+                        new Dictionary<string, string>(),
                         new Dictionary<string, string>(),
                         new Dictionary<string, string>(),
                         _tag,
@@ -2188,6 +2197,7 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
+                    new Dictionary<string, string>(),
                     _tag,
                     GetLastEntryIndex(ctx) + 1
                 );
@@ -2229,6 +2239,11 @@ namespace Raven.Server.Rachis
         public Task AddToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
         {
             return ModifyTopologyAsync(nodeTag, url, asWatcher ? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Promotable, validateNotInTopology);
+        }
+
+        public Task AddWitnessToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true, bool asWitness = true)
+        {
+            return ModifyTopologyAsync(nodeTag, url, asWitness ? Leader.TopologyModification.Witness : Leader.TopologyModification.Promotable, validateNotInTopology);
         }
 
         public Task RemoveFromClusterAsync(string nodeTag)

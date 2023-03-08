@@ -210,6 +210,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         },
                         new Dictionary<string, string>(),
                         new Dictionary<string, string>(),
+                        new Dictionary<string, string>(),
                         tag,
                         -1L
                     );

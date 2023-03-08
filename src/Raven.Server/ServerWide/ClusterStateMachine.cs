@@ -2648,6 +2648,7 @@ namespace Raven.Server.ServerWide
                 },
                 new Dictionary<string, string>(),
                 new Dictionary<string, string>(),
+                new Dictionary<string, string>(),
                 newTag,
                 index
             );

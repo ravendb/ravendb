@@ -12,6 +12,7 @@ namespace Raven.Client.Http
             None = 0,
             Promotable = 1,
             Member = 2,
+            Witness = 3,
             Rehab = 4
         }
 
@@ -108,6 +109,14 @@ namespace Raven.Client.Http
                 });
             }
 
+            foreach (var witness in topology.Witnesses)
+            {
+                nodes.Add(new ServerNode
+                {
+                    Url = witness.Value,
+                    ClusterTag = witness.Key
+                });
+            }
             return nodes;
         }
     }

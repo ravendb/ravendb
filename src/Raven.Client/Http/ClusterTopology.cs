@@ -7,7 +7,7 @@ namespace Raven.Client.Http
 {
     public class ClusterTopology
     {
-        public ClusterTopology(string topologyId, Dictionary<string, string> members, Dictionary<string, string> promotables, Dictionary<string, string> watchers, string lastNodeId, long index)
+        public ClusterTopology(string topologyId, Dictionary<string, string> members, Dictionary<string, string> promotables, Dictionary<string, string> watchers, Dictionary<string, string> witnesses, string lastNodeId, long index)
         {
             TopologyId = topologyId;
             Members = members;
@@ -44,12 +44,19 @@ namespace Raven.Client.Http
                     return;
                 }
             }
-            
+            foreach (var witness in Witnesses)
+            {
+                if (witness.Key == currentNodeTag)
+                {
+                    Witnesses[witness.Key] = clientRequestedUrl;
+                    return;
+                }
+            }
         }
 
         public bool Contains(string node)
         {
-            return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node);
+            return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node) || Witnesses.ContainsKey(node);
         }
 
         //Try to avoid using this since it is expensive
@@ -76,6 +83,13 @@ namespace Raven.Client.Http
                     return (true, watcher.Key);
                 }
             }
+            foreach (var witness in Witnesses)
+            {
+                if (witness.Value == nodeUrl)
+                {
+                    return (true, witness.Key);
+                }
+            }
             return (false, (string)null);
         }
 
@@ -93,6 +107,7 @@ namespace Raven.Client.Http
                 [nameof(Members)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Members)),
                 [nameof(Promotables)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Promotables)),
                 [nameof(Watchers)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Watchers)),
+                [nameof(Witnesses)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Witnesses)),
                 [nameof(LastNodeId)] = LastNodeId,
                 [nameof(Etag)] = Etag
             };
@@ -106,6 +121,7 @@ namespace Raven.Client.Http
                 [nameof(Members)] = DynamicJsonValue.Convert(Members),
                 [nameof(Promotables)] = DynamicJsonValue.Convert(Promotables),
                 [nameof(Watchers)] = DynamicJsonValue.Convert(Watchers),
+                [nameof(Witnesses)] = DynamicJsonValue.Convert(Witnesses),
                 [nameof(LastNodeId)] = LastNodeId,
                 [nameof(Etag)] = Etag
             };
@@ -118,7 +134,8 @@ namespace Raven.Client.Http
 
             if (Members.TryGetValue(tag, out string url) ||
                 Promotables.TryGetValue(tag, out url) ||
-                Watchers.TryGetValue(tag, out url))
+                Watchers.TryGetValue(tag, out url) || 
+                Witnesses.TryGetValue(tag, out url)) 
                 return url;
 
             return null;
@@ -171,6 +188,10 @@ namespace Raven.Client.Http
                 {
                     dic[node.Key] = node.Value;
                 }
+                foreach (var node in Witnesses)
+                {
+                    dic[node.Key] = node.Value;
+                }
                 return dic;
             }
         }
@@ -178,13 +199,13 @@ namespace Raven.Client.Http
         public string LastNodeId { get; protected set; }
         public string TopologyId { get; protected set; }
         public long Etag { get; protected set; }
-
+        public Dictionary<string,string> Witnesses { get; protected set; }
         public Dictionary<string, string> Members { get; protected set; }
         public Dictionary<string, string> Promotables { get; protected set; }
         public Dictionary<string, string> Watchers { get; protected set; }
 
         [JsonIgnore]
-        internal int Count => Members.Count + Promotables.Count + Watchers.Count;
+        internal int Count => Members.Count + Promotables.Count + Watchers.Count + Witnesses.Count;
     }
 
     public class NodeStatus : IDynamicJson

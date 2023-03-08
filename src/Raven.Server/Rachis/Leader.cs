@@ -262,6 +262,11 @@ namespace Raven.Server.Rachis
                     ambassador.Start();
                 }
 
+                foreach (var witness in clusterTopology.Witnesses)
+                {
+                    //WE NEED TO REFRESH HERE WITNESSES AMBASSADORS FOR THIS LEADER
+                }
+
                 if (old.Count > 0)
                 {
                     foreach (var ambassador in old)
@@ -619,6 +624,7 @@ namespace Raven.Server.Rachis
 
         protected long GetMaxIndexOnQuorum(int minSize)
         {
+            //WE NEED TO CONSIDER HERE ABOUT VOTERS THAT ARE WITNESSES
             _nodesPerIndex.Clear();
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -1008,6 +1014,7 @@ namespace Raven.Server.Rachis
             Voter,
             Promotable,
             NonVoter,
+            Witness,
             Remove
         }
 
@@ -1054,6 +1061,8 @@ namespace Raven.Server.Rachis
                         newPromotables.Remove(nodeTag);
                         var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
                         newNonVotes.Remove(nodeTag);
+                        var newWitnesses = new Dictionary<string, string>(clusterTopology.Witnesses);
+                        newWitnesses.Remove(nodeTag);
 
                         var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] { nodeTag }).Max();
 
@@ -1074,6 +1083,10 @@ namespace Raven.Server.Rachis
                                 Debug.Assert(nodeUrl != null);
                                 newNonVotes[nodeTag] = nodeUrl;
                                 break;
+                            case TopologyModification.Witness:
+                                Debug.Assert(nodeUrl != null);
+                                newWitnesses[nodeTag] = nodeUrl;
+                                break;
                             case TopologyModification.Remove:
                                 PeersVersion.TryRemove(nodeTag, out _);
                                 if (clusterTopology.Contains(nodeTag) == false)
@@ -1091,6 +1104,7 @@ namespace Raven.Server.Rachis
                             newVotes,
                             newPromotables,
                             newNonVotes,
+                            newWitnesses,
                             highestNodeId,
                             _engine.GetLastEntryIndex(context) + 1
                         );

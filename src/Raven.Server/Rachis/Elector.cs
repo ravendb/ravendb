@@ -95,7 +95,8 @@ namespace Raven.Server.Rachis
 
                             if (clusterTopology.Members.ContainsKey(rv.Source) == false &&
                                 clusterTopology.Promotables.ContainsKey(rv.Source) == false &&
-                                clusterTopology.Watchers.ContainsKey(rv.Source) == false)
+                                clusterTopology.Watchers.ContainsKey(rv.Source) == false &&
+                                clusterTopology.Witnesses.ContainsKey(rv.Source) == false)
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {

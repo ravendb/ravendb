@@ -29,9 +29,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new SubscriptionsFailover(testOutputHelper))
+                    using (var test = new BasicCluster(testOutputHelper))
                     {
-                        await test.ContinueFromThePointIStoppedConcurrentSubscription(1, 20);
+                         await test.ClusterWithNodeAsWitness();
                     }
                 }
                 catch (Exception e)

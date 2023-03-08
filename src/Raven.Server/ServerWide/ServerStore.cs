@@ -561,6 +561,7 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Snapshot can be requested only by a non-member node.{Environment.NewLine}" +
                                                     $"In order to proceed, demote this node to watcher, then request the snapshot again.{Environment.NewLine}" +
                                                     $"Afterwards you can promote it back to member.");
+            //DO WE NEED TO CONSIDER WITNESS HERE?
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
@@ -2697,7 +2698,7 @@ namespace Raven.Server.ServerWide
             var clusterNodes = clusterTopology.Members.Keys
                 .Concat(clusterTopology.Watchers.Keys)
                 .ToList();
-
+            // I THINK WE NEED TO CONCAT WITNESSES HERE ALSO
             if (record.Encrypted)
             {
                 clusterNodes.RemoveAll(n => AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
