@@ -190,7 +190,7 @@ namespace Raven.Server.Rachis
                                 // here we need to wait until the concurrent send pending to leader
                                 // is completed to avoid concurrent writes to the leader
                                 cts.Cancel();
-                                task.Wait(CancellationToken.None);
+                                await task;
                             }
                         }
                     }
@@ -1087,11 +1087,6 @@ namespace Raven.Server.Rachis
 
         private void Run(object obj)
         {
-            RunAsync(obj).Wait();
-        }
-
-        private async Task RunAsync(object obj)
-        {
             try
             {
                 ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, _debugName, _engine.Log);
@@ -1107,7 +1102,7 @@ namespace Raven.Server.Rachis
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
 
-                        await FollowerSteadyStateAsync();
+                        FollowerSteadyStateAsync().Wait();
                     }
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {

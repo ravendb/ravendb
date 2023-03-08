@@ -1,6 +1,5 @@
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis.Commands;
@@ -37,11 +36,6 @@ namespace Raven.Server.Rachis
         }
 
         private void HandleVoteRequest()
-        {
-            HandleVoteRequestAsync().Wait();
-        }
-
-        private async Task HandleVoteRequestAsync()
         {
             try
             {
@@ -211,7 +205,7 @@ namespace Raven.Server.Rachis
                                 // consider this an indication that the cluster was able to move past our term
                                 // and update the term accordingly
                                 var castVoteInTermCommand = new ElectorCastVoteInTermCommand(_engine, rv);
-                                await _engine.TxMerger.Enqueue(castVoteInTermCommand);
+                                _engine.TxMerger.Enqueue(castVoteInTermCommand).Wait();
 
                                 _connection.Send(context, new RequestVoteResponse
                                 {
@@ -260,7 +254,7 @@ namespace Raven.Server.Rachis
                             _engine.ForTestingPurposes?.BeforeCastingForRealElection();
 
                             var castVoteInTermWithShouldGrantVoteCommand = new ElectorCastVoteInTermWithShouldGrantVoteCommand(_engine, this, rv, lastLogIndex);
-                            await _engine.TxMerger.Enqueue(castVoteInTermWithShouldGrantVoteCommand);
+                            _engine.TxMerger.Enqueue(castVoteInTermWithShouldGrantVoteCommand).Wait();
 
                             var result = castVoteInTermWithShouldGrantVoteCommand.VoteResult;
 
