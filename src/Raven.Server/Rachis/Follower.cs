@@ -72,6 +72,9 @@ namespace Raven.Server.Rachis
 
             while (true)
             {
+                _threadGuardian ??= new ThreadGuardian();
+                _threadGuardian.Guard();
+
                 entries.Clear();
 
                 using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -1084,6 +1087,8 @@ namespace Raven.Server.Rachis
                     state: negotiation,
                     ThreadNames.ForFollower($"Follower thread from {_connection} in term {negotiation.Term}", _connection.ToString(), negotiation.Term));
         }
+
+        private ThreadGuardian _threadGuardian;
 
         private void Run(object obj)
         {
