@@ -741,12 +741,12 @@ Global
 		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Release|x64.Build.0 = Release|Any CPU
 		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Release|x86.ActiveCfg = Release|Any CPU
 		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Release|x86.Build.0 = Release|Any CPU
-		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|Any CPU.ActiveCfg = Debug|Any CPU
-		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|Any CPU.Build.0 = Debug|Any CPU
-		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x64.ActiveCfg = Debug|Any CPU
-		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x64.Build.0 = Debug|Any CPU
-		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x86.ActiveCfg = Debug|Any CPU
-		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x86.Build.0 = Debug|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|Any CPU.ActiveCfg = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|Any CPU.Build.0 = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x64.ActiveCfg = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x64.Build.0 = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x86.ActiveCfg = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

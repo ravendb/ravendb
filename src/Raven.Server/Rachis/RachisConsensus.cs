@@ -1472,7 +1472,7 @@ namespace Raven.Server.Rachis
                 GetLastTruncated(context, out lastIndex, out long _);
             }
             lastIndex += 1;
-            var guid = LogHistory.GetGuidFromCommand(cmd);
+            var guid = RachisLogHistory.GetUniqueRequestIdFromCommand(cmd);
             if (guid == RaftIdGenerator.DontCareId)
             {
                 var newGuid = $"DontCare/{term}-{lastIndex}";
