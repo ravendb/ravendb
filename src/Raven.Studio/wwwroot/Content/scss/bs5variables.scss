@@ -2,7 +2,6 @@
 @import "../../../node_modules/boostrap5/scss/functions";
 @import "../scss/colors";
 @import "../scss/sizes";
-@import "../scss/custom-properties";
 // Variables
 //
 // Variables should follow the `$component-state-property-size` formula for
@@ -292,7 +291,7 @@ $border-color: $gray-300 !default;
 // scss-docs-start border-radius-variables
 $border-radius: 2px !default;
 $border-radius-sm: 2px !default;
-$border-radius-lg: 2px !default;
+$border-radius-lg: 4px !default;
 $border-radius-pill: 30px !default;
 // scss-docs-end border-radius-variables
 
@@ -1001,8 +1000,8 @@ $pagination-border-radius-lg: $border-radius-lg !default;
 $card-spacer-y: $spacer !default;
 $card-spacer-x: $spacer !default;
 $card-title-spacer-y: $spacer * $spacer-ratio !default;
-$card-border-width: $border-width !default;
-$card-border-radius: $border-radius !default;
+$card-border-width: 0 !default;
+$card-border-radius: $border-radius-lg !default;
 $card-border-color: $panel-header-bg !default;
 $card-inner-border-radius: subtract($card-border-radius, $card-border-width) !default;
 $card-cap-padding-y: $card-spacer-y * 0.5 !default;

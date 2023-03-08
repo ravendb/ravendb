@@ -52,18 +52,18 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         : appUrl.toExternalDatabaseUrl(db, localDocumentsUrl);
 
     return (
-        <RichPanelDetails className="flex-wrap">
+        <RichPanelDetails className="flex-wrap pb-1">
             <RichPanelDetailItem>
                 <div className="encryption">
                     {db.encrypted && (
-                        <small title="This database is encrypted">
+                        <span title="This database is encrypted">
                             <i className="icon-key text-success" />
-                        </small>
+                        </span>
                     )}
                     {!db.encrypted && (
-                        <small title="This database is not encrypted">
+                        <span title="This database is not encrypted">
                             <i className="icon-unencrypted text-muted" />
-                        </small>
+                        </span>
                     )}
                 </div>
             </RichPanelDetailItem>

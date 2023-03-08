@@ -4,11 +4,8 @@
 @use "Content/scss/sizes";
 
 .location-distribution {
-    padding: sizes.$gutter-sm;
-    padding-left: sizes.$gutter-md;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(130px, max-content));
-    margin: sizes.$gutter-xs/-2;
 
     .distribution-legend,
     .distribution-summary,
@@ -26,7 +23,7 @@
         }
 
         & > div {
-            height: 30px;
+            min-height: 30px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -39,10 +36,10 @@
                 height: 50px;
             }
 
-            &:last-of-type,
-            &.progress-circle {
-                height: auto;
-            }
+            // &:last-of-type,
+            // &.progress-circle {
+            //     height: auto;
+            // }
         }
     }
 
