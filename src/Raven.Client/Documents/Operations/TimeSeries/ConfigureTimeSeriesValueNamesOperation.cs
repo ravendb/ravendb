@@ -22,15 +22,17 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public RavenCommand<ConfigureTimeSeriesOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureTimeSeriesValueNamesCommand(_parameters);
+            return new ConfigureTimeSeriesValueNamesCommand(conventions, _parameters);
         }
 
         private class ConfigureTimeSeriesValueNamesCommand : RavenCommand<ConfigureTimeSeriesOperationResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly Parameters _parameters;
 
-            public ConfigureTimeSeriesValueNamesCommand(Parameters parameters)
+            public ConfigureTimeSeriesValueNamesCommand(DocumentConventions conventions, Parameters parameters)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _parameters = parameters;
             }
 
@@ -46,7 +48,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     {
                         var config = ctx.ReadObject(_parameters.ToJson(), "convert time-series configuration");
                         await ctx.WriteAsync(stream, config).ConfigureAwait(false);
-                    })
+                    }, _conventions)
                 };
 
                 return request;

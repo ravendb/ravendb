@@ -85,7 +85,7 @@ namespace FastTests.Client
 
             using var dis = requestExecutor.ContextPool.AllocateOperationContext(out var context);
             var documentJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new User(), context);
-            var command = new FirstFailCommand("User/1", null, documentJson, failCount);
+            var command = new FirstFailCommand(requestExecutor.Conventions, "User/1", null, documentJson, failCount);
             try
             {
                 await requestExecutor.ExecuteAsync(command, context);
@@ -105,8 +105,8 @@ namespace FastTests.Client
 
             public override bool IsReadRequest { get; }
 
-            public FirstFailCommand(string id, string changeVector, BlittableJsonReaderObject document, int timeToFail)
-                : base(id, changeVector, document)
+            public FirstFailCommand(DocumentConventions conventions, string id, string changeVector, BlittableJsonReaderObject document, int timeToFail)
+                : base(conventions, id, changeVector, document)
             {
                 _timeToFail = timeToFail;
             }

@@ -131,7 +131,7 @@ namespace SlowTests.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
+                    var command = new GetDocumentsCommand(store.Conventions, ids, includes: null, metadataOnly: false);
                     re.Execute(command, context);
                     Assert.Equal(101, command.Result.Results.Length);
                     Assert.Null(command.Result.Results[^1]);
@@ -160,7 +160,7 @@ namespace SlowTests.Issues
                 var re = store.GetRequestExecutor();
                 using (re.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
+                    var command = new GetDocumentsCommand(store.Conventions, ids, includes: null, metadataOnly: false);
                     re.Execute(command, context);
                     Assert.Equal(1001, command.Result.Results.Length);
                     Assert.Null(command.Result.Results[^1]);

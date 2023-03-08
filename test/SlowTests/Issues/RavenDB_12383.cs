@@ -40,7 +40,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var getDocumentsCommand = new GetDocumentsCommand(
+                    var getDocumentsCommand = new GetDocumentsCommand(store.Conventions,
                         new[] { "employees/1", "employees/2" },
                         new[] { nameof(Employee.ReportsTo) },
                         metadataOnly: false);

@@ -88,7 +88,7 @@ namespace FastTests.Server.Basic
                     using (var requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, null, DocumentConventions.Default))
                     {
                         mre.WaitOne();
-                        requestExecutor.Execute(new GetDocumentsCommand("Raven/HiloPrefix", includes: null, metadataOnly: false), ctx);
+                        requestExecutor.Execute(new GetDocumentsCommand(requestExecutor.Conventions, "Raven/HiloPrefix", includes: null, metadataOnly: false), ctx);
                     }
                 });
                 await t;

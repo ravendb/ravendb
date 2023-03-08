@@ -30,18 +30,19 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public RavenCommand<AttachmentResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetAttachmentCommand(context, _documentId, _name, _type, _changeVector);
+            return new GetAttachmentCommand(conventions, context, _documentId, _name, _type, _changeVector);
         }
 
         internal class GetAttachmentCommand : RavenCommand<AttachmentResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
             private readonly string _documentId;
             private readonly string _name;
             private readonly AttachmentType _type;
             private readonly string _changeVector;
 
-            public GetAttachmentCommand(JsonOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
+            public GetAttachmentCommand(DocumentConventions conventions, JsonOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -51,6 +52,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                 if (type != AttachmentType.Document && changeVector == null)
                     throw new ArgumentNullException(nameof(changeVector), $"Change Vector cannot be null for attachment type {type}");
 
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _context = context;
                 _documentId = documentId;
                 _name = name;
@@ -87,7 +89,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
                             writer.WriteEndObject();
                         }
-                    });
+                    }, _conventions);
                 }
 
                 return request;

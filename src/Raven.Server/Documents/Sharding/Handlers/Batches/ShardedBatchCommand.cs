@@ -53,7 +53,7 @@ public class ShardedBatchCommand : IBatchCommand
             var shardNumber = c.ShardNumber;
             if (_batchPerShard.TryGetValue(shardNumber, out var shardedBatchCommand) == false)
             {
-                shardedBatchCommand = new ShardedSingleNodeBatchCommand(shardNumber, indexBatchOptions, replicationBatchOptions);
+                shardedBatchCommand = new ShardedSingleNodeBatchCommand(_databaseContext.ShardExecutor.Conventions, shardNumber, indexBatchOptions, replicationBatchOptions);
                 _batchPerShard.Add(shardNumber, shardedBatchCommand);
             }
 

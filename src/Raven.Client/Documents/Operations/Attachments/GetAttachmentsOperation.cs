@@ -30,18 +30,20 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public RavenCommand<IEnumerator<AttachmentEnumeratorResult>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetAttachmentsCommand(context, _attachments, _type);
+            return new GetAttachmentsCommand(conventions, context, _attachments, _type);
         }
 
         internal class GetAttachmentsCommand : RavenCommand<IEnumerator<AttachmentEnumeratorResult>>
         {
+            private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
             private readonly AttachmentType _type;
             internal IEnumerable<AttachmentRequest> Attachments { get; }
             internal List<AttachmentDetails> AttachmentsMetadata { get; } = new List<AttachmentDetails>();
 
-            public GetAttachmentsCommand(JsonOperationContext context, IEnumerable<AttachmentRequest> attachments, AttachmentType type)
+            public GetAttachmentsCommand(DocumentConventions conventions, JsonOperationContext context, IEnumerable<AttachmentRequest> attachments, AttachmentType type)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _context = context;
                 _type = type;
                 Attachments = attachments;
@@ -87,7 +89,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
                             writer.WriteEndObject();
                         }
-                    })
+                    }, _conventions)
                 };
 
                 return request;

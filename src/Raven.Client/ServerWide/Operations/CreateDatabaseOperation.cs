@@ -40,18 +40,20 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new CreateDatabaseCommand(_databaseRecord, _replicationFactor);
+            return new CreateDatabaseCommand(conventions, _databaseRecord, _replicationFactor);
         }
 
         internal class CreateDatabaseCommand : RavenCommand<DatabasePutResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly DatabaseRecord _databaseRecord;
             private readonly int _replicationFactor;
             private readonly long? _etag;
             private readonly string _databaseName;
 
-            public CreateDatabaseCommand(DatabaseRecord databaseRecord, int replicationFactor = 1, long? etag = null)
+            public CreateDatabaseCommand(DocumentConventions conventions, DatabaseRecord databaseRecord, int replicationFactor = 1, long? etag = null)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseRecord = databaseRecord;
                 _replicationFactor = replicationFactor;
                 _etag = etag;
@@ -68,7 +70,7 @@ namespace Raven.Client.ServerWide.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, databaseDocument).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, databaseDocument).ConfigureAwait(false), _conventions)
                 };
 
                 if (_etag.HasValue)

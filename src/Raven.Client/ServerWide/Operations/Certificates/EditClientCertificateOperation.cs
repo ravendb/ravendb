@@ -36,18 +36,20 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new EditClientCertificateCommand(_thumbprint, _name, _permissions, _clearance);
+            return new EditClientCertificateCommand(conventions, _thumbprint, _name, _permissions, _clearance);
         }
 
         private class EditClientCertificateCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _thumbprint;
             private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly string _name;
             private readonly SecurityClearance _clearance;
 
-            public EditClientCertificateCommand(string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
+            public EditClientCertificateCommand(DocumentConventions conventions, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _thumbprint = thumbprint;
                 _name = name;
                 _permissions = permissions;
@@ -70,7 +72,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(definition, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(definition, ctx)).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

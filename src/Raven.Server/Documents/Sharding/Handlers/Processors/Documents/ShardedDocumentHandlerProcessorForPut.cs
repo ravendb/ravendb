@@ -17,7 +17,7 @@ internal class ShardedDocumentHandlerProcessorForPut : AbstractDocumentHandlerPr
 
     protected override async ValueTask HandleDocumentPutAsync(string id, string changeVector, BlittableJsonReaderObject doc, TransactionOperationContext context)
     {
-        var command = new PutDocumentCommand(id, changeVector, doc);
+        var command = new PutDocumentCommand(RequestHandler.ShardExecutor.Conventions, id, changeVector, doc);
 
         int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
 

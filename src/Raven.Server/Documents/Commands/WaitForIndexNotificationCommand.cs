@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -32,7 +33,7 @@ internal class WaitForIndexNotificationCommand : RavenCommand
                     writer.WriteArray(nameof(WaitForIndexNotificationRequest.RaftCommandIndexes), _indexes);
                     writer.WriteEndObject();
                 }
-            })
+            }, DocumentConventions.DefaultForServer)
         };
 
         return request;

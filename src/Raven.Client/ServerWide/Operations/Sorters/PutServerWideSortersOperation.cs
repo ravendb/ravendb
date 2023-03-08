@@ -28,6 +28,7 @@ namespace Raven.Client.ServerWide.Operations.Sorters
 
         private class PutServerWideSortersCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject[] _sortersToAdd;
 
             public PutServerWideSortersCommand(DocumentConventions conventions, JsonOperationContext context, SorterDefinition[] sortersToAdd)
@@ -38,6 +39,7 @@ namespace Raven.Client.ServerWide.Operations.Sorters
                     throw new ArgumentNullException(nameof(sortersToAdd));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
+                _conventions = conventions;
 
                 _sortersToAdd = new BlittableJsonReaderObject[sortersToAdd.Length];
 
@@ -65,7 +67,7 @@ namespace Raven.Client.ServerWide.Operations.Sorters
                             writer.WriteArray("Sorters", _sortersToAdd);
                             writer.WriteEndObject();
                         }
-                    })
+                    }, _conventions)
                 };
 
                 return request;

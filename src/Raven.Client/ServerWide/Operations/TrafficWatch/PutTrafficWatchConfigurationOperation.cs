@@ -21,15 +21,17 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new SetTrafficWatchConfigurationCommand(_parameters);
+            return new SetTrafficWatchConfigurationCommand(conventions, _parameters);
         }
 
         private class SetTrafficWatchConfigurationCommand : RavenCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly Parameters _parameters;
 
-            public SetTrafficWatchConfigurationCommand(Parameters parameters)
+            public SetTrafficWatchConfigurationCommand(DocumentConventions conventions, Parameters parameters)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             }
 
@@ -39,7 +41,7 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
 
                 return new HttpRequestMessage(HttpMethod.Post, url)
                 {
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false), _conventions)
                 };
             }
         }

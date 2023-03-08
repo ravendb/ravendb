@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
@@ -13,6 +14,7 @@ namespace Raven.Server.Documents.Sharding.Commands;
 
 public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObject>
 {
+    private readonly DocumentConventions _conventions;
     public readonly int ShardNumber;
     private readonly IndexBatchOptions _indexBatchOptions;
     private readonly ReplicationBatchOptions _replicationBatchOptions;
@@ -23,8 +25,9 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
     private List<Stream> _attachmentStreams;
     private HashSet<Stream> _uniqueAttachmentStreams;
 
-    public ShardedSingleNodeBatchCommand(int shardNumber, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions)
+    public ShardedSingleNodeBatchCommand(DocumentConventions conventions, int shardNumber, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions)
     {
+        _conventions = conventions;
         ShardNumber = shardNumber;
         _indexBatchOptions = indexBatchOptions;
         _replicationBatchOptions = replicationBatchOptions;
@@ -92,7 +95,7 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
 
                     writer.WriteEndObject();
                 }
-            })
+            }, _conventions)
         };
 
         if (_attachmentStreams is { Count: > 0 })

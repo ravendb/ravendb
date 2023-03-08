@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
                 OperationType.DatabaseBackup,
                 $"Manual backup for database: {RequestHandler.DatabaseName}",
                 detailedDescription: null,
-                commandFactory: (context, shardNumber) => new BackupOperation.BackupCommand(backupConfiguration, operationId),
+                commandFactory: (context, shardNumber) => new BackupOperation.BackupCommand(RequestHandler.ShardExecutor.Conventions, backupConfiguration, operationId),
                 token);
 
             var _ = t.ContinueWith(_ =>

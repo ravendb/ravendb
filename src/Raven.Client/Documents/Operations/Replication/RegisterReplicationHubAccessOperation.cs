@@ -26,18 +26,20 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new RegisterReplicationHubAccessCommand(_hubName, _access);
+            return new RegisterReplicationHubAccessCommand(conventions, _hubName, _access);
         }
 
         private class RegisterReplicationHubAccessCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _hubName;
             private readonly ReplicationHubAccess _access;
 
-            public RegisterReplicationHubAccessCommand(string hubName, ReplicationHubAccess access)
+            public RegisterReplicationHubAccessCommand(DocumentConventions conventions, string hubName, ReplicationHubAccess access)
             {
                 if (string.IsNullOrWhiteSpace(hubName))
                     throw new ArgumentException("Value cannot be null or whitespace.", nameof(hubName));
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _hubName = hubName;
                 _access = access ?? throw new ArgumentNullException(nameof(access));
                 ResponseType = RavenCommandResponseType.Raw;
@@ -52,7 +54,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(async stream => await blittable.WriteJsonToAsync(stream).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await blittable.WriteJsonToAsync(stream).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

@@ -25,7 +25,7 @@ namespace FastTests.Issues
                 using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(ComplexDocument)))
                 using (var blittableJson = await context.ReadForDiskAsync(stringStream, "Reading of foo/bar"))
                 {
-                    requestExecutor.Execute(new PutDocumentCommand("foo/bar", null, blittableJson), context);
+                    requestExecutor.Execute(new PutDocumentCommand(requestExecutor.Conventions, "foo/bar", null, blittableJson), context);
                 }
 
                 var url = $"{store.Urls[0]}/databases/{store.Database}/docs/class?id=foo/bar";

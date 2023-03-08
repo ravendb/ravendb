@@ -33,11 +33,11 @@ namespace SlowTests.Sharding.Issues
                 using (var session = store.OpenSession())
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var command = new GetDocumentsCommand("users", null, null, null, 0, 100, false);
+                    var command = new GetDocumentsCommand(store.Conventions, "users", null, null, null, 0, 100, false);
 
                     session.Advanced.RequestExecutor.Execute(command, context);
 
-                    var command2 = new GetDocumentsCommand("users", null, null, null, 0, 100, false);
+                    var command2 = new GetDocumentsCommand(store.Conventions, "users", null, null, null, 0, 100, false);
 
                     session.Advanced.RequestExecutor.Execute(command2, context);
 
@@ -63,11 +63,11 @@ namespace SlowTests.Sharding.Issues
                 using (var session = store.OpenSession())
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var command = new GetDocumentsCommand(new[] { "users/1", "users/2" }, null, null, null, null, false);
+                    var command = new GetDocumentsCommand(store.Conventions, new[] { "users/1", "users/2" }, null, null, null, null, false);
 
                     session.Advanced.RequestExecutor.Execute(command, context);
 
-                    var command2 = new GetDocumentsCommand(new[] { "users/1", "users/2" }, null, null, null, null, false);
+                    var command2 = new GetDocumentsCommand(store.Conventions, new[] { "users/1", "users/2" }, null, null, null, null, false);
 
                     session.Advanced.RequestExecutor.Execute(command2, context);
 

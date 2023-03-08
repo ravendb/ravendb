@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,17 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void CRUD_Operations()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CRUD_Operations(bool useCompression)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ ModifyDocumentStore = x =>
+                       {
+                           x.Conventions.UseHttpCompression = useCompression;
+                           x.Conventions.UseHttpDecompression = useCompression;
+                       }
+                   }))
             {
                 using (var newSession = store.OpenSession())
                 {

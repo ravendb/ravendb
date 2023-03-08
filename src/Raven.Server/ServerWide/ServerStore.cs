@@ -3165,7 +3165,6 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
             cmdJson.TryGet("Type", out string commandType);
-            var command = new PutRaftCommand(cmdJson, _engine.Url, commandType);
 
             var serverCertificateChanged = Interlocked.Exchange(ref _serverCertificateChanged, 0) == 1;
 
@@ -3176,6 +3175,8 @@ namespace Raven.Server.ServerWide
                 _leaderRequestExecutor?.Dispose();
                 _leaderRequestExecutor = CreateNewClusterRequestExecutor(leaderUrl);
             }
+
+            var command = new PutRaftCommand(_leaderRequestExecutor.Conventions, cmdJson, _engine.Url, commandType);
 
             try
             {
@@ -3200,6 +3201,7 @@ namespace Raven.Server.ServerWide
 
         private class PutRaftCommand : RavenCommand<PutRaftCommandResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _command;
             private bool _reachedLeader;
             public override bool IsReadRequest => false;
@@ -3209,8 +3211,9 @@ namespace Raven.Server.ServerWide
             private readonly string _source;
             private readonly string _commandType;
 
-            public PutRaftCommand(BlittableJsonReaderObject command, string source, string commandType)
+            public PutRaftCommand(DocumentConventions conventions, BlittableJsonReaderObject command, string source, string commandType)
             {
+                _conventions = conventions;
                 _command = command;
                 _source = source;
                 _commandType = commandType;
@@ -3235,7 +3238,7 @@ namespace Raven.Server.ServerWide
                         {
                             writer.WriteObject(_command);
                         }
-                    })
+                    }, _conventions)
                 };
 
                 return request;

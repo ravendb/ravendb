@@ -810,7 +810,7 @@ namespace SlowTests.Server.Documents.Revisions
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Post,
-                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false))
+                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false), DocumentConventions.Default)
                     };
                 }
 

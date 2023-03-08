@@ -20,15 +20,17 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public RavenCommand<ConfigureRevisionsOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureRevisionsCommand(_configuration);
+            return new ConfigureRevisionsCommand(conventions, _configuration);
         }
 
         private class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly RevisionsConfiguration _configuration;
 
-            public ConfigureRevisionsCommand(RevisionsConfiguration configuration)
+            public ConfigureRevisionsCommand(DocumentConventions conventions, RevisionsConfiguration configuration)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
@@ -41,7 +43,7 @@ namespace Raven.Client.Documents.Operations.Revisions
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

@@ -20,15 +20,17 @@ namespace Raven.Client.ServerWide.Operations.DocumentsCompression
         }
         public RavenCommand<DocumentCompressionConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdateDocumentCompressionConfigurationCommand(_documentsCompressionConfiguration);
+            return new UpdateDocumentCompressionConfigurationCommand(conventions, _documentsCompressionConfiguration);
         }
 
         private class UpdateDocumentCompressionConfigurationCommand : RavenCommand<DocumentCompressionConfigurationResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly DocumentsCompressionConfiguration _documentsCompressionConfiguration;
 
-            public UpdateDocumentCompressionConfigurationCommand(DocumentsCompressionConfiguration configuration)
+            public UpdateDocumentCompressionConfigurationCommand(DocumentConventions conventions, DocumentsCompressionConfiguration configuration)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _documentsCompressionConfiguration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
             public override bool IsReadRequest => false;
@@ -40,7 +42,7 @@ namespace Raven.Client.ServerWide.Operations.DocumentsCompression
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_documentsCompressionConfiguration, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_documentsCompressionConfiguration, ctx)).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

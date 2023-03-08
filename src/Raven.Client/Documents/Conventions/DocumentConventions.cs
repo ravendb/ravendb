@@ -327,7 +327,8 @@ namespace Raven.Client.Documents.Conventions
         private ReadBalanceBehavior _readBalanceBehavior;
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
-        private bool? _useCompression;
+        private bool? _useHttpDecompression;
+        private bool? _useHttpCompression;
         private Func<MemberInfo, string> _propertyNameConverter;
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private Func<MemberInfo, bool> _shouldApplyPropertyNameConverter;
@@ -568,18 +569,31 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-        internal bool HasExplicitlySetCompressionUsage => _useCompression.HasValue;
-
         /// <summary>
-        /// Should accept gzip/deflate headers be added to all requests?
+        /// Use gzip compression when sending content of HTTP request
         /// </summary>
-        public bool UseCompression
+        public bool UseHttpCompression
         {
-            get => _useCompression ?? true;
+            get => _useHttpCompression ?? true;
             set
             {
                 AssertNotFrozen();
-                _useCompression = value;
+                _useHttpCompression = value;
+            }
+        }
+
+        internal bool HasExplicitlySetDecompressionUsage => _useHttpDecompression.HasValue;
+
+        /// <summary>
+        /// Can accept compressed HTTP response content and will use gzip/deflate decompression methods
+        /// </summary>
+        public bool UseHttpDecompression
+        {
+            get => _useHttpDecompression ?? true;
+            set
+            {
+                AssertNotFrozen();
+                _useHttpDecompression = value;
             }
         }
 

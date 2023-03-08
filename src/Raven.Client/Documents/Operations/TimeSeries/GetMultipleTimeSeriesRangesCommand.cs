@@ -12,13 +12,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries;
 
 internal class GetMultipleTimeSeriesRangesCommand : RavenCommand<GetMultipleTimeSeriesRangesCommand.Response>
 {
+    private readonly DocumentConventions _conventions;
     private readonly int _start;
     private readonly int _pageSize;
     private readonly bool _returnFullResults;
     private readonly RequestBody _ranges;
 
-    public GetMultipleTimeSeriesRangesCommand(Dictionary<string, List<TimeSeriesRange>> ranges, int start = 0, int pageSize = int.MaxValue, bool returnFullResults = false)
+    public GetMultipleTimeSeriesRangesCommand(DocumentConventions conventions, Dictionary<string, List<TimeSeriesRange>> ranges, int start = 0, int pageSize = int.MaxValue, bool returnFullResults = false)
     {
+        _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
         _start = start;
         _pageSize = pageSize;
         _returnFullResults = returnFullResults;
@@ -59,7 +61,7 @@ internal class GetMultipleTimeSeriesRangesCommand : RavenCommand<GetMultipleTime
         return new HttpRequestMessage
         {
             Method = HttpMethod.Post,
-            Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_ranges, ctx)).ConfigureAwait(false))
+            Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_ranges, ctx)).ConfigureAwait(false), _conventions)
         };
     }
 

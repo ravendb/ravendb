@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Revisions
 
         internal class DeleteRevisionsCommand : RavenCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _parameters;
 
             public DeleteRevisionsCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
@@ -34,6 +35,7 @@ namespace Raven.Server.Documents.Revisions
                     throw new ArgumentNullException(nameof(context));
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
+                _conventions = conventions;
 
                 _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
             }
@@ -45,7 +47,7 @@ namespace Raven.Server.Documents.Revisions
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Delete,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false), _conventions)
                 };
             }
         }

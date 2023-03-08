@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
                     countersBatchForShard.Documents.Add(counterBatch.Documents[pos]);
                 }
                 
-                commandsPerShard[shardNumber] = new CounterBatchOperation.CounterBatchCommand(countersBatchForShard);
+                commandsPerShard[shardNumber] = new CounterBatchOperation.CounterBatchCommand(RequestHandler.ShardExecutor.Conventions, countersBatchForShard);
                 
             }
 

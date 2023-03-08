@@ -40,19 +40,21 @@ namespace Raven.Client.ServerWide.Operations
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             var order = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, context);
-            return new ReorderDatabaseMembersCommand(_database, order);
+            return new ReorderDatabaseMembersCommand(conventions, _database, order);
         }
 
         private class ReorderDatabaseMembersCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
             private readonly BlittableJsonReaderObject _orderBlittable;
 
-            public ReorderDatabaseMembersCommand(string databaseName, BlittableJsonReaderObject orderBlittable)
+            public ReorderDatabaseMembersCommand(DocumentConventions conventions, string databaseName, BlittableJsonReaderObject orderBlittable)
             {
                 if (string.IsNullOrEmpty(databaseName))
                     throw new ArgumentNullException(databaseName);
 
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseName = databaseName;
                 _orderBlittable = orderBlittable;
             }
@@ -64,7 +66,7 @@ namespace Raven.Client.ServerWide.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _orderBlittable).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _orderBlittable).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

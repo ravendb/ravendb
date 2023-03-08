@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                             [Raven.Client.Constants.Documents.Metadata.Collection] = "docs"
                         }
                     }, "newDoc");
-                    store.Commands().Execute(new PutDocumentCommand("docs/1", null, docBlit));
+                    store.Commands().Execute(new PutDocumentCommand(store.Conventions, "docs/1", null, docBlit));
 
                     using (var session = store.OpenSession())
                     {
@@ -79,7 +79,7 @@ namespace SlowTests.Issues
                             [Raven.Client.Constants.Documents.Metadata.Collection] = "docs"
                         }
                     }, "newDoc");
-                    store.Commands().Execute(new PutDocumentCommand("docs/1", null, docBlit));
+                    store.Commands().Execute(new PutDocumentCommand(store.Conventions, "docs/1", null, docBlit));
 
                     using (var session = store.OpenSession())
                     {
@@ -123,7 +123,7 @@ namespace SlowTests.Issues
                             [Raven.Client.Constants.Documents.Metadata.Collection] = "docs"
                         }
                     }, "newDoc");
-                    store.Commands().Execute(new PutDocumentCommand("docs/1", null, docBlit));
+                    store.Commands().Execute(new PutDocumentCommand(store.Conventions, "docs/1", null, docBlit));
 
                     using (var session = store.OpenSession())
                     {

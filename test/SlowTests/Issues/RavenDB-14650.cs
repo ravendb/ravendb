@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                             ["$values"] = new DynamicJsonArray(list.Select(x => (object)x))
                         }
                     }, "users/1");
-                    requestExecuter.Execute(new PutDocumentCommand("users/1", null, reader), context);
+                    requestExecuter.Execute(new PutDocumentCommand(store.Conventions, "users/1", null, reader), context);
                 }
 
                 var javascriptProjection = @"from @all_docs as doc
@@ -81,7 +81,7 @@ select doc.Array";
                             ["$value"] = "AQIDBAU="
                         }
                     }, "users/1");
-                    requestExecuter.Execute(new PutDocumentCommand("users/1", null, reader), context);
+                    requestExecuter.Execute(new PutDocumentCommand(store.Conventions, "users/1", null, reader), context);
                 }
 
                 var javascriptProjection = @"from @all_docs as doc

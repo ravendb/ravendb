@@ -78,7 +78,7 @@ namespace FastTests.Client.Documents
 
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var getDocumentCommand = new GetDocumentsCommand(new[] { "users/1", "users/2" }, includes: null, metadataOnly: false);
+                    var getDocumentCommand = new GetDocumentsCommand(store.Conventions, new[] { "users/1", "users/2" }, includes: null, metadataOnly: false);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);
@@ -110,7 +110,7 @@ namespace FastTests.Client.Documents
                         Assert.Equal("Arek", user2.Name);
                     }
 
-                    getDocumentCommand = new GetDocumentsCommand(new[] { "users/1", "users/2" }, includes: null,
+                    getDocumentCommand = new GetDocumentsCommand(store.Conventions, new[] { "users/1", "users/2" }, includes: null,
                         metadataOnly: true);
 
                     requestExecuter

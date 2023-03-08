@@ -5,6 +5,7 @@ using System.Net.Http;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -101,7 +102,7 @@ public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<Ge
                         writer.WriteString(_tryout.Query);
                         writer.WriteEndObject();
                     }
-                })
+                }, DocumentConventions.DefaultForServer)
             };
 
             return request;

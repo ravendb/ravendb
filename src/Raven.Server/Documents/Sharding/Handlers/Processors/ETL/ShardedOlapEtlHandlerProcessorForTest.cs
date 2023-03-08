@@ -16,5 +16,5 @@ internal class ShardedOlapEtlHandlerProcessorForTest : AbstractShardedEtlHandler
 
     protected override TestOlapEtlScript GetTestEtlScript(BlittableJsonReaderObject json) => JsonDeserializationServer.TestOlapEtlScript(json);
 
-    protected override RavenCommand CreateCommand(BlittableJsonReaderObject json) => new OlapEtlTestCommand(json);
+    protected override RavenCommand CreateCommand(BlittableJsonReaderObject json) => new OlapEtlTestCommand(RequestHandler.ShardExecutor.Conventions, json);
 }

@@ -19,10 +19,15 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Sharding.Import.CompressionLevel", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public CompressionLevel CompressionLevel { get; set; }
 
-        [Description("The compression to use when distributing requests from the orchestrator to the shards")]
+        [Description("Accept compressed HTTP responses from shards")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Sharding.ShardExecutorUseCompression", ConfigurationEntryScope.ServerWideOnly)]
-        public bool ShardExecutorUseCompression { get; set; }
+        [ConfigurationEntry("Sharding.ShardExecutor.UseHttpDecompression", ConfigurationEntryScope.ServerWideOnly)]
+        public bool ShardExecutorUseHttpDecompression { get; set; }
+
+        [Description("Use compression when sending HTTP requests to shards")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Sharding.ShardExecutor.UseHttpCompression", ConfigurationEntryScope.ServerWideOnly)]
+        public bool ShardExecutorUseHttpCompression { get; set; }
 
         [Description("Enable the timeout of the orchestrator's requests to the shards")]
         [DefaultValue(DefaultValueSetInConstructor)]

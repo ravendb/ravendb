@@ -16,7 +16,7 @@ internal class ShardedDocumentHandlerProcessorForPatch : AbstractDocumentHandler
 
     protected override async ValueTask HandleDocumentPatchAsync(string id, string changeVector, BlittableJsonReaderObject patchRequest, bool skipPatchIfChangeVectorMismatch, bool returnDebugInformation, bool test, TransactionOperationContext context)
     {
-        var command = new PatchOperation.PatchCommand(id, changeVector, patchRequest, skipPatchIfChangeVectorMismatch, returnDebugInformation, test);
+        var command = new PatchOperation.PatchCommand(RequestHandler.ShardExecutor.Conventions, id, changeVector, patchRequest, skipPatchIfChangeVectorMismatch, returnDebugInformation, test);
 
         int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
 

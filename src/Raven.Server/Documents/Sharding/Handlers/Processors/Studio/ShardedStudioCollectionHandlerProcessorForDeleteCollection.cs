@@ -32,8 +32,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
                     (_, shardNumber) =>
                     {
                         if (shardToIds.ContainsKey(shardNumber) == false)
-                            return new DeleteStudioCollectionOperation.DeleteStudioCollectionCommand(operationId, collectionName, null);
-                        return new DeleteStudioCollectionOperation.DeleteStudioCollectionCommand(operationId, collectionName, shardToIds[shardNumber].Ids);
+                            return new DeleteStudioCollectionOperation.DeleteStudioCollectionCommand(RequestHandler.ShardExecutor.Conventions, operationId, collectionName, null);
+                        return new DeleteStudioCollectionOperation.DeleteStudioCollectionCommand(RequestHandler.ShardExecutor.Conventions, operationId, collectionName, shardToIds[shardNumber].Ids);
                     },
                     token: token);
 

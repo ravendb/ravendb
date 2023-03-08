@@ -25,16 +25,18 @@ namespace Raven.Server.Documents.Operations
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new RevertRevisionsCommand(_request);
+            return new RevertRevisionsCommand(conventions, _request);
         }
 
         public class RevertRevisionsCommand : RavenCommand<OperationIdResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly RevertRevisionsRequest _request;
             private readonly long? _operationId;
 
-            public RevertRevisionsCommand(RevertRevisionsRequest request, long? operationId = null)
+            public RevertRevisionsCommand(DocumentConventions conventions, RevertRevisionsRequest request, long? operationId = null)
             {
+                _conventions = conventions;
                 _request = request;
                 _operationId = operationId;
             }
@@ -52,7 +54,7 @@ namespace Raven.Server.Documents.Operations
                 {
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(async stream =>
-                        await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false))
+                        await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false), _conventions)
                 };
             }
 

@@ -16,6 +16,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.ETL
 
         protected override TestRavenEtlScript GetTestEtlScript(BlittableJsonReaderObject json) => JsonDeserializationServer.TestRavenEtlScript(json);
 
-        protected override RavenCommand CreateCommand(BlittableJsonReaderObject json) => new RavenEtlTestCommand(json);
+        protected override RavenCommand CreateCommand(BlittableJsonReaderObject json) => new RavenEtlTestCommand(RequestHandler.ShardExecutor.Conventions, json);
     }
 }

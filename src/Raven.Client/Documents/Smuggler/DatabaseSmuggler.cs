@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Smuggler
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                var command = new ExportCommand(context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
+                var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
 
                 requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
                     .ContinueWith(t =>
@@ -273,7 +273,7 @@ namespace Raven.Client.Documents.Smuggler
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                var command = new ImportCommand(context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
+                var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
                 var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
                 requestTask = task
@@ -323,16 +323,18 @@ namespace Raven.Client.Documents.Smuggler
         private class ExportCommand : RavenCommand
         {
             private readonly BlittableJsonReaderObject _options;
+            private readonly DocumentConventions _conventions;
             private readonly Func<Stream, Task> _handleStreamResponse;
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
 
-            public ExportCommand(JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
+            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
             {
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _handleStreamResponse = handleStreamResponse ?? throw new ArgumentNullException(nameof(handleStreamResponse));
                 _options = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(options, context);
                 _operationId = operationId;
@@ -356,7 +358,7 @@ namespace Raven.Client.Documents.Smuggler
                     {
                         await ctx.WriteAsync(stream, _options).ConfigureAwait(false);
                         _tcs.TrySetResult(null);
-                    })
+                    }, _conventions)
                 };
             }
 
@@ -374,6 +376,7 @@ namespace Raven.Client.Documents.Smuggler
         private class ImportCommand : RavenCommand
         {
             private readonly BlittableJsonReaderObject _options;
+            private readonly DocumentConventions _conventions;
             private readonly Stream _stream;
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
@@ -381,8 +384,9 @@ namespace Raven.Client.Documents.Smuggler
 
             public override bool IsReadRequest => false;
 
-            public ImportCommand(JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
+            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
@@ -406,7 +410,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 var form = new MultipartFormDataContent
                 {
-                    {new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _options).ConfigureAwait(false)), Constants.Smuggler.ImportOptions},
+                    {new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _options).ConfigureAwait(false), _conventions), Constants.Smuggler.ImportOptions},
                     {new StreamContentWithConfirmation(_stream, _tcs, _parent), "file", "name"}
                 };
 

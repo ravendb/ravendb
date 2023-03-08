@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Put,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, blittable).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, blittable).ConfigureAwait(false), _conventions)
                 };
                 return request;
             }

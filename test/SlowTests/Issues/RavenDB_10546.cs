@@ -105,6 +105,7 @@ namespace SlowTests.Issues
 
             private class PutStudioConfigurationCommand : RavenCommand, IRaftCommand
             {
+                private readonly DocumentConventions _conventions;
                 private readonly BlittableJsonReaderObject _configuration;
 
                 public PutStudioConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, StudioConfiguration configuration)
@@ -115,6 +116,7 @@ namespace SlowTests.Issues
                         throw new ArgumentNullException(nameof(configuration));
                     if (context == null)
                         throw new ArgumentNullException(nameof(context));
+                    _conventions = conventions;
 
                     _configuration = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                 }
@@ -127,7 +129,7 @@ namespace SlowTests.Issues
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Put,
-                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false))
+                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false), _conventions)
                     };
                 }
 
@@ -151,6 +153,7 @@ namespace SlowTests.Issues
 
             private class PutServerWideStudioConfigurationCommand : RavenCommand, IRaftCommand
             {
+                private readonly DocumentConventions _conventions;
                 private readonly BlittableJsonReaderObject _configuration;
 
                 public PutServerWideStudioConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, ServerWideStudioConfiguration configuration)
@@ -161,6 +164,7 @@ namespace SlowTests.Issues
                         throw new ArgumentNullException(nameof(configuration));
                     if (context == null)
                         throw new ArgumentNullException(nameof(context));
+                    _conventions = conventions;
 
                     _configuration = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                 }
@@ -173,7 +177,7 @@ namespace SlowTests.Issues
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Put,
-                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false))
+                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false), _conventions)
                     };
                 }
 

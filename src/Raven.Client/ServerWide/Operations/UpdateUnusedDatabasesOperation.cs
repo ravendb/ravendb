@@ -28,16 +28,18 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdateUnusedDatabasesCommand(_database, _parameters);
+            return new UpdateUnusedDatabasesCommand(conventions, _database, _parameters);
         }
 
         private class UpdateUnusedDatabasesCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _database;
             private readonly Parameters _parameters;
 
-            public UpdateUnusedDatabasesCommand(string database, Parameters parameters)
+            public UpdateUnusedDatabasesCommand(DocumentConventions conventions, string database, Parameters parameters)
             {
+                _conventions = conventions;
                 _database = database;
                 _parameters = parameters;
             }
@@ -49,7 +51,7 @@ namespace Raven.Client.ServerWide.Operations
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false), _conventions)
                 };
             }
 

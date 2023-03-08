@@ -44,9 +44,16 @@ namespace FastTests.Client.Queries
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(Options options)
+        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All)]
+        public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(Options options, bool useCompression)
         {
+            options.ModifyDocumentStore = x =>
+            {
+                x.Conventions.UseHttpCompression = useCompression;
+                x.Conventions.UseHttpDecompression = useCompression;
+            };
+
             using (var store = GetDocumentStore(options))
             {
                 const string id1 = "users/1";

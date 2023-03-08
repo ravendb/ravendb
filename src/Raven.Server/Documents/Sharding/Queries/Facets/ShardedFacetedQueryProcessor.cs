@@ -87,7 +87,7 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(Context, facetField.FacetSetupDocumentId);
 
             var result = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(Context,
-                new GetDocumentsCommand(facetField.FacetSetupDocumentId, includes: null, metadataOnly: false), shardNumber, Token);
+                new GetDocumentsCommand(RequestHandler.ShardExecutor.Conventions, facetField.FacetSetupDocumentId, includes: null, metadataOnly: false), shardNumber, Token);
 
             return result;
         }

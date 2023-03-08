@@ -88,7 +88,7 @@ namespace SlowTests.Issues
 
                 using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
                 {
-                    var cmd = new GetDocumentsCommand(startWith: "users/", startAfter: null, matches: null, exclude: null, start: 0, pageSize: int.MaxValue,
+                    var cmd = new GetDocumentsCommand(store.Conventions, startWith: "users/", startAfter: null, matches: null, exclude: null, start: 0, pageSize: int.MaxValue,
                         metadataOnly: false);
                     await store.GetRequestExecutor().ExecuteAsync(cmd, context);
 
@@ -158,7 +158,7 @@ namespace SlowTests.Issues
 
                 using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
                 {
-                    var cmd = new GetDocumentsCommand(startWith: "users/", startAfter: null, matches: null, exclude: null, start: 6, pageSize: int.MaxValue,
+                    var cmd = new GetDocumentsCommand(store.Conventions, startWith: "users/", startAfter: null, matches: null, exclude: null, start: 6, pageSize: int.MaxValue,
                         metadataOnly: false);
                     await store.GetRequestExecutor().ExecuteAsync(cmd, context);
 
@@ -343,7 +343,7 @@ namespace SlowTests.Issues
 
                 using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
                 {
-                    var cmd = new GetDocumentsCommand(startWith: "users/", start: 0, pageSize: int.MaxValue, startAfter: "users/95", matches: null, exclude: null, metadataOnly: false);
+                    var cmd = new GetDocumentsCommand(store.Conventions, startWith: "users/", start: 0, pageSize: int.MaxValue, startAfter: "users/95", matches: null, exclude: null, metadataOnly: false);
                     await store.GetRequestExecutor().ExecuteAsync(cmd, context);
 
                     var results = cmd.Result.Results;

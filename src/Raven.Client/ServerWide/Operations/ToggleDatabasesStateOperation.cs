@@ -45,21 +45,23 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<DisableDatabaseToggleResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ToggleDatabaseStateCommand(context, _parameters, _disable);
+            return new ToggleDatabaseStateCommand(conventions, context, _parameters, _disable);
         }
 
         private class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly bool _disable;
             private readonly BlittableJsonReaderObject _parameters;
 
-            public ToggleDatabaseStateCommand(JsonOperationContext context, Parameters parameters, bool disable)
+            public ToggleDatabaseStateCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters, bool disable)
             {
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
 
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _disable = disable;
                 _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
             }
@@ -72,7 +74,7 @@ namespace Raven.Client.ServerWide.Operations
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false), _conventions)
                 };
             }
 

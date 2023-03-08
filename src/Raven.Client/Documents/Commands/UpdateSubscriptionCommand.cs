@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
@@ -11,10 +12,12 @@ namespace Raven.Client.Documents.Commands
 {
     internal class UpdateSubscriptionCommand : RavenCommand<UpdateSubscriptionResult>, IRaftCommand
     {
+        private readonly DocumentConventions _conventions;
         private readonly SubscriptionUpdateOptions _options;
 
-        public UpdateSubscriptionCommand(SubscriptionUpdateOptions options)
+        public UpdateSubscriptionCommand(DocumentConventions conventions, SubscriptionUpdateOptions options)
         {
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _options = options;
         }
 
@@ -25,7 +28,7 @@ namespace Raven.Client.Documents.Commands
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx)).ConfigureAwait(false))
+                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx)).ConfigureAwait(false), _conventions)
             };
             return request;
         }

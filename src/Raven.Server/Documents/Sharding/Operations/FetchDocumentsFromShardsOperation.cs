@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             };
         }
 
-        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_idsByShards[shardNumber].Ids.ToArray(), _includePaths,
+        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_databaseContext.ShardExecutor.Conventions, _idsByShards[shardNumber].Ids.ToArray(), _includePaths,
             counterIncludes: _counterIncludes.Count > 0 ? _counterIncludes.ToArray() : null,
             revisionsIncludesByChangeVector: _includeRevisions?.RevisionsChangeVectorsPaths,
             revisionIncludeByDateTimeBefore: _includeRevisions?.RevisionsBeforeDateTime,

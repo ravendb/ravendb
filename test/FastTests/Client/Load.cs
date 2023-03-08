@@ -187,7 +187,7 @@ namespace FastTests.Client
                     session.SaveChanges();
                 }
                 var rq1 = store.GetRequestExecutor();
-                var cmd = new GetDocumentsCommand(ids.ToArray(), null, true);
+                var cmd = new GetDocumentsCommand(store.Conventions, ids.ToArray(), null, true);
                 using (var ctx = new JsonOperationContext(1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
                 {
                     rq1.Execute(cmd, ctx);

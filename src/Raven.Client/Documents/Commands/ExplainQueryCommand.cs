@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Commands
 
                             writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
                         }
-                    }
+                    }, _conventions
                 )
             };
 

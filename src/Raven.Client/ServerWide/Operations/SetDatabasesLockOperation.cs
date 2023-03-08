@@ -42,6 +42,7 @@ namespace Raven.Client.ServerWide.Operations
 
         private class SetDatabasesLockCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _parameters;
 
             public SetDatabasesLockCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
@@ -52,6 +53,7 @@ namespace Raven.Client.ServerWide.Operations
                     throw new ArgumentNullException(nameof(context));
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
+                _conventions = conventions;
 
                 _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
             }
@@ -63,7 +65,7 @@ namespace Raven.Client.ServerWide.Operations
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false), _conventions)
                 };
             }
 

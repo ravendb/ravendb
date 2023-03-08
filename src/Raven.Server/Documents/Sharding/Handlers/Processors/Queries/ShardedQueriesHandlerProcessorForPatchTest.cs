@@ -22,7 +22,7 @@ internal class ShardedQueriesHandlerProcessorForPatchTest : AbstractQueriesHandl
 
     protected override async ValueTask HandleDocumentPatchTestAsync(IndexQueryServerSide query, string docId, TransactionOperationContext context)
     {
-        var command = new PatchByQueryTestCommand(docId, query);
+        var command = new PatchByQueryTestCommand(RequestHandler.ShardExecutor.Conventions, docId, query);
 
         int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
 

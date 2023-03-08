@@ -25,7 +25,7 @@ namespace FastTests.Issues
                 using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)))
                 using (var blittableJson = context.Sync.ReadForDisk(stringStream, "Reading of foo/bar"))
                 {
-                    Assert.Throws<RavenException>(() => requestExecutor.Execute(new PutDocumentCommand("foo/bar", null, blittableJson), context));
+                    Assert.Throws<RavenException>(() => requestExecutor.Execute(new PutDocumentCommand(store.Conventions, "foo/bar", null, blittableJson), context));
                 }
             }
         }

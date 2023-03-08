@@ -316,7 +316,7 @@ namespace Raven.Server.ServerWide
 
         private static async Task<bool> AssertNoDocsStartingWith(string prefix, JsonOperationContext context, RequestExecutor requestExecutor)
         {
-            var command = new GetDocumentsCommand(startWith: prefix,
+            var command = new GetDocumentsCommand(requestExecutor.Conventions, startWith: prefix,
                 startAfter: null, matches: null, exclude: null, start: 0, pageSize: int.MaxValue, metadataOnly: false);
 
             await requestExecutor.ExecuteAsync(command, context, sessionInfo: null);

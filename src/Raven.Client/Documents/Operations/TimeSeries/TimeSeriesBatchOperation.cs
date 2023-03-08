@@ -20,16 +20,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new TimeSeriesBatchCommand(_documentId, _operation);
+            return new TimeSeriesBatchCommand(conventions, _documentId, _operation);
         }
 
         internal class TimeSeriesBatchCommand : RavenCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _documentId;
             private readonly TimeSeriesOperation _operation;
 
-            public TimeSeriesBatchCommand(string documentId, TimeSeriesOperation operation)
+            public TimeSeriesBatchCommand(DocumentConventions conventions, string documentId, TimeSeriesOperation operation)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _documentId = documentId;
                 _operation = operation;
             }
@@ -46,7 +48,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     {
                         var op = ctx.ReadObject(_operation.ToJson(), "convert-time-series-operation");
                         await ctx.WriteAsync(stream, op).ConfigureAwait(false);
-                    })
+                    }, _conventions)
                 };
             }
 

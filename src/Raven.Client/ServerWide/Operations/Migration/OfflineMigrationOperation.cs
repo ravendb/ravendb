@@ -21,15 +21,17 @@ namespace Raven.Client.ServerWide.Operations.Migration
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new OfflineMigrationCommand(_configuration);
+            return new OfflineMigrationCommand(conventions, _configuration);
         }
 
         private class OfflineMigrationCommand : RavenCommand<OperationIdResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly OfflineMigrationConfiguration _configuration;
 
-            public OfflineMigrationCommand(OfflineMigrationConfiguration configuration)
+            public OfflineMigrationCommand(DocumentConventions conventions, OfflineMigrationConfiguration configuration)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
@@ -46,7 +48,7 @@ namespace Raven.Client.ServerWide.Operations.Migration
                     {
                         var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx);
                         await ctx.WriteAsync(stream, config).ConfigureAwait(false);
-                    })
+                    }, _conventions)
                 };
             }
 

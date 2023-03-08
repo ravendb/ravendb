@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
@@ -16,6 +17,7 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetDocumentsCommand : RavenCommand<GetDocumentsResult>
     {
+        private readonly DocumentConventions _conventions;
         private readonly string _id;
         private readonly string[] _ids;
         private readonly string[] _includes;
@@ -41,33 +43,35 @@ namespace Raven.Client.Documents.Commands
             _pageSize = pageSize;
         }
 
-        public GetDocumentsCommand(string id, string[] includes, bool metadataOnly)
+        public GetDocumentsCommand(DocumentConventions conventions, string id, string[] includes, bool metadataOnly)
         {
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _id = id ?? throw new ArgumentNullException(nameof(id));
             _includes = includes;
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, bool metadataOnly)
+        public GetDocumentsCommand(DocumentConventions conventions, string[] ids, string[] includes, bool metadataOnly)
         {
             if (ids == null || ids.Length == 0)
                 throw new ArgumentNullException(nameof(ids));
 
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _ids = ids;
             _includes = includes;
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
-            : this(ids, includes, metadataOnly)
+        public GetDocumentsCommand(DocumentConventions conventions, string[] ids, string[] includes, string[] counterIncludes, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
+            : this(conventions, ids, includes, metadataOnly)
         {
             _counters = counterIncludes;
             _timeSeriesIncludes = timeSeriesIncludes;
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
         
-        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<string> revisionsIncludesByChangeVector, DateTime? revisionIncludeByDateTimeBefore, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
-            : this(ids, includes, metadataOnly)
+        public GetDocumentsCommand(DocumentConventions conventions, string[] ids, string[] includes, string[] counterIncludes, IEnumerable<string> revisionsIncludesByChangeVector, DateTime? revisionIncludeByDateTimeBefore, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
+            : this(conventions, ids, includes, metadataOnly)
         {
             _counters = counterIncludes;
             _revisionsIncludeByChangeVector = revisionsIncludesByChangeVector;
@@ -76,16 +80,17 @@ namespace Raven.Client.Documents.Commands
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, bool includeAllCounters, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
-            : this(ids, includes, metadataOnly)
+        public GetDocumentsCommand(DocumentConventions conventions, string[] ids, string[] includes, bool includeAllCounters, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
+            : this(conventions, ids, includes, metadataOnly)
         {
             _includeAllCounters = includeAllCounters;
             _timeSeriesIncludes = timeSeriesIncludes;
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
 
-        public GetDocumentsCommand(string startWith, string startAfter, string matches, string exclude, int start, int pageSize, bool metadataOnly)
+        public GetDocumentsCommand(DocumentConventions conventions, string startWith, string startAfter, string matches, string exclude, int start, int pageSize, bool metadataOnly)
         {
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _startWith = startWith ?? throw new ArgumentNullException(nameof(startWith));
             _startAfter = startAfter;
             _matches = matches;
@@ -199,14 +204,14 @@ namespace Raven.Client.Documents.Commands
             }
             else if (_ids != null)
             {
-                PrepareRequestWithMultipleIds(pathBuilder, request, _ids, ctx);
+                PrepareRequestWithMultipleIds(_conventions, pathBuilder, request, _ids, ctx);
             }
 
             url = pathBuilder.ToString();
             return request;
         }
 
-        public static void PrepareRequestWithMultipleIds(StringBuilder pathBuilder, HttpRequestMessage request, string[] ids, JsonOperationContext context)
+        public static void PrepareRequestWithMultipleIds(DocumentConventions conventions, StringBuilder pathBuilder, HttpRequestMessage request, string[] ids, JsonOperationContext context)
         {
             var uniqueIds = new HashSet<string>(ids);
 
@@ -231,7 +236,7 @@ namespace Raven.Client.Documents.Commands
                         writer.WriteArray("Ids", uniqueIds);
                         writer.WriteEndObject();
                     }
-                });
+                }, conventions);
             }
         }
 

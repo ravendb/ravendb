@@ -35,15 +35,17 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdatePullReplicationDefinitionCommand(_pullReplicationDefinition);
+            return new UpdatePullReplicationDefinitionCommand(conventions, _pullReplicationDefinition);
         }
 
         private class UpdatePullReplicationDefinitionCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly PullReplicationDefinition _pullReplicationDefinition;
 
-            public UpdatePullReplicationDefinitionCommand(PullReplicationDefinition pullReplicationDefinition)
+            public UpdatePullReplicationDefinitionCommand(DocumentConventions conventions, PullReplicationDefinition pullReplicationDefinition)
             {
+                _conventions = conventions;
                 _pullReplicationDefinition = pullReplicationDefinition;
             }
 
@@ -54,7 +56,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, ctx.ReadObject(_pullReplicationDefinition.ToJson(), "update-pull-replication-definition")).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, ctx.ReadObject(_pullReplicationDefinition.ToJson(), "update-pull-replication-definition")).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

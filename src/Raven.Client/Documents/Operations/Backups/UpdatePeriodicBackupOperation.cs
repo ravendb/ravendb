@@ -20,15 +20,17 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public RavenCommand<UpdatePeriodicBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdatePeriodicBackupCommand(_configuration);
+            return new UpdatePeriodicBackupCommand(conventions, _configuration);
         }
 
         private class UpdatePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly PeriodicBackupConfiguration _configuration;
 
-            public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration)
+            public UpdatePeriodicBackupCommand(DocumentConventions conventions, PeriodicBackupConfiguration configuration)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
@@ -41,7 +43,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

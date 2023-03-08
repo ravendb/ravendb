@@ -24,6 +24,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         private class IndexHasChangedCommand : RavenCommand<bool>
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _definition;
 
             public IndexHasChangedCommand(DocumentConventions conventions, JsonOperationContext context, IndexDefinition definition)
@@ -36,6 +37,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(definition.Name));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
+                _conventions = conventions;
                 _definition = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(definition, context);
             }
 
@@ -48,7 +50,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _definition).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _definition).ConfigureAwait(false), _conventions)
                 };
             }
 

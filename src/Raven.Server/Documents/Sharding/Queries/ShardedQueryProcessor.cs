@@ -162,7 +162,7 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
                 countersBatchForShard.Documents.Add(counterBatch.Documents[pos]);
             }
 
-            commandsPerShard[shardNumber] = new CounterBatchOperation.CounterBatchCommand(countersBatchForShard);
+            commandsPerShard[shardNumber] = new CounterBatchOperation.CounterBatchCommand(databaseContext.ShardExecutor.Conventions, countersBatchForShard);
         }
 
         var counterIncludes = await databaseContext.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
@@ -192,7 +192,7 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
                 rangesForShard[id] = missingTimeSeriesIncludes[id];
             }
 
-            commandsPerShard[shardNumber] = new GetMultipleTimeSeriesRangesCommand(rangesForShard);
+            commandsPerShard[shardNumber] = new GetMultipleTimeSeriesRangesCommand(databaseContext.ShardExecutor.Conventions, rangesForShard);
         }
 
         var timeSeriesIncludes = await databaseContext.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
