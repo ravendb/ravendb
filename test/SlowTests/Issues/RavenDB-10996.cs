@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                 {
                     var json = context.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(Doc)), "users/1");
 
-                    var putCommand = new PutDocumentCommand("users/1", null, json);
+                    var putCommand = new PutDocumentCommand(store.Conventions, "users/1", null, json);
 
                     requestExecuter.Execute(putCommand, context);
                 }

@@ -24,6 +24,7 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         private class PutClientConfigurationCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _configuration;
 
             public PutClientConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, ClientConfiguration configuration)
@@ -34,6 +35,7 @@ namespace Raven.Client.Documents.Operations.Configuration
                     throw new ArgumentNullException(nameof(configuration));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
+                _conventions = conventions;
 
                 _configuration = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
             }
@@ -45,7 +47,7 @@ namespace Raven.Client.Documents.Operations.Configuration
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false), _conventions)
                 };
             }
 

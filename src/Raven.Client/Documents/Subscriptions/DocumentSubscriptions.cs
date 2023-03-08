@@ -572,7 +572,7 @@ namespace Raven.Client.Documents.Subscriptions
             var requestExecutor = _store.GetRequestExecutor(database);
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var command = new UpdateSubscriptionCommand(options);
+                var command = new UpdateSubscriptionCommand(requestExecutor.Conventions, options);
                 await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
 
                 return command.Result.Name;

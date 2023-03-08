@@ -20,15 +20,17 @@ namespace Raven.Client.Documents.Operations.Refresh
 
         public RavenCommand<ConfigureRefreshOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureRefreshCommand(_configuration);
+            return new ConfigureRefreshCommand(conventions, _configuration);
         }
 
         private class ConfigureRefreshCommand : RavenCommand<ConfigureRefreshOperationResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly RefreshConfiguration _configuration;
 
-            public ConfigureRefreshCommand(RefreshConfiguration configuration)
+            public ConfigureRefreshCommand(DocumentConventions conventions, RefreshConfiguration configuration)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
@@ -41,7 +43,7 @@ namespace Raven.Client.Documents.Operations.Refresh
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

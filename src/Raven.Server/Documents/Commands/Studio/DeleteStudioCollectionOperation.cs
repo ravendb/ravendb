@@ -27,17 +27,19 @@ namespace Raven.Server.Documents.Commands.Studio
 
         public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new DeleteStudioCollectionCommand(_operationId, _collectionName, _excludeIds);
+            return new DeleteStudioCollectionCommand(conventions, _operationId, _collectionName, _excludeIds);
         }
 
         internal class DeleteStudioCollectionCommand : RavenCommand<OperationIdResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly long? _operationId;
             private readonly string _collectionName;
             private readonly List<string> _excludeIds;
 
-            public DeleteStudioCollectionCommand(long? operationId, string collectionName, List<string> excludeIds)
+            public DeleteStudioCollectionCommand(DocumentConventions conventions, long? operationId, string collectionName, List<string> excludeIds)
             {
+                _conventions = conventions;
                 _operationId = operationId;
                 _collectionName = collectionName;
                 _excludeIds = excludeIds;
@@ -70,7 +72,7 @@ namespace Raven.Server.Documents.Commands.Studio
                             writer.WriteArray("ExcludeIds", _excludeIds);
                             writer.WriteEndObject();
                         }
-                    })
+                    }, _conventions)
                 };
 
                 return request;

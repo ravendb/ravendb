@@ -16,5 +16,5 @@ internal class ShardedElasticSearchEtlHandlerProcessorForTest : AbstractShardedE
 
     protected override TestElasticSearchEtlScript GetTestEtlScript(BlittableJsonReaderObject json) => JsonDeserializationServer.TestElasticSearchEtlScript(json);
 
-    protected override RavenCommand CreateCommand(BlittableJsonReaderObject json) => new ElasticSearchEtlTestCommand(json);
+    protected override RavenCommand CreateCommand(BlittableJsonReaderObject json) => new ElasticSearchEtlTestCommand(RequestHandler.ShardExecutor.Conventions, json);
 }

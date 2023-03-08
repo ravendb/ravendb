@@ -21,16 +21,18 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ReplaceClusterCertificateCommand(_certBytes, _replaceImmediately);
+            return new ReplaceClusterCertificateCommand(conventions, _certBytes, _replaceImmediately);
         }
 
         private class ReplaceClusterCertificateCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly byte[] _certBytes;
             private readonly bool _replaceImmediately;
 
-            public ReplaceClusterCertificateCommand(byte[] certBytes, bool replaceImmediately)
+            public ReplaceClusterCertificateCommand(DocumentConventions conventions, byte[] certBytes, bool replaceImmediately)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _certBytes = certBytes ?? throw new ArgumentNullException(nameof(certBytes));
                 _replaceImmediately = replaceImmediately;
             }
@@ -53,7 +55,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                             writer.WriteString(Convert.ToBase64String(_certBytes)); // keep the private key -> this is a server cert
                             writer.WriteEndObject();
                         }
-                    })
+                    }, _conventions)
                 };
 
                 return request;

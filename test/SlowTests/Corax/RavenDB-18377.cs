@@ -28,7 +28,7 @@ public class RavenDB_18377 : RavenTestBase
         var djv = new DynamicJsonValue {["Coll"] = new DynamicJsonValue {["$values"] = new DynamicJsonArray(new string[] {"a", "b", "c"})}};
         var requestExecutor = store.GetRequestExecutor();
         var json = context.ReadObject(djv, "tests/1");
-        requestExecutor.Execute(new PutDocumentCommand("tests/1-A", null, json), context);
+        requestExecutor.Execute(new PutDocumentCommand(store.Conventions, "tests/1-A", null, json), context);
         {
             using var session = store.OpenSession();
             var result = session.Advanced.RawQuery<object>("from \"@empty\" where Coll = 'a'").ToList();

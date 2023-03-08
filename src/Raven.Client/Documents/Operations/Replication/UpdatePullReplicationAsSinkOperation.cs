@@ -36,15 +36,17 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdatePullEdgeReplication(_pullReplication);
+            return new UpdatePullEdgeReplication(conventions, _pullReplication);
         }
 
         private class UpdatePullEdgeReplication : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly PullReplicationAsSink _pullReplication;
 
-            public UpdatePullEdgeReplication(PullReplicationAsSink pullReplication)
+            public UpdatePullEdgeReplication(DocumentConventions conventions, PullReplicationAsSink pullReplication)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _pullReplication = pullReplication ?? throw new ArgumentNullException(nameof(pullReplication));
             }
 
@@ -63,7 +65,7 @@ namespace Raven.Client.Documents.Operations.Replication
                         };
 
                         await ctx.WriteAsync(stream, ctx.ReadObject(json, "update-pull-replication")).ConfigureAwait(false);
-                    })
+                    }, _conventions)
                 };
 
                 return request;

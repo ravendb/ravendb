@@ -21,19 +21,21 @@ namespace Raven.Client.ServerWide.Operations.Configuration
 
         public RavenCommand<PutServerWideBackupConfigurationResponse> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutServerWideBackupConfigurationCommand(context, _configuration);
+            return new PutServerWideBackupConfigurationCommand(conventions, context, _configuration);
         }
 
         private class PutServerWideBackupConfigurationCommand : RavenCommand<PutServerWideBackupConfigurationResponse>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _configuration;
 
-            public PutServerWideBackupConfigurationCommand(JsonOperationContext context, ServerWideBackupConfiguration configuration)
+            public PutServerWideBackupConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, ServerWideBackupConfiguration configuration)
             {
                 if (configuration == null)
                     throw new ArgumentNullException(nameof(configuration));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
 
                 _configuration = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
             }
@@ -49,7 +51,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false), _conventions)
                 };
             }
 

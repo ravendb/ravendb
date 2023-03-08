@@ -21,15 +21,17 @@ namespace Raven.Client.Documents.Operations.Integrations.PostgreSQL
 
         public RavenCommand<ConfigurePostgreSqlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigurePostgreSqlCommand(_configuration);
+            return new ConfigurePostgreSqlCommand(conventions, _configuration);
         }
 
         private class ConfigurePostgreSqlCommand : RavenCommand<ConfigurePostgreSqlOperationResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly PostgreSqlConfiguration _configuration;
 
-            public ConfigurePostgreSqlCommand(PostgreSqlConfiguration configuration)
+            public ConfigurePostgreSqlCommand(DocumentConventions conventions, PostgreSqlConfiguration configuration)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
@@ -42,7 +44,7 @@ namespace Raven.Client.Documents.Operations.Integrations.PostgreSQL
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

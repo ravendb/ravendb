@@ -43,7 +43,7 @@ public class RavenDB_15629 : RavenTestBase
                 Content = new BlittableJsonContent(async stream =>
                 {
                     await ctx.WriteAsync(stream, payloadJson);
-                })
+                }, DocumentConventions.Default)
             };
         }
 

@@ -29,7 +29,7 @@ namespace SlowTests.Issues
             {
                 var requestExecuter = store.GetRequestExecutor();
                 var blitUser = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(user, context);
-                requestExecuter.Execute(new PutDocumentCommand(id, null, blitUser), context);
+                requestExecuter.Execute(new PutDocumentCommand(store.Conventions, id, null, blitUser), context);
 
                 //Action
                 store.Operations.Send(new CounterBatchOperation(new CounterBatch

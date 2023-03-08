@@ -22,17 +22,19 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public RavenCommand<OperationIdResult<StartBackupOperationResult>> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new BackupCommand(_backupConfiguration, null);
+            return new BackupCommand(conventions, _backupConfiguration, null);
         }
 
         internal class BackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
         {
             public override bool IsReadRequest => false;
+            private readonly DocumentConventions _conventions;
             private readonly BackupConfiguration _backupConfiguration;
             private readonly long? _operationId;
 
-            public BackupCommand(BackupConfiguration backupConfiguration, long? operationId = null)
+            public BackupCommand(DocumentConventions conventions, BackupConfiguration backupConfiguration, long? operationId = null)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _backupConfiguration = backupConfiguration;
                 _operationId = operationId;
             }
@@ -51,7 +53,7 @@ namespace Raven.Client.Documents.Operations.Backups
                     {
                         var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_backupConfiguration, ctx);
                         await ctx.WriteAsync(stream, config).ConfigureAwait(false);
-                    })
+                    }, _conventions)
                 };
 
                 return request;

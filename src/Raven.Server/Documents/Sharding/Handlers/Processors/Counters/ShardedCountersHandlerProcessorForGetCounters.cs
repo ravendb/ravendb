@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
 
         protected override async ValueTask<CountersDetail> GetCountersAsync(TransactionOperationContext context, string docId, StringValues counters, bool full)
         {
-            var op = new GetCountersOperation.GetCounterValuesCommand(docId, counters, full);
+            var op = new GetCountersOperation.GetCounterValuesCommand(RequestHandler.ShardExecutor.Conventions, docId, counters, full);
 
             var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
 

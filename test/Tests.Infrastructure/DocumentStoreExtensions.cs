@@ -110,7 +110,7 @@ namespace FastTests
                         }
                     }
 
-                    var command = new PutDocumentCommand(id, changeVector, documentJson);
+                    var command = new PutDocumentCommand(RequestExecutor.Conventions, id, changeVector, documentJson);
 
                     await RequestExecutor.ExecuteAsync(command, Context, token: cancellationToken);
 
@@ -174,7 +174,7 @@ namespace FastTests
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
 
-                var command = new GetDocumentsCommand(id, includes: null, metadataOnly: metadataOnly);
+                var command = new GetDocumentsCommand(RequestExecutor.Conventions, id, includes: null, metadataOnly: metadataOnly);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -231,7 +231,7 @@ namespace FastTests
                 if (ids == null)
                     throw new ArgumentNullException(nameof(ids));
 
-                var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
+                var command = new GetDocumentsCommand(RequestExecutor.Conventions, ids, includes: null, metadataOnly: false);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -413,7 +413,7 @@ namespace FastTests
                         {
                             if (_payload != null)
                                 await ctx.WriteAsync(stream, _payload);
-                        })
+                        }, DocumentConventions.Default)
                     };
 
                     return request;

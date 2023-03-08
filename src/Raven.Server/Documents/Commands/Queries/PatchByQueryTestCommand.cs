@@ -15,6 +15,7 @@ namespace Raven.Server.Documents.Commands.Queries;
 
 public class PatchByQueryTestCommand : RavenCommand<PatchByQueryTestCommand.Response>
 {
+    private readonly DocumentConventions _conventions;
     private readonly string _id;
     private readonly IndexQueryServerSide _query;
 
@@ -25,8 +26,9 @@ public class PatchByQueryTestCommand : RavenCommand<PatchByQueryTestCommand.Resp
         public BlittableJsonReaderObject DebugActions { get; set; }
     }
 
-    public PatchByQueryTestCommand(string id, IndexQueryServerSide query)
+    public PatchByQueryTestCommand(DocumentConventions conventions, string id, IndexQueryServerSide query)
     {
+        _conventions = conventions ?? throw new ArgumentNullException(nameof(id));
         _id = id ?? throw new ArgumentNullException(nameof(id));
         _query = query ?? throw new ArgumentNullException(nameof(query));
     }
@@ -51,7 +53,7 @@ public class PatchByQueryTestCommand : RavenCommand<PatchByQueryTestCommand.Resp
 
                     writer.WriteEndObject();
                 }
-            })
+            }, _conventions)
         };
     }
 

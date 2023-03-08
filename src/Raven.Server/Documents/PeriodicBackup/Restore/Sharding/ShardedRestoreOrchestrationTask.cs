@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Http;
@@ -63,10 +64,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
         {
             var dbSearchResult = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(DatabaseName);
             var shardedDbContext = dbSearchResult.DatabaseContext;
+            var conventions = shardedDbContext.ShardExecutor.Conventions;
 
             var multiOperationTask = shardedDbContext.Operations.CreateServerWideMultiOperationTask<OperationIdResult, ShardedRestoreResult, ShardedRestoreProgress>(
                 id: _operationId,
-                commandFactory: (context, i) => GenerateCommandForShard(shardNumber: i, configuration: RestoreConfiguration.Clone()),
+                commandFactory: (context, i) => GenerateCommandForShard(conventions, shardNumber: i, configuration: RestoreConfiguration.Clone()),
                 onProgress: Progress,
                 token: OperationCancelToken);
 
@@ -136,7 +138,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
         }
 
 
-        private static RavenCommand<OperationIdResult> GenerateCommandForShard(int shardNumber, RestoreBackupConfigurationBase configuration)
+        private static RavenCommand<OperationIdResult> GenerateCommandForShard(DocumentConventions conventions, int shardNumber, RestoreBackupConfigurationBase configuration)
         {
             Debug.Assert(configuration.ShardRestoreSettings?.Shards.ContainsKey(shardNumber) ?? false);
 
@@ -162,7 +164,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
                     throw new ArgumentOutOfRangeException(nameof(configuration));
             }
 
-            return new RestoreBackupOperation.RestoreBackupCommand(configuration);
+            return new RestoreBackupOperation.RestoreBackupCommand(conventions, configuration);
         }
     }
 }

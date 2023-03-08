@@ -130,7 +130,7 @@ namespace Raven.Client.Documents.Operations
                         {
                             writer.WriteIndexQuery(_conventions, ctx, _queryToDelete);
                         }
-                    })
+                    }, _conventions)
                 };
 
                 url = path.ToString();

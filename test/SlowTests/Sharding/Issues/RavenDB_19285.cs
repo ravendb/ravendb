@@ -112,7 +112,7 @@ public class RavenDB_19285: RavenTestBase
                         {
                             writer.WriteIndexQuery(DocumentConventions.Default, ctx, _indexQuery);
                         }
-                    }
+                    }, DocumentConventions.Default
                 )
             };
 

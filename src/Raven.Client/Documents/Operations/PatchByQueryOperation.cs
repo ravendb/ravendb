@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Operations
 
                             writer.WriteEndObject();
                         }
-                    })
+                    }, _conventions)
                 };
 
                 url = path.ToString();

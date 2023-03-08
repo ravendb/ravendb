@@ -23,7 +23,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutDatabaseConfigurationSettingsCommand(context, _configurationSettings, _databaseName);
+            return new PutDatabaseConfigurationSettingsCommand(conventions, context, _configurationSettings, _databaseName);
         }
 
         private class PutDatabaseConfigurationSettingsCommand : RavenCommand, IRaftCommand
@@ -31,14 +31,16 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             public override bool IsReadRequest => false;
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
             private readonly BlittableJsonReaderObject _configurationSettings;
+            private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
 
-            public PutDatabaseConfigurationSettingsCommand(JsonOperationContext context, Dictionary<string, string> configurationSettings, string databaseName)
+            public PutDatabaseConfigurationSettingsCommand(DocumentConventions conventions, JsonOperationContext context, Dictionary<string, string> configurationSettings, string databaseName)
             {
                 if (context is null)
                     throw new ArgumentNullException(nameof(context));
                 if (configurationSettings is null)
                     throw new ArgumentNullException(nameof(configurationSettings));
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
                 _configurationSettings = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configurationSettings, context);
             }
@@ -49,7 +51,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configurationSettings).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configurationSettings).ConfigureAwait(false), _conventions)
                 };
                 return request;
             }

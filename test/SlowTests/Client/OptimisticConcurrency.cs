@@ -233,7 +233,7 @@ namespace SlowTests.Client
                     }
                 };
                 var json = context.ReadObject(djv, id);
-                var putCommand = new PutDocumentCommand(id, "someConflictedChangeVector", json);
+                var putCommand = new PutDocumentCommand(store.Conventions, id, "someConflictedChangeVector", json);
                 await Assert.ThrowsAnyAsync<ConcurrencyException>(async () => await requestExecuter.ExecuteAsync(putCommand, context));
             }
 

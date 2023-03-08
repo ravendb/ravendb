@@ -20,19 +20,21 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
 
         public RavenCommand<ServerWideExternalReplicationResponse> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutServerWideExternalReplicationCommand(context, _configuration);
+            return new PutServerWideExternalReplicationCommand(conventions, context, _configuration);
         }
 
         private class PutServerWideExternalReplicationCommand : RavenCommand<ServerWideExternalReplicationResponse>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _configuration;
 
-            public PutServerWideExternalReplicationCommand(JsonOperationContext context, ServerWideExternalReplication configuration)
+            public PutServerWideExternalReplicationCommand(DocumentConventions conventions, JsonOperationContext context, ServerWideExternalReplication configuration)
             {
                 if (configuration == null)
                     throw new ArgumentNullException(nameof(configuration));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
 
                 _configuration = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
             }
@@ -48,7 +50,7 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false), _conventions)
                 };
             }
 

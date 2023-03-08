@@ -83,7 +83,7 @@ namespace SlowTests.Issues
 
                                 writer.WriteEndObject();
                             }
-                        })
+                        }, DocumentConventions.Default)
                     };
                 }
 

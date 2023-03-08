@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             var shard = RequestHandler.DatabaseContext.GetShardNumberFor(context, fromDocument);
 
             var docs = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(context,
-                new GetDocumentsCommand(new[] { fromDocument }, includes: null, metadataOnly: false), shard);
+                new GetDocumentsCommand(RequestHandler.ShardExecutor.Conventions, new[] { fromDocument }, includes: null, metadataOnly: false), shard);
             return (BlittableJsonReaderObject)docs.Results[0];
         }
 

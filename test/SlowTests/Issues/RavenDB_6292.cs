@@ -123,7 +123,7 @@ namespace SlowTests.Issues
 
                     using (var commands = store2.Commands())
                     {
-                        var command = new GetDocumentsCommand("users/1", includes: new[] { "AddressId" }, metadataOnly: false);
+                        var command = new GetDocumentsCommand(commands.RequestExecutor.Conventions, "users/1", includes: new[] { "AddressId" }, metadataOnly: false);
 
                         commands.RequestExecutor.Execute(command, commands.Context);
 

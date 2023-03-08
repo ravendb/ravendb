@@ -12,11 +12,13 @@ namespace Raven.Client.Documents.Commands
 {
     public class CreateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>, IRaftCommand
     {
+        private readonly DocumentConventions _conventions;
         private readonly SubscriptionCreationOptions _options;
         private readonly string _id;
 
         public CreateSubscriptionCommand(DocumentConventions conventions, SubscriptionCreationOptions options, string id = null)
         {
+            _conventions = conventions;
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _id = id;
         }
@@ -30,7 +32,7 @@ namespace Raven.Client.Documents.Commands
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,
-                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx)).ConfigureAwait(false))
+                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx)).ConfigureAwait(false), _conventions)
             };
             return request;
         }

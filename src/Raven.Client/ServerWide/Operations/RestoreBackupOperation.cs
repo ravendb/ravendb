@@ -28,16 +28,18 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new RestoreBackupCommand(_restoreConfiguration, NodeTag);
+            return new RestoreBackupCommand(conventions, _restoreConfiguration, NodeTag);
         }
 
         internal class RestoreBackupCommand : RavenCommand<OperationIdResult>
         {
             public override bool IsReadRequest => false;
+            private readonly DocumentConventions _conventions;
             private readonly RestoreBackupConfigurationBase _restoreConfiguration;
 
-            public RestoreBackupCommand(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)
+            public RestoreBackupCommand(DocumentConventions conventions, RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _restoreConfiguration = restoreConfiguration ?? throw new ArgumentNullException(nameof(restoreConfiguration));
                 SelectedNodeTag = nodeTag;
             }
@@ -53,7 +55,7 @@ namespace Raven.Client.ServerWide.Operations
                     {
                         var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_restoreConfiguration, ctx);
                         await ctx.WriteAsync(stream, config).ConfigureAwait(false);
-                    })
+                    }, _conventions)
                 };
 
                 return request;

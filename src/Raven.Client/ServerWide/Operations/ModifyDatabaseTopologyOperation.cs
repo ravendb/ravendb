@@ -28,16 +28,18 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<ModifyDatabaseTopologyResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ModifyDatabaseTopologyCommand(_databaseName, _databaseTopology);
+            return new ModifyDatabaseTopologyCommand(conventions, _databaseName, _databaseTopology);
         }
 
         internal class ModifyDatabaseTopologyCommand : RavenCommand<ModifyDatabaseTopologyResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly DatabaseTopology _databaseTopology;
             private readonly string _databaseName;
 
-            public ModifyDatabaseTopologyCommand(string databaseName, DatabaseTopology databaseTopology)
+            public ModifyDatabaseTopologyCommand(DocumentConventions conventions, string databaseName, DatabaseTopology databaseTopology)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseTopology = databaseTopology;
                 _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseTopology));
             }
@@ -51,7 +53,7 @@ namespace Raven.Client.ServerWide.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, topologyDocument).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, topologyDocument).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

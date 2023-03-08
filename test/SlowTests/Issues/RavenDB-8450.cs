@@ -99,7 +99,7 @@ namespace SlowTests.Issues
                             writer.WriteString(_tryout.Query);
                             writer.WriteEndObject();
                         }
-                    })
+                    }, DocumentConventions.Default)
                 };
 
                 var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/subscriptions/try?pageSize=10");

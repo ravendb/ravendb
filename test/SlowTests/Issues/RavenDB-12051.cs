@@ -24,7 +24,7 @@ namespace SlowTests.Issues
                 using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("{'Items': []}")))
                 using (var blittableJson = context.Sync.ReadForDisk(stringStream, "Reading of foo/bar"))
                 {
-                    store.GetRequestExecutor().Execute(new PutDocumentCommand("foo/bar", null, blittableJson), context);
+                    store.GetRequestExecutor().Execute(new PutDocumentCommand(store.Conventions, "foo/bar", null, blittableJson), context);
                 }
                 using (var s = store.OpenSession())
                 {

@@ -60,7 +60,7 @@ namespace Raven.Client.ServerWide.Operations
                             ResolveToLatest = _solver.ResolveToLatest,
                         }, ctx);
                         await ctx.WriteAsync(stream, solver).ConfigureAwait(false);
-                    })
+                    }, _conventions)
                 };
 
                 return request;

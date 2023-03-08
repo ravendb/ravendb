@@ -52,19 +52,21 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new SetIndexLockCommand(context, _parameters);
+            return new SetIndexLockCommand(conventions, context, _parameters);
         }
 
         internal class SetIndexLockCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _parameters;
 
-            public SetIndexLockCommand(JsonOperationContext context, Parameters parameters)
+            public SetIndexLockCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
             {
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
 
                 _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
             }
@@ -76,7 +78,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false), _conventions)
                 };
             }
 

@@ -31,6 +31,7 @@ namespace Raven.Client.ServerWide.Operations
 
         private class CompactDatabaseCommand : RavenCommand<OperationIdResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _compactSettings;
 
             public CompactDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, CompactSettings compactSettings, string selectedNode)
@@ -41,6 +42,7 @@ namespace Raven.Client.ServerWide.Operations
                     throw new ArgumentNullException(nameof(compactSettings));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
+                _conventions = conventions;
 
                 _compactSettings = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(compactSettings, context);
 
@@ -54,7 +56,7 @@ namespace Raven.Client.ServerWide.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _compactSettings).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _compactSettings).ConfigureAwait(false), _conventions)
                 };
 
                 return request;

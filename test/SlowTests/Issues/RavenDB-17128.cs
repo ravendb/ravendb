@@ -170,7 +170,7 @@ namespace SlowTests.Issues
                     using (re.ContextPool.AllocateOperationContext(out var ctx))
                     using (var blittable = ctx.ReadObject(djv, "new/1"))
                     {
-                        var ex = Assert.Throws<ConcurrencyException>(() => re.Execute(new PutDocumentCommand("new/1", cv, blittable), ctx));
+                        var ex = Assert.Throws<ConcurrencyException>(() => re.Execute(new PutDocumentCommand(store.Conventions, "new/1", cv, blittable), ctx));
                         Assert.Equal(cv, ex.ExpectedChangeVector);
                     }
                 }

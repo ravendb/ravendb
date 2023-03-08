@@ -17,16 +17,18 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new StartTransactionsRecordingCommand(_filePath);
+            return new StartTransactionsRecordingCommand(conventions, _filePath);
         }
 
         private class StartTransactionsRecordingCommand : RavenCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _filePath;
 
-            public StartTransactionsRecordingCommand(string filePath)
+            public StartTransactionsRecordingCommand(DocumentConventions conventions, string filePath)
             {
                 EnsureIsNotNullOrEmpty(filePath, nameof(filePath));
+                _conventions = conventions;
                 _filePath = filePath;
             }
 
@@ -41,7 +43,7 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
                     {
                         var parametersJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new Parameters { File = _filePath }, ctx);
                         await ctx.WriteAsync(stream, parametersJson).ConfigureAwait(false);
-                    })
+                    }, _conventions)
                 };
                 return request;
             }

@@ -50,16 +50,17 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<PatchResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchCommand(context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfChangeVectorMismatch, returnDebugInformation: false, test: false);
+            return new PatchCommand(conventions, context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfChangeVectorMismatch, returnDebugInformation: false, test: false);
         }
 
         public RavenCommand<PatchResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache, bool returnDebugInformation, bool test)
         {
-            return new PatchCommand(context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfChangeVectorMismatch, returnDebugInformation, test);
+            return new PatchCommand(conventions, context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfChangeVectorMismatch, returnDebugInformation, test);
         }
 
         internal class PatchCommand : RavenCommand<PatchResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _id;
             private readonly string _changeVector;
             private readonly BlittableJsonReaderObject _patch;
@@ -67,8 +68,8 @@ namespace Raven.Client.Documents.Operations
             private readonly bool _returnDebugInformation;
             private readonly bool _test;
 
-            public PatchCommand(JsonOperationContext context, string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfChangeVectorMismatch, bool returnDebugInformation, bool test)
-            : this(id, changeVector, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new
+            public PatchCommand(DocumentConventions conventions, JsonOperationContext context, string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfChangeVectorMismatch, bool returnDebugInformation, bool test)
+            : this(conventions, id, changeVector, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new
             {
                 Patch = patch,
                 PatchIfMissing = patchIfMissing
@@ -82,8 +83,9 @@ namespace Raven.Client.Documents.Operations
                     throw new ArgumentNullException(nameof(patchIfMissing.Script));
             }
 
-            internal PatchCommand(string id, string changeVector, BlittableJsonReaderObject patch, bool skipPatchIfChangeVectorMismatch, bool returnDebugInformation, bool test)
+            internal PatchCommand(DocumentConventions conventions, string id, string changeVector, BlittableJsonReaderObject patch, bool skipPatchIfChangeVectorMismatch, bool returnDebugInformation, bool test)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _id = id ?? throw new ArgumentNullException(nameof(id));
                 _changeVector = changeVector;
                 _patch = patch ?? throw new ArgumentNullException(nameof(patch));
@@ -107,7 +109,7 @@ namespace Raven.Client.Documents.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Patch,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _patch).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _patch).ConfigureAwait(false), _conventions)
                 };
                 AddChangeVectorIfNotNull(_changeVector, request);
                 return request;

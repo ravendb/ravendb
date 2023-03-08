@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                GetDocumentsCommand getDocsCommand = new GetDocumentsCommand("things/1", null, false);
+                GetDocumentsCommand getDocsCommand = new GetDocumentsCommand(store.Conventions, "things/1", null, false);
                 store.Commands().Execute(getDocsCommand);
                 var res = getDocsCommand.Result.Results[0] as BlittableJsonReaderObject;
                 

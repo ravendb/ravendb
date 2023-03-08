@@ -19,15 +19,17 @@ namespace Raven.Client.Documents.Operations.Counters
 
         public RavenCommand<CountersDetail> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new CounterBatchCommand(_counterBatch);
+            return new CounterBatchCommand(conventions, _counterBatch);
         }
 
         internal class CounterBatchCommand : RavenCommand<CountersDetail>
         {
+            private readonly DocumentConventions _conventions;
             private readonly CounterBatch _counterBatch;
 
-            public CounterBatchCommand(CounterBatch counterBatch)
+            public CounterBatchCommand(DocumentConventions conventions, CounterBatch counterBatch)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _counterBatch = counterBatch ?? throw new ArgumentNullException(nameof(counterBatch));
             }
 
@@ -39,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Counters
                 {
                     Method = HttpMethod.Post,
 
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_counterBatch, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_counterBatch, ctx)).ConfigureAwait(false), _conventions)
                 };
             }
 

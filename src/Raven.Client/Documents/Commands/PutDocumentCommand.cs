@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
@@ -10,12 +11,14 @@ namespace Raven.Client.Documents.Commands
 {
     public class PutDocumentCommand : RavenCommand<PutResult>
     {
+        private readonly DocumentConventions _conventions;
         private readonly string _id;
         private readonly string _changeVector;
         private readonly BlittableJsonReaderObject _document;
 
-        public PutDocumentCommand(string id, string changeVector, BlittableJsonReaderObject document)
+        public PutDocumentCommand(DocumentConventions conventions, string id, string changeVector, BlittableJsonReaderObject document)
         {
+            _conventions = conventions;
             _id = id ?? throw new ArgumentNullException(nameof(id));
             _changeVector = changeVector;
             _document = document ?? throw new ArgumentNullException(nameof(document));
@@ -28,7 +31,7 @@ namespace Raven.Client.Documents.Commands
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,
-                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _document).ConfigureAwait(false))
+                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _document).ConfigureAwait(false), _conventions)
             };
             AddChangeVectorIfNotNull(_changeVector, request);
             return request;

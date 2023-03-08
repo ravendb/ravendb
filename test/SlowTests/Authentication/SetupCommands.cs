@@ -23,10 +23,12 @@ namespace SlowTests.Authentication
     {
         private class ClaimDomainCommand : RavenCommand<ClaimDomainResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _payload;
 
             public ClaimDomainCommand(DocumentConventions conventions, JsonOperationContext context, ClaimDomainInfo claimInfo)
             {
+                _conventions = conventions;
                 _payload = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(claimInfo, context);
             }
 
@@ -40,7 +42,7 @@ namespace SlowTests.Authentication
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _payload).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _payload).ConfigureAwait(false), _conventions)
                 };
             }
 
@@ -82,10 +84,12 @@ namespace SlowTests.Authentication
 
         private class SetupLetsEncryptCommand : RavenCommand<byte[]>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject _payload;
 
             public SetupLetsEncryptCommand(DocumentConventions conventions, JsonOperationContext context, SetupInfo setupInfo)
             {
+                _conventions = conventions;
                 _payload = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(setupInfo, context);
                 ResponseType = RavenCommandResponseType.Raw;
                 Timeout = TimeSpan.FromMinutes(30);
@@ -100,7 +104,7 @@ namespace SlowTests.Authentication
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _payload).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _payload).ConfigureAwait(false), _conventions)
                 };
             }
 

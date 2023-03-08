@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -7,11 +8,13 @@ namespace Raven.Server.Documents.Commands.ETL;
 
 internal class ElasticSearchEtlTestCommand : RavenCommand
 {
+    private readonly DocumentConventions _conventions;
     private readonly BlittableJsonReaderObject _testScript;
     public override bool IsReadRequest => true;
 
-    public ElasticSearchEtlTestCommand(BlittableJsonReaderObject testScript)
+    public ElasticSearchEtlTestCommand(DocumentConventions conventions, BlittableJsonReaderObject testScript)
     {
+        _conventions = conventions;
         _testScript = testScript;
     }
 
@@ -28,7 +31,7 @@ internal class ElasticSearchEtlTestCommand : RavenCommand
                 {
                     writer.WriteObject(_testScript);
                 }
-            })
+            }, _conventions)
         };
 
         return request;

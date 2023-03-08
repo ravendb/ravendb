@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Raven.Client.Documents.Conventions;
@@ -23,17 +24,19 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<JsonPatchResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new JsonPatchCommand(Id, JsonPatchDocument);
+            return new JsonPatchCommand(conventions, Id, JsonPatchDocument);
         }
 
         internal class JsonPatchCommand : RavenCommand<JsonPatchResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _id;
             private readonly JsonPatchDocument _jsonPatchDocument;
             public override bool IsReadRequest => false;
 
-            public JsonPatchCommand(string id, JsonPatchDocument jsonPatchDocument)
+            public JsonPatchCommand(DocumentConventions conventions, string id, JsonPatchDocument jsonPatchDocument)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _id = id;
                 _jsonPatchDocument = jsonPatchDocument;
             }
@@ -58,7 +61,7 @@ namespace Raven.Client.Documents.Operations
                                     Operations = _jsonPatchDocument.Operations
                                 }, ctx, serializer));
                         }
-                    })
+                    }, _conventions)
                 };
 
                 return request;

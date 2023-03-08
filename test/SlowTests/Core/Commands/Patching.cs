@@ -138,7 +138,7 @@ this.Comments = this.Comments.filter(function (c) {
                     result = commands.Get("posts/4"); ;
                     Assert.Equal("Post 5", result.Title.ToString());
 
-                    var command = new PatchOperation.PatchCommand(
+                    var command = new PatchOperation.PatchCommand(store.Conventions,
                         commands.Context,
                         "posts/4",
                         null,
@@ -191,7 +191,7 @@ this.Comments = this.Comments.filter(function (c) {
                         Comments = new Post[] { }
                     }, null);
 
-                    var command = new PatchOperation.PatchCommand(
+                    var command = new PatchOperation.PatchCommand(store.Conventions,
                         commands.Context,
                         "posts/1",
                         null,
@@ -221,7 +221,7 @@ this.Comments = this.Comments.filter(function (c) {
                         Assert.Equal(postId, post.Title);
                     }
 
-                    command = new PatchOperation.PatchCommand(
+                    command = new PatchOperation.PatchCommand(store.Conventions,
                         commands.Context,
                         "posts/1",
                         null,
@@ -274,7 +274,7 @@ this.Comments = this.Comments.filter(function (c) {
 
                 using (var commands = store.Commands())
                 {
-                    var command = new PatchOperation.PatchCommand(
+                    var command = new PatchOperation.PatchCommand(store.Conventions,
                         commands.Context,
                         "posts/1-A",
                         null,
@@ -303,7 +303,7 @@ this.Comments = this.Comments.filter(function (c) {
 
                 using (var commands = store.Commands())
                 {
-                    var command = new PatchOperation.PatchCommand(
+                    var command = new PatchOperation.PatchCommand(store.Conventions,
                         commands.Context,
                         "posts/1-A",
                         null,

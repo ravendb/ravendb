@@ -22,15 +22,17 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdateExternalReplication(_newWatcher);
+            return new UpdateExternalReplication(conventions, _newWatcher);
         }
 
         private class UpdateExternalReplication : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly ExternalReplication _newWatcher;
 
-            public UpdateExternalReplication(ExternalReplication newWatcher)
+            public UpdateExternalReplication(DocumentConventions conventions, ExternalReplication newWatcher)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _newWatcher = newWatcher ?? throw new ArgumentNullException(nameof(newWatcher));
             }
 
@@ -49,7 +51,7 @@ namespace Raven.Client.Documents.Operations.Replication
                         };
 
                         await ctx.WriteAsync(stream, ctx.ReadObject(json, "update-replication")).ConfigureAwait(false);
-                    })
+                    }, _conventions)
                 };
 
                 return request;

@@ -41,13 +41,13 @@ namespace SlowTests.Issues
                     {
                         ["BigNumber"] = new LazyNumberValue(context.GetLazyString(bigNumString))
                     }, "num");
-                    requestExecuter.Execute(new PutDocumentCommand("bignum/1", null, reader), context);
+                    requestExecuter.Execute(new PutDocumentCommand(store.Conventions, "bignum/1", null, reader), context);
                 }
 
                 using (requestExecuter.ContextPool.AllocateOperationContext(out var context))
                 {
 
-                    GetDocumentsCommand getDoc = new GetDocumentsCommand("bignum/1", null, false);
+                    GetDocumentsCommand getDoc = new GetDocumentsCommand(store.Conventions, "bignum/1", null, false);
                     requestExecuter.Execute(getDoc, context);
                     var doc = getDoc.Result.Results[0] as BlittableJsonReaderObject;
                     Assert.True(doc.TryGet<LazyNumberValue>("BigNumber", out var rawNum));
@@ -84,13 +84,13 @@ namespace SlowTests.Issues
                     {
                         ["BigNumber"] = new LazyNumberValue(context.GetLazyString(bigNumString))
                     }, "num");
-                    requestExecuter.Execute(new PutDocumentCommand("bignum/1", null, reader), context);
+                    requestExecuter.Execute(new PutDocumentCommand(store.Conventions, "bignum/1", null, reader), context);
                 }
 
                 using (requestExecuter.ContextPool.AllocateOperationContext(out var context))
                 {
 
-                    GetDocumentsCommand getDoc = new GetDocumentsCommand("bignum/1", null, false);
+                    GetDocumentsCommand getDoc = new GetDocumentsCommand(store.Conventions, "bignum/1", null, false);
                     requestExecuter.Execute(getDoc, context);
                     var doc = getDoc.Result.Results[0] as BlittableJsonReaderObject;
                     Assert.True(doc.TryGet<LazyNumberValue>("BigNumber", out var rawNum));
@@ -113,7 +113,7 @@ namespace SlowTests.Issues
                     {
                         ["BigNumber"] = new LazyNumberValue(context.GetLazyString(bigNumString))
                     }, "num");
-                    var thrownException =  Assert.Throws<RavenException>(() => requestExecuter.Execute(new PutDocumentCommand("bignum/1", null, reader), context));
+                    var thrownException =  Assert.Throws<RavenException>(() => requestExecuter.Execute(new PutDocumentCommand(store.Conventions, "bignum/1", null, reader), context));
 
                     Assert.StartsWith("System.IO.InvalidDataException: Could not parse double:", thrownException.Message);
                 }              

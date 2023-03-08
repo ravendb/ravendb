@@ -26,18 +26,20 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
         public RavenCommand<CertificateRawData> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new CreateClientCertificateCommand(_name, _permissions, _clearance, _password);
+            return new CreateClientCertificateCommand(conventions, _name, _permissions, _clearance, _password);
         }
 
         private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _name;
             private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly SecurityClearance _clearance;
             private readonly string _password;
 
-            public CreateClientCertificateCommand(string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, string password = null)
+            public CreateClientCertificateCommand(DocumentConventions conventions, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, string password = null)
             {
+                _conventions = conventions;
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
                 _clearance = clearance;
@@ -93,7 +95,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
                         writer.WriteEndObject();
                     }
-                });
+                }, _conventions);
 
                 return request;
             }

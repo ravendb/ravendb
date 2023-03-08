@@ -141,7 +141,7 @@ namespace Raven.Client.Documents.Session
                 ThrowCouldNotRefreshDocument("Cannot refresh a transient instance");
             IncrementRequestCount();
 
-            var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
+            var command = new GetDocumentsCommand(Conventions, new[] { documentInfo.Id }, includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
             var commandResult = (BlittableJsonReaderObject)command.Result.Results[0];
@@ -159,7 +159,7 @@ namespace Raven.Client.Documents.Session
 
             IncrementRequestCount();
 
-            var command = new GetDocumentsCommand(idsEntitiesPairs.Keys.ToArray(), includes: null, metadataOnly: false);
+            var command = new GetDocumentsCommand(Conventions, idsEntitiesPairs.Keys.ToArray(), includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
             RefreshEntities(command, idsEntitiesPairs);

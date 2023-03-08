@@ -110,7 +110,7 @@ namespace Raven.Client.Documents.Commands.Batches
                         }
                         writer.WriteEndObject();
                     }
-                })
+                }, _conventions)
             };
 
             if (_attachmentStreams != null && _attachmentStreams.Count > 0)

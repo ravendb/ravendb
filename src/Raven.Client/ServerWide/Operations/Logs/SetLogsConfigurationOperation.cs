@@ -40,15 +40,17 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new SetLogsConfigurationCommand(_parameters);
+            return new SetLogsConfigurationCommand(conventions, _parameters);
         }
 
         private class SetLogsConfigurationCommand : RavenCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly Parameters _parameters;
 
-            public SetLogsConfigurationCommand(Parameters parameters)
+            public SetLogsConfigurationCommand(DocumentConventions conventions, Parameters parameters)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             }
 
@@ -58,7 +60,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
                 return new HttpRequestMessage(HttpMethod.Post, url)
                 {
-                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false), _conventions)
                 };
             }
         }

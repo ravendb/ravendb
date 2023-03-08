@@ -191,7 +191,7 @@ namespace FastTests.Sharding
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var blittableJsonReaderObject = context.ReadObject(user, id);
-                requestExecutor.Execute(new PutDocumentCommand(id, null, blittableJsonReaderObject), context);
+                requestExecutor.Execute(new PutDocumentCommand(requestExecutor.Conventions, id, null, blittableJsonReaderObject), context);
             }
         }
 
@@ -219,7 +219,7 @@ namespace FastTests.Sharding
                     ["Type"] = "Dog"
                 }, petId);
 
-                var command = new PatchOperation.PatchCommand(
+                var command = new PatchOperation.PatchCommand(store.Conventions,
                     context,
                     id,
                     null,

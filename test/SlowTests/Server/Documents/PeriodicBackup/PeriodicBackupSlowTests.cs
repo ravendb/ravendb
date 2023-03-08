@@ -2175,7 +2175,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var requestExecutor = store.GetRequestExecutor())
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
-                var command = new BackupOperation.BackupCommand(config);
+                var command = new BackupOperation.BackupCommand(store.Conventions, config);
                 var request = command.CreateRequest(context, new ServerNode { Url = store.Urls.First(), Database = store.Database }, out var url);
                 request.RequestUri = new Uri(url);
                 var client = store.GetRequestExecutor(store.Database).HttpClient;

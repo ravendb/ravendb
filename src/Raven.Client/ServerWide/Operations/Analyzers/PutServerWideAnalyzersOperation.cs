@@ -28,6 +28,7 @@ namespace Raven.Client.ServerWide.Operations.Analyzers
 
         private class PutServerWideAnalyzersCommand : RavenCommand, IRaftCommand
         {
+            private readonly DocumentConventions _conventions;
             private readonly BlittableJsonReaderObject[] _analyzersToAdd;
 
             public PutServerWideAnalyzersCommand(DocumentConventions conventions, JsonOperationContext context, AnalyzerDefinition[] analyzersToAdd)
@@ -38,6 +39,7 @@ namespace Raven.Client.ServerWide.Operations.Analyzers
                     throw new ArgumentNullException(nameof(analyzersToAdd));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
+                _conventions = conventions;
 
                 _analyzersToAdd = new BlittableJsonReaderObject[analyzersToAdd.Length];
 
@@ -65,7 +67,7 @@ namespace Raven.Client.ServerWide.Operations.Analyzers
                             writer.WriteArray("Analyzers", _analyzersToAdd);
                             writer.WriteEndObject();
                         }
-                    })
+                    }, _conventions)
                 };
 
                 return request;

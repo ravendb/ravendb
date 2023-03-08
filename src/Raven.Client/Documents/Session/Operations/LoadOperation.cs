@@ -40,9 +40,9 @@ namespace Raven.Client.Documents.Session.Operations
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
 
             if (_includeAllCounters)
-                return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude, compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false);
+                return new GetDocumentsCommand(_session.Conventions, _ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude, compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false);
             
-            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _revisionsToIncludeByChangeVector, _revisionsToIncludeByDateTimeBefore, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
+            return new GetDocumentsCommand(_session.Conventions, _ids, _includes, _countersToInclude, _revisionsToIncludeByChangeVector, _revisionsToIncludeByDateTimeBefore, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)

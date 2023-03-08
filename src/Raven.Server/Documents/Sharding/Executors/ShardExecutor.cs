@@ -20,8 +20,6 @@ namespace Raven.Server.Documents.Sharding.Executors
         private Dictionary<int, RequestExecutor> _requestExecutors;
         private readonly int[] _fullRange;
 
-        private readonly DocumentConventions _conventions;
-
         public ShardExecutor(ServerStore store, [NotNull] DatabaseRecord databaseRecord, [NotNull] string databaseName) : base(store)
         {
             _databaseRecord = databaseRecord ?? throw new ArgumentNullException(nameof(databaseRecord));
@@ -29,17 +27,20 @@ namespace Raven.Server.Documents.Sharding.Executors
 
             _fullRange = databaseRecord.Sharding.Shards.Keys.ToArray();
 
-            _conventions = new DocumentConventions
+            Conventions = new DocumentConventions
             {
                 SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
                 MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
                 HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
-                UseCompression = store.Configuration.Sharding.ShardExecutorUseCompression,
+                UseHttpCompression = store.Configuration.Sharding.ShardExecutorUseHttpCompression,
+                UseHttpDecompression = store.Configuration.Sharding.ShardExecutorUseHttpDecompression,
                 GlobalHttpClientTimeout = store.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan
             };
 
             _requestExecutors = CreateExecutors();
         }
+
+        public DocumentConventions Conventions { get; private set; }
 
         public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
         {
@@ -106,7 +107,7 @@ namespace Raven.Server.Documents.Sharding.Executors
                     urls,
                     ShardHelper.ToShardName(_databaseName, shardNumber),
                     ServerStore.Server.Certificate.Certificate,
-                    _conventions);
+                    Conventions);
             }
 
             return requestExecutors;

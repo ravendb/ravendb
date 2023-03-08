@@ -39,17 +39,19 @@ namespace Raven.Client.Documents.Operations.Counters
 
         public RavenCommand<CountersDetail> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetCounterValuesCommand(_docId, _counters, _returnFullResults);
+            return new GetCounterValuesCommand(conventions, _docId, _counters, _returnFullResults);
         }
 
         internal class GetCounterValuesCommand : RavenCommand<CountersDetail>
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _docId;
             private readonly string[] _counters;
             private readonly bool _returnFullResults;
 
-            public GetCounterValuesCommand(string docId, string[] counters, bool returnFullResults)
+            public GetCounterValuesCommand(DocumentConventions conventions, string docId, string[] counters, bool returnFullResults)
             {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _docId = docId ?? throw new ArgumentNullException(nameof(docId));
                 _counters = counters;
                 _returnFullResults = returnFullResults;
@@ -140,7 +142,7 @@ namespace Raven.Client.Documents.Operations.Counters
                         ReplyWithAllNodesValues = _returnFullResults
                     };
 
-                    request.Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(batch, ctx)).ConfigureAwait(false));
+                    request.Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(batch, ctx)).ConfigureAwait(false), _conventions);
                 }
             }
 

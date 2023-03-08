@@ -114,7 +114,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                         writer.WriteEndObject();
                     }
-                })
+                }, _requestExecutor.Conventions)
             };
 
             return request;
