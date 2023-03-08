@@ -68,22 +68,22 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
     const uniqueNodeTags = [...new Set(locations.map((x) => x.nodeTag))];
 
     return (
-        <div>
+        <div className="bs5">
             <CheckboxTriple onChanged={toggleAllNodes} state={nodesSelectionState()} title="Select all or none" />
 
             {uniqueNodeTags.map((nodeTag, idx) => {
                 const nodeId = uniqId + idx;
                 return (
                     <div key={nodeId}>
-                        <NodeSet color="shard" className="m-1">
-                            <Label className="m-0">
+                        <NodeSet color="shard" className="my-1">
+                            <Label className="m-0 p-1 d-flex flex-column align-items-center">
                                 <NodeSetLabel icon="node" color="node">
                                     {nodeTag}
-                                    <Checkbox
-                                        toggleSelection={() => toggleNode(nodeTag)}
-                                        selected={isNodeSelected(nodeTag)}
-                                    />
                                 </NodeSetLabel>
+                                <Checkbox
+                                    toggleSelection={() => toggleNode(nodeTag)}
+                                    selected={isNodeSelected(nodeTag)}
+                                />
                             </Label>
 
                             <NodeSetListCard>
@@ -95,15 +95,18 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                         }
 
                                         return (
-                                            <Label key={nodeId + "-shard-" + location.shardNumber} className="m-0">
+                                            <Label
+                                                key={nodeId + "-shard-" + location.shardNumber}
+                                                className="m-0 p-1 d-flex flex-column align-items-center"
+                                            >
                                                 <NodeSetItem color="shard" icon="shard">
                                                     {location.shardNumber}
-                                                    <Checkbox
-                                                        selected={isShardSelected(location)}
-                                                        toggleSelection={() => toggleShard(location)}
-                                                        color="shard"
-                                                    />
                                                 </NodeSetItem>
+                                                <Checkbox
+                                                    selected={isShardSelected(location)}
+                                                    toggleSelection={() => toggleShard(location)}
+                                                    color="shard"
+                                                />
                                             </Label>
                                         );
                                     })}
