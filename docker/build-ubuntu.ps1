@@ -31,8 +31,8 @@ function GetPackageFileName($arch)
 
 function GetUbuntuVersionFromDockerfile($DockerfileDir, $DockerfileName) {
     $dockerfilePath = Join-Path $DockerfileDir "Dockerfile.$arch"
-    $ubuntuVersion = Get-Content $dockerfilePath | Select-String -Pattern "(?<=FROM\s+mcr\.microsoft\.com\/dotnet\/runtime-deps:)([0-9]+\.[0-9]+-[0-9a-zA-Z]+)"
-    return $ubuntuVersion.Matches.Groups[1].Value
+    $ubuntuVersion = Get-Content $dockerfilePath | Select-String -Pattern "(?<=FROM\s+mcr\.microsoft\.com\/dotnet\/runtime-deps:)(\d+\.\d+)-(.*)"
+    return $ubuntuVersion.Matches.Groups[2].Value
 }
 
 function SetupDebBuildEnvironment($arch, $ubuntuVersion){
@@ -141,7 +141,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
     }
 
     Write-Host "Providing deb path '$($pathToDeb)' to Dockerfile.."
-    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "PATH_TO_DEB=./$matchingFile"
+    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "PATH_TO_DEB=./$matchingFile" --build-arg "RAVEN_USER_ID=999"
     CheckLastExitCode
     
     foreach ($tag in $tags[1..$tags.Length]) {
