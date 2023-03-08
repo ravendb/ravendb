@@ -9,6 +9,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -152,12 +153,8 @@ namespace Raven.Server.Rachis
                             var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, appendEntries.PrevLogIndex);
                             try
                             {
-                                bool hasRemovedFromTopology;
-
-                                (hasRemovedFromTopology, lastAcknowledgedIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
-                                    context,
-                                    entries,
-                                    appendEntries);
+                                (bool hasRemovedFromTopology, lastAcknowledgedIndex, lastTruncate, lastCommit) =
+                                    await ApplyLeaderStateToLocalStateAsync(sp, entries, appendEntries);
 
                                 if (hasRemovedFromTopology)
                                 {
@@ -279,88 +276,25 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private (bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate, long LastCommit) ApplyLeaderStateToLocalState(Stopwatch sp, ClusterOperationContext context, List<RachisEntry> entries, AppendEntries appendEntries)
+        private async Task<(bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate, long LastCommit)> ApplyLeaderStateToLocalStateAsync(Stopwatch sp, List<RachisEntry> entries, AppendEntries appendEntries)
         {
-            long lastTruncate;
-            long lastCommit;
-
-            bool removedFromTopology = false;
             // we start the tx after we finished reading from the network
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"{ToString()}: Ready to start tx in {sp.Elapsed}");
             }
 
-            using (var tx = context.OpenWriteTransaction())
-            {
-                _engine.ValidateTerm(_term);
-
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info($"{ToString()}: Tx running in {sp.Elapsed}");
-                }
-
-                if (entries.Count > 0)
-                {
-                    var (lastTopology, lastTopologyIndex) = _engine.AppendToLog(context, entries);
-                    using (lastTopology)
-                    {
-                        if (lastTopology != null)
-                        {
-                            if (_engine.Log.IsInfoEnabled)
-                            {
-                                _engine.Log.Info($"Topology changed to {lastTopology}");
-                            }
-
-                            var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(lastTopology);
-                            if (topology.Members.ContainsKey(_engine.Tag) ||
-                                topology.Promotables.ContainsKey(_engine.Tag) ||
-                                topology.Watchers.ContainsKey(_engine.Tag))
-                            {
-                                RachisConsensus.SetTopology(_engine, context, topology);
-                            }
-                            else
-                            {
-                                removedFromTopology = true;
-                                _engine.ClearAppendedEntriesAfter(context, lastTopologyIndex);
-                            }
-                        }
-                    }
-                }
-
-                var lastEntryIndexToCommit = Math.Min(
-                    _engine.GetLastEntryIndex(context),
-                    appendEntries.LeaderCommit);
-
-                var lastAppliedIndex = _engine.GetLastCommitIndex(context);
-                var lastAppliedTerm = _engine.GetTermFor(context, lastEntryIndexToCommit);
-
-                // we start to commit only after we have any log with a term of the current leader
-                if (lastEntryIndexToCommit > lastAppliedIndex && lastAppliedTerm == appendEntries.Term)
-                {
-                    lastAppliedIndex = _engine.Apply(context, lastEntryIndexToCommit, null, sp);
-                }
-
-                lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastAppliedIndex);
-                _engine.TruncateLogBefore(context, lastTruncate);
-
-                lastCommit = lastAppliedIndex;
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info($"{ToString()}: Ready to commit in {sp.Elapsed}");
-                }
-
-                tx.Commit();
-            }
+            var command = new FollowerApplyCommand(_engine, _term, entries, appendEntries, sp);
+            await _engine.TxMerger.Enqueue(command);
 
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"{ToString()}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
             }
 
-            var lastAcknowledgedIndex = entries.Count == 0 ? appendEntries.PrevLogIndex : entries[entries.Count - 1].Index;
+            var lastAcknowledgedIndex = entries.Count == 0 ? appendEntries.PrevLogIndex : entries[^1].Index;
 
-            return (HasRemovedFromTopology: removedFromTopology, LastAcknowledgedIndex: lastAcknowledgedIndex, LastTruncate: lastTruncate, LastCommit: lastCommit);
+            return (HasRemovedFromTopology: command.RemovedFromTopology, LastAcknowledgedIndex: lastAcknowledgedIndex, LastTruncate: command.LastTruncate, LastCommit: command.LastCommit);
         }
 
         public static bool CheckIfValidLeader(RachisConsensus engine, RemoteConnection connection, out LogLengthNegotiation negotiation)
@@ -388,7 +322,7 @@ namespace Raven.Server.Rachis
                 }
                 if (engine.Log.IsInfoEnabled)
                 {
-                    engine.Log.Info($"The incoming term { logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
+                    engine.Log.Info($"The incoming term {logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
                 }
                 engine.FoundAboutHigherTerm(logLength.Term, "Setting the term of the new leader");
                 engine.Timeout.Defer(connection.Source);
@@ -686,7 +620,7 @@ namespace Raven.Server.Rachis
                         return true;
                     case RootObjectType.VariableSizeTree:
                         size = reader.ReadInt32();
-                        reader.ReadExactly(size); 
+                        reader.ReadExactly(size);
 
                         Tree tree = null;
                         Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice treeName); // The Slice will be freed on context close
@@ -1002,7 +936,7 @@ namespace Raven.Server.Rachis
                             LastLogIndex = lastCommittedIndex,
                         });
                         return false;
-                    } 
+                    }
 
                     // the leader already truncated the suggested index
                     // Let's try to negotiate from that index upto our last appended index
