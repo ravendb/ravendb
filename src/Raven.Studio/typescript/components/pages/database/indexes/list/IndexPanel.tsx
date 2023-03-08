@@ -396,11 +396,11 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             </ButtonGroup>
                         )}
                         <Button color="secondary" onClick={togglePanelCollapsed} title="Toggle distribution details">
-                            <i className={panelCollapsed ? "icon-expand-vertical" : "icon-collapse-vertical"} />
+                            <i className={panelCollapsed ? "icon-arrow-down" : "icon-arrow-up"} />
                         </Button>
                     </RichPanelActions>
                 </RichPanelHeader>
-                <RichPanelDetails>
+                <RichPanelDetails className="pb-1">
                     {(index.reduceOutputCollectionName || index.patternForReferencesToReduceOutputCollection) && (
                         <RichPanelDetailItem>
                             <div className="index-type-icon" id={reduceOutputId}>
@@ -473,14 +473,16 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
                     {!isFaulty && <InlineDetails index={index} />}
                 </RichPanelDetails>
-                <Collapse isOpen={!panelCollapsed}>
-                    <IndexDistribution
-                        index={index}
-                        globalIndexingStatus={globalIndexingStatus}
-                        showStaleReason={(location) => showStaleReasons(index, location)}
-                        openFaulty={openFaulty}
-                    />
-                </Collapse>
+                <div className="px-3 pb-2">
+                    <Collapse isOpen={!panelCollapsed}>
+                        <IndexDistribution
+                            index={index}
+                            globalIndexingStatus={globalIndexingStatus}
+                            showStaleReason={(location) => showStaleReasons(index, location)}
+                            openFaulty={openFaulty}
+                        />
+                    </Collapse>
+                </div>
             </RichPanel>
         </>
     );
