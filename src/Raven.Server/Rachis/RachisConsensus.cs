@@ -699,11 +699,16 @@ namespace Raven.Server.Rachis
 
         public void SetNewState(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
         {
+            SetNewStateAsync(rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose).GetAwaiter().GetResult();
+        }
+
+        public async Task SetNewStateAsync(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
+        {
             var command = new SetNewStateCommand(this, rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose);
-            TxMerger.EnqueueSync(command);
+            await TxMerger.Enqueue(command);
             _leadershipTimeChanged.SetAndResetAtomically();
         }
-        
+
         public void SetNewStateImmediately(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
         {
             using(ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -1378,7 +1383,7 @@ namespace Raven.Server.Rachis
                             if (r.Success)
                             {
                                 var follower = new Follower(this, r.Negotiation.Term, remoteConnection);
-                                follower.AcceptConnection(r.Negotiation);
+                                await follower.AcceptConnectionAsync(r.Negotiation);
                             }
                             else
                             {
@@ -1469,12 +1474,12 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public bool RemoveEntryFromRaftLog(long index)
+        public async Task<bool> RemoveEntryFromRaftLogAsync(long index)
         {
             try
             {
                 var command = new RemoveEntryFromRaftLogCommand(Tag, index, LogHistory);
-                TxMerger.EnqueueSync(command);
+                await TxMerger.Enqueue(command);
                 return command.Succeeded;
             }
             catch (Exception e)
@@ -2234,14 +2239,14 @@ namespace Raven.Server.Rachis
             return true;
         }
 
-        public string HardResetToNewCluster(string nodeTag = "A")
+        public async Task<string> HardResetToNewClusterAsync(string nodeTag = "A")
         {
             bool committed = false;
             var topologyId = Guid.NewGuid().ToString();
             try
             {
                 var command = new HardResetToNewClusterCommand(this, _tag, topologyId);
-                TxMerger.EnqueueSync(command);
+                await TxMerger.Enqueue(command);
                 committed = command.Committed;
             }
             catch (ConcurrencyException) when (committed)

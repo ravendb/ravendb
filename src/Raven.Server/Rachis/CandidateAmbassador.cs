@@ -113,7 +113,7 @@ namespace Raven.Server.Rachis
         /// This method may run for a long while, as we are trying to get agreement 
         /// from a majority of the cluster
         /// </summary>
-        private void Run()
+        private void Run(object o)
         {
             try
             {

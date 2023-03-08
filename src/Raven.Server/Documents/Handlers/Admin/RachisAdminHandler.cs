@@ -680,7 +680,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var removed = ServerStore.Engine.RemoveEntryFromRaftLog(index);
+                var removed = await ServerStore.Engine.RemoveEntryFromRaftLogAsync(index);
                 if (removed)
                     nodeList.Add(ServerStore.NodeTag);
 

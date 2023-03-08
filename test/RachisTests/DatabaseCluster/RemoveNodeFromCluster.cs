@@ -141,7 +141,7 @@ namespace RachisTests.DatabaseCluster
                 var result = WaitForDocument(store2, "foo/bar");
                 Assert.True(result);
 
-                cluster.Leader.ServerStore.Engine.HardResetToNewCluster(tag);
+                await cluster.Leader.ServerStore.Engine.HardResetToNewClusterAsync(tag);
 
                 var outgoingConnections = WaitForValue(() =>
                 {

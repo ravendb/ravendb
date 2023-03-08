@@ -771,7 +771,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                await serverStore.Engine.SetNewStateAsync(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
             }
             catch (Exception e)
             {
@@ -948,7 +948,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                await serverStore.Engine.SetNewStateAsync(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
             }
             catch (Exception e)
             {
@@ -1069,7 +1069,7 @@ namespace Raven.Server.Commercial
                 {
                     try
                     {
-                        serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                        await serverStore.Engine.SetNewStateAsync(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
                     }
                     catch (Exception e)
                     {
@@ -1130,7 +1130,7 @@ namespace Raven.Server.Commercial
                         {
                             try
                             {
-                        serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                                await serverStore.Engine.SetNewStateAsync(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
                             }
                             catch (Exception e)
                             {

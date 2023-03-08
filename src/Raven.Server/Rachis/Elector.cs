@@ -123,7 +123,7 @@ namespace Raven.Server.Rachis
                                     try
                                     {
                                         var follower = new Follower(_engine, r.Negotiation.Term, _connection);
-                                        follower.AcceptConnection(r.Negotiation);
+                                        follower.AcceptConnectionAsync(r.Negotiation).GetAwaiter().GetResult();
                                     }
                                     catch
                                     {

@@ -288,7 +288,7 @@ namespace Raven.Server.Rachis
             }
 
             var command = new FollowerApplyCommand(_engine, _term, entries, appendEntries, sp);
-            _engine.TxMerger.Enqueue(command).Wait();
+            _engine.TxMerger.EnqueueSync(command);
 
             if (_engine.Log.IsInfoEnabled)
             {
@@ -987,13 +987,13 @@ namespace Raven.Server.Rachis
                 });
         }
 
-        public void AcceptConnection(LogLengthNegotiation negotiation)
+        public async Task AcceptConnectionAsync(LogLengthNegotiation negotiation)
         {
             if (_engine.CurrentState != RachisState.Passive)
                 _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
 
             // if leader / candidate, this remove them from play and revert to follower mode
-            _engine.SetNewState(RachisState.Follower, this, _term,
+            await _engine.SetNewStateAsync(RachisState.Follower, this, _term,
                 $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
             _engine.LeaderTag = _connection.Source;
 

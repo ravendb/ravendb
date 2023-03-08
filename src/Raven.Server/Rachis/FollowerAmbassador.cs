@@ -153,7 +153,7 @@ namespace Raven.Server.Rachis
         /// it is responsible for talking to the remote follower and maintaining its state.
         /// This can never throw, and will run on its own thread.
         /// </summary>
-        private unsafe void Run()
+        private unsafe void Run(object o)
         {
             _engine.ForTestingPurposes?.BeforeNegotiatingWithFollower();
 

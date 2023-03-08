@@ -199,7 +199,7 @@ namespace SlowTests.Issues
 
             foreach (var server in Servers)
             {
-                var res = await WaitForValueAsync(() => server.ServerStore.Engine.RemoveEntryFromRaftLog(testCmdIndex), true);
+                var res = await WaitForValueAsync(() => server.ServerStore.Engine.RemoveEntryFromRaftLogAsync(testCmdIndex), true);
 
                 Assert.True(res);
             }
