@@ -257,25 +257,27 @@ public unsafe class CompactKey : IDisposable
             var srcIndex = key._keyMappingCacheIndex;
             var destIndex = _keyMappingCacheIndex;
 
+            int currentElementIdx = 0;
+
             // PERF: Since we are avoiding the cost of general purpose copying, if we have the vector instruction set we should use it. 
             if (Avx.IsSupported)
             {
-                int currentElementIdx = 0;
-                while (currentElementIdx <= lastElementIdx)
+                // Find out the last element where a full vector can be copied.
+                int lastVectorElement = (key._lastKeyMappingItem / Vector256<long>.Count) * Vector256<long>.Count;
+
+                while (currentElementIdx < lastElementIdx)
                 {
                     Avx.Store(_keyMappingCache + currentElementIdx, Avx.LoadDquVector256(key._keyMappingCache + currentElementIdx));
                     Avx.Store(_keyMappingCacheIndex + currentElementIdx, Avx.LoadDquVector256(key._keyMappingCacheIndex + currentElementIdx));
                     currentElementIdx += Vector256<long>.Count;
                 }
             }
-            else
+
+            while (currentElementIdx < lastElementIdx)
             {
-                while (lastElementIdx >= 0)
-                {
-                    destDictionary[lastElementIdx] = srcDictionary[lastElementIdx];
-                    destIndex[lastElementIdx] = srcIndex[lastElementIdx];
-                    lastElementIdx--;
-                }
+                destDictionary[currentElementIdx] = srcDictionary[currentElementIdx];
+                destIndex[currentElementIdx] = srcIndex[currentElementIdx];
+                currentElementIdx++;
             }
         }
 
