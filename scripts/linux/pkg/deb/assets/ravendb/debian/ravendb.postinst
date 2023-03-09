@@ -6,19 +6,14 @@ case "$1" in
     configure)
         RAVEN_GID=$(getent group ravendb | cut -d ':' -f 3)
         if [[ -z "$RAVEN_GID" ]]; then
-            if [[ -n "$RAVEN_GROUP_ID" ]]; then
-                RAVEN_GID="$RAVEN_GROUP_ID"
-                groupadd --gid "$RAVEN_GID" ravendb
-            else
-                groupadd ravendb
-                RAVEN_GID=$(getent group ravendb | cut -d ':' -f 3)
-            fi
+
+            [[ -n "$RAVEN_GROUP_ID" ]] && GID_ARG="--gid $RAVEN_GROUP_ID"
+
+            groupadd $GID_ARG ravendb
+            RAVEN_GID=$(getent group ravendb | cut -d ':' -f 3)
         fi
 
-        UID_ARG=""
-        if [[ -n "$RAVEN_USER_ID" ]]; then
-            UID_ARG="--uid $RAVEN_USER_ID"
-        fi
+        [[ -n "$RAVEN_USER_ID" ]] && UID_ARG="--uid $RAVEN_USER_ID"
 
         getent passwd ravendb || adduser --disabled-login --disabled-password --system --home /var/lib/ravendb --no-create-home --quiet $UID_ARG --gid "$RAVEN_GID" ravendb
 
