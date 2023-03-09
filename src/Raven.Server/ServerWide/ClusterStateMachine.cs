@@ -640,6 +640,12 @@ namespace Raven.Server.ServerWide
                         }
                         break;
 
+                    case nameof(UpdatePrivateUrlsCommand):
+                        var command = (UpdatePrivateUrlsCommand)CommandBase.CreateFrom(cmd);
+                        command.Update(context, index);
+                        NotifyValueChanged(context, type, index);
+                        break;
+
                     default:
                         var massage = $"The command '{type}' is unknown and cannot be executed on server with version '{ServerVersion.FullVersion}'.{Environment.NewLine}" +
                                       "Updating this node version to match the rest should resolve this issue.";
@@ -2162,7 +2168,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void DeleteItem<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
+        public static void DeleteItem<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);

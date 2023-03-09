@@ -7,6 +7,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -25,13 +27,8 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
     // this executor will contact every single node in the cluster
     public AllOrchestratorNodesExecutor(ServerStore store, DatabaseRecord record) : base(store)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-            "RavenDB-19065 We might want to kill this entire class and do it differently by returning an index to the client which he will pass on for the next request");
-
         _store = store;
         _record = record;
-
-        RegisterForTopologyChange();
 
         _clusterTopology = _store.GetClusterTopology();
         UpdateExecutors(_clusterTopology, _record.Sharding.Orchestrator.Topology);
@@ -53,59 +50,29 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
         return executor;
     }
 
-    private void RegisterForTopologyChange()
+    private void UpdateExecutors(ClusterTopology clusterTopology, OrchestratorTopology orchestrator)
     {
-        var task = _store.Engine.GetTopologyChanged();
-        task.ContinueWith(_ =>
-        {
-            RegisterForTopologyChange();
-
-            var topology = _store.GetClusterTopology();
-            Interlocked.Exchange(ref _clusterTopology, topology);
-
-            UpdateExecutors(topology, _record.Sharding.Orchestrator.Topology);
-        }, TaskContinuationOptions.OnlyOnRanToCompletion);
-    }
-
-    private void UpdateExecutors(ClusterTopology cluster, OrchestratorTopology orchestrator)
-    {
-        var disposables = new List<IDisposable>();
-
         var oldCurrent = _current;
         var newCurrent = new Dictionary<string, RequestExecutor>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var node in cluster.AllNodes)
+        PublishedUrls published;
+        using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            published = PublishedUrls.Read(context);
+        }
+
+        foreach (var node in clusterTopology.AllNodes)
         {
             var tag = node.Key;
-            var url = node.Value;
 
             if (orchestrator.AllNodes.Contains(tag, StringComparer.OrdinalIgnoreCase) == false)
                 continue;
 
-            if (oldCurrent.TryGetValue(tag, out var requestExecutor) == false)
-            {
-                newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
-                    DocumentConventions.DefaultForServer);
-                continue;
-            }
+            var url = published.SelectUrl(tag, clusterTopology);
 
-            if (string.Equals(requestExecutor.Url, url, StringComparison.OrdinalIgnoreCase) == false)
-            {
-                disposables.Add(requestExecutor); // will dispose outside the lock
-                newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
-                    DocumentConventions.DefaultForServer);
-                continue;
-            }
-
-            if (_store.Server.Certificate.Certificate?.Thumbprint != requestExecutor.Certificate?.Thumbprint)
-            {
-                disposables.Add(requestExecutor);
-                newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
-                    DocumentConventions.DefaultForServer);
-                continue;
-            }
-
-            newCurrent[tag] = requestExecutor;
+            newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
+                ServerStore.Sharding.DocumentConventionsForOrchestrator);
         }
 
         lock (this)
@@ -119,42 +86,12 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
             _current = newCurrent;
         }
 
-        foreach (var tag in oldCurrent.Keys)
-        {
-            if (orchestrator.AllNodes.Contains(tag, StringComparer.OrdinalIgnoreCase))
-                continue;
-
-            if (oldCurrent.TryGetValue(tag, out var re))
-                disposables.Add(re);
-        }
-
-        foreach (var disposable in disposables)
-        {
-            try
-            {
-                disposable.Dispose();
-            }
-            catch
-            {
-                // ignored
-            }
-        }
+        SafelyDisposeExecutors(oldCurrent.Values);
     }
 
     public override void Dispose()
     {
-        foreach (var executor in _current)
-        {
-            try
-            {
-                executor.Value.Dispose();
-            }
-            catch
-            {
-                // ignored
-            }
-        }
-
+        SafelyDisposeExecutors(_current.Values);
         _current.Clear();
     }
 

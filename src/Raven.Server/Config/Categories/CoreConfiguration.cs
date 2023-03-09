@@ -25,6 +25,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("ServerUrl.Tcp", ConfigurationEntryScope.ServerWideOnly)]
         public string[] TcpServerUrls { get; set; }
 
+        [Description("When provided those URLs are used for Server->Server communications to this node. This is meant to allow inter-cluster communication via private IPs, while external clients will use external IPs.  The provided URL can be raw IPs or utilize hostnames.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("ServerUrl.Cluster", ConfigurationEntryScope.ServerWideOnly)]
+        public UriSetting? ClusterServerUrl { get; set; }
+
         [Description("When provided those URLs are used for Server->Server TCP communications to this node. The list is used in the order provided, and the first URL that can be successfully connected to will be used. This is meant to allow inter-cluster communication via private IPs, while external clients will use external IPs.  The provided URLs can be raw IPs or utilize hostnames.")]
         [DefaultValue(null)]
         [ConfigurationEntry("PublicServerUrl.Tcp.Cluster", ConfigurationEntryScope.ServerWideOnly)]

@@ -803,7 +803,7 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
-                ServerStore.Cluster.DeleteItem(context, CertificateReplacement.CertificateReplacementDoc);
+                ClusterStateMachine.DeleteItem(context, CertificateReplacement.CertificateReplacementDoc);
                 tx.Commit();
             }
 

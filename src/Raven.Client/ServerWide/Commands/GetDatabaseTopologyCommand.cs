@@ -9,6 +9,7 @@ namespace Raven.Client.ServerWide.Commands
     public class GetDatabaseTopologyCommand : RavenCommand<Topology>
     {
         private readonly Guid? _applicationIdentifier;
+        private readonly bool _usePrivateUrls;
         private readonly string _debugTag;
 
         public GetDatabaseTopologyCommand()
@@ -17,10 +18,11 @@ namespace Raven.Client.ServerWide.Commands
             Timeout = TimeSpan.FromSeconds(15);
         }
 
-        public GetDatabaseTopologyCommand(string debugTag, Guid? applicationIdentifier)
+        public GetDatabaseTopologyCommand(string debugTag, Guid? applicationIdentifier, bool usePrivateUrls = false)
             : this(debugTag)
         {
             _applicationIdentifier = applicationIdentifier;
+            _usePrivateUrls = usePrivateUrls;
         }
 
         public GetDatabaseTopologyCommand(string debugTag) : this()
@@ -36,6 +38,8 @@ namespace Raven.Client.ServerWide.Commands
                 url += "&" + _debugTag;
             if (_applicationIdentifier != null)
                 url += "&applicationIdentifier=" + _applicationIdentifier;
+            if (_usePrivateUrls)
+                url += "&private=true";
 
             if (node.Url.IndexOf(".fiddler", StringComparison.OrdinalIgnoreCase) != -1)
             {

@@ -12,6 +12,7 @@ using Raven.Server.Documents.Sharding.NotificationCenter;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -114,6 +115,19 @@ namespace Raven.Server.Documents.Sharding
             Interlocked.Exchange(ref _record, record);
 
             RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
+        }
+
+        public void RefreshExecutors(long index)
+        {
+            using (var se = ShardExecutor)
+            {
+                ShardExecutor = new ShardExecutor(ServerStore, _record, _record.DatabaseName);
+            }
+
+            using (var ne = AllOrchestratorNodesExecutor)
+            {
+                AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, _record);
+            }
         }
 
         public string DatabaseName => _record.DatabaseName;

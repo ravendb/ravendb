@@ -86,6 +86,48 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
+        public void ClearPublishedUrls()
+        {
+            using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction())
+            {
+                PublishedUrls.Clear(ctx);
+                tx.Commit();
+            }
+        }
+
+        public string ReadPublishedUrls()
+        {
+            using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var val = PublishedUrls.Read(ctx);
+                return ctx.ReadObject(val.ToJson(), "read-published-urls").ToString();
+            }
+        }
+
+        public DocumentConventions DocumentConventionsForShard =>
+            new()
+            {
+                SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
+                MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
+                HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
+                UseHttpCompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpCompression,
+                UseHttpDecompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpDecompression,
+                GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan
+            };
+
+        public DocumentConventions DocumentConventionsForOrchestrator =>
+            new()
+            {
+                SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
+                MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
+                HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
+                UseHttpCompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpCompression,
+                UseHttpDecompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpDecompression,
+                GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan
+            };
+
         private ClusterChanges.DatabaseChangedDelegate CreateDelegateForReshardingStatus(string database, AsyncQueue<string> messages)
         {
             return (name, index, type, _, __) =>
