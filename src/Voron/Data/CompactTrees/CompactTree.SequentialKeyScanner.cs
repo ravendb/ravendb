@@ -26,7 +26,7 @@ unsafe partial class CompactTree
         {
             // Obtain the new key and return the corresponding span. 
             bool operationResult = _iterator.MoveNext(out var scope, out long _);
-            key = scope.Key.Decoded();
+            key = operationResult ? scope.Key.Decoded() : ReadOnlySpan<byte>.Empty;
 
             // We won't dispose the scope. 
             return operationResult;
