@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Patch
                 return new ScriptRunner.ReturnRun();
             }
             var scriptRunner = GetScriptRunner(key);
-            var returnRun = scriptRunner.GetRunner(out patchRun);
+            var returnRun = scriptRunner.GetRunner(out patchRun, key);
             patchRun.ReadOnly = readOnly;
             return returnRun;
         }

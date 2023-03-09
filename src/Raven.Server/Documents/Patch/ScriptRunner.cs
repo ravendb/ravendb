@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Patch
             TimeSeriesDeclaration.Add(func.Name, func);
         }
 
-        public ReturnRun GetRunner(out SingleRun run)
+        public ReturnRun GetRunner(out SingleRun run, ScriptRunnerCache.Key key)
         {
             _lastRun = DateTime.UtcNow;
             Interlocked.Increment(ref Runs);
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    holder.Value = new SingleRun(_db, _configuration, this, ScriptsSource);
+                    holder.Value = new SingleRun(_db, _configuration, this, ScriptsSource, key);
                 }
             }
 
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Patch
             private const string _timeSeriesSignature = "timeseries(doc, name)";
             public const string GetMetadataMethod = "getMetadata";
 
-            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
+            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource, ScriptRunnerCache.Key key)
             {
                 _database = database;
                 _configuration = configuration;
@@ -316,7 +316,8 @@ namespace Raven.Server.Documents.Patch
                     }
                     catch (Exception e)
                     {
-                        throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
+                        if (key is not PatchRequest { Type: PatchRequestType.EtlBehaviorFunctions })
+                            throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
                     }
                 }
 
