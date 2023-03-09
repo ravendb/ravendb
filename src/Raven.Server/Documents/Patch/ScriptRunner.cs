@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Patch
             TimeSeriesDeclaration.Add(func.Name, func);
         }
 
-        public ReturnRun GetRunner(out SingleRun run, bool ignoreValidationErrors)
+        public ReturnRun GetRunner(bool ignoreValidationErrors, out SingleRun run)
         {
             _lastRun = DateTime.UtcNow;
             Interlocked.Increment(ref Runs);
