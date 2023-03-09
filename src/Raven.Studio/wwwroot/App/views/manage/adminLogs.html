@@ -135,6 +135,19 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="row">
+                                <label class="col-md-3 control-label">Microsoft logs:</label>
+                                <div class="col-md-9">
+                                    <div class="form-control-static">
+                                        <button type="button" class="btn btn-default btn-sm close-panel margin-right" data-bind="click: $root.configureMicrosoftLogs">
+                                            <i class="icon-settings"></i>
+                                            <span>Configure</span>
+                                        </button>
+                                        <span class="text-success" data-bind="visible: $root.isMicrosoftLogsEnabled()">Active</span>
+                                        <span class="text-default" data-bind="visible: !$root.isMicrosoftLogsEnabled()">Disabled</span>
+                                    </div>
+                                </div>
+                            </div>
                         </form>
                         <div class="flex-horizontal">
                             <div class="flex-separator"></div>
