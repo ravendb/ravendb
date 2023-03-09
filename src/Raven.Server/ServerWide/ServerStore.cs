@@ -816,7 +816,8 @@ namespace Raven.Server.ServerWide
 
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex);
-
+            Task.Run(PublishPrivateUrlAsync);
+            
             SorterCompilationCache.Instance.AddServerWideItems(this);
             AnalyzerCompilationCache.Instance.AddServerWideItems(this);
 
@@ -829,6 +830,29 @@ namespace Raven.Server.ServerWide
 
             Initialized = true;
             InitializationCompleted.Set();
+        }
+
+        private async Task PublishPrivateUrlAsync()
+        {
+            var publicUrl = GetNodeHttpServerUrl();
+            var privateUrl = Configuration.Core.ClusterServerUrl?.ToString() ?? publicUrl;
+
+            while (ServerShutdown.IsCancellationRequested == false)
+            {
+                try
+                {
+                    var cmd = new UpdatePrivateUrlsCommand(NodeTag, publicUrl, privateUrl, Guid.NewGuid().ToString());
+                    await SendToLeaderAsync(cmd);
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to update my private url to {privateUrl}", e);
+
+                    await Task.Delay(1000, ServerShutdown);
+                }
+            }
         }
 
         private void CheckSwapOrPageFileAndRaiseNotification()
@@ -1244,6 +1268,18 @@ namespace Raven.Server.ServerWide
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
+
+                case nameof(UpdatePrivateUrlsCommand):
+
+                    foreach (var orchestrator in DatabasesLandlord.ShardedDatabasesCache.Values)
+                    {
+                        if (orchestrator.IsCompletedSuccessfully == false)
+                            continue;
+
+                        orchestrator.Result.RefreshExecutors(index);
+                    }
+                    
+                    break;
             }
         }
 
@@ -1357,7 +1393,7 @@ namespace Raven.Server.ServerWide
                         // as well as the old and new server certs from the server store trusted certificates
                         using (var tx = context.OpenWriteTransaction())
                         {
-                            Cluster.DeleteItem(context, CertificateReplacement.CertificateReplacementDoc);
+                            ClusterStateMachine.DeleteItem(context, CertificateReplacement.CertificateReplacementDoc);
                             Cluster.DeleteCertificate(context, thumbprint);
 
                             if (oldThumbprint.IsNullOrWhiteSpace() == false)
@@ -1595,7 +1631,7 @@ namespace Raven.Server.ServerWide
                         // because the last stage of the new version (ConfirmServerCertificateReplacedCommand where we delete 'server/cert') will not happen
                         using (var tx = context.OpenWriteTransaction())
                         {
-                            Cluster.DeleteItem(context, CertificateReplacement.CertificateReplacementDoc);
+                            ClusterStateMachine.DeleteItem(context, CertificateReplacement.CertificateReplacementDoc);
                             tx.Commit();
                         }
 

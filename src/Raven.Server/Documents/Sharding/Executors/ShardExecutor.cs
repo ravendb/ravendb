@@ -8,6 +8,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -20,6 +22,8 @@ namespace Raven.Server.Documents.Sharding.Executors
         private Dictionary<int, RequestExecutor> _requestExecutors;
         private readonly int[] _fullRange;
 
+        private readonly DocumentConventions _conventions;
+
         public ShardExecutor(ServerStore store, [NotNull] DatabaseRecord databaseRecord, [NotNull] string databaseName) : base(store)
         {
             _databaseRecord = databaseRecord ?? throw new ArgumentNullException(nameof(databaseRecord));
@@ -27,20 +31,10 @@ namespace Raven.Server.Documents.Sharding.Executors
 
             _fullRange = databaseRecord.Sharding.Shards.Keys.ToArray();
 
-            Conventions = new DocumentConventions
-            {
-                SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
-                MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
-                HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
-                UseHttpCompression = store.Configuration.Sharding.ShardExecutorUseHttpCompression,
-                UseHttpDecompression = store.Configuration.Sharding.ShardExecutorUseHttpDecompression,
-                GlobalHttpClientTimeout = store.Configuration.Sharding.OrchestratorTimeout.AsTimeSpan
-            };
+            _conventions = store.Sharding.DocumentConventionsForShard;
 
             _requestExecutors = CreateExecutors();
         }
-
-        public DocumentConventions Conventions { get; }
 
         public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
         {
@@ -90,50 +84,38 @@ namespace Raven.Server.Documents.Sharding.Executors
             }
             finally
             {
-                SafelyDisposeRequestExecutors(oldRequestExecutors);
+                SafelyDisposeExecutors(oldRequestExecutors.Values);
             }
         }
 
         private Dictionary<int, RequestExecutor> CreateExecutors()
         {
             var requestExecutors = new Dictionary<int, RequestExecutor>(_databaseRecord.Sharding.Shards.Count);
-
-            var allNodes = ServerStore.GetClusterTopology().AllNodes;
+            
+            PublishedUrls published;
+            ClusterTopology clusterTopology;
+            
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                clusterTopology = ServerStore.GetClusterTopology(context);
+                published = PublishedUrls.Read(context);
+            }
 
             foreach ((int shardNumber, var topology) in _databaseRecord.Sharding.Shards)
             {
-                var urls = topology.AllNodes.Select(tag => allNodes[tag]).ToArray();
-                requestExecutors[shardNumber] = RequestExecutor.CreateForServer(
+                var urls = topology.AllNodes.Select(tag => published.SelectUrl(tag, clusterTopology)).ToArray();
+
+                requestExecutors[shardNumber] = RequestExecutor.CreateForShard(
                     urls,
                     ShardHelper.ToShardName(_databaseName, shardNumber),
                     ServerStore.Server.Certificate.Certificate,
-                    Conventions);
+                    _conventions);
             }
 
             return requestExecutors;
         }
 
-        public override void Dispose()
-        {
-            SafelyDisposeRequestExecutors(_requestExecutors);
-        }
-
-        private void SafelyDisposeRequestExecutors(Dictionary<int, RequestExecutor> requestExecutors)
-        {
-            if (requestExecutors == null)
-                return;
-
-            foreach (var executor in requestExecutors.Values)
-            {
-                try
-                {
-                    executor.Dispose();
-                }
-                catch
-                {
-                    // ignored
-                }
-            }
-        }
+        public override void Dispose() => SafelyDisposeExecutors(_requestExecutors.Values);
     }
 }

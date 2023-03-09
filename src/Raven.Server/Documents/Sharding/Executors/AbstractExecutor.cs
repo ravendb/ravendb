@@ -190,6 +190,21 @@ public abstract class AbstractExecutor : IDisposable
         }
     }
 
+    protected static void SafelyDisposeExecutors(IEnumerable<RequestExecutor> executors)
+    {
+        foreach (var disposable in executors)
+        {
+            try
+            {
+                disposable.Dispose();
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+    }
+
     public abstract void Dispose();
 }
 

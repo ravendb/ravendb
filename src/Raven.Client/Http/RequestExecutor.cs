@@ -134,6 +134,8 @@ namespace Raven.Client.Http
 
         protected bool _disableClientConfigurationUpdates;
 
+        private bool _usePrivateUrls;
+
         public TimeSpan? DefaultTimeout
         {
             get => _defaultTimeout;
@@ -358,6 +360,13 @@ namespace Raven.Client.Http
             return executor;
         }
 
+        internal static RequestExecutor CreateForShard(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        {
+            var executor = CreateForServer(initialUrls, databaseName, certificate, conventions);
+            executor._usePrivateUrls = true;
+            return executor;
+        }
+
         public static RequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             var executor = CreateForSingleNodeWithoutConfigurationUpdates(url, databaseName, certificate, conventions);
@@ -474,7 +483,7 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetDatabaseTopologyCommand(parameters.DebugTag, Conventions.SendApplicationIdentifier ? parameters.ApplicationIdentifier : null);
+                    var command = new GetDatabaseTopologyCommand(parameters.DebugTag, Conventions.SendApplicationIdentifier ? parameters.ApplicationIdentifier : null, _usePrivateUrls);
                     await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
