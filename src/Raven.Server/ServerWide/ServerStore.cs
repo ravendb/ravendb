@@ -1276,7 +1276,7 @@ namespace Raven.Server.ServerWide
                         if (orchestrator.IsCompletedSuccessfully == false)
                             continue;
 
-                        orchestrator.Result.RefreshExecutors(index);
+                        orchestrator.Result.UpdateUrls(index);
                     }
                     
                     break;

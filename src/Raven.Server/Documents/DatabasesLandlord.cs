@@ -1433,5 +1433,115 @@ namespace Raven.Server.Documents
                                                     $"There is an intersection with database {currentDatabaseName} Temp file located in {currentConfiguration.Indexing.TempPath.FullPath}.");
             }
         }
+
+        public static void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index, StateChange state)
+        {
+            if (CanSkipDatabaseRecordChange())
+                return;
+
+            var taken = false;
+            Stopwatch sp = default;
+
+            while (taken == false)
+            {
+                Monitor.TryEnter(state.Locker, TimeSpan.FromSeconds(5), ref taken);
+
+                try
+                {
+                    if (CanSkipDatabaseRecordChange())
+                        return;
+
+                    if (state.Token.IsCancellationRequested)
+                        return;
+
+                    if (taken == false)
+                        continue;
+
+                    sp = Stopwatch.StartNew();
+
+                    Debug.Assert(string.Equals(state.Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
+                        $"{state.Name} != {record.DatabaseName}");
+
+                    if (state.Logger.IsInfoEnabled)
+                        state.Logger.Info($"Starting to process record {index} (current {state.LastIndexChange}) for {record.DatabaseName}.");
+
+                    try
+                    {
+                        state.OnChange(record, index);
+                        state.LastIndexChange = index;
+
+                        if (state.Logger.IsInfoEnabled)
+                            state.Logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
+                    }
+                    catch (Exception e)
+                    {
+                        if (state.Logger.IsInfoEnabled)
+                            state.Logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
+                        throw;
+                    }
+                }
+                finally
+                {
+                    if (taken)
+                    {
+                        Monitor.Exit(state.Locker);
+
+                        if (sp?.Elapsed > TimeSpan.FromSeconds(10))
+                        {
+                            if (state.Logger.IsOperationsEnabled)
+                            {
+                                using (state.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+                                using (ctx.OpenReadTransaction())
+                                {
+                                    var logs = state.ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
+                                    var msg =
+                                        $"Lock held for a very long time {sp.Elapsed} in database {state.Name} for index {index} ({string.Join(", ", logs)})";
+                                    state.Logger.Operations(msg);
+
+#if !RELEASE
+                                    Console.WriteLine(msg);
+#endif
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            bool CanSkipDatabaseRecordChange()
+            {
+                if (state.LastIndexChange > index)
+                {
+                    // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
+                    if (state.Logger.IsInfoEnabled)
+                        state.Logger.Info($"Skipping record {index} (current {state.LastIndexChange}) for {record.DatabaseName} because it was already precessed.");
+                    return true;
+                }
+
+                return false;
+            }
+        }
+        
+        public class StateChange
+        {
+            public readonly object Locker = new object();
+            public readonly ServerStore ServerStore;
+            public readonly string Name;
+            public readonly CancellationToken Token;
+            public readonly Logger Logger;
+            public readonly Action<DatabaseRecord,long> OnChange;
+
+            public long LastIndexChange;
+
+            public StateChange(ServerStore serverStore, string name, Logger logger, Action<DatabaseRecord, long> onChange, long lastIndexChange, CancellationToken token)
+            {
+                ServerStore = serverStore;
+                Name = name;
+                Logger = logger;
+                OnChange = onChange;
+                LastIndexChange = lastIndexChange;
+                Token = token;
+            }
+        }
     }
 }

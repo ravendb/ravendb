@@ -12,7 +12,6 @@ using Raven.Server.Documents.Sharding.NotificationCenter;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -50,6 +49,9 @@ namespace Raven.Server.Documents.Sharding
 
         public readonly MetricCounters Metrics;
 
+        private readonly DatabasesLandlord.StateChange _orchestratorStateChange;
+        private readonly DatabasesLandlord.StateChange _urlUpdateStateChange;
+
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 reduce the record to the needed fields");
@@ -58,6 +60,9 @@ namespace Raven.Server.Documents.Sharding
             ServerStore = serverStore;
             _record = record;
             _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
+
+            _orchestratorStateChange = new DatabasesLandlord.StateChange(ServerStore, record.DatabaseName, _logger, OnDatabaseRecordChange, 0, _databaseShutdown.Token);
+            _urlUpdateStateChange = new DatabasesLandlord.StateChange(ServerStore, record.DatabaseName, _logger, OnUrlChange, 0, _databaseShutdown.Token);
 
             Time = serverStore.Server.Time;
             Metrics = new MetricCounters();
@@ -88,7 +93,21 @@ namespace Raven.Server.Documents.Sharding
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
 
-        public void UpdateDatabaseRecord(RawDatabaseRecord record, long index)
+        public void UpdateDatabaseRecord(DatabaseRecord record, long index)
+        {
+            try
+            {
+                DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _orchestratorStateChange);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
+            }
+            catch (Exception e)
+            {
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                throw;
+            }
+        }
+
+        private void OnDatabaseRecordChange(DatabaseRecord record, long index)
         {
             UpdateConfiguration(record.Settings);
 
@@ -113,11 +132,9 @@ namespace Raven.Server.Documents.Sharding
             SubscriptionsStorage.Update(record);
 
             Interlocked.Exchange(ref _record, record);
-
-            RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
         }
 
-        public void RefreshExecutors(long index)
+        private void OnUrlChange(DatabaseRecord record, long index)
         {
             using (var se = ShardExecutor)
             {
@@ -129,6 +146,8 @@ namespace Raven.Server.Documents.Sharding
                 AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, _record);
             }
         }
+
+        public void UpdateUrls(long index) => DatabasesLandlord.NotifyFeaturesAboutStateChange(_record, index, _urlUpdateStateChange);
 
         public string DatabaseName => _record.DatabaseName;
 
