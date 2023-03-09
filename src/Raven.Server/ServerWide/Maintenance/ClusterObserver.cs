@@ -277,7 +277,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         if (cleanupIndexes)
                         {
-                            var cleanupCommandsForDatabase = GetUnusedAutoIndexes(mergedState.States);
+                            var cleanupCommandsForDatabase = GetUnusedAutoIndexes(mergedState);
                                 cleanUnusedAutoIndexesCommands.AddRange(cleanupCommandsForDatabase);
                         }
 
@@ -496,7 +496,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return hash.ToString("X");
         }
 
-        internal List<(UpdateDatabaseCommand Update, string Reason)> GetUnusedAutoIndexes(Dictionary<int, DatabaseObservationState> shardStates)
+        internal List<(UpdateDatabaseCommand Update, string Reason)> GetUnusedAutoIndexes(MergedDatabaseObservationState mergedStates)
         {
             const string autoIndexPrefix = "Auto/";
             var cleanupCommands = new List<(UpdateDatabaseCommand Update, string Reason)>();
@@ -506,7 +506,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var lowestDatabaseUpTime = TimeSpan.MaxValue;
             var newestIndexQueryTime = TimeSpan.MaxValue;
 
-            foreach (var shardToState in shardStates)
+            foreach (var shardToState in mergedStates.States)
             {
                 var databaseState = shardToState.Value;
 
@@ -547,13 +547,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (indexes.Count == 0)
                 return cleanupCommands;
-            
-            var rawRecord = shardStates.Values.FirstOrDefault()?.RawDatabase;
 
-            if (rawRecord == null)
-                return cleanupCommands;
-
-            var settings = rawRecord.Settings;
+            var settings = mergedStates.RawDatabase.Settings;
             var timeToWaitBeforeMarkingAutoIndexAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle, _server.Configuration, settings);
             var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = (TimeSetting)RavenConfiguration.GetValue(x => x.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle, _server.Configuration, settings);
 
@@ -570,10 +565,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
 
                 var state = IndexState.Normal;
-                if (rawRecord.AutoIndexes.TryGetValue(kvp.Key, out var definition) && definition.State.HasValue)
+                if (mergedStates.RawDatabase.AutoIndexes.TryGetValue(kvp.Key, out var definition) && definition.State.HasValue)
                     state = definition.State.Value;
 
-                var shardedDatabaseName = ShardHelper.ToDatabaseName(rawRecord.DatabaseName);
+                var shardedDatabaseName = ShardHelper.ToDatabaseName(mergedStates.RawDatabase.DatabaseName);
 
                 if (state == IndexState.Idle && difference >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                 {
