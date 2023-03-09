@@ -458,8 +458,8 @@ namespace Raven.Server.Config.Categories
             ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndex { get; set; }
         
-        [Description("Sort by ticks when field contains dates.")]
-        [DefaultValue(true)]
+        [Description("Sort by ticks when field contains dates. Null dates are returned at the end with this option enabled.")]
+        [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool OrderByTicksAutomaticallyWhenDatesAreInvolved { get; set; }
