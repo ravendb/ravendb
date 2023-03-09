@@ -342,12 +342,20 @@ namespace SlowTests.Sharding.Cluster
 
                 Assert.True(idle);
 
-                for (int i = 0; i < 3; i++)
+                var idleInMem = await WaitForValueAsync(async () =>
                 {
-                    db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, i), cluster.Nodes);
-                    autoIndex = db.IndexStore.GetIndexes().First();
-                    Assert.Equal(IndexState.Idle, autoIndex.State);
-                }
+                    var idleInMem = true;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, i), cluster.Nodes);
+                        autoIndex = db.IndexStore.GetIndexes().First();
+                        idleInMem = idleInMem && IndexState.Idle == autoIndex.State;
+                    }
+
+                    return idleInMem;
+                }, true);
+                
+                Assert.True(idleInMem);
 
                 store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database,
                     new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle), "30" }, }));
@@ -362,12 +370,7 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 //wait for it to stop being idle on all shards
-                db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, 0), cluster.Nodes);
-                autoIndex = db.IndexStore.GetIndexes().First();
-                Assert.Equal(IndexState.Normal, autoIndex.State);
-
-                //make sure indexes on all other shards are not idle either
-                var normal = await WaitForValueAsync(async () =>
+                var normalInMem = await WaitForValueAsync(async () =>
                 {
                     var normal = true;
                     for (int i = 0; i < 3; i++)
@@ -380,7 +383,7 @@ namespace SlowTests.Sharding.Cluster
                     return normal;
                 }, true);
 
-                Assert.True(normal);
+                Assert.True(normalInMem);
 
                 var normalOnRecord = await WaitForValueAsync(async () =>
                 {
