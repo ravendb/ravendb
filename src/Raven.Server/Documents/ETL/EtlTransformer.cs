@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.ETL
         {
             if (_behaviorFunctions != null)
             {
-                _behaviorFunctionsRun = Database.Scripts.GetScriptRunner(_behaviorFunctions, true, out BehaviorsScript);
+                _behaviorFunctionsRun = Database.Scripts.GetScriptRunner(_behaviorFunctions, true, out BehaviorsScript, ignoreValidationErrors: true);
 
                 if (debugMode)
                     BehaviorsScript.DebugMode = true;
