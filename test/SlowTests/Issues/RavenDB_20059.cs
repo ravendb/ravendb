@@ -35,8 +35,6 @@ function deleteDocumentsOfContractsBehavior(docId) {
                 }
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                WaitForUserToContinueTheTest(srcStore);
-
                 using (var session = destStore.OpenSession())
                 {
                     var contract = session.Load<Contract>("contracts/1-A/ContractsTemp/0000000000000000001-A");
