@@ -561,7 +561,7 @@ namespace Voron.Data.CompactTrees
             using var scope = new CompactKeyCacheScope(this);
             var encodedKey = scope.Key;
             encodedKey.Set(key);
-            FindPageFor(encodedKey, ref _internalCursor);
+            FindPageFor(encodedKey, ref _internalCursor, tryRecompress: true);
 
             return RemoveFromPage(allowRecurse: true, out oldValue);
         }
@@ -570,7 +570,7 @@ namespace Voron.Data.CompactTrees
         {
             CompactTreeDumper.WriteRemoval(this, key.Decoded());
 
-            FindPageFor(key, ref _internalCursor);
+            FindPageFor(key, ref _internalCursor, tryRecompress: true);
             return RemoveFromPage(allowRecurse: true, out oldValue);
         }
 
@@ -889,7 +889,7 @@ namespace Voron.Data.CompactTrees
 
             AssertValueAndKeySize(key, value);
 
-            FindPageFor(key, ref _internalCursor);
+            FindPageFor(key, ref _internalCursor, tryRecompress: true);
             
             // this overload assumes that a previous call to TryGetValue (where you go the encodedKey
             // already placed us in the right place for the value)
@@ -962,7 +962,7 @@ namespace Voron.Data.CompactTrees
                     // is not as good as the old for this particular page (rare but it can happen). In those cases,
                     // we will not upgrade and just split the pages using the old dictionary. Eventually the new
                     // dictionary will catch up. 
-                    if (TryRecompressPage(state))
+                    if (TryRecompressPage(ref state))   
                     {                        
                         Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
   
@@ -1215,10 +1215,15 @@ namespace Voron.Data.CompactTrees
 #if !DEBUG
         [SkipLocalsInit]
 #endif
-        private bool TryRecompressPage(in CursorState state)
+        private bool TryRecompressPage(ref CursorState state)
         {
+            // The finding process may call Recompress to avoid the expensive re-encoding and decoding of keys,
+            // and instead upgrade the page. However, since TryRecompressPage may also be called from the finding
+            // process, the page may not yet be marked as 'writable'.
+            state.Page = _llt.ModifyPage(state.Page.PageNumber);
+
             var oldDictionary = CompactTree.GetEncodingDictionary(this._llt, state.Header->DictionaryId);
-            var newDictionary = CompactTree.GetEncodingDictionary(this._llt, _state.TreeDictionaryId);                
+            var newDictionary = CompactTree.GetEncodingDictionary(this._llt, _state.TreeDictionaryId);
 
             using var _ = _llt.Environment.GetTemporaryPage(_llt, out var tmp);
             Memory.Copy(tmp.TempPagePointer, state.Page.Pointer, Constants.Storage.PageSize);
@@ -1239,7 +1244,6 @@ namespace Voron.Data.CompactTrees
             var tmpPage = new Page(tmp.TempPagePointer);
 
             var valueBufferPtr = stackalloc byte[16];
-            var keySizeBufferPtr = stackalloc byte[16];
 
             for (int i = 0; i < tmpHeader->NumberOfEntries; i++)
             {
@@ -1434,7 +1438,7 @@ namespace Voron.Data.CompactTrees
             FindPageFor(encodedKey, ref cstate);
         }
 
-        private void FindPageFor(CompactKey key, ref IteratorCursorState cstate)
+        private void FindPageFor(CompactKey key, ref IteratorCursorState cstate, bool tryRecompress = false)
         {
             cstate._pos = -1;
             cstate._len = 0;
@@ -1444,14 +1448,21 @@ namespace Voron.Data.CompactTrees
 
             key.ChangeDictionary(state.Header->DictionaryId);
 
-            FindPageFor(ref cstate, ref state, key);
+            FindPageFor(ref cstate, ref state, key, tryRecompress);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void FindPageFor(ref IteratorCursorState cstate, ref CursorState state, CompactKey compactKey)
+        private void FindPageFor(ref IteratorCursorState cstate, ref CursorState state, CompactKey compactKey, bool tryRecompress = false)
         {
             while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
             {
+                // PERF: We aim to carry out the dictionary migration during the search process. This is because even though it may take longer,
+                // we can offset the cost of future key re-encoding along the way. We could choose to do this either before or after
+                // adding/searching, but performing it proactively guarantees that we avoid the need for re-encoding at this stage.
+                if (tryRecompress && _state.TreeDictionaryId != state.Header->DictionaryId)
+                    TryRecompressPage(ref state);
+
+                compactKey.ChangeDictionary(cstate._stk[cstate._pos].Header->DictionaryId);
                 SearchInCurrentPage(compactKey, ref cstate._stk[cstate._pos]);
 
                 ref var nState = ref cstate._stk[cstate._pos];
@@ -1465,10 +1476,13 @@ namespace Voron.Data.CompactTrees
 
                 PushPage(nextPage, ref cstate);
 
-                compactKey.ChangeDictionary(cstate._stk[cstate._pos].Header->DictionaryId);
-
                 state = ref cstate._stk[cstate._pos];
             }
+
+            if (tryRecompress && _state.TreeDictionaryId != state.Header->DictionaryId)
+                TryRecompressPage(ref state);
+
+            compactKey.ChangeDictionary(cstate._stk[cstate._pos].Header->DictionaryId);
             SearchInCurrentPage(compactKey, ref state);
         }
 
