@@ -1369,6 +1369,7 @@ namespace Raven.Server.Smuggler.Documents
                     _log.Info($"Importing {Documents.Count:#,#0} documents");
 
                 var idsOfDocumentsToUpdateAfterAttachmentDeletion = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var addHasRevisionsFlag = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
 
                 foreach (var documentType in Documents)
@@ -1461,6 +1462,11 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             _database.DocumentsStorage.RevisionsStorage.Put(context, id, document.Data, document.Flags,
                                 document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+
+                            if (addHasRevisionsFlag.Contains(id) == false && document.Flags.Contain(DocumentFlags.HasRevisions))
+                            {
+                                addHasRevisionsFlag.Add(id);
+                            }
                         }
 
                         databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
@@ -1530,6 +1536,16 @@ namespace Raven.Server.Smuggler.Documents
 
                         DocumentCollectionMismatchHandler.Invoke(documentType);
                     }
+                }
+
+                foreach (var documentId in addHasRevisionsFlag)
+                {
+                    var document = _database.DocumentsStorage.Get(context, documentId);
+                    document.Flags |= DocumentFlags.HasRevisions;
+                    _database.DocumentsStorage.Put(context, document.Id, expectedChangeVector: null, document.Data.Clone(context), changeVector: document.ChangeVector, flags: document.Flags);
+                    var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+                    document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                    databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
                 }
 
                 context.LastDatabaseChangeVector = databaseChangeVector;
