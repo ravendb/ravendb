@@ -102,6 +102,8 @@ namespace Raven.Server.Documents
 
         private Lazy<RequestExecutor> _requestExecutor;
 
+        private readonly DatabasesLandlord.StateChange _databaseStateChange;
+
         public void ResetIdleTime()
         {
             _lastIdleTicks = DateTime.MinValue.Ticks;
@@ -122,6 +124,8 @@ namespace Raven.Server.Documents
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
 
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
+
+            _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token);
 
             try
             {
@@ -302,13 +306,7 @@ namespace Raven.Server.Documents
 
         public bool Is32Bits { get; }
 
-        private long _lastDatabaseRecordChangeIndex;
-
-        public long LastDatabaseRecordChangeIndex
-        {
-            get => Volatile.Read(ref _lastDatabaseRecordChangeIndex);
-            private set => _lastDatabaseRecordChangeIndex = value; // we write this always under lock
-        }
+        public long LastDatabaseRecordChangeIndex => _databaseStateChange.LastIndexChange;
 
         private long _lastValueChangeIndex;
 
@@ -417,7 +415,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        NotifyFeaturesAboutStateChange(record, index);
+                        DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
                         RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
                     catch (Exception e)
@@ -1483,7 +1481,7 @@ namespace Raven.Server.Documents
 
                 StudioConfiguration = record.Studio;
 
-                NotifyFeaturesAboutStateChange(record, index);
+                DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
@@ -1506,88 +1504,17 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        public void UpdateOnStateChange(DatabaseRecord record, long index)
         {
-            if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
-                return;
+            SetIds(record);
+            SetUnusedDatabaseIds(record);
+            InitializeFromDatabaseRecord(record);
+            IndexStore.HandleDatabaseRecordChange(record, index);
+            ReplicationLoader?.HandleDatabaseRecordChange(record, index);
+            EtlLoader?.HandleDatabaseRecordChange(record);
+            SubscriptionStorage?.HandleDatabaseRecordChange(record);
 
-            var taken = false;
-            Stopwatch sp = default;
-
-            while (taken == false)
-            {
-                Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
-
-                try
-                {
-                    if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
-                        return;
-
-                    if (DatabaseShutdown.IsCancellationRequested)
-                        return;
-
-                    if (taken == false)
-                        continue;
-
-                    sp = Stopwatch.StartNew();
-
-                    Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
-                        $"{Name} != {record.DatabaseName}");
-
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordChangeIndex}) for {record.DatabaseName}.");
-
-                    try
-                    {
-                        SetIds(record);
-                        SetUnusedDatabaseIds(record);
-                        InitializeFromDatabaseRecord(record);
-                        IndexStore.HandleDatabaseRecordChange(record, index);
-                        ReplicationLoader?.HandleDatabaseRecordChange(record, index);
-                        EtlLoader?.HandleDatabaseRecordChange(record);
-                        SubscriptionStorage?.HandleDatabaseRecordChange(record);
-
-                        OnDatabaseRecordChanged(record);
-
-                        LastDatabaseRecordChangeIndex = index;
-
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
-                    }
-                    catch (Exception e)
-                    {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
-                        throw;
-                    }
-                }
-                finally
-                {
-                    if (taken)
-                    {
-                        Monitor.Exit(_clusterLocker);
-
-                        if (sp?.Elapsed > TimeSpan.FromSeconds(10))
-                        {
-                            if (_logger.IsOperationsEnabled)
-                            {
-                                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-                                using (ctx.OpenReadTransaction())
-                                {
-                                    var logs = ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
-                                    var msg =
-                                        $"Lock held for a very long time {sp.Elapsed} in database {Name} for index {index} ({string.Join(", ", logs)})";
-                                    _logger.Operations(msg);
-
-#if !RELEASE
-                                    Console.WriteLine(msg);
-#endif
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            OnDatabaseRecordChanged(record);
         }
 
         private void SetUnusedDatabaseIds(DatabaseRecord record)
@@ -1681,7 +1608,8 @@ namespace Raven.Server.Documents
             {
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
-            NotifyFeaturesAboutStateChange(record, index);
+
+            DatabasesLandlord.NotifyFeaturesAboutStateChange(record, index, _databaseStateChange);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
