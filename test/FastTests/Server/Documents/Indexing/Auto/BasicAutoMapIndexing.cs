@@ -1275,7 +1275,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         private async Task CleanupUnusedAutoIndexesOnNonSharded(ClusterObserver.DatabaseObservationState state)
         {
-            var indexCleanupCommands = Server.ServerStore.Observer.GetUnusedAutoIndexes(new Dictionary<int, ClusterObserver.DatabaseObservationState> { {0, state} });
+            var mergedState = new ClusterObserver.MergedDatabaseObservationState(state.RawDatabase);
+            mergedState.AddState(state);
+            var indexCleanupCommands = Server.ServerStore.Observer.GetUnusedAutoIndexes(mergedState);
             foreach (var (cmd, _) in indexCleanupCommands)
             {
                 await Server.ServerStore.Engine.PutAsync(cmd);
