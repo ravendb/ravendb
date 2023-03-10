@@ -6,16 +6,18 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 
 internal class DefaultRavenSerializationBinder : DefaultSerializationBinder
 {
+    public static readonly DefaultRavenSerializationBinder Instance = new();
+
     private static HashSet<Type> ForbiddenTypesCache = new();
 
     private static HashSet<Type> SafeTypesCache = new();
 
-    private readonly HashSet<string> _forbiddenNamespaces = new() { "Microsoft.VisualStudio" };
+    private static readonly HashSet<string> ForbiddenNamespaces = new() { "Microsoft.VisualStudio" };
 
     /// <summary>
     /// https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html#known-net-rce-gadgets
     /// </summary>
-    private readonly HashSet<string> _forbiddenTypes = new()
+    private static readonly HashSet<string> ForbiddenTypes = new()
     {
         "System.Configuration.Install.AssemblyInstaller",
         "System.Activities.Presentation.WorkflowDesigner",
@@ -28,6 +30,10 @@ internal class DefaultRavenSerializationBinder : DefaultSerializationBinder
         "System.Xml.XmlDataDocument",
         "System.Management.Automation.PSObject"
     };
+
+    private DefaultRavenSerializationBinder()
+    {
+    }
 
     public override Type BindToType(string assemblyName, string typeName)
     {
@@ -45,7 +51,7 @@ internal class DefaultRavenSerializationBinder : DefaultSerializationBinder
         base.BindToName(serializedType, out assemblyName, out typeName);
     }
 
-    private void AssertType(Type type)
+    private static void AssertType(Type type)
     {
         if (type == null)
             return;
@@ -56,13 +62,13 @@ internal class DefaultRavenSerializationBinder : DefaultSerializationBinder
         if (ForbiddenTypesCache.Contains(type))
             ThrowForbiddenType(type);
 
-        if (_forbiddenNamespaces.Contains(type.Namespace))
+        if (ForbiddenNamespaces.Contains(type.Namespace))
         {
             UpdateCache(ref ForbiddenTypesCache, type);
             ThrowForbiddenNamespace(type);
         }
 
-        if (_forbiddenTypes.Contains(type.FullName))
+        if (ForbiddenTypes.Contains(type.FullName))
         {
             UpdateCache(ref ForbiddenTypesCache, type);
             ThrowForbiddenType(type);
