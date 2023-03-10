@@ -18,7 +18,7 @@ export function SplashScreen() {
                     <i className="orbit-icon"></i>
                 </div>
             </div>
-            <p className="lead text-center">Building a nest</p>
+            <p className="lead text-center">Loading...</p>
         </div>
     );
 }

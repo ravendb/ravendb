@@ -146,7 +146,7 @@ class clusterNode {
             }
           
             return this.type() === "Watcher" &&
-                   accessManager.default.clusterView.canDemotePromoteNode();
+                   accessManager.default.isClusterAdminOrClusterNode();
         });
     }
 
@@ -159,7 +159,7 @@ class clusterNode {
             
             return topology.leader() !== this.tag() && 
                    (this.type() === "Member" || this.type() === "Promotable") &&
-                    accessManager.default.clusterView.canDemotePromoteNode();
+                    accessManager.default.isClusterAdminOrClusterNode();
         });
     }
 

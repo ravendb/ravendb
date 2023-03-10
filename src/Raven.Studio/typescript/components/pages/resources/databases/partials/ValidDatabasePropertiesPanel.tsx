@@ -1,11 +1,13 @@
 ﻿import { DatabaseSharedInfo } from "components/models/databases";
 import { RichPanelDetailItem, RichPanelDetails } from "components/common/RichPanel";
 import React from "react";
-import { useAppSelector } from "components/store";
-import { selectDatabaseState } from "components/common/shell/databasesSlice";
+import { useAppDispatch, useAppSelector } from "components/store";
+import { openNotificationCenterForDatabase, selectDatabaseState } from "components/common/shell/databasesSlice";
 import { sumBy } from "lodash";
 import genUtils from "common/generalUtils";
 import appUrl from "common/appUrl";
+import notificationCenter from "common/notifications/notificationCenter";
+import { withPreventDefault } from "components/utils/common";
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
@@ -15,6 +17,8 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const { db } = props;
 
     const dbState = useAppSelector(selectDatabaseState(db.name));
+
+    const dispatch = useAppDispatch();
 
     const nonEmptyDbState = dbState
         .filter((x) => x.status === "success" && !x.data.loadError)
@@ -51,6 +55,18 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         ? localDocumentsUrl
         : appUrl.toExternalDatabaseUrl(db, localDocumentsUrl);
 
+    const localIndexingErrorsUrl = appUrl.forIndexErrors(db);
+    const indexingErrorsUrl = db.currentNode.relevant
+        ? localIndexingErrorsUrl
+        : appUrl.toExternalDatabaseUrl(db, localIndexingErrorsUrl);
+
+    const localIndexingListUrl = appUrl.forIndexes(db);
+    const indexingListUrl = db.currentNode.relevant
+        ? localIndexingListUrl
+        : appUrl.toExternalDatabaseUrl(db, localIndexingListUrl);
+
+    const linksTarget = db.currentNode.relevant ? undefined : "_blank";
+
     return (
         <RichPanelDetails className="flex-wrap pb-1">
             <RichPanelDetailItem>
@@ -71,12 +87,14 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 <i className="icon-drive me-1" /> {genUtils.formatBytesToSize(totalSize)}
             </RichPanelDetailItem>
             <RichPanelDetailItem>
-                <a href={documentsUrl} target={db.currentNode.relevant ? undefined : "_blank"}>
+                <a href={documentsUrl} target={linksTarget}>
                     <i className="icon-documents me-1" /> {totalDocuments.toLocaleString()}
                 </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
-                <i className="icon-index me-1" /> {db.indexesCount}
+                <a href={indexingListUrl} target={linksTarget}>
+                    <i className="icon-index me-1" /> {db.indexesCount}
+                </a>
             </RichPanelDetailItem>
             {/* TODO
             <RichPanelDetailItem title="Last backup" className="text-danger">
@@ -91,7 +109,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         title="Indexing errors. Click to view the Indexing Errors."
                         className="text-danger"
                     >
-                        <i className="icon-exclamation me-1" /> {indexingErrors} Indexing errors
+                        <a href={indexingErrorsUrl} target={linksTarget}>
+                            <i className="icon-exclamation me-1" /> {indexingErrors} Indexing errors
+                        </a>
                     </RichPanelDetailItem>
                 )}
                 {indexingPaused && (
@@ -100,12 +120,16 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         title="Indexing is paused. Click to view the Index List."
                         className="text-warning"
                     >
-                        <i className="icon-pause me-1" /> Indexing paused
+                        <a href={indexingListUrl} target={linksTarget}>
+                            <i className="icon-pause me-1" /> Indexing paused
+                        </a>
                     </RichPanelDetailItem>
                 )}
                 {indexingDisabled && (
                     <RichPanelDetailItem key="indexing-disabled" title="Indexing is disabled" className="text-danger">
-                        <i className="icon-stop me-1" /> Indexing disabled
+                        <a href={indexingListUrl} target={linksTarget}>
+                            <i className="icon-stop me-1" /> Indexing disabled
+                        </a>
                     </RichPanelDetailItem>
                 )}
                 {alerts > 0 && (
@@ -114,16 +138,20 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         title="Click to view alerts in Notification Center"
                         className="text-warning"
                     >
-                        <i className="icon-warning me-1" /> {alerts} Alerts
+                        <a href="#" onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}>
+                            <i className="icon-warning me-1" /> {alerts} Alerts
+                        </a>
                     </RichPanelDetailItem>
                 )}
                 {performanceHints > 0 && (
                     <RichPanelDetailItem
                         key="performance-hints"
-                        title="Click to view alerts in Notification Center"
+                        title="Click to view performance hints in Notification Center"
                         className="text-info"
                     >
-                        <i className="icon-rocket me-1" /> {performanceHints} Performance hints
+                        <a href="#" onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}>
+                            <i className="icon-rocket me-1" /> {performanceHints} Performance hints
+                        </a>
                     </RichPanelDetailItem>
                 )}
                 {hasAnyLoadError && (
@@ -147,20 +175,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     data-bind="text: $root.formatBytes(totalSize() + totalTempBuffersSize())"/>
                             </a>
                         </div>
-                        <div className="documents">
-                            <small><i className="icon-document-group"/></small>
-                            <a className="set-size" title="Number of documents. Click to view the Document List."
-                               data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data)}, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() },">
-                                <small data-bind="text: (documentsCount() || 0).toLocaleString()"/>
-                            </a>
-                        </div>
-                        <div className="indexes">
-                            <small><i className="icon-index"/></small>
-                            <a className="set-size" title="Number of indexes. Click to view the Index List."
-                               data-bind="attr: { href: $root.indexesUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
-                                <small data-bind="text: (indexesCount() || 0).toLocaleString()"/>
-                            </a>
-                        </div>
+                 
                         <!--ko if: !uptime()-->
                         <div className="uptime text-muted">
                             <small><i className="icon-recent"/></small>
@@ -185,54 +200,6 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                 </a>
                             </div>
                         </div>*/}
-
-            {/* TODO <div className="database-properties-right">
-                        <div className="indexing-errors text-danger" data-bind="visible: indexingErrors()">
-                            <small><i className="icon-exclamation"/></small>
-                            <a className="set-size text-danger"
-                               title="Indexing errors. Click to view the Indexing Errors."
-                               data-bind="attr: { href: $root.indexErrorsUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
-                                <small data-bind="text: indexingErrors().toLocaleString()"/>
-                                <small className="hidden-compact"
-    data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors', true)"/>
-                            </a>
-                        </div>
-                        <div className="indexing-paused text-warning"
-                             data-bind="visible: indexingPaused() && !indexingDisabled()">
-                            <small><i className="icon-pause"/></small>
-                            <a className="set-size text-warning"
-                               title="Indexing is paused. Click to view the Index List."
-                               data-bind="attr: { href: $root.indexesUrl($data) }">
-                                <small>Indexing paused</small>
-                            </a>
-                        </div>
-                       
-                        <div className="alerts text-warning" data-bind="visible: alerts()">
-                            <div className="set-size">
-                                <small><i className="icon-warning"/></small>
-                                <a className="set-size text-warning" title="Click to view alerts in Notification Center"
-                                   href="#"
-                                   data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
-                                    <small data-bind="text: alerts().toLocaleString()"/>
-                                    <small
-    data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts', true)"/>
-                                </a>
-                            </div>
-                        </div>
-                        <div className="performance-hints text-info" data-bind="visible: performanceHints()">
-                            <div className="set-size">
-                                <small><i className="icon-rocket"/></small>
-                                <a className="set-size text-info" title="Click to view hints in Notification Center"
-                                   href="#"
-                                   data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
-                                    <small data-bind="text: performanceHints().toLocaleString()"/>
-                                    <small className="hidden-compact"
-    data-bind="text: $root.pluralize(performanceHints().toLocaleString(), 'performance hint', 'performance hints', true)"/>
-                                </a>
-                            </div>
-                        </div>
-                      
-                    </div>*/}
         </RichPanelDetails>
     );
 }

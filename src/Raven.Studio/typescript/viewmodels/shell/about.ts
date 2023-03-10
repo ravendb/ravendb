@@ -17,7 +17,7 @@ class about extends viewModelBase {
 
     view = require("views/shell/about.html");
 
-    accessManager = accessManager.default.aboutView;
+    accessManager = accessManager.default;
     
     connectedToLicenseServer = ko.observable<boolean>();
     connectionException = ko.observable<string>();
@@ -204,31 +204,31 @@ class about extends viewModelBase {
             .done((result: Raven.Server.Config.Categories.LicenseConfiguration) => {
                 const access = this.accessManager;
                 
-                const canRegister = result.CanActivate && access.canRegisterLicense();
+                const canRegister = result.CanActivate && access.isClusterAdminOrClusterNode();
                 this.isRegisterLicenseEnabled(canRegister);
                 
-                const registerMsg = this.getTooltipContent(result.CanActivate, access.canRegisterLicense(),
+                const registerMsg = this.getTooltipContent(result.CanActivate, access.isClusterAdminOrClusterNode(),
                     "register a new license", "Registering new license");
                 this.registerTooltip(registerMsg);
                 
-                const canReplace = result.CanActivate && access.canReplaceLicense();
+                const canReplace = result.CanActivate && access.isClusterAdminOrClusterNode();
                 this.isReplaceLicenseEnabled(canReplace);
 
-                const replaceMsg = this.getTooltipContent(result.CanActivate, access.canReplaceLicense(),
+                const replaceMsg = this.getTooltipContent(result.CanActivate, access.isClusterAdminOrClusterNode(),
                     "replace the current license with another license", "Replacing license");
                 this.replaceTooltip(replaceMsg);
                 
-                const canForceUpdate = result.CanForceUpdate && access.canForceUpdate();
+                const canForceUpdate = result.CanForceUpdate && access.isClusterAdminOrClusterNode();
                 this.isForceUpdateEnabled(canForceUpdate);
 
-                const forceUpdateMsg = this.getTooltipContent(result.CanForceUpdate, access.canForceUpdate(),
+                const forceUpdateMsg = this.getTooltipContent(result.CanForceUpdate, access.isClusterAdminOrClusterNode(),
                     "apply the license that was set for you", "Force license update");
                 this.forceUpdateTooltip(forceUpdateMsg);
 
-                const canRenew = result.CanRenew && access.canRenewLicense();
+                const canRenew = result.CanRenew && access.isClusterAdminOrClusterNode();
                 this.isRenewLicenseEnabled(canRenew);
 
-                const renewMsg = this.getTooltipContent(result.CanRenew, access.canRenewLicense(),
+                const renewMsg = this.getTooltipContent(result.CanRenew, access.isClusterAdminOrClusterNode(),
                     "renew license. Expiration date will be extended", "Renew");
                 this.renewTooltip(renewMsg);
             });

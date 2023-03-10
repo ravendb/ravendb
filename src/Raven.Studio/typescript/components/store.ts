@@ -34,5 +34,11 @@ export type AppAsyncThunk<T = void> = (
     getServices: () => typeof services
 ) => Promise<T>;
 
+export type AppThunk<T = void> = (
+    dispatch: AppDispatch,
+    getState: () => RootState,
+    getServices: () => typeof services
+) => T;
+
 export type AppThunkApi = BaseThunkAPI<RootState, any, AppDispatch>;
 export default store;

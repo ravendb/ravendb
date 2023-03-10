@@ -1,7 +1,7 @@
 ﻿import { createAsyncThunk, createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
 import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import genUtils from "common/generalUtils";
-import { AppAsyncThunk, AppDispatch, RootState } from "components/store";
+import { AppAsyncThunk, AppDispatch, AppThunk, RootState } from "components/store";
 import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
 import deleteDatabaseConfirm from "viewmodels/resources/deleteDatabaseConfirm";
@@ -16,6 +16,7 @@ import { services } from "hooks/useServices";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseLocationComparator } from "components/utils/common";
 import disableIndexingToggleConfirm from "viewmodels/resources/disableIndexingToggleConfirm";
+import notificationCenter from "common/notifications/notificationCenter";
 
 interface DatabasesState {
     /**
@@ -295,6 +296,20 @@ export const toggleIndexing =
             await indexesService.enableAllIndexes(db);
             dispatch(databasesSlice.actions.enabledIndexing(db.name));
         }
+    };
+
+export const openNotificationCenterForDatabase =
+    (db: DatabaseSharedInfo): AppThunk =>
+    (dispatch, getState) => {
+        const activeDatabase = selectActiveDatabase(getState());
+        if (activeDatabase !== db.name) {
+            const dbRaw = databasesManager.default.getDatabaseByName(db.name);
+            if (dbRaw) {
+                databasesManager.default.activate(dbRaw);
+            }
+        }
+
+        notificationCenter.instance.showNotifications.toggle();
     };
 
 export const confirmTogglePauseIndexing =

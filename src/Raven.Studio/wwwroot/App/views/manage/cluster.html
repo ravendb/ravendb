@@ -3,12 +3,12 @@
         <div class="col-sm-12 col-lg-6 flex-vertical flex-shrink-0">
             <div class="flex-header flex-horizontal">
                 <div>
-                    <button data-bind="click: addNode, enable: canAddNodes, visible: accessManager.canAddNode" class="btn btn-primary"><i class="icon-plus"></i><span>Add Node to Cluster</span></button>
+                    <button data-bind="click: addNode, enable: canAddNodes, visible: accessManager.isClusterAdminOrClusterNode" class="btn btn-primary"><i class="icon-plus"></i><span>Add Node to Cluster</span></button>
                     <button data-bind="click: bootstrapCluster, visible: canBootstrapCluster, css: { 'btn-spinner': $root.spinners.bootstrap }, disable: $root.spinners.bootstrap"
                             class="btn btn-primary" title="Click to initialize cluster"><i class="icon-cluster"></i><span>Bootstrap cluster</span></button>
                 </div>
                 <div class="flex-separator"></div>
-                <div class="flex-end text-muted resources" data-bind="if: utilizedCores() > 0, visible: accessManager.showCoresInfo">
+                <div class="flex-end text-muted resources" data-bind="if: utilizedCores() > 0, visible: accessManager.isClusterAdminOrClusterNode">
                     <div class="text-center"><small>Available cores:</small></div>
                     <div class="text-center">
                         <small>
@@ -112,7 +112,7 @@
                                 </div>
                                 <button class="btn btn-danger" 
                                         data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes() && !_.includes($root.spinners.delete(), tag()),
-                                                   css: { 'btn-spinner': _.includes($root.spinners.delete(), tag()) }, visible: $root.accessManager.canDeleteNode" 
+                                                   css: { 'btn-spinner': _.includes($root.spinners.delete(), tag()) }, visible: $root.accessManager.isClusterAdminOrClusterNode" 
                                         title="Remove node from cluster">
                                     <i class="icon-trash"></i>
                                 </button>

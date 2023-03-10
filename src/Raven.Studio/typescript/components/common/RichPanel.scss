@@ -38,7 +38,7 @@
             $bg-offset: 3px;
             $width: bs5variables.$gutter-sm;
 
-            content: "selected";
+            content: "active";
             position: absolute;
             top: 0;
             left: ($width * -1) + 1px;

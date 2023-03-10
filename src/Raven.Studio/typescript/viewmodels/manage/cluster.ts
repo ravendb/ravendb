@@ -26,7 +26,7 @@ class cluster extends viewModelBase {
     private graph = new clusterGraph();
 
     topology = clusterTopologyManager.default.topology;
-    accessManager = accessManager.default.clusterView;
+    accessManager = accessManager.default;
     aboutViewUrl = appUrl.forAbout();
 
     canDeleteNodes: KnockoutComputed<boolean>;
