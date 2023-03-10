@@ -19,9 +19,6 @@ public class RavenDB_19843 : RavenTestBase
     [InlineData(false)]
     public void CheckIfNullDatesAreReturnedLastWithConfigOptionEnabled(bool configEnabled)
     {
-        //guardian to set different config for 6_0
-        Assert.True(Raven.Server.Documents.Indexes.IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion < 60_000);
-
         using (var store = GetDocumentStore(new Options
                {
                    ModifyDatabaseRecord = r =>
