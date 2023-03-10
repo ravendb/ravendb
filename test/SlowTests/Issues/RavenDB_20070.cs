@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Sparrow.Server.Json.Sync;
 using Xunit;
@@ -21,12 +23,18 @@ public class RavenDB_20070 : RavenTestBase
             {
                 var json = "{ 'Item': { '$type': 'System.Xml.XmlDocument, System.Xml' } }";
                 var blittableJson = commands.Context.Sync.ReadForMemory(json, "entries/1");
-                commands.Put("entries/1", null, blittableJson);
+                commands.Put("entries/1", null, blittableJson, new Dictionary<string, object> { { "@collection", "Entries" } });
             }
 
             using (var session = store.OpenSession())
             {
                 var e = Assert.Throws<InvalidOperationException>(() => session.Load<Entry>("entries/1"));
+                Assert.Contains("blacklist", e.ToString());
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var e = Assert.Throws<InvalidOperationException>(() => session.Query<Entry>().ToList());
                 Assert.Contains("blacklist", e.ToString());
             }
         }
