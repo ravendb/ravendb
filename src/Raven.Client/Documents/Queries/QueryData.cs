@@ -44,5 +44,10 @@ namespace Raven.Client.Documents.Queries
         {
             return new QueryData(new[] { func }, Array.Empty<string>(), alias, isCustomFunction: true);
         }
+        
+        internal static void ThrowProjectionIsAlreadyDone()
+        {
+            throw new InvalidOperationException("Projection is already done. You should not project your result twice.");
+        }
     }
 }

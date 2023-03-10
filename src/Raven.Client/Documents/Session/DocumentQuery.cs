@@ -39,6 +39,9 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>(ProjectionBehavior projectionBehavior)
         {
+            if (IsProjectInto || FieldsToFetchToken is {Projections.Length: > 0})
+                QueryData.ThrowProjectionIsAlreadyDone();
+            
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(ReflectionUtil.BindingFlagsConstants.QueryingFields).ToList();
             var projections = propertyInfos.Select(x => Conventions.GetConvertedPropertyNameFor(x)).ToArray();
             var fields = propertyInfos.Select(p => Conventions.GetConvertedPropertyNameFor(p)).ToArray();
