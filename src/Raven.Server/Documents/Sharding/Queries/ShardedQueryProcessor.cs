@@ -14,6 +14,7 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Counters;
 using Raven.Server.Documents.Sharding.Operations;
@@ -41,7 +42,7 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
     {
         using (var queryScope = scope?.For(nameof(QueryTimingsScope.Names.Query)))
         {
-            ShardedDocumentsComparer documentsComparer = null;
+            DocumentsComparer documentsComparer = null;
 
             if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery) == false && (Query.Limit is null || Query.Limit > 0))
             {
@@ -49,7 +50,7 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
                 // 1. we have fields to sort
                 // 2. it isn't a map-reduce index/query (the sorting will be done after the re-reduce)
                 // 3. this isn't Count() query - Limit is 0 then
-                documentsComparer = new ShardedDocumentsComparer(Query.Metadata, IsMapReduceIndex || IsAutoMapReduceQuery);
+                documentsComparer = new DocumentsComparer(Query.Metadata, IsMapReduceIndex || IsAutoMapReduceQuery);
             }
 
             ShardedQueryOperation operation;

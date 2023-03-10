@@ -8,6 +8,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands.Querying;
+using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Extensions;
@@ -30,7 +31,7 @@ public class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOperation<S
         : base(queryCommands, context, requestHandler, expectedEtag)
     {
         _query = query ?? throw new ArgumentNullException(nameof(query));
-        _sortingComparer = sortingComparer ?? new RoundRobinComparer();
+        _sortingComparer = sortingComparer ?? ConstantComparer.Instance;
     }
 
     public bool FromStudio => HttpRequest.IsFromStudio();

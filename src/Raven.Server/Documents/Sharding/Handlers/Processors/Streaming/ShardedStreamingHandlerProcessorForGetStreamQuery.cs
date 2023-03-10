@@ -152,16 +152,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                 }
             }
         }
-
-        public class DocumentBlittableLastModifiedComparer : Comparer<BlittableJsonReaderObject>
-        {
-            public override int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
-            {
-                return y.GetMetadata().GetLastModified().CompareTo(x.GetMetadata().GetLastModified());
-            }
-
-            public static DocumentBlittableLastModifiedComparer Instance = new();
-        }
     }
 
     public readonly struct ShardedStreamQueryOperation : IShardedOperation<StreamResult, (IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)>
