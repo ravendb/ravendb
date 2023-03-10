@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Sharding.Comparers;
 
 public class DocumentLastModifiedComparer : IComparer<BlittableJsonReaderObject>
 {
-    public static DocumentLastModifiedComparer Instance = new();
+    public static readonly DocumentLastModifiedComparer Instance = new();
 
     private DocumentLastModifiedComparer()
     {
@@ -22,7 +22,7 @@ public class DocumentLastModifiedComparer : IComparer<BlittableJsonReaderObject>
         if (TryGetLastModified(x, out var xLastModified) == false)
             ThrowInvalidMissingLastModified();
 
-        return yLastModified.CompareTo(xLastModified);
+        return xLastModified.CompareTo(yLastModified);
 
         static bool TryGetLastModified(BlittableJsonReaderObject json, out DateTime lastModified)
         {

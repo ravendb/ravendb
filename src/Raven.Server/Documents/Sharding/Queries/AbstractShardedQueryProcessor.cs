@@ -111,6 +111,17 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         return _filteredShardIndexes == null ? commands.Keys.ToArray() : commands.Keys.Intersect(_filteredShardIndexes).ToArray();
     }
 
+    protected virtual QueryType GetQueryType()
+    {
+        if (IsMapReduceIndex || IsAutoMapReduceQuery)
+            return QueryType.MapReduce;
+
+        if (Query.Metadata.IsCollectionQuery)
+            return QueryType.Collection;
+
+        return QueryType.Map;
+    }
+
     protected bool IsProjectionFromMapReduceIndex =>
         (IsMapReduceIndex == false && IsAutoMapReduceQuery == false
         || (Query.Metadata.Query.Select == null || Query.Metadata.Query.Select.Count == 0)
@@ -487,17 +498,30 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    protected static IComparer<BlittableJsonReaderObject> GetComparer(IndexQueryServerSide query, bool isMapReduce, bool extractFromData)
+    protected IComparer<BlittableJsonReaderObject> GetComparer(IndexQueryServerSide query)
     {
-        if (isMapReduce) // map-reduce index/query (the sorting will be done after the re-reduce)
+        var queryType = GetQueryType();
+
+        if (queryType == QueryType.MapReduce) // map-reduce index/query (the sorting will be done after the re-reduce)
             return ConstantComparer.Instance;
 
         if (query.Limit == 0) // Count() query
             return ConstantComparer.Instance;
 
         if (query.Metadata.OrderBy?.Length > 0)
-            return new DocumentsComparer(query.Metadata, extractFromData);
+            return new DocumentsComparer(query.Metadata, extractFromData: queryType == QueryType.IndexEntries);
+
+        if (queryType == QueryType.IndexEntries)
+            return ConstantComparer.Instance;
 
         return DocumentLastModifiedComparer.Instance;
+    }
+
+    protected enum QueryType
+    {
+        Map,
+        MapReduce,
+        Collection,
+        IndexEntries
     }
 }

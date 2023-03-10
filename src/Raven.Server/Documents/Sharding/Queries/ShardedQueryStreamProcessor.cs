@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Sharding.Queries
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
 
-            var documentsComparer = GetComparer(Query, isMapReduce: false, extractFromData: false);
+            var documentsComparer = GetComparer(Query);
 
             var commands = GetOperationCommands(null);
 
