@@ -181,6 +181,7 @@ export function CreateDatabase(props: CreateDatabaseProps) {
                 backupSource={backupSource}
                 setBackupSource={setBackupSource}
                 shardingEnabled={shardingEnabled}
+                nodeList={nodeList.map((node) => node.nodeTag)}
             />
         ),
         createNew: <StepCreateNew />,
@@ -363,7 +364,7 @@ export function StepCreateNew(props: StepBasicSetupProps) {
             </div>
             <h2 className="text-center mb-4">Create new database</h2>
             <Row>
-                <Col sm={{ offset: 2, size: 8 }}>
+                <Col lg={{ offset: 2, size: 8 }}>
                     <FormGroup floating>
                         <Input type="text" placeholder="Database Name" name="Database Name" id="DbName" />
                         <Label for="DbName">Database Name</Label>
@@ -418,7 +419,7 @@ export function StepEncryption(props: StepEncryptionProps) {
 
             {!serverAuthentication ? (
                 <Row className="my-4">
-                    <Col sm={{ size: 8, offset: 2 }}>
+                    <Col lg={{ size: 8, offset: 2 }}>
                         <Alert color="info">
                             <p className="lead">
                                 <Icon icon="unsecure" /> Authentication is off
@@ -446,10 +447,14 @@ export function StepEncryption(props: StepEncryptionProps) {
                             </InputGroup>
                             <Row className="mt-2">
                                 <Col>
-                                    <Button block>Download encryption key</Button>
+                                    <Button block color="primary" size="sm">
+                                        <Icon icon="download" className="me-1" /> Download encryption key
+                                    </Button>
                                 </Col>
                                 <Col>
-                                    <Button block>Print encryption key</Button>
+                                    <Button block size="sm">
+                                        <Icon icon="print" className="me-1" /> Print encryption key
+                                    </Button>
                                 </Col>
                             </Row>
                             <Alert color="warning" className="d-flex align-items-center mt-2">
@@ -460,8 +465,8 @@ export function StepEncryption(props: StepEncryptionProps) {
                                 </div>
                             </Alert>
                         </Col>
-                        <Col sm="auto">
-                            <img src={qrImg} alt="" className="" />
+                        <Col lg="auto" className="text-center">
+                            <img src={qrImg} alt="" />
                             <div className="text-center mt-1">
                                 <small id="qrInfo" className="text-info">
                                     <Icon icon="info" /> what's this?
@@ -535,7 +540,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
             <h2 className="text-center">Replication & Sharding</h2>
 
             <Row>
-                <Col sm={{ size: 8, offset: 2 }} className="text-center">
+                <Col lg={{ size: 8, offset: 2 }} className="text-center">
                     <p>
                         Database replication provides benefits such as improved data availability, increased
                         scalability, and enhanced disaster recovery capabilities.
@@ -615,7 +620,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                 </PopoverBody>
             </UncontrolledPopover>
             <Row>
-                <Col sm={{ offset: 2, size: 8 }}>
+                <Col lg={{ offset: 2, size: 8 }}>
                     <Row className="pb-2">
                         <Col sm="auto">
                             <InputGroup>
@@ -942,7 +947,7 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
 
             <h2 className="text-center mb-4">Restore from backup</h2>
             <Row>
-                <Col sm={{ offset: 2, size: 4 }}>
+                <Col sm="6" lg={{ offset: 2, size: 4 }}>
                     <Button
                         active={!shardingEnabled}
                         onClick={() => setShardingEnabled(false)}
@@ -955,7 +960,7 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
                         Regular database
                     </Button>
                 </Col>
-                <Col sm="4">
+                <Col sm="6" lg="4">
                     {" "}
                     <LicenseRestrictions
                         isAvailable={licenseIncludesSharding}
@@ -982,7 +987,7 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
             </Row>
             <div className="d-flex justify-content-center mt-4"></div>
             <Row>
-                <Col sm={{ offset: 2, size: 8 }}>
+                <Col lg={{ offset: 2, size: 8 }}>
                     <FormGroup floating>
                         <Input type="text" placeholder="Database Name" name="Database Name" id="DbName" />
                         <Label for="DbName">Database Name</Label>
@@ -997,10 +1002,11 @@ interface StepBackupSourceProps {
     backupSource: string;
     setBackupSource: (source: string) => void;
     shardingEnabled: boolean;
+    nodeList: string[];
 }
 
 export function StepBackupSource(props: StepBackupSourceProps) {
-    const { backupSource, setBackupSource, shardingEnabled } = props;
+    const { backupSource, setBackupSource, shardingEnabled, nodeList } = props;
 
     const backupSourceImg = require("Content/img/createDatabase/backup-source.svg");
 
@@ -1050,7 +1056,7 @@ export function StepBackupSource(props: StepBackupSourceProps) {
             <h2 className="text-center">Backup Source</h2>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Backup Source</Label>
                 </Col>
                 <Col>
@@ -1076,13 +1082,15 @@ export function StepBackupSource(props: StepBackupSourceProps) {
             </Row>
             <Collapse isOpen={backupSource != null}>
                 <>
-                    {backupSource === "local" && <BackupSourceFragmentLocal shardingEnabled={shardingEnabled} />}
+                    {backupSource === "local" && (
+                        <BackupSourceFragmentLocal shardingEnabled={shardingEnabled} nodeList={nodeList} />
+                    )}
                     {backupSource === "cloud" && backupSourceFragmentCloud()}
                     {backupSource === "aws" && backupSourceFragmentAws()}
                     {backupSource === "azure" && backupSourceFragmentAzure()}
                     {backupSource === "gcp" && backupSourceFragmentGcp()}
                     <Row className="mt-2">
-                        <Col sm="3">
+                        <Col lg="3">
                             <Label className="col-form-label">Restore Point</Label>
                         </Col>
                         <Col>
@@ -1116,26 +1124,83 @@ export function StepBackupSource(props: StepBackupSourceProps) {
 
 interface BackupSourceFragmentLocalProps {
     shardingEnabled: boolean;
+    nodeList: string[];
 }
 
 export function BackupSourceFragmentLocal(props: BackupSourceFragmentLocalProps) {
-    const { shardingEnabled } = props;
+    const { shardingEnabled, nodeList } = props;
 
-    // type directory
+    type localBackupSource = {
+        node: string;
+        shard: number;
+        directory: string;
+        restorePoint: string;
+    };
 
-    // const [directories, setDirectories ] = useState()
+    const localBackupSources: localBackupSource[] = [
+        {
+            node: "A",
+            shard: 1,
+            directory: "/backups",
+            restorePoint: "2023 February 21st, 11:19 AM, Full Backup",
+        },
+    ];
 
     return (
-        <div className="mt-2">
-            <Row>
-                <Col sm="3">
-                    <label className="col-form-label">Directory Path</label>
-                </Col>
-                <Col>
-                    <Input placeholder="Enter backup directory path"></Input>
-                </Col>
-            </Row>
-        </div>
+        <>
+            {shardingEnabled ? (
+                <>
+                    <Row className="mt-2">
+                        <Col lg="3">
+                            <label className="col-form-label">Directory Path & Restore&nbsp;Point</label>
+                        </Col>
+                        <Col>
+                            <InputGroup>
+                                <UncontrolledDropdown>
+                                    <DropdownToggle caret>Target Node</DropdownToggle>
+                                    <DropdownMenu>
+                                        {nodeList.map((node) => (
+                                            <DropdownItem>
+                                                <Icon icon="node" color="node" className="me-1" />
+                                                <strong>{node}</strong>
+                                            </DropdownItem>
+                                        ))}
+                                    </DropdownMenu>
+                                </UncontrolledDropdown>
+                                <Input placeholder="Enter backup directory path"></Input>
+                                <UncontrolledDropdown>
+                                    <DropdownToggle caret>Target shard</DropdownToggle>
+                                    <DropdownMenu>
+                                        <DropdownItem>
+                                            <Icon icon="shard" color="shard" className="me-1" /> <strong>1</strong>
+                                        </DropdownItem>
+                                    </DropdownMenu>
+                                </UncontrolledDropdown>
+                            </InputGroup>
+                            <Input placeholder="Restore point" className="mt-1"></Input>
+                        </Col>
+                    </Row>
+                    <Row className="mt-2">
+                        <Col lg={{ offset: 3 }}>
+                            <Button size="sm" outline color="info" className="rounded-pill">
+                                <Icon icon="restore-backup" /> Add backup file
+                            </Button>
+                        </Col>
+                    </Row>
+                </>
+            ) : (
+                <div className="mt-2">
+                    <Row>
+                        <Col lg="3">
+                            <label className="col-form-label">Directory Path</label>
+                        </Col>
+                        <Col>
+                            <Input placeholder="Enter backup directory path"></Input>
+                        </Col>
+                    </Row>
+                </div>
+            )}
+        </>
     );
 }
 
@@ -1143,7 +1208,7 @@ export function backupSourceFragmentCloud() {
     return (
         <div className="mt-2">
             <Row>
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label" id="CloudBackupLinkInfo">
                         Backup Link <Icon icon="info" color="info" />
                     </Label>
@@ -1180,7 +1245,7 @@ export function backupSourceFragmentAws() {
     return (
         <div className="mt-2">
             <Row>
-                <Col sm={{ offset: 3 }}>
+                <Col lg={{ offset: 3 }}>
                     <Switch color="primary" selected={useCustomHost} toggleSelection={toggleUseCustomHost}>
                         Use a custom S3 host
                     </Switch>
@@ -1189,7 +1254,7 @@ export function backupSourceFragmentAws() {
 
             <Collapse isOpen={useCustomHost}>
                 <Row>
-                    <Col sm={{ offset: 3 }}>
+                    <Col lg={{ offset: 3 }}>
                         <Switch color="primary" selected={null} toggleSelection={null}>
                             Force path style <Icon icon="info" className="text-info" id="CloudBackupLinkInfo" />
                         </Switch>
@@ -1203,7 +1268,7 @@ export function backupSourceFragmentAws() {
                     </Col>
                 </Row>
                 <Row className="mt-2">
-                    <Col sm="3">
+                    <Col lg="3">
                         <Label className="col-form-label">Custom server URL</Label>
                     </Col>
                     <Col>
@@ -1213,7 +1278,7 @@ export function backupSourceFragmentAws() {
             </Collapse>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Secret key</Label>
                 </Col>
                 <Col>
@@ -1222,7 +1287,7 @@ export function backupSourceFragmentAws() {
             </Row>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Aws Region</Label>
                 </Col>
                 <Col>
@@ -1231,7 +1296,7 @@ export function backupSourceFragmentAws() {
             </Row>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Name</Label>
                 </Col>
                 <Col>
@@ -1240,7 +1305,7 @@ export function backupSourceFragmentAws() {
             </Row>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Bucket Name</Label>
                 </Col>
                 <Col>
@@ -1249,7 +1314,7 @@ export function backupSourceFragmentAws() {
             </Row>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">
                         Remote Folder Name <small>(optional)</small>
                     </Label>
@@ -1266,7 +1331,7 @@ export function backupSourceFragmentAzure() {
     return (
         <div className="mt-2">
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Account Name</Label>
                 </Col>
                 <Col>
@@ -1275,7 +1340,7 @@ export function backupSourceFragmentAzure() {
             </Row>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Account Key</Label>
                 </Col>
                 <Col>
@@ -1284,7 +1349,7 @@ export function backupSourceFragmentAzure() {
             </Row>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Container</Label>
                 </Col>
                 <Col>
@@ -1293,7 +1358,7 @@ export function backupSourceFragmentAzure() {
             </Row>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">
                         Remote Folder Name <small>(optional)</small>
                     </Label>
@@ -1310,7 +1375,7 @@ export function backupSourceFragmentGcp() {
     return (
         <div className="mt-2">
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Bucket Name</Label>
                 </Col>
                 <Col>
@@ -1319,7 +1384,7 @@ export function backupSourceFragmentGcp() {
             </Row>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">Google Credentials</Label>
                 </Col>
                 <Col>
@@ -1345,7 +1410,7 @@ export function backupSourceFragmentGcp() {
             </Row>
 
             <Row className="mt-2">
-                <Col sm="3">
+                <Col lg="3">
                     <Label className="col-form-label">
                         Remote Folder Name <small>(optional)</small>
                     </Label>
