@@ -113,18 +113,12 @@ namespace Raven.Server.Documents.Sharding
 
             if (DictionaryExtensions.KeysEqual(record.Sharding.Shards, _record.Sharding.Shards) == false)
             {
-                using (var se = ShardExecutor)
-                {
-                    ShardExecutor = new ShardExecutor(ServerStore, record, record.DatabaseName);
-                }
+                ShardExecutor = new ShardExecutor(ServerStore, record, record.DatabaseName);
             }
 
             if (EnumerableExtension.ElementsEqual(record.Sharding.Orchestrator.Topology.Members, _record.Sharding.Orchestrator.Topology.Members) == false)
             {
-                using (var ne = AllOrchestratorNodesExecutor)
-                {
-                    AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, record);
-                }
+                AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, record);
             }
 
             Indexes.Update(record, index);
@@ -136,15 +130,9 @@ namespace Raven.Server.Documents.Sharding
 
         private void OnUrlChange(DatabaseRecord record, long index)
         {
-            using (var se = ShardExecutor)
-            {
-                ShardExecutor = new ShardExecutor(ServerStore, _record, _record.DatabaseName);
-            }
+            ShardExecutor = new ShardExecutor(ServerStore, _record, _record.DatabaseName);
 
-            using (var ne = AllOrchestratorNodesExecutor)
-            {
-                AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, _record);
-            }
+            AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, _record);
         }
 
         public void UpdateUrls(long index) => DatabasesLandlord.NotifyFeaturesAboutStateChange(_record, index, _urlUpdateStateChange);
@@ -197,9 +185,15 @@ namespace Raven.Server.Documents.Sharding
 
             exceptionAggregator.Execute(() => Replication?.Dispose());
 
+
+            /*
+            we explicitly do not dispose the executors here to avoid possible memory invalidation
+            and we rely on the GC to dispose them
+
             exceptionAggregator.Execute(() => ShardExecutor?.Dispose());
 
             exceptionAggregator.Execute(() => AllOrchestratorNodesExecutor?.Dispose());
+            */
 
             exceptionAggregator.Execute(() => SubscriptionsStorage.Dispose());
 
