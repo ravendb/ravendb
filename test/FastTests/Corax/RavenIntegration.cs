@@ -34,7 +34,21 @@ public class RavenIntegration : RavenTestBase
         Indexes.WaitForIndexing(store);
         {
             using var session = store.OpenSession();
-            var results = session.Query<Doc, DocIndex>().OrderByScore().ToList();
+            var results = session
+                .Query<Doc, DocIndex>()
+                .OrderByScore()
+                .ToList();
+            Assert.Equal(results.Count, 3);
+            Assert.Equal(results[0].Name, "Four");
+            Assert.Equal(results[1].Name, "Three");
+            Assert.Equal(results[2].Name, "Two");
+        }
+        
+        {
+            using var session = store.OpenSession();
+            var results = session
+                .Query<Doc, DocIndex>()
+                .ToList();
             Assert.Equal(results.Count, 3);
             Assert.Equal(results[0].Name, "Four");
             Assert.Equal(results[1].Name, "Three");
@@ -294,6 +308,41 @@ public class RavenIntegration : RavenTestBase
                 .Boost(10)
                 .Single();
             Assert.Equal("Maciej", person.Name);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CoraxWillSortByScoreAutomaticallyWhenQueryHasBoosting(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Person("Maciej"));
+            session.Store(new Person("Marika"));
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var resultsNoBoosting = session.Query<Person>()
+                .ToDocumentQuery()
+                .WaitForNonStaleResults()
+                .WhereEquals(i => i.Name, "Maciej")
+                .OrElse()
+                .WhereEquals(i => i.Name, "marika")
+                .ToList();
+            
+            var resultWithBoosting = session.Query<Person>()
+                .ToDocumentQuery()
+                .WaitForNonStaleResults()
+                .WhereEquals(i => i.Name, "Maciej").Boost(1)
+                .OrElse()
+                .WhereEquals(i => i.Name, "marika").Boost(1000)
+                .ToList();
+            
+            Assert.Equal(resultsNoBoosting[0].Name, resultWithBoosting[1].Name);
+            Assert.Equal(resultsNoBoosting[1].Name, resultWithBoosting[0].Name);
         }
     }
 
