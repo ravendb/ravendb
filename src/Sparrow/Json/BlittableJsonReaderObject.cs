@@ -1102,6 +1102,21 @@ namespace Sparrow.Json
             return context.ReadObject(this, null);
         }
 
+        public BlittableJsonReaderObject CloneForConcurrentRead(JsonOperationContext externalContext)
+        {
+            // when we read a blittable we do also some allocations and use context's path cache (e.g. InsertionOrderProperties, ReadStringLazily, GetPropertyByIndex)
+            // we cannot use internal BlittableJsonReaderBase._context for that purpose since it must not be used concurrently
+            // we have to provide external context that will be used for that purpose during the read action
+            // note that we don't copy the blittable data but still read from the original pointer
+
+            AssertContextNotDisposed(externalContext);
+            
+            return new BlittableJsonReaderObject(_mem, _size, externalContext)
+            {
+                NoCache = NoCache
+            };
+        }
+
         public void BlittableValidation()
         {
             var currentSize = Size - 1;

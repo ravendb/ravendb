@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Sharding.Executors
             _requestExecutors = CreateExecutors();
         }
 
-        public DocumentConventions Conventions { get; private set; }
+        public DocumentConventions Conventions { get; }
 
         public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
         {

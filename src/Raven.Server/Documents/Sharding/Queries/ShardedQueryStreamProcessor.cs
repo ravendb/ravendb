@@ -65,9 +65,9 @@ namespace Raven.Server.Documents.Sharding.Queries
             return RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, op, Token);
         }
 
-        protected override PostQueryStreamCommand CreateCommand(int shardNumber, string query, QueryTimingsScope scope)
+        protected override PostQueryStreamCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope)
         {
-            return new PostQueryStreamCommand(query, _debug, _ignoreLimit);
+            return new PostQueryStreamCommand(RequestHandler.ShardExecutor.Conventions, query, _debug, _ignoreLimit);
         }
     }
 }

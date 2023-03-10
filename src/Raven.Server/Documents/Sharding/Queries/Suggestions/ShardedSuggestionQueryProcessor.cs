@@ -70,5 +70,5 @@ public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<Sha
         }
     }
 
-    protected override ShardedQueryCommand CreateCommand(int shardNumber, string query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
+    protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 }

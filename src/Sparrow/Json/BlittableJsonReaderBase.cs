@@ -266,5 +266,14 @@ namespace Sparrow.Json
                 throw new ObjectDisposedException("blittable's context has been disposed, blittable should not be used now in that case!");
             }
         }
+
+        [Conditional("DEBUG")]
+        protected void AssertContextNotDisposed(JsonOperationContext context)
+        {
+            if (context?.Disposed ?? false)
+            {
+                throw new ObjectDisposedException("blittable's context has been disposed, blittable should not be used now in that case!");
+            }
+        }
     }
 }

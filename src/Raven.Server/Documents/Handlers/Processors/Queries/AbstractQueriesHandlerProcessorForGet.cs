@@ -17,7 +17,6 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
-using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
 
