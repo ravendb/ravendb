@@ -1,6 +1,6 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
-import aceEditorBindingHandler = require("../../common/bindingHelpers/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 interface ConfigureMicrosoftLogsDialogResult {
     isEnabled: boolean;
@@ -22,15 +22,7 @@ class configureMicrosoftLogsDialog extends dialogViewModelBase {
     }
 
     attached() {
-        
-    }
-
-    deactivate() {
-        super.deactivate(null);
-    }
-
-    compositionComplete() {
-        super.compositionComplete();
+        // empty by design, so that pressing enter does not call save button click
     }
 
     close() {

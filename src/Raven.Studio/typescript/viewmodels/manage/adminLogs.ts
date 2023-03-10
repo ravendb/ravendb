@@ -19,11 +19,11 @@ import app = require("durandal/app");
 import getTrafficWatchConfigurationCommand = require("commands/maintenance/getTrafficWatchConfigurationCommand");
 import trafficWatchConfiguration = require("models/resources/trafficWatchConfiguration");
 import saveTrafficWatchConfigurationCommand = require("commands/maintenance/saveTrafficWatchConfigurationCommand");
-import getAdminLogsMicrosoftStateCommand = require("../../commands/maintenance/getAdminLogsMicrosoftStateCommand");
-import getAdminLogsMicrosoftConfigurationCommand = require("../../commands/maintenance/getAdminLogsMicrosoftConfigurationCommand");
-import enableAdminLogsMicrosoftCommand = require("../../commands/maintenance/enableAdminLogsMicrosoftCommand");
-import disableAdminLogsMicrosoftCommand = require("../../commands/maintenance/disableAdminLogsMicrosoftCommand");
-import saveAdminLogsMicrosoftConfigurationCommand = require("../../commands/maintenance/saveAdminLogsMicrosoftConfigurationCommand");
+import getAdminLogsMicrosoftStateCommand = require("commands/maintenance/getAdminLogsMicrosoftStateCommand");
+import getAdminLogsMicrosoftConfigurationCommand = require("commands/maintenance/getAdminLogsMicrosoftConfigurationCommand");
+import enableAdminLogsMicrosoftCommand = require("commands/maintenance/enableAdminLogsMicrosoftCommand");
+import disableAdminLogsMicrosoftCommand = require("commands/maintenance/disableAdminLogsMicrosoftCommand");
+import saveAdminLogsMicrosoftConfigurationCommand = require("commands/maintenance/saveAdminLogsMicrosoftConfigurationCommand");
 import configureMicrosoftLogsDialog = require("./configureMicrosoftLogsDialog");
 
 class heightCalculator {

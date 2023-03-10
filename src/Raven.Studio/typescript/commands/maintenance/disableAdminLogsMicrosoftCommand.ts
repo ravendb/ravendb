@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class disableAdminLogsMicrosoftCommand extends commandBase {
     
-    execute(): JQueryPromise<string> {
+    execute(): JQueryPromise<void> {
         const url = endpoints.global.adminLogs.adminLogsMicrosoftDisable;
 
         return this.post<void>(url, null, null, { dataType: undefined })
