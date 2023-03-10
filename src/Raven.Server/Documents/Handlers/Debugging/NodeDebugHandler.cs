@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        internal class SetupAliveInfo : IDynamicJsonValueConvertible
+        internal class SetupAliveInfo : IDynamicJson
         {
             public long Time;
             public string Error;
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        internal class TcpInfo : IDynamicJsonValueConvertible
+        internal class TcpInfo : IDynamicJson
         {
             public long TcpInfoTime;
             public long SendTime;
