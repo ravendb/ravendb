@@ -7,9 +7,7 @@ import accessManager = require("common/shell/accessManager");
 export = getManageServerMenuItem;
 
 function getManageServerMenuItem() {
-
-    const accessMainMenu = accessManager.default.mainMenu;
-        
+     
     const items: menuItem[] = [
         new leafMenuItem({
             route: 'admin/settings/cluster',
@@ -208,6 +206,6 @@ function getManageServerMenuItem() {
         }),
     ];
 
-    return new intermediateMenuItem('Manage Server', items, 'icon-manage-server', null, accessMainMenu.showManageServerMenuItem);
+    return new intermediateMenuItem('Manage Server', items, 'icon-manage-server', null);
 }
 

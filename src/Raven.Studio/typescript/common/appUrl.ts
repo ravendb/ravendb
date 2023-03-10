@@ -334,7 +334,7 @@ class appUrl {
         return "#databases/settings/databaseRecord?" + appUrl.getEncodedDbPart(db);
     }
     
-    static forIndexErrors(db: database): string {
+    static forIndexErrors(db: database | DatabaseSharedInfo): string {
         return "#databases/indexes/indexErrors?" + appUrl.getEncodedDbPart(db);
     }
 
@@ -487,7 +487,7 @@ class appUrl {
         }
     }
 
-    static forIndexes(db: database, indexName: string = null, staleOnly = false): string {
+    static forIndexes(db: database | DatabaseSharedInfo, indexName: string = null, staleOnly = false): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const indexNamePart = indexName ? `&indexName=${indexName}` : "";
         const stalePart = staleOnly ? "&stale=true" : "";
@@ -733,7 +733,7 @@ class appUrl {
         return appUrl.currentDbComputeds;
     }
 
-    private static getEncodedDbPart(db?: database | string) {
+    private static getEncodedDbPart(db?: database | string | DatabaseSharedInfo) {
         if (!db) {
             return "";
         }

@@ -48,6 +48,7 @@ import { DatabaseNodeSetItem } from "components/pages/resources/databases/partia
 import { locationAwareLoadableData } from "components/models/common";
 import { useAccessManager } from "hooks/useAccessManager";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -87,7 +88,7 @@ interface DatabaseTopologyProps {
     db: DatabaseSharedInfo;
 }
 
-export function AccessIcon(props: { dbAccess: string }) {
+export function AccessIcon(props: { dbAccess: databaseAccessLevel }) {
     const { dbAccess } = props;
     switch (dbAccess) {
         case "DatabaseAdmin":
@@ -109,7 +110,7 @@ export function AccessIcon(props: { dbAccess: string }) {
                 </span>
             );
         default:
-            return null;
+            assertUnreachable(dbAccess);
     }
 }
 

@@ -69,7 +69,7 @@ class certificates extends viewModelBase {
     
     isSecureServer = accessManager.default.secureServer();
     
-    accessManager = accessManager.default.certificatesView;
+    accessManager = accessManager.default;
 
     importedFileName = ko.observable<string>();
     
@@ -134,7 +134,7 @@ class certificates extends viewModelBase {
     activate() {
         this.loadCertificates();
         
-        if (accessManager.default.certificatesView.canRenewLetsEncryptCertificate()) {
+        if (accessManager.default.isClusterAdminOrClusterNode()) {
             new getServerCertificateSetupModeCommand()
                 .execute()
                 .done((setupMode: Raven.Server.Commercial.SetupMode) => {
@@ -703,11 +703,11 @@ class certificates extends viewModelBase {
     
     canDelete(securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance, model: unifiedCertificateDefinition) {
         return ko.pureComputed(() => {
-            if (!this.accessManager.canDeleteClusterAdminCertificate() && securityClearance === "ClusterAdmin") {
+            if (!this.accessManager.isClusterAdminOrClusterNode() && securityClearance === "ClusterAdmin") {
                 return false;
             }
             
-            if (!this.accessManager.canDeleteClusterNodeCertificate() && securityClearance === "ClusterNode") {
+            if (!this.accessManager.isClusterAdminOrClusterNode() && securityClearance === "ClusterNode") {
                 return false;
             }
             
@@ -721,7 +721,7 @@ class certificates extends viewModelBase {
 
     canGenerateCertificateForSecurityClearanceType(securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
         return ko.pureComputed(() => {
-            if (!this.accessManager.canGenerateClientCertificateForAdmin() && securityClearance === "ClusterAdmin") {
+            if (!this.accessManager.isClusterAdminOrClusterNode() && securityClearance === "ClusterAdmin") {
                 return false;
             }
 

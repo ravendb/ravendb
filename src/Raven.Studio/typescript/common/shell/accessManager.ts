@@ -12,7 +12,6 @@ class accessManager {
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
     secureServer = ko.observable<boolean>(true);
 
-    private allLevels = ko.pureComputed(() => true);
     
     // cluster node has the same privileges as cluster admin
     isClusterAdminOrClusterNode = ko.pureComputed(() => {
@@ -168,30 +167,6 @@ class accessManager {
                 </div>`;
     }
 
-    clusterView = {
-        canAddNode: this.isClusterAdminOrClusterNode,
-        canDeleteNode: this.isClusterAdminOrClusterNode,
-        showCoresInfo: this.isClusterAdminOrClusterNode,
-        canDemotePromoteNode: this.isClusterAdminOrClusterNode
-    };
-    
-    aboutView = {
-        canReplaceLicense: this.isClusterAdminOrClusterNode,
-        canForceUpdate: this.isClusterAdminOrClusterNode,
-        canRenewLicense: this.isClusterAdminOrClusterNode,
-        canRegisterLicense: this.isClusterAdminOrClusterNode
-    };
-    
-    certificatesView = {
-        canRenewLetsEncryptCertificate: this.isClusterAdminOrClusterNode,
-        canDeleteClusterNodeCertificate: this.isClusterAdminOrClusterNode,
-        canDeleteClusterAdminCertificate: this.isClusterAdminOrClusterNode,
-        canGenerateClientCertificateForAdmin: this.isClusterAdminOrClusterNode
-    };
-
-    mainMenu = {
-        showManageServerMenuItem: this.allLevels
-    };
 }
 
 export = accessManager;
