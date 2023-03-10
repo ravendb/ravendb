@@ -17,7 +17,7 @@ using Sparrow.Logging;
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
 internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-    where TOperationContext : JsonOperationContext 
+    where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     private readonly bool _validatedAsAdmin;
@@ -46,14 +46,18 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
                 var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                 indexDefinition.Name = indexDefinition.Name?.Trim();
 
-                var source = IsLocalRequest(RequestHandler.HttpContext) ? Environment.MachineName : RequestHandler.HttpContext.Connection.RemoteIpAddress.ToString();
+                var ip = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
+
+                var clientCert = RequestHandler.GetCurrentCertificate();
+
+                string source = clientCert != null
+                    ? $"{ip} | {clientCert.Subject} [{clientCert.Thumbprint}]"
+                    : $"{ip}";
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var clientCert = RequestHandler.GetCurrentCertificate();
-
                     var auditLog = LoggingSource.AuditLog.GetLogger(RequestHandler.DatabaseName, "Audit");
-                    auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {source} at {DateTime.UtcNow}");
+                    auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {ip} at {DateTime.UtcNow}");
                 }
 
                 if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)

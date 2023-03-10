@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Server.Dashboard;
+using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.Utils.Cpu;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -14,7 +15,7 @@ namespace Raven.Server.Utils
 {
     public class ThreadsUsage
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("ThreadsUsage");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineCpu>("ThreadsUsage");
         private (long TotalProcessorTimeTicks, long TimeTicks) _processTimes;
         private Dictionary<int, long> _threadTimesInfo = new Dictionary<int, long>();
 

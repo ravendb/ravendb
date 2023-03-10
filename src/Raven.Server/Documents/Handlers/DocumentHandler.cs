@@ -22,12 +22,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentHandler : DatabaseRequestHandler
     {
-        public DocumentHandler()
-        {
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("N/A", TrafficWatchChangeType.Documents);
-        }
-
         [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Head()
         {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -46,31 +45,32 @@ namespace SlowTests.Corax
         [InlineData(SearchEngineType.Lucene, SearchEngineType.Corax)]
         public async Task AutoPersistIndexConfiguration(SearchEngineType beginType, SearchEngineType endType)
         {
-            // using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = NewDataPath(), RunInMemory = false }))
-            // {
-                using (var store = GetDocumentStore(new Options {RunInMemory = false, Path = NewDataPath(), ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = beginType.ToString() }))
-                {
-                    _databaseName = store.Database;
-                    using (var session = store.OpenSession())
-                        _ = session.Query<Order>().Where(x => x.OrderedAt == DateTime.Now).ToList();
-                    var database = await GetDatabase(store.Database); //await store.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    var index = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
+            using (var store = GetDocumentStore(new Options
+                   {
+                       RunInMemory = false,
+                       Path = NewDataPath(),
+                       ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = beginType.ToString()
+                   }))
+            {
+                _databaseName = store.Database;
+                using (var session = store.OpenSession())
+                    _ = session.Query<Order>().Where(x => x.OrderedAt == DateTime.Now).ToList();
+                var database = await GetDatabase(store.Database); //await store.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var index = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
 
-                    Assert.Equal(beginType, index.SearchEngineType);
-                    PutConfigurationSettings(store, "Indexing.Auto.SearchEngine", endType);
-                    var index2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
+                Assert.Equal(beginType, index.SearchEngineType);
+                PutConfigurationSettings(store, "Indexing.Auto.SearchEngine", endType);
+                var index2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
 
-                    Assert.Equal(beginType, index2.SearchEngineType);
-                }
-           // }
+                Assert.Equal(beginType, index2.SearchEngineType);
+            }
         }
 
-        //todo maciej: There will be tests for StaticIndexes
         [Fact]
         public async Task LoadOldIndexWithoutRebuildingForNewIndexingEngine()
         {
-            using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = _serverPath, RunInMemory = false }))
-            using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = _databasePath }))
+            using (var server = GetNewServer(new ServerCreationOptions {DataDirectory = _serverPath, RunInMemory = false}))
+            using (var store = GetDocumentStore(new Options {Server = server, RunInMemory = false, Path = _databasePath}))
             {
                 _databaseName = store.Database;
                 _index.Execute(store);
@@ -94,8 +94,8 @@ namespace SlowTests.Corax
             DeleteAndExtractFiles(_indexStoragePath2, "Precorax.Orders_ByOrderBy.zip");
             DeleteAndExtractFiles(_indexStoragePath1, "Precorax.Auto_Orders_ByOrderedAt.zip");
 
-            using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = _serverPath, RunInMemory = false }))
-            using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = _databasePath, ModifyDatabaseName = _ => _databaseName }))
+            using (var server = GetNewServer(new ServerCreationOptions {DataDirectory = _serverPath, RunInMemory = false}))
+            using (var store = GetDocumentStore(new Options {Server = server, RunInMemory = false, Path = _databasePath, ModifyDatabaseName = _ => _databaseName}))
             {
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Indexes.WaitForIndexing(store);
@@ -119,12 +119,12 @@ namespace SlowTests.Corax
             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
             try
             {
-                var settings = new Dictionary<string, string>() { [key] = changedTo.ToString() };
+                var settings = new Dictionary<string, string>() {[key] = changedTo.ToString()};
                 store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database, settings));
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
             }
-            catch(ConcurrencyException)
+            catch (ConcurrencyException)
             {
                 var recordJson = JsonConvert.SerializeObject(record);
                 Console.WriteLine($"Original: {recordJson}");
@@ -151,7 +151,7 @@ namespace SlowTests.Corax
             public Orders_ByOrderBy()
             {
                 Map = orders => from o in orders
-                    select new { o.OrderedAt, o.ShippedAt };
+                    select new {o.OrderedAt, o.ShippedAt};
             }
         }
 

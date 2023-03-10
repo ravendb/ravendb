@@ -1449,9 +1449,9 @@ namespace Voron.Data.CompactTrees
 
                 if (splitAnyways)
                 {
-                    DebugStuff.RenderAndShow(this);
+                    //DebugStuff.RenderAndShow(this);
                     SplitPage(key, value);
-                    DebugStuff.RenderAndShow(this);
+                    //DebugStuff.RenderAndShow(this);
                     return;
                 }
             }
@@ -1665,7 +1665,9 @@ namespace Voron.Data.CompactTrees
             DebugStuff.RenderAndShow(this);
         }
 
+#if !DEBUG
         [SkipLocalsInit]
+#endif
         private bool TryRecompressPage(in CursorState state)
         {
             var oldDictionary = GetEncodingDictionary(state.Header->DictionaryId);
