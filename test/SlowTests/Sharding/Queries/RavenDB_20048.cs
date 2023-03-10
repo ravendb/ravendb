@@ -101,7 +101,7 @@ public class RavenDB_20048 : RavenTestBase
                 session.SaveChanges();
             }
 
-            Thread.Sleep(10);
+            Thread.Sleep(1);
         }
     }
 

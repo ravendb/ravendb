@@ -26,12 +26,12 @@ public class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOperation<S
         TransactionOperationContext context,
         ShardedDatabaseRequestHandler requestHandler,
         Dictionary<int, ShardedQueryCommand> queryCommands,
-        IComparer<BlittableJsonReaderObject> sortingComparer,
+        [NotNull] IComparer<BlittableJsonReaderObject> sortingComparer,
         string expectedEtag)
         : base(queryCommands, context, requestHandler, expectedEtag)
     {
         _query = query ?? throw new ArgumentNullException(nameof(query));
-        _sortingComparer = sortingComparer ?? ConstantComparer.Instance;
+        _sortingComparer = sortingComparer ?? throw new ArgumentNullException(nameof(sortingComparer));
     }
 
     public bool FromStudio => HttpRequest.IsFromStudio();
