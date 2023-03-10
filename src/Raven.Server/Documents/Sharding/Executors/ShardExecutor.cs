@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Executors
         private Dictionary<int, RequestExecutor> _requestExecutors;
         private readonly int[] _fullRange;
 
-        private readonly DocumentConventions _conventions;
+        public readonly DocumentConventions Conventions;
 
         public ShardExecutor(ServerStore store, [NotNull] DatabaseRecord databaseRecord, [NotNull] string databaseName) : base(store)
         {
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Sharding.Executors
 
             _fullRange = databaseRecord.Sharding.Shards.Keys.ToArray();
 
-            _conventions = store.Sharding.DocumentConventionsForShard;
+            Conventions = store.Sharding.DocumentConventionsForShard;
 
             _requestExecutors = CreateExecutors();
         }
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Sharding.Executors
                     urls,
                     ShardHelper.ToShardName(_databaseName, shardNumber),
                     ServerStore.Server.Certificate.Certificate,
-                    _conventions);
+                    Conventions);
             }
 
             return requestExecutors;
