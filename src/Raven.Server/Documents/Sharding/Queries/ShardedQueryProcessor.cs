@@ -42,8 +42,7 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
     {
         using (var queryScope = scope?.For(nameof(QueryTimingsScope.Names.Query)))
         {
-            var isMapReduce = IsMapReduceIndex || IsAutoMapReduceQuery;
-            var documentsComparer = GetComparer(Query, isMapReduce, extractFromData: false);
+            var documentsComparer = GetComparer(Query);
             ShardedQueryOperation operation;
             ShardedReadResult<ShardedQueryResult> shardedReadResult;
 
