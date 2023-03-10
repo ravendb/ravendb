@@ -1,5 +1,6 @@
 ﻿import accessManager from "common/shell/accessManager";
 import database from "models/resources/database";
+import { DatabaseSharedInfo } from "components/models/databases";
 
 function canHandleOperation(requiredAccess: accessLevel, dbName: string = null) {
     return accessManager.canHandleOperation(requiredAccess, dbName);
@@ -21,7 +22,11 @@ function isClusterAdminOrClusterNode() {
     return accessManager.default.isClusterAdminOrClusterNode();
 }
 
-function isAdminAccessOrAbove(db: database) {
+function isSecuredServer() {
+    return accessManager.default.secureServer();
+}
+
+function isAdminAccessOrAbove(db: database | DatabaseSharedInfo) {
     return accessManager.default.adminAccessOrAboveForDatabase(db);
 }
 
@@ -29,6 +34,7 @@ export function useAccessManager() {
     return {
         canHandleOperation,
         canReadWriteDatabase,
+        isSecuredServer,
         canReadOnlyDatabase,
         isOperatorOrAbove,
         isClusterAdminOrClusterNode,

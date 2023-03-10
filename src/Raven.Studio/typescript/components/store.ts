@@ -4,12 +4,14 @@ import { statisticsSlice } from "components/pages/database/status/statistics/log
 import { BaseThunkAPI } from "@reduxjs/toolkit/dist/createAsyncThunk";
 import { databasesSlice } from "components/common/shell/databasesSlice";
 import { services } from "hooks/useServices";
+import { accessManagerSlice } from "components/common/shell/accessManagerSlice";
 
 export function createStoreConfiguration() {
     return configureStore({
         reducer: {
             statistics: statisticsSlice.reducer,
             databases: databasesSlice.reducer,
+            accessManager: accessManagerSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({

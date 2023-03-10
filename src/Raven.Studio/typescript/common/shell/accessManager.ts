@@ -1,5 +1,6 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 import database = require("models/resources/database");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class accessManager {
 
@@ -109,7 +110,7 @@ class accessManager {
         return null;
     }
     
-    adminAccessOrAboveForDatabase(db: database) {
+    adminAccessOrAboveForDatabase(db: database | DatabaseSharedInfo) {
         if (db) {
             const accessLevel = this.getEffectiveDatabaseAccessLevel(db.name);
             return accessLevel === "DatabaseAdmin";
