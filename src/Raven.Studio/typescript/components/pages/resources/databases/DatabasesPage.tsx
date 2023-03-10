@@ -11,7 +11,6 @@ import {
     compactDatabase,
     loadDatabaseDetails,
     openCreateDatabaseFromRestoreDialog,
-    selectActiveDatabase,
     selectAllDatabases,
 } from "components/common/shell/databasesSlice";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
@@ -37,7 +36,6 @@ interface DatabasesPageProps {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function DatabasesPage(props: DatabasesPageProps) {
-    const activeDatabase = useAppSelector(selectActiveDatabase);
     const databases = useAppSelector(selectAllDatabases);
 
     const dispatch = useAppDispatch();

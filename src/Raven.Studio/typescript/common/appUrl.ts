@@ -322,7 +322,7 @@ class appUrl {
         return '#databases/indexes/cleanup?' + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusStorageReport(db: database | string): string {
+    static forStatusStorageReport(db: database | string | DatabaseSharedInfo): string {
         return '#databases/status/storage/report?' + appUrl.getEncodedDbPart(db);
     }
 
@@ -559,7 +559,7 @@ class appUrl {
         return "#databases/tasks/import/migrate?" + databasePart;
     }
 
-    static forBackups(db: database): string {
+    static forBackups(db: database | DatabaseSharedInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/backups?" + databasePart;
     }

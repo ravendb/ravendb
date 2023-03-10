@@ -101,3 +101,86 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
         </Row>
     );
 }
+
+/* TODO
+
+MODEL:
+ filters = {
+        searchText: ko.observable<string>(),
+        requestedState: ko.observable<filterState>('all')
+    };
+     const filters = this.filters;
+
+        filters.searchText.throttle(200).subscribe(() => this.filterDatabases());
+        filters.requestedState.subscribe(() => this.filterDatabases());
+
+        
+        this.databasesByState = ko.pureComputed(() => {
+            const databases = this.databases().sortedDatabases();
+            
+            const result: Record<databaseState, number> = {
+                errored: 0,
+                disabled: 0,
+                offline: 0,
+                online: 0,
+                remote: 0
+            };
+
+            for (const database of databases) {
+                if (database.hasLoadError()) {
+                    result.errored++;
+                //TODO } else if (!this.isLocalDatabase(database.name)) {
+                //TODO:     result.remote++;
+                } else if (database.disabled()) {
+                    result.disabled++;
+                } else if (database.online()) {
+                    result.online++;
+                } else {
+                    result.offline++;
+                }
+            }
+            
+            return result;
+        });
+
+private filterDatabases(): void {
+    /* TODO
+    const filters = this.filters;
+    let searchText = filters.searchText();
+    const hasSearchText = !!searchText;
+
+    if (hasSearchText) {
+        searchText = searchText.toLowerCase();
+    }
+
+    const matchesFilters = (db: databaseInfo): boolean => {
+        const state = filters.requestedState();
+        const nodeTag = this.clusterManager.localNodeTag();
+        
+        const matchesOnline = state === 'online' && db.online();
+        const matchesDisabled = state === 'disabled' && db.disabled();
+        const matchesErrored = state === 'errored' && db.hasLoadError();
+        const matchesOffline = state === 'offline' && (!db.online() && !db.disabled() && !db.hasLoadError() && db.isLocal(nodeTag));
+        
+        const matchesLocal = state === 'local' && db.isLocal(nodeTag);
+        const matchesRemote = state === 'remote' && !db.isLocal(nodeTag);
+        const matchesAll = state === 'all';
+        
+        const matchesText = !hasSearchText || db.name.toLowerCase().indexOf(searchText) >= 0;
+        
+        return matchesText &&
+            (matchesOnline || matchesDisabled || matchesErrored || matchesOffline || matchesLocal || matchesRemote || matchesAll);
+    };
+
+    const databases = this.databases();
+    databases.sortedDatabases().forEach(db => {
+        const matches = matchesFilters(db);
+        db.filteredOut(!matches);
+
+        if (!matches) {
+            this.selectedDatabases.remove(db.name);
+        }
+    });
+     
+}
+ */
