@@ -453,7 +453,7 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     var configuration = new FaultyInMemoryIndexConfiguration(_documentDatabase.Configuration.Indexing.StoragePath, _documentDatabase.Configuration);
-                    var fakeIndex = new FaultyInMemoryIndex(exception, indexName, configuration, definition);
+                    var fakeIndex = new FaultyInMemoryIndex(exception, indexName, configuration, definition, SearchEngineType.None);
                     _indexes.Add(fakeIndex);
                 }
             }
@@ -1620,10 +1620,10 @@ namespace Raven.Server.Documents.Indexes
         private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, bool startIndex, IndexDefinitionBase indexDefinition)
         {
             Index index = null;
-
+            SearchEngineType searchEngineType = SearchEngineType.None;
             try
             {
-                index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId: false);
+                index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId: false, out searchEngineType);
 
                 var differences = IndexDefinitionCompareDifferences.None;
 
@@ -1684,8 +1684,8 @@ namespace Raven.Server.Documents.Indexes
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
                 var faultyIndex = (indexDefinition is AutoIndexDefinition)
-                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition((AutoIndexDefinition)indexDefinition, IndexDeploymentMode.Parallel))
-                    : new FaultyInMemoryIndex(e, name, configuration, (IndexDefinition)indexDefinition);
+                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition((AutoIndexDefinition)indexDefinition, IndexDeploymentMode.Parallel), searchEngineType)
+                    : new FaultyInMemoryIndex(e, name, configuration, (IndexDefinition)indexDefinition, searchEngineType);
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {faultyIndex.Name}";
 

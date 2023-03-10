@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         public DateTime CreatedAt { get; set; }
 
         public string Source { get; set; }
-
+        
         public int RevisionsToKeep { get; set; }
 
         public PutIndexesCommand()

@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raven.Server.Dashboard;
+using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.NotificationCenter;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -36,7 +37,7 @@ namespace Raven.Server.Utils.Cpu
     
     internal abstract class CpuUsageCalculator<T> : ICpuUsageCalculator where T : ProcessInfo
     {
-        protected readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
+        protected readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineCpu>("Server");
         private readonly object _locker = new object();
 
         protected  CpuUsageStats LastCpuUsage;

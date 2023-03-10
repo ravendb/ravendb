@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -28,23 +29,29 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         private readonly DateTime _createdAt;
 
-        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, AutoIndexDefinitionBaseServerSide definition)
-            : this(e, configuration, new FaultyAutoIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, new IndexField[0], definition))
+        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, AutoIndexDefinitionBaseServerSide definition, SearchEngineType searchEngineType)
+            : this(e, configuration, new FaultyAutoIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, new IndexField[0], definition), searchEngineType)
         {
         }
 
-        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, IndexDefinition definition)
-            : this(e, configuration, new FaultyIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, new IndexField[0], definition))
+        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, IndexDefinition definition, SearchEngineType searchEngineType)
+            : this(e, configuration, new FaultyIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, new IndexField[0], definition), searchEngineType)
         {
+            if (searchEngineType is SearchEngineType.None && definition.Configuration.TryGetValue(RavenConfiguration.GetKey(i => i.Indexing.StaticIndexingEngineType), out var configKey))
+            {
+                if (Enum.TryParse(configKey, out Client.Documents.Indexes.SearchEngineType searchEngineKey))
+                    SearchEngineType = searchEngineKey;
+            }
         }
 
-        private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinitionBaseServerSide definition)
+        private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinitionBaseServerSide definition, SearchEngineType searchEngineType)
             : base(IndexType.Faulty, IndexSourceType.None, definition)
         {
             _e = e;
             _createdAt = DateTime.UtcNow;
             State = IndexState.Error;
             Configuration = configuration;
+            SearchEngineType = searchEngineType;
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
@@ -114,7 +121,8 @@ namespace Raven.Server.Documents.Indexes.Errors
             return new IndexStats
             {
                 Name = Name,
-                Type = Type
+                Type = Type,
+                SearchEngineType = SearchEngineType
             };
         }
 

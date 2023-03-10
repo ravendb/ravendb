@@ -367,11 +367,11 @@ namespace Raven.Server.Documents.Indexes
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId)
+        public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId, out SearchEngineType searchEngineType)
         {
             var logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
-
             StorageEnvironment environment = null;
+            searchEngineType = SearchEngineType.None;
 
             var name = new DirectoryInfo(path).Name;
             var indexPath = path;
@@ -395,6 +395,15 @@ namespace Raven.Server.Documents.Indexes
                 {
                     type = IndexStorage.ReadIndexType(name, environment);
                     sourceType = IndexStorage.ReadIndexSourceType(name, environment);
+                    try
+                    {
+                        searchEngineType = IndexStorage.ReadSearchEngineType(name, environment);
+                    }
+                    catch
+                    {
+                        // Since we only want to present the index search engine to the user when it's possible, we can simply ignore it when it's not possible
+                        // (for instance, if the index dates back to the pre-Corax era).
+                    }
                 }
                 catch (Exception e)
                 {
