@@ -42,17 +42,8 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
     {
         using (var queryScope = scope?.For(nameof(QueryTimingsScope.Names.Query)))
         {
-            DocumentsComparer documentsComparer = null;
-
-            if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery) == false && (Query.Limit is null || Query.Limit > 0))
-            {
-                // sorting only if:
-                // 1. we have fields to sort
-                // 2. it isn't a map-reduce index/query (the sorting will be done after the re-reduce)
-                // 3. this isn't Count() query - Limit is 0 then
-                documentsComparer = new DocumentsComparer(Query.Metadata, IsMapReduceIndex || IsAutoMapReduceQuery);
-            }
-
+            var isMapReduce = IsMapReduceIndex || IsAutoMapReduceQuery;
+            var documentsComparer = GetComparer(Query, isMapReduce, extractFromData: false);
             ShardedQueryOperation operation;
             ShardedReadResult<ShardedQueryResult> shardedReadResult;
 

@@ -28,9 +28,7 @@ public class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<Shard
 
     public override async Task<ShardedIndexEntriesQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
     {
-        DocumentsComparer documentsComparer = null;
-        if (Query.Metadata.OrderBy?.Length > 0)
-            documentsComparer = new DocumentsComparer(Query.Metadata, extractFromData: true);
+        var documentsComparer = GetComparer(Query, isMapReduce: false, extractFromData: true);
 
         var commands = GetOperationCommands(scope: null);
 

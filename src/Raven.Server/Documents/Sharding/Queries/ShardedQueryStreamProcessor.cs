@@ -50,9 +50,7 @@ namespace Raven.Server.Documents.Sharding.Queries
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
 
-            IComparer<BlittableJsonReaderObject> comparer = Query.Metadata.OrderBy?.Length > 0
-                ? new DocumentsComparer(Query.Metadata, extractFromData: false)
-                : DocumentLastModifiedComparer.Instance;
+            var documentsComparer = GetComparer(Query, isMapReduce: false, extractFromData: false);
 
             var commands = GetOperationCommands(null);
 
@@ -60,7 +58,7 @@ namespace Raven.Server.Documents.Sharding.Queries
             {
                 IDisposable returnToContextPool = RequestHandler.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
                 return (ctx, returnToContextPool);
-            }, comparer, commands, skip: Query.Offset ?? 0, take: Query.Limit ?? int.MaxValue, Token);
+            }, documentsComparer, commands, skip: Query.Offset ?? 0, take: Query.Limit ?? int.MaxValue, Token);
 
             var shards = GetShardNumbers(commands);
 

@@ -14,6 +14,11 @@ namespace Raven.Client.Extensions
             return metadata;
         }
 
+        public static bool TryGetMetadata(this BlittableJsonReaderObject document, out BlittableJsonReaderObject metadata)
+        {
+            return document.TryGet(Constants.Documents.Metadata.Key, out metadata) && metadata != null;
+        }
+
         public static bool TryGetProjection(this BlittableJsonReaderObject metadata, out bool projection)
         {
             return metadata.TryGet(Constants.Documents.Metadata.Projection, out projection);
@@ -59,6 +64,11 @@ namespace Raven.Client.Extensions
                 InvalidMissingLastModified();
 
             return lastModified;
+        }
+
+        public static bool TryGetLastModified(this BlittableJsonReaderObject metadata, out DateTime lastModified)
+        {
+            return metadata.TryGet(Constants.Documents.Metadata.LastModified, out lastModified);
         }
 
         public static bool TryGetChangeVector(this BlittableJsonReaderObject metadata, out string changeVector)

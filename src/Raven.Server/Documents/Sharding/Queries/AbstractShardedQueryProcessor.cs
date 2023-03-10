@@ -16,6 +16,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Commands.Querying;
+using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
@@ -484,5 +485,19 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 await RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(autoIndexCreationRaftCommandIndex.Value, Token);
             }
         }
+    }
+
+    protected static IComparer<BlittableJsonReaderObject> GetComparer(IndexQueryServerSide query, bool isMapReduce, bool extractFromData)
+    {
+        if (isMapReduce) // map-reduce index/query (the sorting will be done after the re-reduce)
+            return ConstantComparer.Instance;
+
+        if (query.Limit == 0) // Count() query
+            return ConstantComparer.Instance;
+
+        if (query.Metadata.OrderBy?.Length > 0)
+            return new DocumentsComparer(query.Metadata, extractFromData);
+
+        return DocumentLastModifiedComparer.Instance;
     }
 }
