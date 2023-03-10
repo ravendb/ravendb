@@ -205,7 +205,25 @@ public abstract class AbstractExecutor : IDisposable
         }
     }
 
-    public abstract void Dispose();
+    public virtual void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
+
+    ~AbstractExecutor()
+    {
+        try
+        {
+            Dispose();
+        }
+        catch (Exception e)
+        {
+#if DEBUG
+            Console.WriteLine($"Finalizer of {GetType()} got an exception:{Environment.NewLine}" + e);
+#endif
+            // nothing we can do here
+        }
+    }
 }
 
 public interface IExecutionMode

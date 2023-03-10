@@ -91,6 +91,7 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
 
     public override void Dispose()
     {
+        base.Dispose();
         SafelyDisposeExecutors(_current.Values);
         _current.Clear();
     }

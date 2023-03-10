@@ -116,6 +116,10 @@ namespace Raven.Server.Documents.Sharding.Executors
             return requestExecutors;
         }
 
-        public override void Dispose() => SafelyDisposeExecutors(_requestExecutors.Values);
+        public override void Dispose()
+        {
+            base.Dispose();
+            SafelyDisposeExecutors(_requestExecutors.Values);
+        }
     }
 }
