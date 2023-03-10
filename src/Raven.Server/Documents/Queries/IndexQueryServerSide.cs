@@ -99,7 +99,12 @@ namespace Raven.Server.Documents.Queries
         public bool DisableAutoIndexCreation;
 
         public bool IsStream;
+
         public string ClientQueryId;
+
+        [JsonDeserializationIgnore]
+        public BlittableJsonReaderObject SourceQueryJson { get; set; }
+
 
         private BlittableJsonReaderObject _asJson;
 
@@ -111,18 +116,33 @@ namespace Raven.Server.Documents.Queries
                 return _asJson;
             }
 
-            _asJson = context.ReadObject(new DynamicJsonValue
+            var djv = new DynamicJsonValue
             {
-                [nameof(Query)] = Query,
-                [nameof(Start)] = Start,
-                [nameof(PageSize)] = PageSize,
-                [nameof(QueryParameters)] = QueryParameters,
-                [nameof(WaitForNonStaleResults)] = WaitForNonStaleResults,
-                [nameof(WaitForNonStaleResultsTimeout)] = WaitForNonStaleResultsTimeout,
-                [nameof(SkipDuplicateChecking)] = SkipDuplicateChecking,
-                [nameof(ProjectionBehavior)] = ProjectionBehavior,
+                [nameof(Query)] = Query
+            };
 
-            }, "query");
+            if (QueryParameters != null)
+                djv[nameof(QueryParameters)] = QueryParameters;
+
+            if (Start > 0)
+                djv[nameof(Start)] = Start;
+
+            if (PageSize != int.MaxValue && PageSize != long.MaxValue)
+                djv[nameof(PageSize)] = PageSize;
+
+            if (WaitForNonStaleResults)
+                djv[nameof(WaitForNonStaleResults)] = WaitForNonStaleResults;
+
+            if (WaitForNonStaleResultsTimeout.HasValue)
+                djv[nameof(WaitForNonStaleResultsTimeout)] = WaitForNonStaleResultsTimeout;
+
+            if (SkipDuplicateChecking)
+                djv[nameof(SkipDuplicateChecking)] = SkipDuplicateChecking;
+
+            if (ProjectionBehavior.HasValue)
+                djv[nameof(ProjectionBehavior)] = ProjectionBehavior;
+
+            _asJson = context.ReadObject(djv, "query");
 
             return _asJson;
         }
@@ -153,6 +173,8 @@ namespace Raven.Server.Documents.Queries
 
                 if (string.IsNullOrWhiteSpace(result.Query))
                     throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
+
+                result.SourceQueryJson = json;
 
                 if (cache.TryGetMetadata(result, addSpatialProperties, out var metadataHash, out var metadata))
                 {

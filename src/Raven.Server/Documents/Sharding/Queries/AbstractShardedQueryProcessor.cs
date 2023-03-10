@@ -31,7 +31,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 {
     const string LimitToken = "__raven_limit";
 
-    private Dictionary<int, string> _queryTemplates;
+    private Dictionary<int, BlittableJsonReaderObject> _queryTemplates;
     private Dictionary<int, TCommand> _commands;
     private readonly bool _indexEntriesOnly;
     private readonly bool _ignoreLimit;
@@ -136,8 +136,13 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         // - For collection queries that specify startsWith by id(), we need to send to all shards
         // - For collection queries without any where clause, we need to send to all shards
         // - For indexes, we sent to all shards
+        
+        BlittableJsonReaderObject queryTemplate;
 
-        using var queryTemplate = Query.ToJson(Context);
+        if (Query.SourceQueryJson is {Modifications: null} && Query.QueryParameters == null)
+            queryTemplate = Query.SourceQueryJson;
+        else
+            queryTemplate = Query.ToJson(Context);
 
         if (Query.Metadata.IsCollectionQuery && Query.Metadata.DeclaredFunctions is null or { Count: 0 })
         {
@@ -154,23 +159,20 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         if (_queryTemplates == null)
         {
-            using var rewrittenQuery = RewriteQueryIfNeeded(queryTemplate);
+            var rewrittenQuery = RewriteQueryIfNeeded(queryTemplate);
 
             _queryTemplates = new(RequestHandler.DatabaseContext.ShardCount);
 
-            // need to do this only once because the query is the same for all shards
-            var queryStr = rewrittenQuery.ToString();
-
             foreach (var shardNumber in RequestHandler.DatabaseContext.ShardsTopology.Keys)
             {
-                _queryTemplates.Add(shardNumber, queryStr);
+                _queryTemplates.Add(shardNumber, rewrittenQuery);
             }
         }
 
         return ValueTask.CompletedTask;
     }
 
-    private Dictionary<int, TCommand> CreateQueryCommands(Dictionary<int, string> preProcessedQueries, QueryTimingsScope scope)
+    private Dictionary<int, TCommand> CreateQueryCommands(Dictionary<int, BlittableJsonReaderObject> preProcessedQueries, QueryTimingsScope scope)
     {
         var commands = new Dictionary<int, TCommand>(preProcessedQueries.Count);
 
@@ -187,11 +189,12 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         return _commands ??= CreateQueryCommands(_queryTemplates, scope);
     }
 
-    protected abstract TCommand CreateCommand(int shardNumber, string query, QueryTimingsScope scope);
+    protected abstract TCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope);
 
-    protected ShardedQueryCommand CreateShardedQueryCommand(int shardNumber, string query, QueryTimingsScope scope)
+    protected ShardedQueryCommand CreateShardedQueryCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope)
     {
         return new ShardedQueryCommand(
+            RequestHandler.ShardExecutor.Conventions,
             query,
             Query,
             scope?.For($"Shard_{shardNumber}"),
@@ -336,7 +339,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         return Context.ReadObject(queryTemplate, "modified-query");
     }
 
-    private Dictionary<int, string> GenerateLoadByIdQueries(IEnumerable<Slice> ids)
+    private Dictionary<int, BlittableJsonReaderObject> GenerateLoadByIdQueries(IEnumerable<Slice> ids)
     {
         const string listParameterName = "p0";
 
@@ -402,7 +405,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             queryText += $" {selectClause}";
         }
 
-        Dictionary<int, string> queryTemplates = new();
+        Dictionary<int, BlittableJsonReaderObject> queryTemplates = new();
 
         var shards = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, ids);
 
@@ -419,7 +422,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 [nameof(IndexQuery.Query)] = queryText
             };
 
-            queryTemplates[shardId] = Context.ReadObject(q, "query").ToString();
+            queryTemplates[shardId] = Context.ReadObject(q, "query");
 
             IEnumerable<string> GetIds()
             {

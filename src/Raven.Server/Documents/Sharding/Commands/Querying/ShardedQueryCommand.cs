@@ -1,8 +1,11 @@
 using System;
 using System.Net.Http;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Timings;
@@ -10,12 +13,16 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Commands.Querying;
 
-public class ShardedQueryCommand : AbstractShardedQueryCommand<QueryResult, BlittableJsonReaderObject>
+public class ShardedQueryCommand : AbstractQueryCommand<QueryResult, BlittableJsonReaderObject>
 {
     private readonly IndexQueryServerSide _indexQuery;
+    private readonly DocumentConventions _conventions;
+    private readonly BlittableJsonReaderObject _query;
 
+    public readonly QueryTimingsScope Scope;
     public ShardedQueryCommand(
-        string query,
+        DocumentConventions conventions,
+        BlittableJsonReaderObject query,
         IndexQueryServerSide indexQuery,
         QueryTimingsScope scope,
         bool metadataOnly,
@@ -25,10 +32,20 @@ public class ShardedQueryCommand : AbstractShardedQueryCommand<QueryResult, Blit
         bool canReadFromCache,
         string raftUniqueRequestId,
         TimeSpan globalHttpClientTimeout)
-        : base(query, indexQuery, scope, metadataOnly, indexEntriesOnly, ignoreLimit, indexName, canReadFromCache, raftUniqueRequestId, globalHttpClientTimeout)
+        : base(indexQuery, true, metadataOnly, indexEntriesOnly, ignoreLimit, globalHttpClientTimeout)
     {
+        _conventions = conventions;
+        _query = query;
         _indexQuery = indexQuery;
+        Scope = scope;
+        IndexName = indexName;
+        CanReadFromCache = canReadFromCache;
+        RaftUniqueRequestId = raftUniqueRequestId;
     }
+
+    protected readonly string IndexName;
+
+    public string RaftUniqueRequestId { get; }
 
     internal BlittableJsonReaderObject RawResult { get; set; }
 
@@ -61,5 +78,22 @@ public class ShardedQueryCommand : AbstractShardedQueryCommand<QueryResult, Blit
 
             Scope?.WithBase(Result.Timings);
         }
+    }
+
+    protected override ulong GetQueryHash(JsonOperationContext ctx)
+    {
+        using (var hasher = new HashCalculator(ctx))
+        {
+            hasher.Write(_query);
+
+            return hasher.GetHash();
+        }
+    }
+
+    protected override HttpContent GetContent(JsonOperationContext ctx)
+    {
+        var queryToWrite = _query.CloneForConcurrentRead(ctx);
+
+        return new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, queryToWrite, CancellationToken), _conventions);
     }
 }
