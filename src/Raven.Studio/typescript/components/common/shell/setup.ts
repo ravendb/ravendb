@@ -10,7 +10,7 @@ function updateReduxStore() {
     globalDispatch(databasesLoaded(dtos));
 }
 
-const throttledUpdateReduxStore = _.throttle(() => updateReduxStore(), 400);
+const throttledUpdateReduxStore = _.throttle(() => updateReduxStore(), 200);
 
 export function initRedux() {
     if (initialized) {

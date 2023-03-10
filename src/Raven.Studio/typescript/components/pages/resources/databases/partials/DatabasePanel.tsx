@@ -49,6 +49,7 @@ import { locationAwareLoadableData } from "components/models/common";
 import { useAccessManager } from "hooks/useAccessManager";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import assertUnreachable from "components/utils/assertUnreachable";
+import { selectEffectiveDatabaseAccessLevel } from "components/common/shell/accessManagerSlice";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -193,9 +194,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
 
-    const dbAccess: databaseAccessLevel = null; // DatabaseAdmin, DatabaseReadWrite, DatabaseRead TODO  TODO
-
+    //TODO: review data-bind!
     //TODO: review action access for non-admin users!
+    //TODO: show commands errors!
+    //TODO: cleanance on toggle db state vs disable indexing (and can't reload db)s
+
+    const dbAccess: databaseAccessLevel = useAppSelector(selectEffectiveDatabaseAccessLevel(db.name));
 
     const { reportEvent } = useEventsCollector();
 
@@ -215,7 +219,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
         ? localManageGroupUrl
         : appUrl.toExternalDatabaseUrl(db, localManageGroupUrl);
 
-    const { isOperatorOrAbove } = useAccessManager();
+    const { isOperatorOrAbove, isSecuredServer, isAdminAccessOrAbove } = useAccessManager();
 
     const canNavigateToDatabase = !db.disabled;
 
@@ -349,7 +353,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     </span>
                                 )}
                             </RichPanelName>
-                            <div className="text-muted">{dbAccess && <AccessIcon dbAccess={dbAccess} />}</div>
+                            <div className="text-muted">
+                                {dbAccess && isSecuredServer() && <AccessIcon dbAccess={dbAccess} />}
+                            </div>
                         </RichPanelInfo>
 
                         <RichPanelActions>
@@ -418,30 +424,36 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             </button>*/}
 
                             <UncontrolledDropdown>
-                                <ButtonGroup data-bind="visible: $root.accessManager.canDelete">
-                                    <Button
-                                        onClick={() => onDelete()}
-                                        title={
-                                            db.lockMode === "Unlock"
-                                                ? "Remove database"
-                                                : "Database cannot be deleted because of the set lock mode"
-                                        }
-                                        color={db.lockMode === "Unlock" && "danger"}
-                                        disabled={db.lockMode !== "Unlock"}
-                                        data-bind=" disable: isBeingDeleted() || lockMode() !== 'Unlock', 
+                                {isOperatorOrAbove() && (
+                                    <ButtonGroup>
+                                        <Button
+                                            onClick={() => onDelete()}
+                                            title={
+                                                db.lockMode === "Unlock"
+                                                    ? "Remove database"
+                                                    : "Database cannot be deleted because of the set lock mode"
+                                            }
+                                            color={db.lockMode === "Unlock" && "danger"}
+                                            disabled={db.lockMode !== "Unlock"}
+                                            data-bind=" disable: isBeingDeleted() || lockMode() !== 'Unlock', 
                                         css: { 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) }"
-                                    >
-                                        {lockChanges && <Spinner size="sm" />}
-                                        {!lockChanges && db.lockMode === "Unlock" && <i className="icon-trash" />}
-                                        {!lockChanges && db.lockMode === "PreventDeletesIgnore" && (
-                                            <i className="icon-trash-cutout icon-addon-cancel" />
-                                        )}
-                                        {!lockChanges && db.lockMode === "PreventDeletesError" && (
-                                            <i className="icon-trash-cutout icon-addon-exclamation" />
-                                        )}
-                                    </Button>
-                                    <DropdownToggle caret color={db.lockMode === "Unlock" && "danger"}></DropdownToggle>
-                                </ButtonGroup>
+                                        >
+                                            {lockChanges && <Spinner size="sm" />}
+                                            {!lockChanges && db.lockMode === "Unlock" && <i className="icon-trash" />}
+                                            {!lockChanges && db.lockMode === "PreventDeletesIgnore" && (
+                                                <i className="icon-trash-cutout icon-addon-cancel" />
+                                            )}
+                                            {!lockChanges && db.lockMode === "PreventDeletesError" && (
+                                                <i className="icon-trash-cutout icon-addon-exclamation" />
+                                            )}
+                                        </Button>
+                                        <DropdownToggle
+                                            caret
+                                            color={db.lockMode === "Unlock" && "danger"}
+                                        ></DropdownToggle>
+                                    </ButtonGroup>
+                                )}
+
                                 <DropdownMenu>
                                     <DropdownItem
                                         onClick={() => onChangeLockMode("Unlock")}

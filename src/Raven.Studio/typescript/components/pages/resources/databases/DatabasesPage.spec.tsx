@@ -27,8 +27,10 @@ describe("DatabasesPage", function () {
 
         await screen.findByText(/Manage group/i);
 
-        await fireClick(await screen.findByTitle(/Toggle distribution/i));
+        await screen.findByText("6 Indexing errors");
         await screen.findByText(/Database has load errors/i);
+
+        await fireClick(await screen.findByTitle(/Toggle distribution/i));
     });
 
     it("can render sharded view", async () => {
