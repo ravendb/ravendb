@@ -8,14 +8,14 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Sharding.Queries;
+namespace Raven.Server.Documents.Sharding.Comparers;
 
-public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
+public class DocumentsComparer : IComparer<BlittableJsonReaderObject>
 {
     private readonly QueryMetadata _metadata;
     private readonly bool _extractFromData;
 
-    public ShardedDocumentsComparer(QueryMetadata metadata, bool extractFromData)
+    public DocumentsComparer(QueryMetadata metadata, bool extractFromData)
     {
         _metadata = metadata;
         _extractFromData = extractFromData;

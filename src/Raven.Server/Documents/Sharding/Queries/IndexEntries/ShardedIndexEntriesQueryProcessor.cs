@@ -5,6 +5,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Commands.Querying;
+using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations.Queries;
 using Raven.Server.ServerWide.Context;
@@ -27,9 +28,9 @@ public class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<Shard
 
     public override async Task<ShardedIndexEntriesQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
     {
-        ShardedDocumentsComparer documentsComparer = null;
+        DocumentsComparer documentsComparer = null;
         if (Query.Metadata.OrderBy?.Length > 0)
-            documentsComparer = new ShardedDocumentsComparer(Query.Metadata, extractFromData: true);
+            documentsComparer = new DocumentsComparer(Query.Metadata, extractFromData: true);
 
         var commands = GetOperationCommands(scope: null);
 

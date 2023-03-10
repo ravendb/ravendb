@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -9,6 +8,7 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Commands.Streaming;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Streaming;
 using Raven.Server.ServerWide.Context;
@@ -51,8 +51,8 @@ namespace Raven.Server.Documents.Sharding.Queries
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
 
             IComparer<BlittableJsonReaderObject> comparer = Query.Metadata.OrderBy?.Length > 0
-                ? new ShardedDocumentsComparer(Query.Metadata, extractFromData: false)
-                : new ShardedStreamingHandlerProcessorForGetStreamQuery.DocumentBlittableLastModifiedComparer();
+                ? new DocumentsComparer(Query.Metadata, extractFromData: false)
+                : DocumentLastModifiedComparer.Instance;
 
             var commands = GetOperationCommands(null);
 

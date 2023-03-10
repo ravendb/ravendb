@@ -4,6 +4,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Commands.Querying;
+using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -82,7 +83,7 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
                 if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery))
                 {
                     // apply ordering after the re-reduce of a map-reduce index
-                    result.Results.Sort(new ShardedDocumentsComparer(Query.Metadata, extractFromData: true));
+                    result.Results.Sort(new DocumentsComparer(Query.Metadata, extractFromData: true));
                 }
             }
         }
