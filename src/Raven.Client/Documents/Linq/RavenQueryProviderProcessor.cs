@@ -3928,8 +3928,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var i = 0;
             foreach (var fieldToFetch in FieldsToFetch)
             {
-                fields[i] = fieldToFetch.Name;
-                projections[i] = fieldToFetch.Alias ?? fieldToFetch.Name;
+                var fieldName = fieldToFetch.Name;
+                var fieldAlias = fieldToFetch.Alias;
+
+                if (_isProjectInto)
+                {
+                    HandleKeywordsIfNeeded(ref fieldName, ref fieldAlias);
+                }
+                
+                fields[i] = fieldName;
+                projections[i] = fieldAlias ?? fieldName;
 
                 i++;
             }
