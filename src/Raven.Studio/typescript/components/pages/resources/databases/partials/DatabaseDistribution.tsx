@@ -1,22 +1,27 @@
 ﻿import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import React, { useRef } from "react";
-import { DatabaseSharedInfo } from "components/models/databases";
+import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
 import { selectDatabaseState } from "components/common/shell/databasesSlice";
 import genUtils from "common/generalUtils";
-import { UncontrolledTooltip } from "reactstrap";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
+import { UncontrolledTooltip } from "reactstrap";
 
 interface DatabaseDistributionProps {
     db: DatabaseSharedInfo;
 }
 
+function formatUptime(uptime: string) {
+    if (uptime) {
+        return genUtils.timeSpanAsAgo(uptime, false);
+    }
+    return "Offline";
+}
+
 export function DatabaseDistribution(props: DatabaseDistributionProps) {
     const { db } = props;
     const sharded = db.sharded;
-
-    //TODO: expose other props and load error?
 
     const dbState = useAppSelector(selectDatabaseState(db.name));
 
@@ -44,6 +49,12 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                 <div>
                     <i className="icon-info" /> Performance Hints
                 </div>
+                <div>
+                    <i className="icon-storage" /> Size on disk
+                </div>
+                <div>
+                    <i className="icon-recent" /> Uptime
+                </div>
             </DistributionLegend>
 
             {dbState.map((localState) => {
@@ -57,6 +68,8 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                         )}
                     </div>
                 );
+
+                const uptime = localState.data ? formatUptime(localState.data.upTime) : "";
 
                 return (
                     <DistributionItem
@@ -80,10 +93,42 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                         <div className="entries">{localState.data?.indexingStatus}</div>
                         <div className="entries">{localState.data?.alerts}</div>
                         <div className="entries">{localState.data?.performanceHints}</div>
+                        <div className="entries">
+                            <SizeOnDisk info={localState.data} />
+                        </div>
+                        <div className="entries">{uptime}</div>
                     </DistributionItem>
                 );
             })}
         </LocationDistribution>
+    );
+}
+
+function SizeOnDisk(props: { info: DatabaseLocalInfo }) {
+    const { info } = props;
+
+    const divRef = useRef<HTMLDivElement>();
+
+    if (!info) {
+        return null;
+    }
+    const tempBufferSize = info.tempBuffersSize?.SizeInBytes ?? 0;
+    const totalSize = info.totalSize?.SizeInBytes ?? 0;
+    const grandTotalSize = tempBufferSize + totalSize;
+
+    return (
+        <div>
+            <div ref={divRef}>{genUtils.formatBytesToSize(grandTotalSize)}</div>
+            {divRef.current && (
+                <UncontrolledTooltip target={divRef.current}>
+                    Data: <strong>{genUtils.formatBytesToSize(totalSize)}</strong>
+                    <br />
+                    Temp: <strong>{genUtils.formatBytesToSize(tempBufferSize)}</strong>
+                    <br />
+                    Total: <strong>{genUtils.formatBytesToSize(grandTotalSize)}</strong>
+                </UncontrolledTooltip>
+            )}
+        </div>
     );
 }
 

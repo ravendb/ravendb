@@ -1,4 +1,6 @@
 ﻿import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
+import moment from "moment";
 
 export default class DatabaseUtils {
     static formatName(name: string) {
@@ -48,4 +50,28 @@ export default class DatabaseUtils {
             }));
         }
     }
+
+    static computeBackupStatus(backupInfo: BackupInfo): { color: string; text: string } {
+        if (!backupInfo || !backupInfo.LastBackup) {
+            return {
+                color: "danger",
+                text: "Never backed up",
+            };
+        }
+
+        const dateInUtc = moment.utc(backupInfo.LastBackup);
+        const diff = moment().utc().diff(dateInUtc);
+        const durationInSeconds = moment.duration(diff).asSeconds();
+
+        const backupDate = moment.utc(backupInfo.LastBackup).local().fromNow();
+
+        const text = `Backed up ${backupDate}`;
+
+        return {
+            text,
+            color: durationInSeconds > dayAsSeconds ? "warning" : "success",
+        };
+    }
 }
+
+const dayAsSeconds = 60 * 60 * 24;

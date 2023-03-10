@@ -1,4 +1,4 @@
-﻿import { DatabaseSharedInfo } from "components/models/databases";
+﻿import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import { RichPanelDetailItem, RichPanelDetails } from "components/common/RichPanel";
 import React from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -6,11 +6,23 @@ import { openNotificationCenterForDatabase, selectDatabaseState } from "componen
 import { sumBy } from "lodash";
 import genUtils from "common/generalUtils";
 import appUrl from "common/appUrl";
-import notificationCenter from "common/notifications/notificationCenter";
 import { withPreventDefault } from "components/utils/common";
+import DatabaseUtils from "components/utils/DatabaseUtils";
+import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
+}
+
+function findOldestBackup(localInfos: DatabaseLocalInfo[]): BackupInfo {
+    if (localInfos.some((x) => !x.backupInfo || !x.backupInfo.LastBackup)) {
+        return null;
+    }
+
+    const backupInfos = localInfos.map((x) => x.backupInfo);
+    backupInfos.sort((a, b) => a.LastBackup.localeCompare(b.LastBackup));
+
+    return backupInfos[0];
 }
 
 export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) {
@@ -48,8 +60,6 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     const hasAnyLoadError = dbState.some((x) => x.data?.loadError);
 
-    //TODO: global backup status
-
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
     const documentsUrl = db.currentNode.relevant
         ? localDocumentsUrl
@@ -65,7 +75,18 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         ? localIndexingListUrl
         : appUrl.toExternalDatabaseUrl(db, localIndexingListUrl);
 
+    const localStorageReportUrl = appUrl.forStatusStorageReport(db);
+    const storageReportUrl = db.currentNode.relevant
+        ? localStorageReportUrl
+        : appUrl.toExternalDatabaseUrl(db, localStorageReportUrl);
+
+    const localBackupUrl = appUrl.forBackups(db);
+    const backupUrl = db.currentNode.relevant ? localBackupUrl : appUrl.toExternalDatabaseUrl(db, localBackupUrl);
+
     const linksTarget = db.currentNode.relevant ? undefined : "_blank";
+
+    const backupInfo = findOldestBackup(nonEmptyDbState);
+    const backupStatus = DatabaseUtils.computeBackupStatus(backupInfo);
 
     return (
         <RichPanelDetails className="flex-wrap pb-1">
@@ -84,7 +105,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 </div>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
-                <i className="icon-drive me-1" /> {genUtils.formatBytesToSize(totalSize)}
+                <a href={storageReportUrl} target={linksTarget}>
+                    <i className="icon-drive me-1" /> {genUtils.formatBytesToSize(totalSize)}
+                </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <a href={documentsUrl} target={linksTarget}>
@@ -96,11 +119,12 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     <i className="icon-index me-1" /> {db.indexesCount}
                 </a>
             </RichPanelDetailItem>
-            {/* TODO
-            <RichPanelDetailItem title="Last backup" className="text-danger">
-                <i className="icon-backup me-1" /> TODO
+            <RichPanelDetailItem title="Click to navigate to Backups view" className="text-danger">
+                <a href={backupUrl} target={linksTarget}>
+                    <i className="icon-backup me-1" />{" "}
+                    <span className={"text-" + backupStatus.color}>{backupStatus.text}</span>
+                </a>
             </RichPanelDetailItem>
-            */}
 
             <div className="rich-panel-details-right">
                 {indexingErrors > 0 && (
@@ -160,46 +184,6 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     </RichPanelDetailItem>
                 )}
             </div>
-
-            {/* TODO <div data-bind="if: databaseAccessText">
-                            <div className="database-access" title="Database access level">
-                                <i data-bind="attr: { class: databaseAccessColor() + ' ' + databaseAccessClass() }"/>
-                                <small data-bind="text: databaseAccessText"/>
-                            </div>
-                        </div>
-                        <div className="storage">
-                            <small><i className="icon-drive"/></small>
-                            <a className="set-size" data-toggle="size-tooltip"
-                               data-bind="attr: { href: $root.storageReportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
-                                <small
-    data-bind="text: $root.formatBytes(totalSize() + totalTempBuffersSize())"/>
-                            </a>
-                        </div>
-                 
-                        <!--ko if: !uptime()-->
-                        <div className="uptime text-muted">
-                            <small><i className="icon-recent"/></small>
-                            <small>Offline</small>
-                        </div>
-                        <!--/ko-->
-                        <!--ko if: uptime()-->
-                        <div className="uptime">
-                            <small><i className="icon-recent"/></small>
-                            <span title="The database uptime">
-                        <small className="hidden-compact">Up for</small>
-                        <small data-bind="text: uptime()"/>
-                    </span>
-                        </div>
-                        <!--/ko-->
-                        <div className="backup">
-                            <div className="properties-value value-only">
-                                <a className="set-size" title="Click to navigate to Backups view"
-                                   data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, attr: { href: $root.backupsViewUrl($data), class: backupStatus() }">
-                                    <small><i className="icon-backup"/></small>
-                                    <small data-bind="text: lastBackupText"/>
-                                </a>
-                            </div>
-                        </div>*/}
         </RichPanelDetails>
     );
 }

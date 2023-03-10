@@ -193,7 +193,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
 
-    const dbAccess: string = null; // DatabaseAdmin, DatabaseReadWrite, DatabaseRead TODO
+    const dbAccess: databaseAccessLevel = null; // DatabaseAdmin, DatabaseReadWrite, DatabaseRead TODO  TODO
+
+    //TODO: review action access for non-admin users!
 
     const { reportEvent } = useEventsCollector();
 
@@ -408,51 +410,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             {/* TODO
                             <Button className="me-1">
                                 <i className="icon-refresh-stats" />
-                            </Button> */}
-
-                            {/* TODO <div className="btn-group">
-                                <button className="btn btn-default" data-bind="click: $root.toggleDatabase, visible: $root.accessManager.canDisableEnableDatabase,
-                                                                    css: { 'btn-spinner': inProgressAction },
-                                                                    disable: isBeingDeleted() || inProgressAction()">
-                                    <span data-bind="visible: inProgressAction(), text: inProgressAction()"/>
-                                    <i className="icon-database-cutout icon-addon-play2"
-    data-bind="visible: !inProgressAction() && disabled()"/>
-                                    <span data-bind="visible: !inProgressAction() && disabled()">Enable</span>
-                                    <i className="icon-database-cutout icon-addon-cancel"
-    data-bind="visible: !inProgressAction() && !disabled()"/>
-                                    <span data-bind="visible: !inProgressAction() && !disabled()">Disable</span>
-                                </button>
-                                <button type="button" className="btn btn-default dropdown-toggle" data-toggle="dropdown"
-                                        aria-haspopup="true" aria-expanded="false"
-                                        data-bind="disable: isBeingDeleted() || inProgressAction(), 
-                                                       visible: online() && $root.isAdminAccessByDbName($data.name)">
-                                </button>
-                                <ul className="dropdown-menu dropdown-menu-right">
-                                    <li data-bind="visible: online() && !indexingPaused() && !indexingDisabled()">
-                                        <a href="#" data-bind="click: $root.togglePauseDatabaseIndexing">
-                                            <i className="icon-pause"/> Pause indexing
-                                        </a>
-                                    </li>
-                                    <li data-bind="visible: indexingPaused()">
-                                        <a href="#" data-bind="click: $root.togglePauseDatabaseIndexing">
-                                            <i className="icon-play"/> Resume indexing
-                                        </a>
-                                    </li>
-                                    
-                                    <li className="divider"
-    data-bind="visible: $root.createIsLocalDatabaseObservable(name) &&  $root.accessManager.canCompactDatabase()"/>
-                                    <li data-bind="visible: $root.createIsLocalDatabaseObservable(name)() && $root.accessManager.canCompactDatabase()">
-                                        <a data-bind="visible: disabled" title="The database is disabled"
-                                           className="has-disable-reason disabled" data-placement="top">
-                                            <i className="icon-compact"/> Compact database
-                                        </a>
-                                        <a href="#" data-bind="click: $root.compactDatabase, visible: !disabled()">
-                                            <i className="icon-compact"/> Compact database
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>*/}
-                            {/* TODO <button className="btn btn-success"
+                            </Button> 
+                             <button className="btn btn-success"
                                     data-bind="click: _.partial($root.updateDatabaseInfo, name), enable: canNavigateToDatabase(), disable: isBeingDeleted"
                                     title="Refresh database statistics">
                                 <i className="icon-refresh-stats"/>
