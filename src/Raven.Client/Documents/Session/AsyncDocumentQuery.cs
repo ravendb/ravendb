@@ -569,6 +569,9 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(ProjectionBehavior projectionBehavior)
         {
+            if (IsProjectInto || FieldsToFetchToken is {Projections.Length: > 0})
+                QueryData.ThrowProjectionIsAlreadyDone();
+            
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(ReflectionUtil.BindingFlagsConstants.QueryingFields).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var fields = propertyInfos.Select(p => p.Name).ToArray();

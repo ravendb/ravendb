@@ -8,7 +8,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
-using Raven.Server.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +24,7 @@ public class RavenDB_19541 : RavenTestBase
         var exception = Assert.ThrowsAny<InvalidOperationException>(queryToString);
         Assert.True(exception.Message.Contains("Projection is already done. You should not project your result twice."));
     }
-    
+
     [Fact]
     public void CanProjectOnlyOneFieldAfterProjectInto() // Hits: ExpressionType.MemberAccess
     {
@@ -69,7 +68,7 @@ public class RavenDB_19541 : RavenTestBase
         using var store = GetDocumentStoreWithDocuments();
         using var session = OpenSessionAndGetProjectIntoQuery(store, out var projectIntoQuery);
         var selectAnonymous = projectIntoQuery.Select(into => into.Props["nested"]);
-        
+
         AssertResult(() => selectAnonymous.ToString());
     }
 
@@ -82,15 +81,12 @@ public class RavenDB_19541 : RavenTestBase
         {
             var projectIntoQuery = session.Advanced.DocumentQuery<FullData, CapsLockIndex>().WhereEquals(i => i.FirstName, "maciej").SelectFields<ProjectionInto>();
             Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, LastNameName, Age, FavoriteFood, Props", projectIntoQuery.ToString());
-            var dqProjectionIntoAnother = projectIntoQuery.SelectFields<MemberInitProjection>();
-            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", dqProjectionIntoAnother.ToString());
-            Assert.Equal("MACIEJ", dqProjectionIntoAnother.Single().FirstName);
-            Assert.Equal("Zylc", dqProjectionIntoAnother.Single().FavoriteFood);
+            AssertResult(() => projectIntoQuery.SelectFields<MemberInitProjection>());
         }
     }
-    
+
     [Fact]
-    public async Task AsyncDocumentQueryProjectionWithMultipleSelects()
+    public void AsyncDocumentQueryProjectionWithMultipleSelects()
     {
         using var store = GetDocumentStoreWithDocuments();
 
@@ -98,10 +94,7 @@ public class RavenDB_19541 : RavenTestBase
         {
             var projectIntoQuery = session.Advanced.AsyncDocumentQuery<FullData, CapsLockIndex>().WhereEquals(i => i.FirstName, "maciej").SelectFields<ProjectionInto>();
             Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, LastNameName, Age, FavoriteFood, Props", projectIntoQuery.ToString());
-            var dqProjectionIntoAnother = projectIntoQuery.SelectFields<MemberInitProjection>();
-            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", dqProjectionIntoAnother.ToString());
-            Assert.Equal("MACIEJ", (await dqProjectionIntoAnother.SingleAsync()).FirstName);
-            Assert.Equal("Zylc", (await dqProjectionIntoAnother.SingleAsync()).FavoriteFood);
+            AssertResult(() => projectIntoQuery.SelectFields<MemberInitProjection>());
         }
     }
 
@@ -111,7 +104,7 @@ public class RavenDB_19541 : RavenTestBase
         using var store = GetDocumentStoreWithDocuments();
         using var session = store.OpenSession();
 
-        var query = session.Query<FullData, CapsLockIndex>().Where(i => i.Age < 5).Select(i => new PersonData{FirstName = i.FirstName,LastName = i.LastName});
+        var query = session.Query<FullData, CapsLockIndex>().Where(i => i.Age < 5).Select(i => new PersonData {FirstName = i.FirstName, LastName = i.LastName});
         var single = query.ToList();
         Assert.Equal(1, single.Count);
         var singleCopy = query.ToList();
@@ -126,7 +119,7 @@ public class RavenDB_19541 : RavenTestBase
 
     private record class PersonData
     {
-        public string FirstName { get; set; } 
+        public string FirstName { get; set; }
         public string LastName { get; set; }
     };
 
@@ -159,13 +152,7 @@ public class RavenDB_19541 : RavenTestBase
         {
             Map = data => from i in data
                 let x = i.Props == null ? -1 : i.Props["nested"]
-                select new
-                {
-                    FirstName = i.FirstName.ToUpper(CultureInfo.InvariantCulture),
-                    Age = i.Age % 97,
-                    City = i.City.ToLowerInvariant(),
-                    Props_nested = x
-                };
+                select new {FirstName = i.FirstName.ToUpper(CultureInfo.InvariantCulture), Age = i.Age % 97, City = i.City.ToLowerInvariant(), Props_nested = x};
 
             Store(i => i.FirstName, FieldStorage.Yes);
             Store(i => i.Age, FieldStorage.Yes);
@@ -179,7 +166,7 @@ public class RavenDB_19541 : RavenTestBase
         public FullData()
         {
         }
-        
+
         public FullData(string firstName, string lastName, int age, string favoriteFood, string city, string street, Dictionary<string, int> props)
         {
             FirstName = firstName;
@@ -190,7 +177,7 @@ public class RavenDB_19541 : RavenTestBase
             Street = street;
             Props = props;
         }
-        
+
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public int Age { get; set; }
