@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
@@ -28,16 +29,17 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
     private readonly HashSet<int> _alreadySeenProjections;
     private HashSet<string> _timeSeriesFieldNames;
 
-    public ShardedQueryOperation(IndexQueryServerSide query,
+    public ShardedQueryOperation([NotNull] IndexQueryServerSide query,
         bool isProjectionFromMapReduceIndex,
         TransactionOperationContext context,
         ShardedDatabaseRequestHandler requestHandler,
         Dictionary<int, ShardedQueryCommand> queryCommands,
-        IComparer<BlittableJsonReaderObject> sortingComparer, string expectedEtag)
+        [NotNull] IComparer<BlittableJsonReaderObject> sortingComparer, 
+        string expectedEtag)
         : base(queryCommands, context, requestHandler, expectedEtag)
     {
-        _query = query;
-        _sortingComparer = sortingComparer ?? ConstantComparer.Instance;
+        _query = query ?? throw new ArgumentNullException(nameof(query));
+        _sortingComparer = sortingComparer ?? throw new ArgumentNullException(nameof(sortingComparer));
 
         if (query.Metadata.IsDistinct && isProjectionFromMapReduceIndex == false)
         {
