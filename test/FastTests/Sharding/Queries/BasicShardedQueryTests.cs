@@ -917,13 +917,20 @@ select project(o)")
                     var queryResult3 = session.Advanced.RawQuery<User>("from Users as u where id() = 'users/1' or id() = 'users/2' or id() = 'users/3' select { Age: u.Age, Name: u.Name }")
                         .ToList();
 
+                    // all users were saved in single batched, so it is hard to determine which one will be saved first
+                    // because we are saving them in parallel
+                    // and we are ordering by @last-modified by default
+                    queryResult3 = queryResult3
+                        .OrderBy(x => x.Age)
+                        .ToList();
+
                     Assert.Equal(3, queryResult3.Count);
-                    Assert.Equal(2, queryResult3[0].Age);
-                    Assert.Equal("Adam", queryResult3[0].Name);
+                    Assert.Equal(2, queryResult3[1].Age);
+                    Assert.Equal("Adam", queryResult3[1].Name);
                     Assert.Equal(3, queryResult3[2].Age);
                     Assert.Equal("Carlos", queryResult3[2].Name);
-                    Assert.Equal(1, queryResult3[1].Age);
-                    Assert.Equal("Grisha", queryResult3[1].Name);
+                    Assert.Equal(1, queryResult3[0].Age);
+                    Assert.Equal("Grisha", queryResult3[0].Name);
                 }
             }
         }

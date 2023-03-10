@@ -136,7 +136,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         // - For collection queries that specify startsWith by id(), we need to send to all shards
         // - For collection queries without any where clause, we need to send to all shards
         // - For indexes, we sent to all shards
-        
+
         using var queryTemplate = Query.ToJson(Context);
 
         if (Query.Metadata.IsCollectionQuery && Query.Metadata.DeclaredFunctions is null or { Count: 0 })
@@ -166,14 +166,14 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 _queryTemplates.Add(shardNumber, queryStr);
             }
         }
-        
+
         return ValueTask.CompletedTask;
     }
 
     private Dictionary<int, TCommand> CreateQueryCommands(Dictionary<int, string> preProcessedQueries, QueryTimingsScope scope)
     {
         var commands = new Dictionary<int, TCommand>(preProcessedQueries.Count);
-        
+
         foreach (var (shard, query) in preProcessedQueries)
         {
             commands.Add(shard, CreateCommand(shard, query, scope));
@@ -514,7 +514,15 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         if (queryType == QueryType.IndexEntries)
             return ConstantComparer.Instance;
 
-        return DocumentLastModifiedComparer.Instance;
+        if (query.Metadata.SelectFields is { Length: > 0 }) // projection
+        {
+            if (queryType == QueryType.Collection) // no stored fields
+                return DocumentLastModifiedComparer.Throwing;
+
+            return DocumentLastModifiedComparer.NotThrowing; // we can have stored fields here, if all of them come from stored, then we do not have @last-modified
+        }
+
+        return DocumentLastModifiedComparer.Throwing;
     }
 
     protected enum QueryType
