@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Intrinsics.X86;
 using Corax.Utils;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +13,7 @@ public class QuantizationTest : RavenTestBase
     public QuantizationTest(ITestOutputHelper output) : base(output)
     {
     }
-
+    
     [Fact]
     public void CanEncodeAndDecodeEveryNumberUnderShort()
     {
@@ -24,5 +26,24 @@ public class QuantizationTest : RavenTestBase
             var decoded = EntryIdEncodings.FrequencyReconstructionFromQuantization(quantized);
             Assert.False(decoded <= 0);
         }
+    }
+    
+    [Theory]
+    [InlineData(7)]
+    [InlineData(8)]
+    [InlineData(16)]
+    [InlineData(24)]
+    [InlineData(32)]
+    [InlineData(33)]
+    [InlineData(1)]
+
+    public void SimdInstructionCorrectlyIgnoresFrequency(int size)
+    {
+        var random = new Random(2337);
+        var ids = Enumerable.Range(0, size).Select(i => (long)random.Next(31_111, 59_999)).ToArray();
+        var idsWithShifted = ids.Select(i => i << 10).ToArray();
+        
+        EntryIdEncodings.DecodeAndDiscardFrequencySimd(idsWithShifted.AsSpan(), size);
+        Assert.Equal(ids, idsWithShifted);
     }
 }

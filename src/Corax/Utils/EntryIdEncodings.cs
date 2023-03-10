@@ -1,11 +1,10 @@
 using System;
-using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Sparrow.Binary;
-using Sparrow.Server.Binary;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace Corax.Utils;
 
@@ -24,6 +23,7 @@ public static class EntryIdEncodings
     private const long Mask = 0xFFL;
     private const byte ContainerTypeOffset = 2;
     private const long MaxEntryId = 1L << 54;
+    private static readonly ulong VectorLongSize = (ulong)Vector256<long>.Count;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static long Encode(long entryId, short count, TermIdMask containerType)
@@ -51,43 +51,64 @@ public static class EntryIdEncodings
         return (entryId >> EntryIdOffset);
     }
     
-    //todo perf
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static unsafe void Encode(Span<long> entries, Span<short> frequencies, bool usePtrVersion = false)
+    public static unsafe void Encode(Span<long> entries, Span<short> frequencies)
     {
-        Debug.Assert(frequencies.Length == entries.Length);
-
-        if (usePtrVersion == false)
-            goto Classic;
-
         for (int idX = 0; idX < entries.Length; ++idX)
         {
-            ref var entryId = ref Unsafe.Add(ref MemoryMarshal.GetReference(entries), idX);
+            ref var entryId = ref Unsafe.Add(ref MemoryMarshal.GetReference(entries), idX); 
             ref var frequency = ref Unsafe.Add(ref MemoryMarshal.GetReference(frequencies), idX);
-            entryId = entryId << EntryIdOffset | FrequencyQuantization(frequency) << ContainerTypeOffset;
-        }
-
-        return;
-
-        Classic:
-        for (int i = 0; i < entries.Length; ++i)
-        {
-            var ecd = FrequencyQuantization(frequencies[i]) << ContainerTypeOffset | entries[i] << EntryIdOffset;
-            entries[i] = ecd;
+            entryId = (entryId << EntryIdOffset) | (FrequencyQuantization(frequency) << ContainerTypeOffset);
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static long DecodeAndDiscardFrequency(long entryId) => entryId >> EntryIdOffset;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    public static unsafe void DecodeAndDiscardFrequencySimd(Span<long> entries, int read)
+    {
+        int idX = read - (read % Vector256<long>.Count);
+        if (read < Vector256<long>.Count)
+            goto Classic;
+
+        fixed (long* currentPtr = entries)
+        {
+            var currentIdx = currentPtr;
+            var endIdx = (currentIdx + idX);
+
+            for (; currentIdx < endIdx; currentIdx += VectorLongSize)
+            {
+                var innerBuffer = Avx.LoadVector256(currentIdx);
+                var shiftRightLogical = Avx2.ShiftRightLogical(innerBuffer, EntryIdOffset);
+                Avx.Store(currentIdx, shiftRightLogical);
+            }
+        }
+
+        Classic:
+        if (idX < read)
+            DecodeAndDiscardFrequencyClassic(entries.Slice(idX), read - idX);
+        
+    }
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void DecodeAndDiscardFrequency(Span<long> entries, int read)
+    internal static void DecodeAndDiscardFrequencyClassic(Span<long> entries, int read)
     {
         for (int i = 0; i < read; ++i)
         {
             entries[i] >>= EntryIdOffset;
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void DecodeAndDiscardFrequency(Span<long> entries, int read)
+    {
+        if (Avx2.IsSupported)
+            DecodeAndDiscardFrequencySimd(entries, read);
+        else
+            DecodeAndDiscardFrequencyClassic(entries, read);
+    }
+
 
     public static void Decode(Span<long> matches, Span<short> frequencies)
     {
@@ -110,23 +131,20 @@ public static class EntryIdEncodings
     private static readonly double[] LevelSizeInStep = StepSize.Select(i => i / 16D).ToArray();
 
     private static readonly short[] FrequencyTable = Enumerable.Range(0, byte.MaxValue).Select(i => FrequencyReconstructionFromQuantizationFromFunction(i)).ToArray();
-    
-    //todo perf
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static long FrequencyQuantization(short frequency)
     {
-        if (frequency < 16) //shortcut
+        if (frequency < 16)
             return frequency;
-
-        int level = 0;
-        for (level = 0; level < 16 && frequency >= Step[level]; ++level)
-        {
-        } // look up for range
         
+        var leadingZeros = Lzcnt.LeadingZeroCount((uint)frequency) ;
+        var level = (28 - leadingZeros + (leadingZeros & 0b1)) >> 1;
         var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
         Debug.Assert((long)mod < 16);
         return ((long)(level << 4)) | (long)mod;
     }
-
+    
     internal static short FrequencyReconstructionFromQuantization(long encoded) => FrequencyTable[encoded];
 
     
@@ -141,8 +159,10 @@ public static class EntryIdEncodings
     }
     
     //Posting list contains encoded ids only but in matches we deal with decoded.
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static long PrepareIdForPruneInPostingList(long entryId) => entryId << EntryIdEncodings.EntryIdOffset + 1;
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static long PrepareIdForSeekInPostingList(long entryId) => entryId << EntryIdEncodings.EntryIdOffset;
 
 }
