@@ -81,7 +81,8 @@ esac
 export VERSION=$RAVENDB_VERSION
 export PACKAGE_REVISION="${PACKAGE_REVISION:-0}"
 export PACKAGEVERSION="${VERSION}-${PACKAGE_REVISION}"
-export PACKAGEFILENAME="ravendb_${PACKAGEVERSION}_${DEB_ARCHITECTURE}.deb"
+export GENERATEDFILENAME="ravendb_${PACKAGEVERSION}_${DEB_ARCHITECTURE}.deb"
+export PACKAGEFILENAME="ravendb_${PACKAGEVERSION}_ubuntu.${DISTRO_VERSION}_${DEB_ARCHITECTURE}.deb"
 
 export DEBCHANGELOGDATE=$(date +"%a, %d %b %Y %H:%M:%S %z")
 export COPYRIGHT_YEAR=$(date +"%Y")
@@ -98,7 +99,7 @@ find /build -type f -exec chmod 644 {} +
 
 dpkg-buildpackage -us -uc -b 
 
-cp -v /build/*.deb $OUTPUT_DIR 
+cp -v "/build/$GENERATEDFILENAME" "$OUTPUT_DIR/$PACKAGEFILENAME"
 
 echo "Package contents:"
 dpkg -c "${OUTPUT_DIR}/${PACKAGEFILENAME}" | tee $OUTPUT_DIR/deb_contents.txt
