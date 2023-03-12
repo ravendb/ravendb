@@ -1,17 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Exceptions.Sharding;
+using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -478,6 +485,97 @@ namespace SlowTests.Sharding.BucketMigration
                         return true;
                     }
                 }, true, 30_000, 333));
+            }
+        }
+
+        [Fact]
+        public async Task DocumentsMigrationShouldWork()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                var shard = await Sharding.GetShardNumberFor(store, "users/1");
+                var wrongShard = (shard + 1) % 2;
+
+                var dbName = ShardHelper.ToShardName(store.Database, wrongShard);
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(dbName);
+                db.ForTestingPurposesOnly().EnableWritesToTheWrongShard = true;
+
+                using (var session = store.OpenSession(ShardHelper.ToShardName(store.Database, wrongShard)))
+                {
+                    session.Store(new User(), "users/2$users/1");
+                    session.Store(new User(), "users/3$users/1");
+                    session.SaveChanges();
+                }
+
+                await store.Maintenance.ForDatabase(dbName).SendAsync(new ShardedExecuteDocumentsMigrationOperation());
+
+                Assert.True(WaitForValue(() =>
+                {
+                    using (var session = store.OpenSession(ShardHelper.ToShardName(store.Database, wrongShard)))
+                    {
+                        var u1 = session.Load<User>("users/2$users/1");
+                        if (u1 != null)
+                            return false;
+
+                        var u2 = session.Load<User>("users/3$users/1");
+                        if (u2 != null)
+                            return false;
+
+                        return true;
+                    }
+                }, true, 30_000, 333));
+            }
+        }
+
+        [Fact]
+        public void DocumentsMigrationCommandShouldThrowForNotShardedInstance()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                Assert.Throws<NotSupportedInShardingException>(() =>
+                {
+                    store.Maintenance.Send(new ShardedExecuteDocumentsMigrationOperation());
+                });
+            }
+        }
+
+        [Fact]
+        public void DocumentsMigrationCommandShouldThrowForNotShardedDatabase()
+        {
+            using (var store = GetDocumentStore())
+            {
+                Assert.Throws<RavenException>(() =>
+                {
+                    store.Maintenance.Send(new ShardedExecuteDocumentsMigrationOperation());
+                });
+            }
+        }
+
+        internal class ShardedExecuteDocumentsMigrationOperation : IMaintenanceOperation
+        {
+            public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new ShardedExecuteDocumentsMigrationCommand();
+            }
+
+            internal class ShardedExecuteDocumentsMigrationCommand : RavenCommand
+            {
+                public override bool IsReadRequest => false;
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/admin/documentsMigrator/cleanup";
+
+                    var request = new HttpRequestMessage { Method = HttpMethod.Post };
+
+                    return request;
+                }
             }
         }
     }
