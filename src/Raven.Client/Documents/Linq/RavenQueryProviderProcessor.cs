@@ -2769,6 +2769,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     fieldToFetch.Alias = null;
                 }
             }
+            if (_declareBuilder != null)
+                AddReturnStatementToOutputFunction(body);
         }
 
         private void AddFromAliasOrRenameArgument(ref string arg)
@@ -3215,6 +3217,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     
                 }
             }
+            
+            if (expression is MemberExpression memberExpression)
+                AddJsProjection(memberExpression.Member.Name, memberExpression, sb, false);
 
             sb.Append(" }");
 
