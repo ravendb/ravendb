@@ -1,37 +1,36 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Background;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Background
 {
-    public class ShardedPeriodicDocumentsMigrator : BackgroundWorkBase
+    public class ShardedDocumentsMigrator : IDisposable
     {
         private readonly ShardedDocumentDatabase _database;
+        private readonly CancellationTokenSource _cts;
+        private readonly Logger _logger;
 
-        public ShardedPeriodicDocumentsMigrator(ShardedDocumentDatabase database) : base(database.ShardedDatabaseName, database.ShardedDocumentsStorage.DocumentDatabase.DatabaseShutdown)
+        public ShardedDocumentsMigrator(ShardedDocumentDatabase database)
         {
             _database = database;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(database.ShardedDocumentsStorage.DocumentDatabase.DatabaseShutdown);
+            _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
         }
 
-        protected override async Task DoWork()
+        internal async Task<bool> ExecuteMoveDocumentsAsync()
         {
-            await WaitOrThrowOperationCanceled(_database.Configuration.Sharding.PeriodicDocumentsMigrationInterval.AsTimeSpan);
+            _cts.Token.ThrowIfCancellationRequested();
 
             if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
-                return;
+                return false;
 
-            await ExecuteMoveDocumentsAsync();
-        }
-
-        internal async ValueTask ExecuteMoveDocumentsAsync()
-        {
+            bool found = false;
             try
             {
                 int bucket = -1;
                 int moveToShard = -1;
-                bool found = false;
                 using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -67,11 +66,16 @@ namespace Raven.Server.Documents.Sharding.Background
 
                 if (found)
                     await MoveDocumentsToShardAsync(bucket, moveToShard);
+
+                return found;
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to execute documents migration for '{_database.Name}'", e);
+                if (_cts.IsCancellationRequested)
+                    return found;
+
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to execute documents migration for '{_database.Name}'", e);
 
                 throw;
             }
@@ -84,6 +88,18 @@ namespace Raven.Server.Documents.Sharding.Background
 
             var result = await _database.ServerStore.SendToLeaderAsync(cmd);
             await _database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                _cts.Dispose();
+            }
+            catch (ObjectDisposedException) //precaution, shouldn't happen
+            {
+                //don't care, we are disposing...
+            }
         }
     }
 }

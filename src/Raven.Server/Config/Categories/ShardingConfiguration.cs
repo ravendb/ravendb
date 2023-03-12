@@ -34,11 +34,5 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Sharding.OrchestratorTimeoutInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting OrchestratorTimeout { get; set; }
-
-        [DefaultValue(10 * 60)]
-        [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Sharding.PeriodicDocumentsMigrationIntervalInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        [Description("Time (in seconds) between periodic documents migration.")]
-        public TimeSetting PeriodicDocumentsMigrationInterval { get; set; }
     }
 }
