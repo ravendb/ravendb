@@ -83,8 +83,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task PingTest()
         {
             var dest = GetStringQueryString("url", false) ?? GetStringQueryString("node", false);
+            var setStatusCodeOnError = GetBoolValueQueryString("setStatusCodeOnError", required: false) ?? false;
             var topology = ServerStore.GetClusterTopology();
             var tasks = new List<Task<PingResult>>();
+
             if (string.IsNullOrEmpty(dest))
             {
                 foreach (var node in topology.AllNodes)
@@ -111,6 +113,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var task = await Task.WhenAny(tasks);
                     tasks.Remove(task);
                     context.Write(writer, task.Result.ToJson());
+
+                    if (setStatusCodeOnError && task.Result.HasErrors)
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ExpectationFailed;
 
                     if (tasks.Count > 0)
                         writer.WriteComma();
@@ -144,6 +149,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public SetupAliveInfo SetupAlive;
             public TcpInfo TcpInfo;
             public List<string> Log;
+
+            public bool HasErrors => SetupAlive.Error != null || TcpInfo.Error != null;
 
             public PingResult()
             {
