@@ -46,10 +46,10 @@ public class ShardedDocumentDatabase : DocumentDatabase
         CompareExchangeStorage.Initialize(ShardedDatabaseName);
     }
 
-    protected override void InitializeAndStartPeriodicDocumentsMigrator()
+    protected override void InitializeAndStartDocumentsMigration()
     {
         DocumentsMigrator = new ShardedDocumentsMigrator(this);
-        DocumentsMigrator.ExecuteMoveDocumentsAsync().Wait();
+        Task.Run(DocumentsMigrator.ExecuteMoveDocumentsAsync);
     }
 
     protected override DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
@@ -139,9 +139,12 @@ public class ShardedDocumentDatabase : DocumentDatabase
                 }
 
                 // cleanup values
-                t = DeleteBucket(process.Bucket, process.MigrationIndex, process.LastSourceChangeVector);
+                t = DeleteBucketAsync(process.Bucket, process.MigrationIndex, process.LastSourceChangeVector);
 
-                DocumentsMigrator.ExecuteMoveDocumentsAsync().Wait();
+                t.ContinueWith(_ =>
+                {
+                    _ = DocumentsMigrator.ExecuteMoveDocumentsAsync();
+                });
             }
 
             if (t != null)
@@ -206,7 +209,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
         }
     }
 
-    public async Task DeleteBucket(int bucket, long migrationIndex, string uptoChangeVector)
+    public async Task DeleteBucketAsync(int bucket, long migrationIndex, string uptoChangeVector)
     {
         if (string.IsNullOrEmpty(uptoChangeVector))
         {

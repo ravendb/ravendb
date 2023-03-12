@@ -19,60 +19,69 @@ namespace Raven.Server.Documents.Sharding.Background
             _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
         }
 
-        internal async Task<bool> ExecuteMoveDocumentsAsync()
+        internal async Task ExecuteMoveDocumentsAsync()
         {
             _cts.Token.ThrowIfCancellationRequested();
 
-            if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
-                return false;
+            if (Monitor.TryEnter(this, 250) == false)
+                return;
 
-            bool found = false;
+            if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
+                return;
+
             try
             {
                 int bucket = -1;
                 int moveToShard = -1;
-                using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                bool found = false;
+
+                try
                 {
-                    var configuration = _database.ShardingConfiguration;
-                    for (var index = 0; index < configuration.BucketRanges.Count; index++)
+                    using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
                     {
-                        var range = configuration.BucketRanges[index];
-                        if (range.ShardNumber == _database.ShardNumber)
-                            continue;
-
-                        var start = range.BucketRangeStart;
-                        var end = index == configuration.BucketRanges.Count - 1
-                            ? int.MaxValue
-                            : configuration.BucketRanges[index + 1].BucketRangeStart - 1;
-
-                        var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
-
-                        foreach (var bucketStats in bucketStatistics)
+                        var configuration = _database.ShardingConfiguration;
+                        for (var index = 0; index < configuration.BucketRanges.Count; index++)
                         {
-                            if (bucketStats.NumberOfDocuments == 0)
+                            var range = configuration.BucketRanges[index];
+                            if (range.ShardNumber == _database.ShardNumber)
                                 continue;
 
-                            bucket = bucketStats.Bucket;
-                            moveToShard = range.ShardNumber;
-                            found = true;
-                            break;
-                        }
+                            var start = range.BucketRangeStart;
+                            var end = index == configuration.BucketRanges.Count - 1
+                                ? int.MaxValue
+                                : configuration.BucketRanges[index + 1].BucketRangeStart - 1;
 
-                        if (found)
-                            break;
+                            var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
+
+                            foreach (var bucketStats in bucketStatistics)
+                            {
+                                if (bucketStats.NumberOfDocuments == 0)
+                                    continue;
+
+                                bucket = bucketStats.Bucket;
+                                moveToShard = range.ShardNumber;
+                                found = true;
+                                break;
+                            }
+
+                            if (found)
+                                break;
+                        }
                     }
+                }
+                finally
+                {
+                    Monitor.Exit(this);
                 }
 
                 if (found)
                     await MoveDocumentsToShardAsync(bucket, moveToShard);
-
-                return found;
             }
             catch (Exception e)
             {
                 if (_cts.IsCancellationRequested)
-                    return found;
+                    return;
 
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"Failed to execute documents migration for '{_database.Name}'", e);
@@ -86,12 +95,12 @@ namespace Raven.Server.Documents.Sharding.Background
             var cmd = new StartBucketMigrationCommand(bucket, _database.ShardNumber, moveToShard, _database.ShardedDatabaseName,
                 $"{Guid.NewGuid()}/{bucket}");
 
-            var result = await _database.ServerStore.SendToLeaderAsync(cmd);
-            await _database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+            await _database.ServerStore.SendToLeaderAsync(cmd);
         }
 
         public void Dispose()
         {
+            Monitor.Enter(this);
             try
             {
                 _cts.Dispose();
@@ -99,6 +108,10 @@ namespace Raven.Server.Documents.Sharding.Background
             catch (ObjectDisposedException) //precaution, shouldn't happen
             {
                 //don't care, we are disposing...
+            }
+            finally
+            {
+                Monitor.Exit(this);
             }
         }
     }
