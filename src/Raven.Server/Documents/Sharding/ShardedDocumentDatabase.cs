@@ -29,7 +29,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public ShardedDocumentsStorage ShardedDocumentsStorage;
 
-    public ShardedPeriodicDocumentsMigrator PeriodicDocumentsMigrator { get; private set; }
+    public ShardedDocumentsMigrator DocumentsMigrator { get; private set; }
 
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
@@ -48,8 +48,8 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     protected override void InitializeAndStartPeriodicDocumentsMigrator()
     {
-        PeriodicDocumentsMigrator = new ShardedPeriodicDocumentsMigrator(this);
-        PeriodicDocumentsMigrator.Start();
+        DocumentsMigrator = new ShardedDocumentsMigrator(this);
+        DocumentsMigrator.ExecuteMoveDocumentsAsync().Wait();
     }
 
     protected override DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
@@ -140,7 +140,8 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
                 // cleanup values
                 t = DeleteBucket(process.Bucket, process.MigrationIndex, process.LastSourceChangeVector);
-                
+
+                DocumentsMigrator.ExecuteMoveDocumentsAsync().Wait();
             }
 
             if (t != null)
@@ -174,7 +175,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
         ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ShardedPeriodicDocumentsMigrator");
         exceptionAggregator.Execute(() =>
         {
-            PeriodicDocumentsMigrator?.Dispose();
+            DocumentsMigrator?.Dispose();
         });
         ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ShardedPeriodicDocumentsMigrator");
     }

@@ -26,14 +26,14 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.BucketMigration
 {
-    public class PeriodicDocumentsMigrationTests : ReplicationTestBase
+    public class DocumentsMigrationTests : ReplicationTestBase
     {
-        public PeriodicDocumentsMigrationTests(ITestOutputHelper output) : base(output)
+        public DocumentsMigrationTests(ITestOutputHelper output) : base(output)
         {
         }
 
         [Fact]
-        public async Task PeriodicDocumentsMigratorShouldWork_SimpleCase()
+        public async Task DocumentsMigratorShouldWork_SimpleCase()
         {
             using (var store = Sharding.GetDocumentStore())
             {
@@ -56,7 +56,7 @@ namespace SlowTests.Sharding.BucketMigration
                     session.SaveChanges();
                 }
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
+                await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -77,7 +77,7 @@ namespace SlowTests.Sharding.BucketMigration
         }
 
         [Fact]
-        public async Task PeriodicDocumentsMigratorShouldWork_MultipleWrongBuckets()
+        public async Task DocumentsMigratorShouldWork_MultipleWrongBuckets()
         {
             Server.ServerStore.Sharding.BlockPrefixedSharding = false;
             using var store = Sharding.GetDocumentStore(new Options
@@ -98,7 +98,6 @@ namespace SlowTests.Sharding.BucketMigration
                             Shards = new List<int> { 2 }
                         }
                     };
-                    record.Settings[RavenConfiguration.GetKey(x => x.Sharding.PeriodicDocumentsMigrationInterval)] = 1.ToString();
                 }
             });
 
@@ -131,7 +130,7 @@ namespace SlowTests.Sharding.BucketMigration
                 session.SaveChanges();
             }
 
-            await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
+            await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
             Assert.True(WaitForValue(() =>
             {
@@ -151,7 +150,7 @@ namespace SlowTests.Sharding.BucketMigration
         }
 
         [Fact]
-        public async Task PeriodicDocumentsMigratorShouldWork_ClusterCase()
+        public async Task DocumentsMigratorShouldWork_ClusterCase()
         {
             var dbName = GetDatabaseName();
             var (nodes, leader) = await CreateRaftCluster(3);
@@ -187,7 +186,7 @@ namespace SlowTests.Sharding.BucketMigration
                     session.SaveChanges();
                 }
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
+                await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -208,7 +207,7 @@ namespace SlowTests.Sharding.BucketMigration
         }
 
         [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
-        public async Task PeriodicDocumentsMigratorShouldWork_SubscriptionsCase()
+        public async Task DocumentsMigratorShouldWork_SubscriptionsCase()
         {
             using var store = Sharding.GetDocumentStore();
             using (var session = store.OpenSession())
@@ -229,7 +228,7 @@ namespace SlowTests.Sharding.BucketMigration
                 session.SaveChanges();
             }
 
-            await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
+            await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
             var id = await store.Subscriptions.CreateAsync<User>();
             var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -266,7 +265,7 @@ namespace SlowTests.Sharding.BucketMigration
         }
 
         [Fact]
-        public async Task PeriodicDocumentsMigratorShouldWork_ExternalReplicationShardedAndNonSharded()
+        public async Task DocumentsMigratorShouldWork_ExternalReplicationShardedAndNonSharded()
         {
             using (var source = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -296,7 +295,7 @@ namespace SlowTests.Sharding.BucketMigration
                     session.SaveChanges();
                 }
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
+                await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -317,7 +316,7 @@ namespace SlowTests.Sharding.BucketMigration
         }
 
         [Fact]
-        public async Task PeriodicDocumentsMigratorShouldWork_ExternalReplicationFromShardedToSharded()
+        public async Task DocumentsMigratorShouldWork_ExternalReplicationFromShardedToSharded()
         {
             using (var source = Sharding.GetDocumentStore())
             using (var dest = Sharding.GetDocumentStore())
@@ -347,7 +346,7 @@ namespace SlowTests.Sharding.BucketMigration
                     session.SaveChanges();
                 }
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
+                await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -368,7 +367,7 @@ namespace SlowTests.Sharding.BucketMigration
         }
 
         [Fact]
-        public async Task PeriodicDocumentsMigratorShouldWork_ExternalReplicationFromShardedToSharded2()
+        public async Task DocumentsMigratorShouldWork_ExternalReplicationFromShardedToSharded2()
         {
             using (var source = Sharding.GetDocumentStore())
             using (var dest = Sharding.GetDocumentStore())
@@ -398,7 +397,7 @@ namespace SlowTests.Sharding.BucketMigration
                 await SetupReplicationAsync(dest, source);
                 await EnsureReplicatingAsync(dest, source);
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
+                await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
@@ -419,7 +418,7 @@ namespace SlowTests.Sharding.BucketMigration
         }
 
         [Fact]
-        public async Task PeriodicDocumentsMigratorShouldWork_ExternalReplicationFromShardedToShardedWithConflict()
+        public async Task DocumentsMigratorShouldWork_ExternalReplicationFromShardedToShardedWithConflict()
         {
             using (var source = Sharding.GetDocumentStore())
             using (var dest = Sharding.GetDocumentStore())
@@ -470,7 +469,7 @@ namespace SlowTests.Sharding.BucketMigration
                 b1.Mend();
                 b2.Mend();
 
-                await db.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
+                await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
                 Assert.True(WaitForValue(() =>
                 {
