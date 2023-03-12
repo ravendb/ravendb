@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
-using Jint.Native.Global;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Lucene.Net.Store;
@@ -38,7 +36,6 @@ namespace Raven.Server.Documents.Patch
         private readonly ScriptRunner _runner;
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
         private readonly Engine _scriptEngine;
-        private static readonly Dictionary<object,object> EmptyMetadataDummy = new Dictionary<object, object>();
 
         public bool ReadOnly;
 
@@ -52,11 +49,7 @@ namespace Raven.Server.Documents.Patch
         {
             if (args.Length != 1 && args.Length != 2 || //length == 2 takes into account Query Arguments that can be added to args
                 !(args[0].AsObject() is BlittableObjectInstance boi))
-            {
-                if (args[0].AsObject() is GlobalObject) // Supposed to happen during the initialize of the script runner  - RavenDB-19466
-                    return JsValue.FromObject(_scriptEngine, EmptyMetadataDummy);
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
-            }
 
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
                 return JsValue.Null;
