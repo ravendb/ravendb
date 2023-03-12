@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     context.Write(writer, task.Result.ToJson());
 
                     if (setStatusCodeOnError && task.Result.HasErrors)
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ExpectationFailed;
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
                     if (tasks.Count > 0)
                         writer.WriteComma();
