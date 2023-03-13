@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -1107,6 +1108,7 @@ namespace Raven.Server.Documents.Replication
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var toDispose = new List<IDisposable>();
+                List<(string DocumentId, string ChangeVector, long ModifiedTicks)> pendingAttachmentsTombstoneUpdates = null;
 
                 try
                 {
@@ -1187,6 +1189,14 @@ namespace Raven.Server.Documents.Replication
                                 var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
                                 if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
                                     continue;
+
+                                // tombstone structure means doc-id | REC-SEP | ...
+                                var keySpan = attachmentTombstone.Key.AsReadOnlySpan();
+                                int endOfDocumentId = keySpan.IndexOf(SpecialChars.RecordSeparator);
+                                Debug.Assert(endOfDocumentId != -1);
+                                string documentId = Encoding.UTF8.GetString(keySpan[..endOfDocumentId]);// will throw if no separator found 
+                                pendingAttachmentsTombstoneUpdates ??= new();
+                                pendingAttachmentsTombstoneUpdates.Add((documentId, attachmentTombstone.ChangeVector, attachmentTombstone.LastModifiedTicks));
 
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
                                     rcvdChangeVector,
@@ -1428,6 +1438,30 @@ namespace Raven.Server.Documents.Replication
 
                             default:
                                 throw new ArgumentOutOfRangeException(item.GetType().ToString());
+                        }
+                    }
+
+                    if (pendingAttachmentsTombstoneUpdates != null)
+                    {
+                        foreach (var (docId, cv, modifiedTicks) in pendingAttachmentsTombstoneUpdates)
+                        {
+                            var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, DocumentFields.ChangeVector, throwOnConflict: false);
+                            
+                            // RavenDB-19421: if the document doesn't exist, the tombstone doesn't matter
+                            // and if the change vector is already merged, then it is already taken into consideration
+                            // we need to force an update when this is _not_ the case, because this replication batch gave us the tombstone only, without
+                            // the related document update, so we need to simulate that locally
+                            if (doc != null &&
+                                ChangeVectorUtils.GetConflictStatus(cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged) 
+                            {   
+                                // have to load the full document
+                                doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, fields: DocumentFields.All, throwOnConflict: false);
+                                long lastModifiedTicks = Math.Max(modifiedTicks, doc.LastModified.Ticks); // old versions may send with 0 in the tombstone ticks
+                                using var newVer = doc.Data.Clone(context);
+                                // now we save it again, and a side effect of that is syncing all the attachments
+                                context.DocumentDatabase.DocumentsStorage.Put(context, docId, null, newVer, lastModifiedTicks,
+                                    flags: doc.Flags);
+                            }
                         }
                     }
 
