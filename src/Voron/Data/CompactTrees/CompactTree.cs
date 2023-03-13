@@ -115,7 +115,7 @@ namespace Voron.Data.CompactTrees
             }
             public string DumpPageDebug(CompactTree tree)
             {
-                var dictionary = CompactTree.GetEncodingDictionary(tree._llt, Header->DictionaryId);
+                var dictionary = tree._llt.GetEncodingDictionary(Header->DictionaryId);
 
                 Span<byte> tempBuffer = stackalloc byte[2048];
 
@@ -680,8 +680,8 @@ namespace Voron.Data.CompactTrees
             var entries = new Span<ushort>(destinationPage.Pointer + PageHeader.SizeOf, destinationHeader->NumberOfEntries + sourceHeader->NumberOfEntries)
                                 .Slice(destinationHeader->NumberOfEntries);
 
-            var srcDictionary = GetEncodingDictionary(this._llt, sourceHeader->DictionaryId);
-            var destDictionary = GetEncodingDictionary(this._llt, destinationHeader->DictionaryId);
+            var srcDictionary = _llt.GetEncodingDictionary(sourceHeader->DictionaryId);
+            var destDictionary = _llt.GetEncodingDictionary(destinationHeader->DictionaryId);
             bool reEncode = sourceHeader->DictionaryId != destinationHeader->DictionaryId;
 
             int sourceMovedLength = 0;
@@ -1222,8 +1222,8 @@ namespace Voron.Data.CompactTrees
             // process, the page may not yet be marked as 'writable'.
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
-            var oldDictionary = CompactTree.GetEncodingDictionary(this._llt, state.Header->DictionaryId);
-            var newDictionary = CompactTree.GetEncodingDictionary(this._llt, _state.TreeDictionaryId);
+            var oldDictionary = _llt.GetEncodingDictionary(state.Header->DictionaryId);
+            var newDictionary = _llt.GetEncodingDictionary(_state.TreeDictionaryId);
 
             using var _ = _llt.Environment.GetTemporaryPage(_llt, out var tmp);
             Memory.Copy(tmp.TempPagePointer, state.Page.Pointer, Constants.Storage.PageSize);
@@ -1283,7 +1283,6 @@ namespace Voron.Data.CompactTrees
             Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
 
             state.Header->DictionaryId = newDictionary.PageNumber;
-            _llt._persistentDictionariesForCompactTrees.Add(newDictionary.PageNumber, newDictionary);
 
             return true;
 
@@ -1503,30 +1502,6 @@ namespace Voron.Data.CompactTrees
             state.Page = _llt.GetPage(nextPage);
 
             cstate._len++;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static PersistentDictionary GetEncodingDictionary(LowLevelTransaction llt, long dictionaryId)
-        {
-            PersistentDictionary GetEncodingDictionaryUnlikely()
-            {
-                llt._persistentDictionariesForCompactTrees ??= new WeakSmallSet<long, PersistentDictionary>(16);
-                if (llt._persistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
-                {
-                    llt._lastPersistentDictionaryForCompactTrees = dictionary;
-                    return dictionary;
-                }
-
-                dictionary = new PersistentDictionary(llt.GetPage(dictionaryId));
-                llt._persistentDictionariesForCompactTrees.Add(dictionaryId, dictionary);
-                return dictionary;
-            }
-
-            PersistentDictionary dictionary = llt._lastPersistentDictionaryForCompactTrees;
-            if (dictionary?.PageNumber == dictionaryId)
-                return dictionary;
-
-            return GetEncodingDictionaryUnlikely();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
