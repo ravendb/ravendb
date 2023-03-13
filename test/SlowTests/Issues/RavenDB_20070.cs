@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,7 +18,19 @@ public class RavenDB_20070 : RavenTestBase
     [Fact]
     public void Will_Throw_When_Deserializing_Blacklisted_Type()
     {
-        using (var store = GetDocumentStore())
+        var binder = new DefaultRavenSerializationBinder();
+        binder.RegisterForbiddenNamespace("MyNamespace");
+
+        using (var store = GetDocumentStore(new Options
+        {
+            ModifyDocumentStore = s =>
+            {
+                s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonDeserializer = deserializer => deserializer.SerializationBinder = binder
+                };
+            }
+        }))
         {
             using (var commands = store.Commands())
             {
@@ -38,6 +51,9 @@ public class RavenDB_20070 : RavenTestBase
                 Assert.Contains("blacklist", e.ToString());
             }
         }
+
+        var e2 = Assert.Throws<InvalidOperationException>(() => binder.RegisterForbiddenNamespace("MyNamespace2"));
+        Assert.Contains("binder was already used", e2.Message);
     }
 
     private class Entry

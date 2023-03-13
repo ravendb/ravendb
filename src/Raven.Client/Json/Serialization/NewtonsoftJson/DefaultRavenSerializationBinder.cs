@@ -1,18 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Serialization;
 
-namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+namespace Raven.Client.Json.Serialization.NewtonsoftJson;
 
-internal class DefaultRavenSerializationBinder : DefaultSerializationBinder
+public class DefaultRavenSerializationBinder : DefaultSerializationBinder
 {
     public static readonly DefaultRavenSerializationBinder Instance = new();
 
-    private static HashSet<Type> ForbiddenTypesCache = new();
+    private HashSet<Type> _forbiddenTypesCache = new();
 
-    private static HashSet<Type> SafeTypesCache = new();
+    private HashSet<Type> _safeTypesCache = new();
 
-    private static readonly HashSet<string> ForbiddenNamespaces = new() { "Microsoft.VisualStudio" };
+    private readonly HashSet<string> _forbiddenNamespaces = new() { "Microsoft.VisualStudio" };
+
+    private bool _used;
 
     /// <summary>
     /// https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html#known-net-rce-gadgets
@@ -31,12 +34,10 @@ internal class DefaultRavenSerializationBinder : DefaultSerializationBinder
         "System.Management.Automation.PSObject"
     };
 
-    private DefaultRavenSerializationBinder()
-    {
-    }
-
     public override Type BindToType(string assemblyName, string typeName)
     {
+        _used = true;
+
         var deserializedType = base.BindToType(assemblyName, typeName);
 
         AssertType(deserializedType);
@@ -46,35 +47,67 @@ internal class DefaultRavenSerializationBinder : DefaultSerializationBinder
 
     public override void BindToName(Type serializedType, out string assemblyName, out string typeName)
     {
+        _used = true;
+
         AssertType(serializedType);
 
         base.BindToName(serializedType, out assemblyName, out typeName);
     }
 
-    private static void AssertType(Type type)
+    public void RegisterForbiddenNamespace(string @namespace)
+    {
+        if (@namespace == null)
+            throw new ArgumentNullException(nameof(@namespace));
+
+        AssertNotUsed();
+
+        _forbiddenNamespaces.Add(@namespace);
+    }
+
+    public void RegisterForbiddenType(Type type)
+    {
+        AssertNotUsed();
+
+        UpdateCache(ref _forbiddenTypesCache, type);
+    }
+
+    public void RegisterSafeType(Type type)
+    {
+        AssertNotUsed();
+
+        UpdateCache(ref _safeTypesCache, type);
+    }
+
+    private void AssertType(Type type)
     {
         if (type == null)
             return;
 
-        if (SafeTypesCache.Contains(type))
+        if (_safeTypesCache.Contains(type))
             return;
 
-        if (ForbiddenTypesCache.Contains(type))
+        if (_forbiddenTypesCache.Contains(type))
             ThrowForbiddenType(type);
 
-        if (ForbiddenNamespaces.Contains(type.Namespace))
+        if (type.Namespace != null && _forbiddenNamespaces.Any(@namespace => @namespace.StartsWith(type.Namespace)))
         {
-            UpdateCache(ref ForbiddenTypesCache, type);
+            UpdateCache(ref _forbiddenTypesCache, type);
             ThrowForbiddenNamespace(type);
         }
 
         if (ForbiddenTypes.Contains(type.FullName))
         {
-            UpdateCache(ref ForbiddenTypesCache, type);
+            UpdateCache(ref _forbiddenTypesCache, type);
             ThrowForbiddenType(type);
         }
 
-        UpdateCache(ref SafeTypesCache, type);
+        UpdateCache(ref _safeTypesCache, type);
+    }
+
+    private void AssertNotUsed()
+    {
+        if (_used)
+            throw new InvalidOperationException("Cannot perform this operation, because binder was already used.");
     }
 
     private static void UpdateCache(ref HashSet<Type> cache, Type type)
