@@ -233,33 +233,31 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     private BlittableJsonReaderObject RewriteQueryIfNeeded(BlittableJsonReaderObject queryTemplate)
     {
-        var rewriteForPaging = Query.Offset is > 0;
-        var rewriteForProjectionFromMapReduceIndex = true;
-        var rewriteForProjectionFromAutoMapReduceQuery = true;
+        var queryChanges = QueryChanges.None;
+
+        if (Query.Offset is > 0)
+            queryChanges |= QueryChanges.RewriteForPaging;
 
         var query = Query.Metadata.Query;
         var isProjectionQuery = query.Select?.Count > 0 ||
                                 query.SelectFunctionBody.FunctionText != null;
 
-        var rewriteForFilterInMapReduce = false;
-        var rewriteForLimitWithOrderByInMapReduce = false;
-        var updateOrderByFieldsInMapReduce = false;
-
         HashSet<string> reduceKeys = null;
 
         if (IsMapReduceIndex || IsAutoMapReduceQuery)
         {
-            rewriteForFilterInMapReduce = query.Filter != null;
-
-            reduceKeys = GetGroupByFields();
+            if (query.Filter != null)
+                queryChanges |= QueryChanges.RewriteForFilterInMapReduce;
 
             if (query.Limit != null)
             {
+                reduceKeys = GetGroupByFields();
+
                 if (query.OrderBy == null)
                 {
                     // we have a limit but not an order by
                     // we need to add the reduce keys in order to get correct results
-                    updateOrderByFieldsInMapReduce = true;
+                    queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
                 }
                 else
                 {
@@ -271,30 +269,38 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                         if (reduceKeys.Contains(orderByField) == false)
                         {
                             // we found an order by field that isn't a reduce key, we must get all the results
-                            rewriteForLimitWithOrderByInMapReduce = true;
+                            queryChanges |= QueryChanges.RewriteForLimitWithOrderByInMapReduce;
                             break;
                         }
                     }
 
                     // we are missing some reduce keys
-                    updateOrderByFieldsInMapReduce = rewriteForLimitWithOrderByInMapReduce == false &&
-                                                     Query.Metadata.OrderByFieldNames.Count != reduceKeys.Count;
+                    if (queryChanges.HasFlag(QueryChanges.RewriteForLimitWithOrderByInMapReduce) == false &&
+                        Query.Metadata.OrderByFieldNames.Count != reduceKeys.Count)
+                    {
+                        queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
+                    }
                 }
             }
         }
 
+        queryChanges |= QueryChanges.RewriteForProjectionFromMapReduceIndex;
+        queryChanges |= QueryChanges.RewriteForProjectionFromAutoMapReduceQuery;
+
         if (isProjectionQuery == false)
         {
-            rewriteForProjectionFromMapReduceIndex = false;
-            rewriteForProjectionFromAutoMapReduceQuery = false;
+            queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
+            queryChanges &= ~QueryChanges.RewriteForProjectionFromAutoMapReduceQuery;
         }
         else
         {
             if (IsMapReduceIndex == false)
-                rewriteForProjectionFromMapReduceIndex = false;
+                queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
 
             if (IsAutoMapReduceQuery == false)
-                rewriteForProjectionFromAutoMapReduceQuery = false;
+            {
+                queryChanges &= ~QueryChanges.RewriteForProjectionFromAutoMapReduceQuery;
+            }
             else
             {
                 if (query.Select?.Count > 0)
@@ -311,24 +317,19 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                     }
 
                     if (hasAlias == false)
-                        rewriteForProjectionFromMapReduceIndex = false;
+                        queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
                 }
             }
         }
 
-        if (rewriteForPaging == false 
-            && rewriteForProjectionFromMapReduceIndex == false 
-            && rewriteForProjectionFromAutoMapReduceQuery == false
-            && rewriteForFilterInMapReduce == false
-            && rewriteForLimitWithOrderByInMapReduce == false
-            && updateOrderByFieldsInMapReduce == false)
+        if (queryChanges == QueryChanges.None)
             return queryTemplate;
 
         var clone = Query.Metadata.Query.ShallowCopy();
 
         DynamicJsonValue modifications = new(queryTemplate);
 
-        if (rewriteForFilterInMapReduce)
+        if (queryChanges.HasFlag(QueryChanges.RewriteForFilterInMapReduce))
         {
             clone.Filter = null;
             clone.FilterLimit = null;
@@ -336,7 +337,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             RemoveLimitAndOffset();
         }
 
-        if (rewriteForLimitWithOrderByInMapReduce)
+        if (queryChanges.HasFlag(QueryChanges.RewriteForLimitWithOrderByInMapReduce))
         {
             // we have a limit with order by
             clone.OrderBy = null;
@@ -344,7 +345,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             RemoveLimitAndOffset();
         }
 
-        if (updateOrderByFieldsInMapReduce)
+        if (queryChanges.HasFlag(QueryChanges.UpdateOrderByFieldsInMapReduce))
         {
             clone.OrderBy ??= new List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)>();
             OrderByFields = new List<OrderByField>();
@@ -369,7 +370,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             }
         }
 
-        if (rewriteForPaging)
+        if (queryChanges.HasFlag(QueryChanges.RewriteForPaging))
         {
             // For paging queries, we modify the limits on the query to include all the results from all
             // shards if there is an offset. But if there isn't an offset, we can just get the limit from
@@ -400,7 +401,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             modifications.Remove(nameof(IndexQueryServerSide.PageSize));
         }
 
-        if (rewriteForProjectionFromMapReduceIndex)
+        if (queryChanges.HasFlag(QueryChanges.RewriteForProjectionFromMapReduceIndex))
         {
             // If we have a projection in a map-reduce index,
             // the shards will send the query result and the orchestrator will re-reduce and apply the projection
@@ -416,7 +417,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             clone.SelectFunctionBody = default;
             clone.DeclaredFunctions = null;
         }
-        else if (rewriteForProjectionFromAutoMapReduceQuery)
+        else if (queryChanges.HasFlag(QueryChanges.RewriteForProjectionFromAutoMapReduceQuery))
         {
             var missingGroupByFieldsFromProjection = Query.Metadata.GroupBy.Select(x => x.Name.Value).ToHashSet();
             var groupByFieldsCount = missingGroupByFieldsFromProjection.Count;
@@ -472,8 +473,21 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             modifications.Remove(nameof(IndexQueryServerSide.Start));
             modifications.Remove(nameof(IndexQueryServerSide.PageSize));
 
-            rewriteForPaging = false;
+            queryChanges &= ~QueryChanges.RewriteForPaging;
         }
+    }
+
+    [Flags]
+    private enum QueryChanges
+    {
+        None = 0,
+
+        RewriteForPaging = 1 << 0,
+        RewriteForProjectionFromMapReduceIndex = 1 << 1,
+        RewriteForProjectionFromAutoMapReduceQuery = 1 << 2,
+        RewriteForFilterInMapReduce = 1 << 3,
+        RewriteForLimitWithOrderByInMapReduce = 1 << 4,
+        UpdateOrderByFieldsInMapReduce = 1 << 5
     }
 
     private HashSet<string> GetGroupByFields()
