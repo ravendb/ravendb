@@ -777,6 +777,8 @@
     }
 }
 
-.edit-raven-sql-task, .edit-raven-etl-task, .edit-elastic-search-task, .edit-kafka-etl-task, .edit-rabbitmq-etl-task {
-    z-index: @zindex-modal;
+.edit-ongoing-task {
+    &.test-mode {
+        z-index: @zindex-modal;
+    }
 }
