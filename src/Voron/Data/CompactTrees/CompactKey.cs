@@ -96,7 +96,7 @@ public unsafe class CompactKey : IDisposable
             _keyMappingCache[buckedIdx] = dictionaryId;
             _keyMappingCacheIndex[buckedIdx] = (int)(_currentPtr - _storage.Ptr);
 
-            var dictionary = CompactTree.GetEncodingDictionary(Owner.Llt, dictionaryId);
+            var dictionary = Owner.Llt.GetEncodingDictionary(dictionaryId);
             int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
 
             int currentSize = (int)(_currentEndPtr - _currentPtr);
@@ -161,7 +161,7 @@ public unsafe class CompactKey : IDisposable
 
         Debug.Assert(currentKeyIdx != Invalid);
 
-        var dictionary = CompactTree.GetEncodingDictionary(Owner.Llt, currentDictionary);
+        var dictionary = Owner.Llt.GetEncodingDictionary(currentDictionary);
 
         byte* encodedStartPtr = _storage.Ptr + currentKeyIdx;
         int encodedKeyLengthInBits = *(int*)encodedStartPtr;

@@ -108,7 +108,7 @@ unsafe partial class CompactTree
 
     private void VerifyNode(ref CursorState current)
     {
-        var dictionary = GetEncodingDictionary(this._llt, current.Header->DictionaryId);
+        var dictionary = _llt.GetEncodingDictionary(current.Header->DictionaryId);
         if (current.Header->NumberOfEntries == 0)
             return;
 

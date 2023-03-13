@@ -47,7 +47,7 @@ unsafe partial class CompactTree
 
         // We will try to improve the dictionary by scanning the whole tree over a maximum budget.    
         // We will do this by randomly selecting a page and then randomly selecting a key from that page.
-        var currentDictionary = GetEncodingDictionary(this._llt, _state.TreeDictionaryId);
+        var currentDictionary = this._llt.GetEncodingDictionary(_state.TreeDictionaryId);
         var newDictionary = PersistentDictionary.CreateIfBetter(_llt, trainer, tester, currentDictionary);
 
         // If the new dictionary is actually better, then update the current dictionary at the tree level.    

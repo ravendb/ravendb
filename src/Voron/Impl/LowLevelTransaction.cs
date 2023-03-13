@@ -37,9 +37,6 @@ namespace Voron.Impl
         private bool _disposeAllocator;
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
-        
-        internal WeakSmallSet<long, PersistentDictionary> _persistentDictionariesForCompactTrees;
-        internal PersistentDictionary _lastPersistentDictionaryForCompactTrees;
 
         public object ImmutableExternalState;
 
@@ -1491,6 +1488,16 @@ namespace Voron.Impl
             {
                 return _tx._pagerStates;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal PersistentDictionary GetEncodingDictionary(long dictionaryId)
+        {
+            var dictionaryLocator = _env.DictionaryLocator;
+            if (dictionaryLocator.TryGet(dictionaryId, out var dictionary))
+                return dictionary;
+
+            return _env.CreateEncodingDictionary(GetPage(dictionaryId));
         }
     }
 }
