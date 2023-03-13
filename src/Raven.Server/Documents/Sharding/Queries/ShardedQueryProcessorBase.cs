@@ -82,10 +82,11 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
             var merger = CreateMapReduceQueryResultsMerger(result);
             result.Results = merger.Merge();
 
-            if (Query.Metadata.OrderBy?.Length > 0)
+            var orderByFields = OrderByFields?.ToArray() ?? Query.Metadata.OrderBy;
+            if (orderByFields?.Length > 0)
             {
                 // apply ordering after the re-reduce of a map-reduce index
-                result.Results.Sort(new DocumentsComparer(Query.Metadata, extractFromData: true));
+                result.Results.Sort(new DocumentsComparer(orderByFields, extractFromData: true));
             }
         }
     }

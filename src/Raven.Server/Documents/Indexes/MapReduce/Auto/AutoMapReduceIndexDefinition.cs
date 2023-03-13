@@ -19,6 +19,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public readonly AutoIndexField[] OrderedGroupByFields;
 
+        private HashSet<string> _groupByFieldNames;
+
+        public HashSet<string> GroupByFieldNames
+        {
+            get
+            {
+                return _groupByFieldNames ??= GroupByFields.Keys.ToHashSet();
+            }
+        }
+
         public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
             : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, deploymentMode, clusterState, indexVersion)
         {

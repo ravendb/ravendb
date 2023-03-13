@@ -200,6 +200,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public CompiledIndexField[] GroupByFields;
 
+        private HashSet<string> _groupByFieldNames;
+
+        public HashSet<string> GroupByFieldNames
+        {
+            get
+            {
+                return _groupByFieldNames ??= GroupByFields.Select(x => x.Name).ToHashSet();
+            }
+        }
+
         public void AddCompareExchangeReferenceToCollection(string collection)
         {
             if (collection is null)

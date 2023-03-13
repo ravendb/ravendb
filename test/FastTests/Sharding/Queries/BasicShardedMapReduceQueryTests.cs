@@ -55,19 +55,75 @@ namespace FastTests.Sharding.Queries
 
                 using (var session = store.OpenSession())
                 {
+                    session.Store(new User { Name = "Grisha", Count = 9 }, "users/5");
+                    session.Store(new User { Name = "Grisha", Count = 9 }, "users/6");
+                    session.Store(new User { Name = "Grisha", Count = 9 }, "users/7");
+                    session.Store(new User { Name = "Grisha", Count = 9 }, "users/8");
                     session.Store(new User { Name = "Jane", Count = 10 }, "users/1");
                     session.Store(new User { Name = "Jane", Count = 10 }, "users/2");
                     session.Store(new User { Name = "Jane", Count = 10 }, "users/3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/4");
                     session.SaveChanges();
 
                     Indexes.WaitForIndexing(store);
 
                     var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
-                        .Filter(x => x.Sum >= 30)
+                        .Filter(x => x.Sum >= 40)
                         .ToList();
 
                     Assert.Equal(1, queryResult.Count);
-                    Assert.Equal(30, queryResult[0].Sum);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(40, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .Filter(x => x.Sum >= 40)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(40, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .Filter(x => x.Sum >= 40)
+                        .OrderBy(x => x.Name)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(40, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .Filter(x => x.Sum >= 20)
+                        .OrderBy(x => x.Name)
+                        .ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal(36, queryResult[0].Sum);
+                    Assert.Equal("Jane", queryResult[1].Name);
+                    Assert.Equal(40, queryResult[1].Sum);
+
+                    queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .Filter(x => x.Sum >= 20)
+                        .OrderBy(x => x.Name)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal(36, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
+                        .Filter(x => x.Sum >= 20)
+                        .OrderByDescending(x => x.Name)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(40, queryResult[0].Sum);
                 }
             }
         }
@@ -79,21 +135,40 @@ namespace FastTests.Sharding.Queries
             {
                 using (var session = store.OpenSession())
                 {
+                    session.Store(new User { Name = "Grisha", Count = 9 }, "users/5");
+                    session.Store(new User { Name = "Grisha", Count = 9 }, "users/6");
+                    session.Store(new User { Name = "Grisha", Count = 9 }, "users/7");
+                    session.Store(new User { Name = "Grisha", Count = 9 }, "users/8");
                     session.Store(new User { Name = "Jane", Count = 10 }, "users/1");
                     session.Store(new User { Name = "Jane", Count = 10 }, "users/2");
                     session.Store(new User { Name = "Jane", Count = 10 }, "users/3");
+                    session.Store(new User { Name = "Jane", Count = 10 }, "users/4");
                     session.SaveChanges();
 
                     var queryResult = session.Advanced.RawQuery<UserMapReduce.Result>(
                             @"
 from Users
 group by Name
-filter Count >= 30
+filter Count >= 40
 select sum(""Count"") as Sum, key() as Name")
                         .ToList();
 
                     Assert.Equal(1, queryResult.Count);
-                    Assert.Equal(30, queryResult[0].Sum);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(40, queryResult[0].Sum);
+
+                    queryResult = session.Advanced.RawQuery<UserMapReduce.Result>(
+                            @"
+from Users
+group by Name
+filter Count >= 40
+select sum(""Count"") as Sum, key() as Name
+limit 1")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(40, queryResult[0].Sum);
                 }
             }
         }
@@ -571,6 +646,77 @@ limit 1
                     Assert.Equal(1, queryResult2.Count);
                     Assert.Equal("Jane", queryResult2[0].Name);
                     Assert.Equal(30, queryResult2[0].Sum);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Map_Reduce_With_Order_By_On_Reduce_Keys_With_Take()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduceWithTwoReduceKeys());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Grisha", LastName = "Kotler", Count = 10 }, "users/1");
+                    session.Store(new User { Name = "Grisha", LastName = "Kotler", Count = 10 }, "users/2");
+                    session.Store(new User { Name = "Grisha", LastName = "A", Count = 21 }, "users/3$3");
+                    session.Store(new User { Name = "Grisha", LastName = "Kotler", Count = 10 }, "users/4$3");
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var queryResult = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal("A", queryResult[0].LastName);
+                    Assert.Equal(21, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
+                        .OrderByDescending(x => x.Name)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal("A", queryResult[0].LastName);
+                    Assert.Equal(21, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
+                        .OrderByDescending(x => x.Name)
+                        .ThenBy(x => x.LastName)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal("A", queryResult[0].LastName);
+                    Assert.Equal(21, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
+                        .OrderBy(x => x.Name)
+                        .ThenByDescending(x => x.LastName)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal("Kotler", queryResult[0].LastName);
+                    Assert.Equal(30, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
+                        .OrderByDescending(x => x.LastName)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal("Kotler", queryResult[0].LastName);
+                    Assert.Equal(30, queryResult[0].Sum);
                 }
             }
         }
