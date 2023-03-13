@@ -1,5 +1,11 @@
 <div class="importDatabase absolute-fill flex-vertical sql-migration">
-    <div class="panel" data-bind="if: inFirstStep, visible: inFirstStep">
+    <div class="panel padding padding-md" data-bind="visible: $root.activeDatabase().isSharded()">
+        <h2 class="text-warning"><i class="icon-info"></i> Feature not available</h2>
+        <p class="margin-top margin-lg">
+            Import documents from a SQL database into the current RavenDB database is not available for sharded databases.
+        </p>
+    </div>
+    <div class="panel" data-bind="if: inFirstStep, visible: !$root.activeDatabase().isSharded() && inFirstStep">
         <div class="panel-body">
             <form class="flex-form" data-bind="submit: nextStep">
                 <h3>Import documents from a SQL database into the current RavenDB database</h3>

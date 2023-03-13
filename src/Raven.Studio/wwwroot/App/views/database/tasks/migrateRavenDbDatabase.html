@@ -1,5 +1,11 @@
 <div class="migrate-ravendb-database">
-    <div class="panel">
+    <div class="panel padding padding-md" data-bind="visible: $root.activeDatabase().isSharded()">
+        <h2 class="text-warning"><i class="icon-info"></i> Feature not available</h2>
+        <p class="margin-top margin-lg">
+            Migrate data from another RavenDB Server is not available for sharded databases.
+        </p>
+    </div>
+    <div class="panel" data-bind="visible: !$root.activeDatabase().isSharded()">
         <div class="panel-body">
             <form class="flex-form" data-bind="submit: migrateDb" autocomplete="off">
                 <div class="row">
