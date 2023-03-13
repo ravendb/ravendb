@@ -1290,7 +1290,8 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Failed to validate user's license as part of Let's Encrypt certificate refresh", e);
+                string userLicenseMessage = license is null ? ", user's license was not found" : $" with license id: {license.Id}";
+                throw new InvalidOperationException($"Failed to validate user's license{userLicenseMessage} as part of Let's Encrypt certificate refresh", e);
             }
 
             var userDomainsResult = JsonConvert.DeserializeObject<UserDomainsResult>(await response.Content.ReadAsStringAsync());
@@ -1308,15 +1309,15 @@ namespace Raven.Server
             if (usedRootDomain == null)
             {
                 if (Configuration.Core.PublicServerUrl.HasValue)
-                    throw new InvalidOperationException($"Your license is associated with the following domains: {string.Join(", ", userDomainsResult.RootDomains)} " +
+                    throw new InvalidOperationException($"Your license with license id: {license.Id} is associated with the following domains: {string.Join(", ", userDomainsResult.RootDomains)} " +
                                                         $"but the PublicServerUrl configuration setting is: {Configuration.Core.PublicServerUrl.Value.UriValue}. " +
                                                         "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
 
-                throw new InvalidOperationException("PublicServerUrl is empty. Cannot automatically renew the Lets Encrypt certificate. Please contact support.");
+                throw new InvalidOperationException($"PublicServerUrl is empty. Cannot automatically renew the Lets Encrypt certificate for license with license id: {license.Id}. Please contact support.");
             }
 
             if (userDomainsResult.Emails.Contains(Configuration.Security.CertificateLetsEncryptEmail, StringComparer.OrdinalIgnoreCase) == false)
-                throw new InvalidOperationException($"Your license is associated with the following emails: {string.Join(", ", userDomainsResult.Emails)} " +
+                throw new InvalidOperationException($"Your license with license id: {license.Id} is associated with the following emails: {string.Join(", ", userDomainsResult.Emails)} " +
                                                     $"but the Security.Certificate.LetsEncrypt.Email configuration setting is: {Configuration.Security.CertificateLetsEncryptEmail}. " +
                                                     "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
 
@@ -1332,7 +1333,7 @@ namespace Raven.Server
             var domain = substring.Substring(firstDot + 1);
 
             if (userDomainsResult.Domains.Any(userDomain => string.Equals(userDomain.Key, domain, StringComparison.OrdinalIgnoreCase)) == false)
-                throw new InvalidOperationException("The license provided does not have access to the domain: " + domain);
+                throw new InvalidOperationException($"The license with license id: {license.Id} provided does not have access to the domain: " + domain);
 
             var setupInfo = new SetupInfo
             {
