@@ -29,8 +29,9 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     var asyncDocumentQuery = from result in session.Query<TestObj>() select result.Prop1.Length;
-                    Console.WriteLine(asyncDocumentQuery);
                     Assert.Equal(6, await asyncDocumentQuery.SingleAsync());
+                    Assert.Equal("from 'TestObjs' select Prop1.Length"
+                        , asyncDocumentQuery.ToString());
                 }
 
 
@@ -40,10 +41,10 @@ namespace SlowTests.Issues
                                              let ret = RavenQuery.Raw<int>("result.Prop1.length")
                                              select ret;
 
-                    Console.WriteLine(asyncDocumentQuery);
-
                     var i = await asyncDocumentQuery.SingleAsync();
                     Assert.Equal(6, i);
+                    Assert.Equal("declare function output(result) {\r\n\tvar ret = result.Prop1.length;\r\n\treturn { ret : ret };\r\n}\r\nfrom 'TestObjs' as result select output(result)"
+                        , asyncDocumentQuery.ToString());
 
                 }
 
@@ -55,11 +56,10 @@ namespace SlowTests.Issues
                                              let x = ret + ret2
                                              select x;
 
-                    Console.WriteLine(asyncDocumentQuery);
-
                     var i = await asyncDocumentQuery.SingleAsync();
                     Assert.Equal(8, i);
-
+                    Assert.Equal("declare function output(result) {\r\n\tvar ret = result.Prop1.length;\r\n\tvar ret2 = result.Prop2.length;\r\n\tvar x = ret+ret2;\r\n\treturn { x : x };\r\n}\r\nfrom 'TestObjs' as result select output(result)"
+                        , asyncDocumentQuery.ToString());
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -68,26 +68,23 @@ namespace SlowTests.Issues
                                              let ret = RavenQuery.Raw<string>("result.Name.substr(0,3)")
                                              select ret;
 
-                    Console.WriteLine(asyncDocumentQuery);
                     var queryResult = await asyncDocumentQuery.ToListAsync();
-
                     Assert.Equal("Ome", queryResult[0]);
-
-
+                    Assert.Equal("declare function output(result) {\r\n\tvar ret = result.Name.substr(0,3);\r\n\treturn { ret : ret };\r\n}\r\nfrom 'TestObjs' as result select output(result)"
+                        , asyncDocumentQuery.ToString());
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
                     var asyncDocumentQuery = from result in session.Query<TestObj>()
-                                             let ret = RavenQuery.Raw<DateTime>("new Date(Date.parse(result.Birthday))")
-                                             select ret;
+                        let ret = RavenQuery.Raw<DateTime>("new Date(Date.parse(result.Birthday))")
+                        select ret;
 
-                    Console.WriteLine(asyncDocumentQuery);
                     var queryResult = await asyncDocumentQuery.ToListAsync();
-
                     Assert.Equal(new DateTime(1994, 3, 22), queryResult[0].Date);
-
-
+                    Assert.Equal(
+                        "declare function output(result) {\r\n\tvar ret = new Date(Date.parse(result.Birthday));\r\n\treturn { ret : ret };\r\n}\r\nfrom 'TestObjs' as result select output(result)",
+                        asyncDocumentQuery.ToString());
                 }
             }
         }
