@@ -21,7 +21,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Subscriptions;
 
-public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection, TIncludesCommand> : AbstractSubscriptionConnectionsStateBase
+public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection, TIncludesCommand> : AbstractSubscriptionConnectionsState
     where TSubscriptionConnection : SubscriptionConnectionBase<TIncludesCommand>
     where TIncludesCommand : AbstractIncludesCommand
 {

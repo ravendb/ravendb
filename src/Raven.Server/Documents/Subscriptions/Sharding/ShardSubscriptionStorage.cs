@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Subscriptions.Sharding;
 
 public class ShardSubscriptionStorage : SubscriptionStorage
 {
-    public ShardSubscriptionStorage(ShardedDocumentDatabase db, ServerStore serverStore) : base(db, serverStore)
+    public ShardSubscriptionStorage(ShardedDocumentDatabase db, ServerStore serverStore, string name) : base(db, serverStore, name)
     {
     }
 
@@ -42,11 +42,6 @@ public class ShardSubscriptionStorage : SubscriptionStorage
                 }
             }
         }
-    }
-
-    protected override string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus)
-    {
-        return _serverStore.WhoseTaskIsIt(databaseRecord.Topology, taskStatus, taskStatus);
     }
 
     internal override void CleanupSubscriptions()

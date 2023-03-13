@@ -58,15 +58,15 @@ public class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscri
     where TConnection : SubscriptionConnectionBase<TIncludeCommand>
     where TIncludeCommand : AbstractIncludesCommand
 {
-    private readonly ISubscriptionSemaphore _semaphore;
+    private readonly AbstractSubscriptionStorage<TState> _storage;
     private readonly Lazy<TState> _state;
     private readonly TConnection _connection;
 
     private TState _subscriptionConnectionsState => _state.Value;
 
-    public SubscriptionBinder(ISubscriptionSemaphore semaphore, Lazy<TState> state, TConnection connection)
+    public SubscriptionBinder(AbstractSubscriptionStorage<TState> storage, Lazy<TState> state, TConnection connection)
     {
-        _semaphore = semaphore;
+        _storage = storage;
         _state = state;
         _connection = connection;
     }
@@ -85,7 +85,7 @@ public class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscri
             {
                 await _connection.ParseSubscriptionOptionsAsync();
 
-                if (_semaphore.TryEnterSubscriptionsSemaphore() == false)
+                if (_storage.TryEnterSubscriptionsSemaphore() == false)
                 {
                     throw new SubscriptionClosedException(
                         $"Cannot open new subscription connection, max amount of concurrent connections reached ({_connection.TcpConnection.DocumentDatabase.Configuration.Subscriptions.MaxNumberOfConcurrentConnections}), you can modify the value at 'Subscriptions.MaxNumberOfConcurrentConnections'");
@@ -106,7 +106,7 @@ public class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscri
                 }
                 finally
                 {
-                    _semaphore.ReleaseSubscriptionsSemaphore();
+                    _storage.ReleaseSubscriptionsSemaphore();
                 }
             }
             catch (SubscriptionChangeVectorUpdateConcurrencyException e)

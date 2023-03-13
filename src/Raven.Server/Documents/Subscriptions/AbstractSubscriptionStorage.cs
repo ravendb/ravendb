@@ -13,14 +13,14 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Subscriptions;
 
-public abstract class AbstractSubscriptionStorage <TState> : ISubscriptionSemaphore, ILowMemoryHandler, IDisposable
-    where TState : AbstractSubscriptionConnectionsStateBase
+public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, IDisposable
+    where TState : AbstractSubscriptionConnectionsState
 {
     protected readonly ConcurrentDictionary<long, TState> _subscriptions = new();
     public ConcurrentDictionary<long, TState> Subscriptions => _subscriptions;
     protected readonly ServerStore _serverStore;
     protected string _databaseName;
-    private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
+    protected readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
     protected Logger _logger;
 
     protected AbstractSubscriptionStorage(ServerStore serverStore, int maxNumberOfConcurrentConnections)
@@ -30,7 +30,6 @@ public abstract class AbstractSubscriptionStorage <TState> : ISubscriptionSemaph
         LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
     }
 
-    public abstract void Initialize(string name);
     protected abstract void DropSubscriptionConnections(TState state, SubscriptionException ex);
     protected abstract void SetConnectionException(TState state, SubscriptionException ex);
     protected abstract string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus);
@@ -38,8 +37,7 @@ public abstract class AbstractSubscriptionStorage <TState> : ISubscriptionSemaph
 
     public bool DropSubscriptionConnections(long subscriptionId, SubscriptionException ex)
     {
-        // TODO: egor switch it back to TryGetValue (like in v5.4), or need to dispose it
-        if (_subscriptions.TryRemove(subscriptionId, out TState state) == false)
+        if (_subscriptions.TryGetValue(subscriptionId, out TState state) == false)
             return false;
 
         DropSubscriptionConnections(state, ex);

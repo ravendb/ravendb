@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             // no op
         }
 
-        protected override async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsStateBase state, Task pendingReply)
+        protected override async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
         {
             // nothing was sent to the client, but we need to let the shard know he can continue
             await NotifyShardAboutBatchCompletion();

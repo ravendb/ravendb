@@ -42,11 +42,6 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     protected override byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, ShardedDatabaseName);
 
-    protected override void InitializeSubscriptionStorage()
-    {
-        SubscriptionStorage.Initialize(ShardedDatabaseName);
-    }
-
     protected override void InitializeCompareExchangeStorage()
     {
         CompareExchangeStorage.Initialize(ShardedDatabaseName);
@@ -75,7 +70,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     protected override ShardSubscriptionStorage CreateSubscriptionStorage(ServerStore serverStore)
     {
-        return new ShardSubscriptionStorage(this, serverStore);
+        return new ShardSubscriptionStorage(this, serverStore, ShardHelper.ToDatabaseName(Name));
     }
 
     internal override void SetIds(DatabaseTopology topology, string shardedDatabaseId)

@@ -365,7 +365,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected virtual async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsStateBase state, Task pendingReply)
+        protected virtual async Task<bool> WaitForChangedDocsAsync(AbstractSubscriptionConnectionsState state, Task pendingReply)
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Start waiting for changed documents"));
             do

@@ -140,7 +140,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var subscriptionStateTable = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
             var bigEndBatchId = Bits.SwapBytes(BatchId ?? 0);
             using var _ = Slice.External(context.Allocator, (byte*)&bigEndBatchId, sizeof(long), out var batchIdSlice);
-            using (AbstractSubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionPrefix(context, DatabaseName, SubscriptionId, out var prefix))
+            using (AbstractSubscriptionConnectionsState.GetDatabaseAndSubscriptionPrefix(context, DatabaseName, SubscriptionId, out var prefix))
             using (Slice.External(context.Allocator, prefix, out var prefixSlice))
             {
                 subscriptionStateTable.DeleteForwardFrom(ClusterStateMachine.SubscriptionStateSchema.Indexes[ClusterStateMachine.SubscriptionStateByBatchIdSlice], batchIdSlice, 
@@ -156,7 +156,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             foreach (var r in DocumentsToResend)
             {
-                using (AbstractSubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, r.DocumentId, out var key))
+                using (AbstractSubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, r.DocumentId, out var key))
                 using (subscriptionStateTable.Allocate(out var tvb))
                 {
                     using var __ = Slice.External(context.Allocator, key, out var keySlice);

@@ -13,7 +13,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Subscriptions;
 
-public abstract class AbstractSubscriptionConnectionsStateBase : IDisposable
+public abstract class AbstractSubscriptionConnectionsState : IDisposable
 {
     private AsyncManualResetEvent _waitForMoreDocuments;
     public readonly CancellationTokenSource CancellationTokenSource;
@@ -22,13 +22,14 @@ public abstract class AbstractSubscriptionConnectionsStateBase : IDisposable
     public string Query;
     public string LastChangeVectorSent;
 
-    protected AbstractSubscriptionConnectionsStateBase(CancellationToken token)
+    protected AbstractSubscriptionConnectionsState(CancellationToken token)
     {
         CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
         _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
     }
 
     public abstract bool IsSubscriptionActive();
+
     public void NotifyHasMoreDocs() => _waitForMoreDocuments.Set();
 
     public Task<bool> WaitForMoreDocs()
