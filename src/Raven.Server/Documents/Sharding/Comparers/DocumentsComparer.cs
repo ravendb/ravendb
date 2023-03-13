@@ -12,20 +12,20 @@ namespace Raven.Server.Documents.Sharding.Comparers;
 
 public class DocumentsComparer : IComparer<BlittableJsonReaderObject>
 {
-    private readonly QueryMetadata _metadata;
+    private readonly OrderByField[] _orderByFields;
     private readonly bool _extractFromData;
 
-    public DocumentsComparer(QueryMetadata metadata, bool extractFromData)
+    public DocumentsComparer(OrderByField[] orderByFields, bool extractFromData)
     {
-        _metadata = metadata;
+        _orderByFields = orderByFields;
         _extractFromData = extractFromData;
     }
 
     public int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
     {
-        for (var i = 0; i < _metadata.OrderBy.Length; i++)
+        for (var i = 0; i < _orderByFields.Length; i++)
         {
-            var orderByField = _metadata.OrderBy[i];
+            var orderByField = _orderByFields[i];
             var cmp = CompareField(orderByField, i, x, y);
             if (cmp != 0)
                 return orderByField.Ascending ? cmp : -cmp;

@@ -8,7 +8,6 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Commands.Streaming;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Timings;
-using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Streaming;
 using Raven.Server.ServerWide.Context;

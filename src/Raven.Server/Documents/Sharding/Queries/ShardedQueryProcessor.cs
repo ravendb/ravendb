@@ -228,6 +228,9 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
                         break;
 
                     result.Results.Add(doc);
+
+                    if (result.Results.Count == Query.Limit)
+                        break;
                 }
             }
         }

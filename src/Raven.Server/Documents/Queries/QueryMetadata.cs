@@ -231,7 +231,27 @@ function execute(doc, args){
         public bool? CountInJs;
 
         public string SumInJs;
-        
+
+        private HashSet<string> _groupByFieldsByName;
+
+        public HashSet<string> GroupByFieldNames
+        {
+            get
+            {
+                return _groupByFieldsByName ??= GroupBy.Select(x => x.Name.Value).ToHashSet();
+            }
+        }
+
+        private HashSet<string> _orderByFieldsByName;
+
+        public HashSet<string> OrderByFieldNames
+        {
+            get
+            {
+                return _orderByFieldsByName ??= OrderBy.Select(x => x.Name.Value).ToHashSet();
+            }
+        }
+
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
