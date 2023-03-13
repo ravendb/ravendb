@@ -19,6 +19,7 @@ import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import TaskUtils from "components/utils/TaskUtils";
 import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" |
                       "subscriptionErrorItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
@@ -2292,7 +2293,9 @@ class ongoingTasksStats extends shardViewModelBase {
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
-            exportFileName = `OngoingTasksStats of ${this.db.name} ${moment().format("YYYY-MM-DD HH-mm")}`;
+            const detailedDatabaseName = DatabaseUtils.formatNameForFile(this.db.name, this.location);
+
+            exportFileName = `OngoingTasksStats of ${detailedDatabaseName} ${moment().format("YYYY-MM-DD HH-mm")}`;
         }
 
         const keysToIgnore: Array<keyof performanceBaseWithCache> = ["StartedAsDate", "CompletedAsDate"];

@@ -14,6 +14,7 @@ import fileImporter = require("common/fileImporter");
 import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 type rTreeLeaf = {
     minX: number;
@@ -1455,7 +1456,9 @@ class indexPerformance extends shardViewModelBase {
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
-            exportFileName = `indexPerf of ${this.db.name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
+            const detailedDatabaseName = DatabaseUtils.formatNameForFile(this.db.name, this.location);
+            
+            exportFileName = `indexPerf of ${detailedDatabaseName} ${moment().format("YYYY-MM-DD HH-mm")}`; 
         }
 
         const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache | keyof IndexingPerformanceOperationWithParent> = [
@@ -1466,6 +1469,7 @@ class indexPerformance extends shardViewModelBase {
             "WaitOperation",
             "DetailsExcludingWaitTime"
         ];
+        
         fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName, (key, value) => {
             if (_.includes(keysToIgnore, key)) {
                 return undefined;
