@@ -376,7 +376,6 @@ namespace Raven.Server.Documents
 
                 OnDatabaseRecordChanged(record);
                 InitializeCompareExchangeStorage();
-                InitializeAndStartDocumentsMigration();
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
@@ -389,6 +388,7 @@ namespace Raven.Server.Documents
                 EtlLoader.Initialize(record);
 
                 TombstoneCleaner.Start();
+                InitializeAndStartDocumentsMigration();
 
                 try
                 {
