@@ -26,8 +26,8 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
-import shardedDatabase from "models/resources/shardedDatabase";
 import { shardingTodo } from "common/developmentHelper";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class editReplicationHubTask extends shardViewModelBase {
 
@@ -549,8 +549,9 @@ class editReplicationHubTask extends shardViewModelBase {
 
         let fileName = includeAccessInfo ? "hubAccessConfiguration" : "hubConfiguration";
         const accessName = includeAccessInfo ? this.editedReplicationAccessItem().replicationAccessName() + "-" : "";
+        const detailedDatabaseName = DatabaseUtils.formatNameForFile(databaseName, this.location);
         
-        fileName = `${fileName}-${hubTaskItem.taskName()}-${accessName}${databaseName}.json`;
+        fileName = `${fileName}-${hubTaskItem.taskName()}-${accessName}${detailedDatabaseName}.json`;
         
         fileDownloader.downloadAsJson(configurationToExport, fileName);
     }

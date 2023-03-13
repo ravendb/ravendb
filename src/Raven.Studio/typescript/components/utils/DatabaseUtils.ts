@@ -17,6 +17,24 @@ export default class DatabaseUtils {
         return DatabaseUtils.shardGroupKey(name) + " (shard #" + DatabaseUtils.shardNumber(name) + ")";
     }
 
+    static formatNameForFile(databaseName: string, location?: databaseLocationSpecifier) {
+        if (!databaseName) {
+            throw new Error("Must specify databaseName");
+        }
+
+        if (location) {
+            return `${databaseName}_${location.nodeTag}${
+                location?.shardNumber != null ? `_shard_${location.shardNumber}` : ""
+            }`;
+        }
+
+        if (DatabaseUtils.isSharded(databaseName)) {
+            return DatabaseUtils.shardGroupKey(databaseName) + "_shard_" + DatabaseUtils.shardNumber(databaseName);
+        }
+
+        return databaseName;
+    }
+
     static isSharded(name: string) {
         return name.includes("$");
     }

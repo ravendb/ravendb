@@ -17,6 +17,7 @@ import defaultAceCompleter = require("common/defaultAceCompleter");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class exportDatabase extends shardViewModelBase {
 
@@ -114,9 +115,10 @@ class exportDatabase extends shardViewModelBase {
     }
 
     private setupDefaultExportFilename(): void {
-        const dbName = this.db.name;
         const date = moment().format("YYYY-MM-DD HH-mm");
-        this.model.exportFileName(`Dump of ${dbName} ${date}`);
+        const detailedDatabaseName = DatabaseUtils.formatNameForFile(this.db.name, this.location);
+        
+        this.model.exportFileName(`Dump of ${detailedDatabaseName} ${date}`);
     }
 
     private initializeObservables(): void {
