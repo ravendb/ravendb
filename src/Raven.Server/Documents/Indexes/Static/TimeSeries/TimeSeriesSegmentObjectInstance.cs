@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using Jint;
 using Jint.Native;
-using Jint.Native.Array;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Raven.Server.Documents.Indexes.Static.JavaScript;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -14,11 +14,12 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private readonly DynamicTimeSeriesSegment _segment;
 
-        private Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
+        private readonly Dictionary<string, PropertyDescriptor> _properties = new();
 
         public TimeSeriesSegmentObjectInstance(Engine engine, DynamicTimeSeriesSegment segment) : base(engine)
         {
-            _segment = segment ?? throw new ArgumentNullException(nameof(segment));
+            ArgumentNullException.ThrowIfNull(segment);
+            _segment = segment;
         }
 
         public override bool Delete(JsValue property)
@@ -28,33 +29,25 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override PropertyDescriptor GetOwnProperty(JsValue property)
         {
-            if (_properties.TryGetValue(property, out var value) == false)
-                _properties[property] = value = GetPropertyValue(property);
+            var key = property.ToString();
+            if (_properties.TryGetValue(key, out var value) == false)
+                _properties[key] = value = GetPropertyValue(key);
 
             return value;
         }
 
-        private PropertyDescriptor GetPropertyValue(JsValue property)
+        private PropertyDescriptor GetPropertyValue(string property)
         {
-            if (property == nameof(DynamicTimeSeriesSegment.Entries))
-                return new TimeSeriesSegmentEntriesPropertyDescriptor(Engine, _segment);
-
-            if (property == nameof(TimeSeriesSegment.DocumentId))
-                return new PropertyDescriptor(_segment._segmentEntry.DocId.ToString(), writable: false, enumerable: false, configurable: false);
-
-            if (property == nameof(DynamicTimeSeriesSegment.Name))
-                return new PropertyDescriptor(_segment._segmentEntry.Name.ToString(), writable: false, enumerable: false, configurable: false);
-
-            if (property == nameof(DynamicTimeSeriesSegment.Count))
-                return new PropertyDescriptor(_segment.Count, writable: false, enumerable: false, configurable: false);
-
-            if (property == nameof(DynamicTimeSeriesSegment.End))
-                return new PropertyDescriptor(new JsDate(_engine, _segment.End), writable: false, enumerable: false, configurable: false);
-
-            if (property == nameof(DynamicTimeSeriesSegment.Start))
-                return new PropertyDescriptor(new JsDate(_engine, _segment.Start), writable: false, enumerable: false, configurable: false);
-
-            return PropertyDescriptor.Undefined;
+            return property switch
+            {
+                nameof(DynamicTimeSeriesSegment.Entries) => new TimeSeriesSegmentEntriesPropertyDescriptor(Engine, _segment),
+                nameof(TimeSeriesSegment.DocumentId) => new PropertyDescriptor(new LazyJsString(_segment._segmentEntry.DocId), writable: false, enumerable: false, configurable: false),
+                nameof(DynamicTimeSeriesSegment.Name) => new PropertyDescriptor(new LazyJsString(_segment._segmentEntry.Name), writable: false, enumerable: false, configurable: false),
+                nameof(DynamicTimeSeriesSegment.Count) => new PropertyDescriptor(_segment.Count, writable: false, enumerable: false, configurable: false),
+                nameof(DynamicTimeSeriesSegment.End) => new PropertyDescriptor(new JsDate(_engine, _segment.End), writable: false, enumerable: false, configurable: false),
+                nameof(DynamicTimeSeriesSegment.Start) => new PropertyDescriptor(new JsDate(_engine, _segment.Start), writable: false, enumerable: false, configurable: false),
+                _ => PropertyDescriptor.Undefined
+            };
         }
 
         public override bool Set(JsValue property, JsValue value, JsValue receiver)
@@ -137,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             {
                 var value = new JsObject(engine);
 
-                value.FastSetDataProperty(nameof(entry.Tag), entry._entry.Tag?.ToString());
+                value.FastSetDataProperty(nameof(entry.Tag), entry._entry.Tag is not null ? new LazyJsString(entry._entry.Tag) : DynamicJsNull.ExplicitNull);
                 value.FastSetDataProperty(nameof(entry.Timestamp), new JsDate(engine, entry._entry.Timestamp));
 
                 var values = new JsValue[entry._entry.Values.Length];

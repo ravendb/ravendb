@@ -12,12 +12,13 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private readonly DynamicCounterEntry _entry;
 
-        private Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
+        private readonly Dictionary<string, PropertyDescriptor> _properties = new();
 
         public CounterEntryObjectInstance(Engine engine, DynamicCounterEntry entry)
             : base(engine)
         {
-            _entry = entry ?? throw new ArgumentNullException(nameof(entry));
+            ArgumentNullException.ThrowIfNull(entry);
+            _entry = entry;
         }
 
         public override bool Delete(JsValue property)
@@ -27,24 +28,22 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         public override PropertyDescriptor GetOwnProperty(JsValue property)
         {
-            if (_properties.TryGetValue(property, out var value) == false)
-                _properties[property] = value = GetPropertyValue(property);
+            var key = property.ToString();
+            if (_properties.TryGetValue(key, out var value) == false)
+                _properties[key] = value = GetPropertyValue(key);
 
             return value;
         }
 
-        private PropertyDescriptor GetPropertyValue(JsValue property)
+        private PropertyDescriptor GetPropertyValue(string property)
         {
-            if (property == nameof(DynamicCounterEntry.Value))
-                return new PropertyDescriptor(_entry._value, writable: false, enumerable: false, configurable: false);
-
-            if (property == nameof(DynamicCounterEntry.DocumentId))
-                return new PropertyDescriptor(_entry._counterItemMetadata.DocumentId.ToString(), writable: false, enumerable: false, configurable: false);
-
-            if (property == nameof(DynamicCounterEntry.Name))
-                return new PropertyDescriptor(_entry._counterItemMetadata.CounterName.ToString(), writable: false, enumerable: false, configurable: false);
-
-            return PropertyDescriptor.Undefined;
+            return property switch
+            {
+                nameof(DynamicCounterEntry.Value) => new PropertyDescriptor(_entry._value, writable: false, enumerable: false, configurable: false),
+                nameof(DynamicCounterEntry.DocumentId) => new PropertyDescriptor(new LazyJsString(_entry._counterItemMetadata.DocumentId), writable: false, enumerable: false, configurable: false),
+                nameof(DynamicCounterEntry.Name) => new PropertyDescriptor(new LazyJsString(_entry._counterItemMetadata.CounterName), writable: false, enumerable: false, configurable: false),
+                _ => PropertyDescriptor.Undefined
+            };
         }
 
         public override bool Set(JsValue property, JsValue value, JsValue receiver)
