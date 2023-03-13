@@ -5,26 +5,23 @@ using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
 
 public partial class ShardedDatabaseContext
 {
-    public ShardedSubscriptions SubscriptionsStorage;
+    public ShardedSubscriptionsStorage SubscriptionsStorage;
 
-    public class ShardedSubscriptions : AbstractSubscriptionStorage<SubscriptionConnectionsStateOrchestrator>
+    public class ShardedSubscriptionsStorage : AbstractSubscriptionStorage<SubscriptionConnectionsStateOrchestrator>
     {
         private readonly ShardedDatabaseContext _context;
 
-        public ShardedSubscriptions(ShardedDatabaseContext context, ServerStore serverStore) : base(serverStore, context.Configuration.Subscriptions.MaxNumberOfConcurrentConnections)
+        public ShardedSubscriptionsStorage(ShardedDatabaseContext context, ServerStore serverStore) : base(serverStore, context.Configuration.Subscriptions.MaxNumberOfConcurrentConnections)
         {
             _context = context;
-        }
-
-        public override void Initialize(string name)
-        {
             _databaseName = _context.DatabaseName;
-            _logger = LoggingSource.Instance.GetLogger<ShardedSubscriptions>(_databaseName);
+            _logger = LoggingSource.Instance.GetLogger<ShardedSubscriptionsStorage>(_databaseName);
         }
 
         protected override void DropSubscriptionConnections(SubscriptionConnectionsStateOrchestrator state, SubscriptionException ex)
@@ -52,7 +49,7 @@ public partial class ShardedDatabaseContext
 
         protected override bool SubscriptionChangeVectorHasChanges(SubscriptionConnectionsStateOrchestrator state, SubscriptionState taskStatus)
         {
-            // TODO: egor check if we can drop sharded subscription on CV change (so it reconnects)
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "RavenDB-18223 Add ability to set CV by admin in sharded subscription.");
             return false;
         }
 

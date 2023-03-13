@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Nest;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -31,15 +32,10 @@ namespace Raven.Server.Documents.Subscriptions
         public event Action<SubscriptionConnection> OnEndConnection;
         public event Action<string, SubscriptionBatchStatsAggregator> OnEndBatch;
 
-        public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore) : base(serverStore, db.Configuration.Subscriptions.MaxNumberOfConcurrentConnections)
+        public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore, string name) : base(serverStore, db.Configuration.Subscriptions.MaxNumberOfConcurrentConnections)
         {
             _db = db;
-        }
-
-        public override void Initialize(string name)
-        {
-            // this is full name for sharded db 
-            _databaseName = name;
+            _databaseName = name; // this is full name for sharded db 
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(name);
         }
 

@@ -128,15 +128,6 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
 
     public void DisposeWorkers()
     {
-        try
-        {
-            CancellationTokenSource.Cancel();
-        }
-        catch
-        {
-            // ignore
-        }
-
         var workers = _shardWorkers;
         var connection = _initialConnection;
 

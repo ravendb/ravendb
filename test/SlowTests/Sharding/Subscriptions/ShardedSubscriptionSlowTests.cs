@@ -356,7 +356,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "Cannot set CV by admin in sharded subscription")]
+        [Fact(Skip = "RavenDB-18223: Cannot set CV by admin in sharded subscription")]
         public async Task RunningSubscriptionShouldJumpToNextChangeVectorIfItWasChangedByAdmin()
         {
             using (var store = Sharding.GetDocumentStore())

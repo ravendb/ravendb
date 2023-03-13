@@ -186,7 +186,7 @@ namespace Raven.Server.Documents
 
         protected virtual SubscriptionStorage CreateSubscriptionStorage(ServerStore serverStore)
         {
-            return new SubscriptionStorage(this, serverStore);
+            return new SubscriptionStorage(this, serverStore, Name);
         }
 
         protected virtual byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, Name);
@@ -325,10 +325,6 @@ namespace Raven.Server.Documents
 
         public AbstractDatabaseSmugglerFactory Smuggler { get; protected set; }
 
-        protected virtual void InitializeSubscriptionStorage()
-        {
-            SubscriptionStorage.Initialize(Name);
-        }
 
         protected virtual void InitializeCompareExchangeStorage()
         {
@@ -376,7 +372,6 @@ namespace Raven.Server.Documents
                     DatabaseDoesNotExistException.Throw(Name);
 
                 OnDatabaseRecordChanged(record);
-                InitializeSubscriptionStorage();
                 InitializeCompareExchangeStorage();
 
                 ReplicationLoader = CreateReplicationLoader();

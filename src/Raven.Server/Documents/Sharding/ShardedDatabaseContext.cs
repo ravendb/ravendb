@@ -76,8 +76,7 @@ namespace Raven.Server.Documents.Sharding
             Changes = new ShardedDocumentsChanges(this);
             Operations = new ShardedOperations(this);
 
-            SubscriptionsStorage = new ShardedSubscriptions(this, serverStore);
-            SubscriptionsStorage.Initialize(DatabaseName);
+            SubscriptionsStorage = new ShardedSubscriptionsStorage(this, serverStore);
 
             QueryRunner = new ShardedQueryRunner();
             Smuggler = new ShardedSmugglerContext(this, serverStore);
@@ -169,8 +168,7 @@ namespace Raven.Server.Documents.Sharding
 
             exceptionAggregator.Execute(() => AllOrchestratorNodesExecutor?.Dispose());
 
-            foreach (var connection in SubscriptionsStorage.Subscriptions)
-                exceptionAggregator.Execute(() => connection.Value.Dispose());
+            exceptionAggregator.Execute(() => SubscriptionsStorage.Dispose());
 
             exceptionAggregator.Execute(() => _databaseShutdown.Dispose());
 
