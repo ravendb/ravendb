@@ -712,6 +712,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         sortOptions = SortField.DOUBLE;
                         fieldName += Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
                         break;
+                    case OrderByFieldType.Implicit:
+                        if (index.Configuration.OrderByTicksAutomaticallyWhenDatesAreInvolved && index.IndexFieldsPersistence.HasTimeValues(fieldName))
+                        {
+                            sortOptions = SortField.LONG;
+                            fieldName += Constants.Documents.Indexing.Fields.TimeFieldSuffix;
+                        }
+                        break;
                 }
 
                 sortArray[sortIndex++] = new SortField(fieldName, sortOptions, field.Ascending == false);
