@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             await ServerStore.EnsureNotPassiveAsync();
 
             var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(Database);
-            await database.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
+            await database.DocumentsMigrator.ExecuteMoveDocumentsAsync();
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }

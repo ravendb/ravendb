@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Background
 {
@@ -21,22 +22,21 @@ namespace Raven.Server.Documents.Sharding.Background
 
         internal async Task ExecuteMoveDocumentsAsync()
         {
-            _cts.Token.ThrowIfCancellationRequested();
-
-            if (Monitor.TryEnter(this, 250) == false)
-                return;
-
-            if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
-                return;
-
             try
             {
                 int bucket = -1;
                 int moveToShard = -1;
                 bool found = false;
-
                 try
                 {
+                    _cts.Token.ThrowIfCancellationRequested();
+
+                    if (Monitor.TryEnter(this, 250) == false)
+                        return;
+
+                    if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
+                        return;
+
                     using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
