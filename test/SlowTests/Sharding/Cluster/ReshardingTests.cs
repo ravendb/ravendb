@@ -181,10 +181,13 @@ namespace SlowTests.Sharding.Cluster
                     Assert.NotNull(user);
                 }
 
+                var config = await Sharding.GetShardingConfigurationAsync(store);
+
                 // the document will be written to the new location
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>(id);
+                    Assert.True(user != null, $"{id} is null (bucket: {bucket}, old:{location}, new:{newLocation}){Environment.NewLine}. {session.Advanced.JsonConverter.ToBlittable(config, documentInfo: null)}");
                     user.Name = "New shard";
                     await session.SaveChangesAsync();
                 }
