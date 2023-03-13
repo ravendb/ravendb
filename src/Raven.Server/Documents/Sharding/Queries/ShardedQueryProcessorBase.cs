@@ -55,7 +55,7 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
                 long index = Math.Min(limit, int.MaxValue);
                 long count = result.Results.Count - limit;
                 if (count > int.MaxValue)
-                    count = int.MaxValue; //todo: Grisha: take a look
+                    count = int.MaxValue;
                 result.Results.RemoveRange((int)index, (int)count);
             }
         }
