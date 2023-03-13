@@ -334,8 +334,8 @@
             <input id="rawEntries" type="checkbox" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery()">
             <label for="rawEntries" data-bind="text: 'Show raw index entries instead of ' + (queryResultsContainMatchingDocuments() ? 'matching documents' : 'index results')"></label>
         </div>
-        <div class="margin-left margin-left-lg" data-bind="collapse: criteria().indexEntries">
-            <div class="toggle margin-left margin-left-lg">
+        <div class="margin-left" data-bind="collapse: criteria().indexEntries">
+            <div class="toggle margin-left">
                 <input id="ignoreLimit" type="checkbox" data-bind="checked: criteria().ignoreIndexQueryLimit">
                 <label for="ignoreLimit">Ignore the index query size limit</label>
             </div>
