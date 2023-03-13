@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -63,7 +64,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             if (bucket > toBucket)
                                 break;
 
-                            await ServerStore.Sharding.StartBucketMigration(database, bucket, toShard, $"{raftId ?? Guid.NewGuid().ToString()}/{bucket}");
+                            var (index, _) = await ServerStore.Sharding.StartBucketMigration(database, bucket, toShard,
+                                $"{raftId ?? Guid.NewGuid().ToString()}/{bucket}");
+                            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, token.Token);
+
                             bucket++;
                         }
 
