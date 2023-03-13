@@ -38,7 +38,8 @@ namespace Voron.Impl
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
         
-        internal WeakSmallSet<long, PersistentDictionary> _persistentDictionariesForCompactTrees; 
+        internal WeakSmallSet<long, PersistentDictionary> _persistentDictionariesForCompactTrees;
+        internal PersistentDictionary _lastPersistentDictionaryForCompactTrees;
 
         public object ImmutableExternalState;
 

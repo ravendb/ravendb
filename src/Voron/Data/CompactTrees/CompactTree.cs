@@ -1505,15 +1505,28 @@ namespace Voron.Data.CompactTrees
             cstate._len++;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static PersistentDictionary GetEncodingDictionary(LowLevelTransaction llt, long dictionaryId)
         {
-            llt._persistentDictionariesForCompactTrees ??= new WeakSmallSet<long, PersistentDictionary>(16);
-            if (llt._persistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
+            PersistentDictionary GetEncodingDictionaryUnlikely()
+            {
+                llt._persistentDictionariesForCompactTrees ??= new WeakSmallSet<long, PersistentDictionary>(16);
+                if (llt._persistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
+                {
+                    llt._lastPersistentDictionaryForCompactTrees = dictionary;
+                    return dictionary;
+                }
+
+                dictionary = new PersistentDictionary(llt.GetPage(dictionaryId));
+                llt._persistentDictionariesForCompactTrees.Add(dictionaryId, dictionary);
+                return dictionary;
+            }
+
+            PersistentDictionary dictionary = llt._lastPersistentDictionaryForCompactTrees;
+            if (dictionary?.PageNumber == dictionaryId)
                 return dictionary;
 
-            dictionary = new PersistentDictionary(llt.GetPage(dictionaryId));
-            llt._persistentDictionariesForCompactTrees.Add(dictionaryId, dictionary);
-            return dictionary;
+            return GetEncodingDictionaryUnlikely();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
