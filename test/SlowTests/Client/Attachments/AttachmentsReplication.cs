@@ -3216,7 +3216,7 @@ namespace SlowTests.Client.Attachments
                 await EnsureReplicatingAsync(store3, store1);
 
                 b1.Mend();
-WaitForUserToContinueTheTest(store1);
+
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store1, store3);
 
