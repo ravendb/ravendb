@@ -154,6 +154,7 @@ namespace Raven.Client.ServerWide
             NodesModifiedAt = topology.NodesModifiedAt;
 
             ReplicationFactor = topology.ReplicationFactor;
+            DynamicNodesDistribution = topology.DynamicNodesDistribution;
         }
     }
 
