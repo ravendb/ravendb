@@ -75,7 +75,9 @@ public partial class IndexSearcher
         //Therefore, we check the density of elements present in the tree.
         //In the future, this can be optimized by adding some values at which it makes sense to skip And and go directly into checking.
         TermQueryItem[] list = new TermQueryItem[allInTerms.Count];
+
         var it = 0;
+        var llt = _transaction.LowLevelTransaction;
         foreach (var item in allInTerms)
         {
             var itemSlice = EncodeAndApplyAnalyzer(field, item);
@@ -85,7 +87,9 @@ public partial class IndexSearcher
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
             }
 
-            list[it++] = new TermQueryItem(itemSlice, amount);
+            var itemKey = llt.AcquireCompactKey();
+            itemKey.Set(itemSlice.AsReadOnlySpan());
+            list[it++] = new TermQueryItem(itemKey, amount);
         }
 
 
@@ -96,15 +100,15 @@ public partial class IndexSearcher
         var stack = new BinaryMatch[allInTermsCount / 2];
         for (int i = 0; i < allInTermsCount / 2; i++)
         {
-            var term1 = TermQuery(field, terms, list[i * 2].Item.Span);
-            var term2 = TermQuery(field, terms, list[i * 2 + 1].Item.Span);
+            var term1 = TermQuery(field, list[i * 2].Item, terms);
+            var term2 = TermQuery(field, list[i * 2 + 1].Item, terms);
             stack[i] = And(term1, term2);
         }
 
         if (allInTermsCount % 2 == 1)
         {
             // We need even values to make the last work. 
-            var term = TermQuery(field, terms, list[^1].Item.Span);
+            var term = TermQuery(field, list[^1].Item, terms);
             stack[^1] = And(stack[^1], term);
         }
 
@@ -132,8 +136,8 @@ public partial class IndexSearcher
         //We don't have to check previous items. We have to check if those entries contain the rest of them.
         list = list[16..];
 
-        //BinarySearch requires sorted array.
-        Array.Sort(list, ((item, inItem) => item.Item.Span.SequenceCompareTo(inItem.Item.Span)));
+        // BinarySearch requires sorted array.
+        Array.Sort(list, ((item, inItem) => item.Item.Compare(inItem.Item)));
         return UnaryQuery(stack[0], field, list, UnaryMatchOperation.AllIn, -1);
     }
     

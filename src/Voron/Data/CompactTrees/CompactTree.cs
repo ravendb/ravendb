@@ -38,55 +38,6 @@ namespace Voron.Data.CompactTrees
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
-
-        // The reason why we use 2 is that the worst case scenario is caused by splitting pages where a single
-        // page split will need 2 simultaneous key encoders. In this way we can get away with not instantiating
-        // so many. 
-        private CompactKey _internalKeyCache1;
-        private CompactKey _internalKeyCache2;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal CompactKey AcquireKey()
-        {
-            if (_internalKeyCache1 == null && _internalKeyCache2 == null)
-                return new CompactKey(this);
-
-            CompactKey current;
-            if (_internalKeyCache1 != null)
-            {
-                current = _internalKeyCache1;
-                _internalKeyCache1 = null;
-            }
-            else
-            {
-                current = _internalKeyCache2;
-                _internalKeyCache2 = null;
-            }
-
-            return current;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void ReleaseKey(CompactKey key)
-        {
-            if (_internalKeyCache1 != null && _internalKeyCache2 != null)
-            {
-                key.Dispose();
-                return;
-            }
-
-            if (_internalKeyCache1 == null)
-            {
-                _internalKeyCache1 = key;
-            }
-            else
-            {
-                // We know we may be forcing the death of a key, but we are doing so because we are 
-                // going to be reclaiming one of them anyways. 
-                _internalKeyCache2 = key;
-            }
-        }
-
         internal struct CursorState
         {
             public Page Page;
@@ -374,7 +325,7 @@ namespace Voron.Data.CompactTrees
                 shouldBeInCurrentPage = true;
 
                 // TODO: Figure out if we can get rid of this copy and just change the current and restore after the loop. 
-                using var currentKeyScope = new CompactKeyCacheScope(this, key);
+                using var currentKeyScope = new CompactKeyCacheScope(this._llt, key);
 
                 var currentKeyInPageDictionary = currentKeyScope.Key;
                 
@@ -437,7 +388,7 @@ namespace Voron.Data.CompactTrees
 
         public bool TryGetNextValue(ReadOnlySpan<byte> key, out long value, out CompactKeyCacheScope cacheScope)
         {
-            cacheScope = new CompactKeyCacheScope(this, key);
+            cacheScope = new CompactKeyCacheScope(this._llt, key);
             var encodedKey = cacheScope.Key;
 
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
@@ -484,7 +435,7 @@ namespace Voron.Data.CompactTrees
                 shouldBeInCurrentPage = true;
 
                 // TODO: Figure out if we can get rid of this copy and just change the current and restore after the loop. 
-                using var currentKeyScope = new CompactKeyCacheScope(this, encodedKey);
+                using var currentKeyScope = new CompactKeyCacheScope(this._llt, encodedKey);
 
                 var currentKeyInPageDictionary = currentKeyScope.Key;
                 for (int i = _internalCursor._pos - 1; i >= 0; i--)
@@ -558,7 +509,7 @@ namespace Voron.Data.CompactTrees
 
         public bool TryRemove(ReadOnlySpan<byte> key, out long oldValue)
         {
-            using var scope = new CompactKeyCacheScope(this);
+            using var scope = new CompactKeyCacheScope(this._llt);
             var encodedKey = scope.Key;
             encodedKey.Set(key);
             FindPageFor(encodedKey, ref _internalCursor, tryRecompress: true);
@@ -718,7 +669,7 @@ namespace Voron.Data.CompactTrees
             Memory.Set(sourcePage.Pointer + sourceHeader->Lower, 0, (oldLower - sourceHeader->Lower));
 
             // now re-wire the new splitted page key
-            using var scope = new CompactKeyCacheScope(this);
+            using var scope = new CompactKeyCacheScope(this._llt);
             var newKey = scope.Key;
 
             var encodedKey = GetEncodedKey(sourcePage, sourceState.EntriesOffsets[0], out int encodedKeyLengthInBits);
@@ -873,13 +824,13 @@ namespace Voron.Data.CompactTrees
         public void Add(string key, long value)
         {
             using var _ = Slice.From(_llt.Allocator, key, out var slice);
-            using var scope = new CompactKeyCacheScope(this, slice.AsReadOnlySpan());
+            using var scope = new CompactKeyCacheScope(this._llt, slice.AsReadOnlySpan());
             Add(scope.Key, value);
         }
 
         public void Add(ReadOnlySpan<byte> key, long value)
         {
-            using var scope = new CompactKeyCacheScope(this, key);
+            using var scope = new CompactKeyCacheScope(this._llt, key);
             Add(scope.Key, value);
         }
 
@@ -1394,7 +1345,7 @@ namespace Voron.Data.CompactTrees
 
             var results = new List<(string, long)>();
 
-            using var scope = new CompactKeyCacheScope(this);
+            using var scope = new CompactKeyCacheScope(this._llt);
             for (ushort i = 0; i < state.Header->NumberOfEntries; i++)
             {
                 GetEncodedEntry(page, state.EntriesOffsets[i], out var encodedKey, out var encodedKeyLengthInBits, out var val);
@@ -1431,7 +1382,7 @@ namespace Voron.Data.CompactTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void FindPageFor(ReadOnlySpan<byte> key, ref IteratorCursorState cstate)
         {
-            using var scope = new CompactKeyCacheScope(this);
+            using var scope = new CompactKeyCacheScope(this._llt);
             var encodedKey = scope.Key;
             encodedKey.Set(key);
             FindPageFor(encodedKey, ref cstate);
@@ -1588,7 +1539,7 @@ namespace Voron.Data.CompactTrees
                 return false;
             }
 
-            key = new CompactKeyCacheScope(tree);
+            key = new CompactKeyCacheScope(tree._llt);
             key.Key.Set(encodedKeyLengthInBits, encodedKeyStream, ((CompactPageHeader*)page.Pointer)->DictionaryId);
 
             return true;
@@ -1781,7 +1732,7 @@ namespace Voron.Data.CompactTrees
 
             ref var state = ref cstate._stk[cstate._pos];
 
-            using var scope = new CompactKeyCacheScope(this);
+            using var scope = new CompactKeyCacheScope(this._llt);
             
             var encodedKey = scope.Key;
             encodedKey.Set(key);

@@ -17,11 +17,11 @@ namespace Corax.Queries
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
-        private readonly Slice _startWith;
+        private readonly CompactKey _startWith;
 
         private CompactTree.Iterator _iterator;
 
-        public StartWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice startWith)
+        public StartWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith)
         {
             _searcher = searcher;
             _field = field;
@@ -51,13 +51,13 @@ namespace Corax.Queries
             }
 
             var key = termScope.Key.Decoded();
-            if (key.StartsWith(_startWith) == false)
+            if (key.StartsWith(_startWith.Decoded()) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
 
-            term = _searcher.TermQuery(_field, _tree, key);
+            term = _searcher.TermQuery(_field, termScope.Key, _tree);
             return true;
         }
 

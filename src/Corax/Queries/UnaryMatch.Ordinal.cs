@@ -10,6 +10,7 @@ using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Voron;
+using Voron.Data.CompactTrees;
 
 namespace Corax.Queries
 {
@@ -140,6 +141,30 @@ namespace Corax.Queries
         }
         
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        private static int BinarySearch(TermQueryItem[] item, CompactKey value)
+        {
+            int l = 0;
+            int r = item.Length - 1;
+            while (l <= r)
+            {
+                var pivot = (l + r) >> 1;
+                switch (item[pivot].Item.Compare(value))
+                {
+                    case 0:
+                        return pivot;
+                    case < 0:
+                        l = pivot + 1;
+                        break;
+                    default:
+                        r = pivot - 1;
+                        break;
+                }
+            }
+
+            return -1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static int BinarySearch(TermQueryItem[] item, ReadOnlySpan<byte> value)
         {
             int l = 0;
@@ -147,7 +172,7 @@ namespace Corax.Queries
             while (l <= r)
             {
                 var pivot = (l + r) >> 1;
-                switch (item[pivot].Item.Span.SequenceCompareTo(value))
+                switch (item[pivot].Item.Decoded().SequenceCompareTo(value))
                 {
                     case 0:
                         return pivot;
@@ -259,7 +284,11 @@ namespace Corax.Queries
                 else
                 {
                     using (searcher.ApplyAnalyzer(field, readFromEntry, out var analyzedTerm))
+                    {
+
                         index = BinarySearch(value, analyzedTerm.AsSpan());
+                    }
+                        
                 }
                 if (index >= 0)
                     bitset.Set(index);

@@ -40,8 +40,19 @@ public partial class IndexSearcher
             Constants.EmptyString => Constants.EmptyStringSlice,
             _ => EncodeAndApplyAnalyzer(field, term)
         };
-        
-        return TermQuery(field, terms, termSlice.AsReadOnlySpan());
+
+        CompactKey termKey;
+        if (termSlice.Size != 0)
+        {
+            termKey = _fieldsTree.Llt.AcquireCompactKey();
+            termKey.Set(termSlice.AsReadOnlySpan());
+        }
+        else
+        {
+            termKey = null;
+        }
+
+        return TermQuery(field, termKey, terms);
     }
     
     //Should be already analyzed...
@@ -53,22 +64,27 @@ public partial class IndexSearcher
             // If either the term or the field does not exist the request will be empty. 
             return TermMatch.CreateEmpty(this, Allocator);
         }
-        
-        return TermQuery(field, terms, term);
-    }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal TermMatch TermQuery(in FieldMetadata field, CompactTree tree, Slice term)
-    {
-        return TermQuery(field, tree, term.AsReadOnlySpan());
-    }
-    
-    public TermMatch TermQuery(FieldMetadata field, CompactKey term, CompactTree termsTree = null)
-    {
-        return TermQuery(field, termsTree, term.Decoded());
+
+        CompactKey termKey;
+        if (term.Size != 0)
+        {
+            termKey = _fieldsTree.Llt.AcquireCompactKey();
+            termKey.Set(term.AsReadOnlySpan());
+        }
+        else
+        {
+            termKey = null;
+        }
+
+        return TermQuery(field, termKey, terms);
     }
 
-    internal TermMatch TermQuery(in FieldMetadata field, CompactTree tree, ReadOnlySpan<byte> term)
+    //public TermMatch TermQuery(FieldMetadata field, CompactKey term, CompactTree termsTree = null)
+    //{
+    //    return TermQuery(field, term, termsTree);
+    //}
+
+    public TermMatch TermQuery(in FieldMetadata field, CompactKey term, CompactTree tree)
     {
         if (tree.TryGetValue(term, out var value) == false)
             return TermMatch.CreateEmpty(this, Allocator);
@@ -83,13 +99,13 @@ public partial class IndexSearcher
             if (totalTerms == 0 || totalSum == 0)
                 termRatioToWholeCollection = 1;
             else
-                termRatioToWholeCollection = term.Length /  (totalSum / (double)totalTerms);
+                termRatioToWholeCollection = term.Decoded().Length /  (totalSum / (double)totalTerms);
         }
 
         var matches = TermQuery(field, value, termRatioToWholeCollection);
         
         #if DEBUG
-        matches.Term = Encoding.UTF8.GetString(term);
+        matches.Term = Encoding.UTF8.GetString(term.Decoded());
         #endif
         return matches;
     }
@@ -114,7 +130,6 @@ public partial class IndexSearcher
         }
         else
         {
-
             matches = TermMatch.YieldOnce(this, Allocator, containerId, termRatioToWholeCollection, field.HasBoost);
         }
 

@@ -17,7 +17,7 @@ namespace Voron.Data.CompactTrees;
 // when the same key is reused on multiple operations in the same transaction.
 public unsafe class CompactKey : IDisposable
 {
-    public readonly CompactTree Owner;
+    public readonly LowLevelTransaction Owner;
 
     private ByteString _storage;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _storageScope;
@@ -45,9 +45,9 @@ public unsafe class CompactKey : IDisposable
 
     private const int Invalid = -1;
 
-    public CompactKey(CompactTree tree)
+    public CompactKey(LowLevelTransaction tx)
     {
-        Owner = tree;
+        Owner = tx;
         Dictionary = Invalid;
         _currentKeyIdx = Invalid;
         _decodedKeyIdx = Invalid;
@@ -55,7 +55,7 @@ public unsafe class CompactKey : IDisposable
 
         int allocationSize = 2 * Constants.CompactTree.MaximumKeySize + 2 * MappingTableSize * sizeof(long);
 
-        _storageScope = Owner.Llt.Allocator.Allocate(allocationSize, out _storage);
+        _storageScope = Owner.Allocator.Allocate(allocationSize, out _storage);
         _currentPtr = _storage.Ptr;
         _currentEndPtr = _currentPtr + Constants.CompactTree.MaximumKeySize * 2;
 
@@ -96,7 +96,7 @@ public unsafe class CompactKey : IDisposable
             _keyMappingCache[buckedIdx] = dictionaryId;
             _keyMappingCacheIndex[buckedIdx] = (int)(_currentPtr - _storage.Ptr);
 
-            var dictionary = Owner.Llt.GetEncodingDictionary(dictionaryId);
+            var dictionary = Owner.GetEncodingDictionary(dictionaryId);
             int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
 
             int currentSize = (int)(_currentEndPtr - _currentPtr);
@@ -161,7 +161,7 @@ public unsafe class CompactKey : IDisposable
 
         Debug.Assert(currentKeyIdx != Invalid);
 
-        var dictionary = Owner.Llt.GetEncodingDictionary(currentDictionary);
+        var dictionary = Owner.GetEncodingDictionary(currentDictionary);
 
         byte* encodedStartPtr = _storage.Ptr + currentKeyIdx;
         int encodedKeyLengthInBits = *(int*)encodedStartPtr;
@@ -223,7 +223,7 @@ public unsafe class CompactKey : IDisposable
 
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, _storage.Length) * 2;
-        var storageScope = Owner.Llt.Allocator.Allocate(maxSize, out var storage);
+        var storageScope = Owner.Allocator.Allocate(maxSize, out var storage);
         Memory.Copy(storage.Ptr, _storage.Ptr, memoryUsed);
 
         _storageScope.Dispose();
@@ -432,5 +432,21 @@ public unsafe class CompactKey : IDisposable
     public void Dispose()
     {
         _storageScope.Dispose();
+    }
+
+    public int Compare(CompactKey value)
+    {
+        // If both are using the same dictionary, we just get the current encoded value.
+        if (this.Dictionary != Invalid && this.Dictionary == value.Dictionary)
+        {
+            byte* valuePtr = value.EncodedWithPtr(value.Dictionary, out var valueLength);
+            return CompareEncodedWithCurrent(valuePtr, valueLength);
+        }
+
+        // This is the fallback, let's hope that both have the decoded value already there to avoid
+        // the decoding step. 
+        var thisDecoded = this.Decoded();
+        var valueDecoded = value.Decoded();
+        return thisDecoded.SequenceCompareTo(valueDecoded);
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using Voron.Impl;
 
 namespace Voron.Data.CompactTrees;
 
@@ -8,26 +9,26 @@ public readonly struct CompactKeyCacheScope : IDisposable
     public readonly CompactKey Key;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CompactKeyCacheScope(CompactTree tree)
+    public CompactKeyCacheScope(LowLevelTransaction tx)
     {
-        Key = tree.AcquireKey();
+        Key = tx.AcquireCompactKey();
     }
 
-    public CompactKeyCacheScope(CompactTree tree, ReadOnlySpan<byte> key)
+    public CompactKeyCacheScope(LowLevelTransaction tx, ReadOnlySpan<byte> key)
     {
-        Key = tree.AcquireKey();
+        Key = tx.AcquireCompactKey();
         Key.Set(key);
     }
 
-    public CompactKeyCacheScope(CompactTree tree, CompactKey key)
+    public CompactKeyCacheScope(LowLevelTransaction tx, CompactKey key)
     {
-        Key = tree.AcquireKey();
+        Key = tx.AcquireCompactKey();
         Key.Set(key);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
     {
-        Key?.Owner.ReleaseKey(Key);
+        Key?.Owner.ReleaseCompactKey(Key);
     }
 }

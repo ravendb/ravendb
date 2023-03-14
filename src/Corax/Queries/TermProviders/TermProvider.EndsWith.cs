@@ -13,10 +13,10 @@ namespace Corax.Queries
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
 
-        private readonly Slice _endsWith;
+        private readonly CompactKey _endsWith;
 
         private CompactTree.Iterator _iterator;
-        public EndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice endsWith)
+        public EndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
         {
             _tree = tree;
             _searcher = searcher;
@@ -34,14 +34,14 @@ namespace Corax.Queries
 
         public bool Next(out TermMatch term)
         {
-            var suffix = _endsWith;
+            var suffix = _endsWith.Decoded();
             while (_iterator.MoveNext(out var termScope, out var _))
             {
                 var termSlice = termScope.Key.Decoded();
                 if (termSlice.EndsWith(suffix) == false)
                     continue;
 
-                term = _searcher.TermQuery(_field, _tree, termSlice);
+                term = _searcher.TermQuery(_field, termScope.Key, _tree);
                 return true;
             }
 

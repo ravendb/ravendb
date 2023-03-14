@@ -42,7 +42,7 @@ public struct RegexTermProvider : ITermProvider
             if (_regex.IsMatch(Encoding.UTF8.GetString(key)) == false)
                 continue;
 
-            term = _searcher.TermQuery(_field, _tree, key);
+            term = _searcher.TermQuery(_field, termScope.Key, _tree);
             return true;
         }
 

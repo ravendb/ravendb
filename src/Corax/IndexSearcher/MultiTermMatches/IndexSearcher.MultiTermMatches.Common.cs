@@ -14,7 +14,18 @@ public partial class IndexSearcher
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        return MultiTermMatchBuilderBase<TTermProvider>(field, terms, term, isNegated);
+        CompactKey termKey;
+        if (term.Size != 0)
+        {
+            termKey = _fieldsTree.Llt.AcquireCompactKey();
+            termKey.Set(term.AsReadOnlySpan());
+        }
+        else
+        {
+            termKey = null;
+        }
+        
+        return MultiTermMatchBuilderBase<TTermProvider>(field, terms, termKey, isNegated);
     }
 
     private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(FieldMetadata field, string term,  bool isNegated)
@@ -25,10 +36,13 @@ public partial class IndexSearcher
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
         var slicedTerm = EncodeAndApplyAnalyzer(field, term);
-        return MultiTermMatchBuilderBase<TTermProvider>(field, terms, slicedTerm, isNegated);
+
+        var termKey = _fieldsTree.Llt.AcquireCompactKey();
+        termKey.Set(slicedTerm.AsReadOnlySpan());
+        return MultiTermMatchBuilderBase<TTermProvider>(field, terms, termKey, isNegated);
     }
 
-    private MultiTermMatch MultiTermMatchBuilderBase<TTermProvider>(FieldMetadata field, CompactTree termTree, Slice term, bool isNegated)
+    private MultiTermMatch MultiTermMatchBuilderBase<TTermProvider>(FieldMetadata field, CompactTree termTree, CompactKey term, bool isNegated)
         where TTermProvider : ITermProvider
     {
         if (typeof(TTermProvider) == typeof(StartWithTermProvider))
