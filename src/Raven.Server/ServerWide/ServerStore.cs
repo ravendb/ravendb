@@ -816,6 +816,13 @@ namespace Raven.Server.ServerWide
 
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex);
+            
+            using (Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                PublishedUrls = PublishedUrls.Read(context);
+            }
+
             Task.Run(PublishPrivateUrlAsync);
             
             SorterCompilationCache.Instance.AddServerWideItems(this);
@@ -1270,6 +1277,11 @@ namespace Raven.Server.ServerWide
                     break;
 
                 case nameof(UpdatePrivateUrlsCommand):
+                    using (Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        PublishedUrls = PublishedUrls.Read(context);
+                    }
 
                     foreach (var orchestrator in DatabasesLandlord.ShardedDatabasesCache.Values)
                     {
@@ -1278,10 +1290,12 @@ namespace Raven.Server.ServerWide
 
                         orchestrator.Result.UpdateUrls(index);
                     }
-                    
+
                     break;
             }
         }
+
+        public PublishedUrls PublishedUrls;
 
         private void RescheduleTimerIfDatabaseIdle(string db, object state)
         {
