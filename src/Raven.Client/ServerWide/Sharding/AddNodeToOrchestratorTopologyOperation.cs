@@ -72,7 +72,7 @@ namespace Raven.Client.ServerWide.Sharding
     public class ModifyOrchestratorTopologyResult
     {
         public string Name { get; set; }
-        public string OrchestratorTopology { get; set; }
+        public OrchestratorTopology OrchestratorTopology { get; set; }
         public long RaftCommandIndex { get; set; }
     }
 }
