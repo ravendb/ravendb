@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -26,7 +27,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
         {
-            AssertCanAddOrUpdateEtl(ref configuration);
+            var etlType = EtlConfiguration<ConnectionString>.GetEtlType(configuration);
+            AssertIsEtlTypeSupported(etlType);
+            AssertCanAddOrUpdateEtl(etlType);
         }
 
         protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext _, BlittableJsonReaderObject configuration, string raftRequestId)
@@ -57,9 +60,11 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             return RequestHandler.ServerStore.UpdateEtl(context, RequestHandler.DatabaseName, id.Value, configuration, raftRequestId);
         }
 
-        private void AssertCanAddOrUpdateEtl(ref BlittableJsonReaderObject etlConfiguration)
+        protected abstract void AssertIsEtlTypeSupported(EtlType type);
+
+        private void AssertCanAddOrUpdateEtl(EtlType type)
         {
-            switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
+            switch (type)
             {
                 case EtlType.Raven:
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddRavenEtl();
@@ -77,7 +82,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddQueueEtl();
                     break;
                 default:
-                    throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
+                    throw new NotSupportedException($"Unknown ETL type  {type}");
             }
         }
     }

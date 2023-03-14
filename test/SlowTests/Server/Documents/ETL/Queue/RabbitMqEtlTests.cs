@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
@@ -67,6 +68,19 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             Assert.Equal(order.Id, "orders/1-A");
             Assert.Equal(order.OrderLinesCount, 2);
             Assert.Equal(order.TotalCost, 10);
+        }
+    }
+
+    [RequiresRabbitMqRetryFact]
+    public void ShardedRabbitMqEtlNotSupported()
+    {
+        using (var store = Sharding.GetDocumentStore())
+        {
+            var error = Assert.ThrowsAny<NotSupportedInShardingException>(() =>
+            {
+                SetupQueueEtlToRabbitMq(store, DefaultScript, DefaultCollections);
+            });
+            Assert.Contains("Queue ETLs are currently not supported in sharding", error.Message);
         }
     }
 
