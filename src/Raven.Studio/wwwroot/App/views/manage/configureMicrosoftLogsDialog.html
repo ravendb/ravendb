@@ -1,0 +1,34 @@
+<div class="modal-dialog modal-lg prevent-close" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Configure Microsoft Logs</h4>
+        </div>
+        <div class="modal-body">
+            
+            <div class="margin-left">
+                <div class="toggle">
+                    <input id="enableAdminLogsMicrosoft" type="checkbox" data-bind="checked: isEnabled">
+                    <label for="enableAdminLogsMicrosoft">Enable Microsoft logs</label>
+                </div>
+            </div>
+
+            <div data-bind="collapse: isEnabled">
+                <pre class="form-control margin-top" data-bind="aceEditor: { code: code, fullScreenNotAllowed: true }" style="height: 250px;">
+                </pre>
+            </div>
+            
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: close">
+                Cancel
+            </button>
+            <button type="button" class="btn btn-primary" data-bind="click: save">
+                <i class="icon-save"></i>
+                <span>Save</span>
+            </button>
+        </div>
+    </div>
+</div>

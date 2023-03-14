@@ -20,6 +20,12 @@ import app = require("durandal/app");
 import getTrafficWatchConfigurationCommand = require("commands/maintenance/getTrafficWatchConfigurationCommand");
 import trafficWatchConfiguration = require("models/resources/trafficWatchConfiguration");
 import saveTrafficWatchConfigurationCommand = require("commands/maintenance/saveTrafficWatchConfigurationCommand");
+import getAdminLogsMicrosoftStateCommand = require("commands/maintenance/getAdminLogsMicrosoftStateCommand");
+import getAdminLogsMicrosoftConfigurationCommand = require("commands/maintenance/getAdminLogsMicrosoftConfigurationCommand");
+import enableAdminLogsMicrosoftCommand = require("commands/maintenance/enableAdminLogsMicrosoftCommand");
+import disableAdminLogsMicrosoftCommand = require("commands/maintenance/disableAdminLogsMicrosoftCommand");
+import saveAdminLogsMicrosoftConfigurationCommand = require("commands/maintenance/saveAdminLogsMicrosoftConfigurationCommand");
+import configureMicrosoftLogsDialog = require("./configureMicrosoftLogsDialog");
 
 class heightCalculator {
     
@@ -94,6 +100,9 @@ class adminLogs extends viewModelBase {
     private onDiskConfiguration = ko.observable<adminLogsOnDiskConfig>();
     private configuration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     private trafficWatchConfiguration = ko.observable<trafficWatchConfiguration>();
+
+    isMicrosoftLogsEnabled = ko.observable<boolean>(false);
+    microsoftLogsConfiguration = ko.observable<string>("");
     
     editedConfiguration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     editedHeaderName = ko.observable<adminLogsHeaderType>("Source");
@@ -140,7 +149,7 @@ class adminLogs extends viewModelBase {
         
         this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "loadLogsConfig",
             "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider", "setAdminLogMode", 
-            "configureTrafficWatch");
+            "configureTrafficWatch", "configureMicrosoftLogs");
         
         this.initObservables();
         this.initValidation();
@@ -285,8 +294,10 @@ class adminLogs extends viewModelBase {
     loadConfigs() {
         const logConfigsTask = this.loadLogsConfig();
         const trafficWatchConfigTask = this.loadTrafficWatchConfig();
+        const loadIsMicrosoftLogsEnabledTask = this.loadIsMicrosoftLogsEnabled();
+        const loadMicrosoftLogsConfigurationTask = this.loadMicrosoftLogsConfiguration();
         
-        return $.when<any>(logConfigsTask, trafficWatchConfigTask);
+        return $.when<any>(logConfigsTask, trafficWatchConfigTask, loadIsMicrosoftLogsEnabledTask, loadMicrosoftLogsConfigurationTask);
     }
     
     loadLogsConfig() {
@@ -297,6 +308,16 @@ class adminLogs extends viewModelBase {
     loadTrafficWatchConfig() {
         return new getTrafficWatchConfigurationCommand().execute()
             .done(result => this.trafficWatchConfiguration(new trafficWatchConfiguration(result)))
+    }
+    
+    loadIsMicrosoftLogsEnabled() {
+        return new getAdminLogsMicrosoftStateCommand().execute()
+            .done(result => this.isMicrosoftLogsEnabled(result.IsActive));
+    }
+
+    loadMicrosoftLogsConfiguration() {
+        return new getAdminLogsMicrosoftConfigurationCommand().execute()
+            .done(result => this.microsoftLogsConfiguration(JSON.stringify(result, null, 4)));
     }
 
     setAdminLogMode(newMode: Sparrow.Logging.LogMode) {
@@ -640,6 +661,34 @@ class adminLogs extends viewModelBase {
                     this.trafficWatchConfiguration(result);
                     new saveTrafficWatchConfigurationCommand(this.trafficWatchConfiguration().toDto())
                         .execute();
+                }
+            });
+    }
+
+    configureMicrosoftLogs() {
+        app.showBootstrapDialog(new configureMicrosoftLogsDialog(this.isMicrosoftLogsEnabled(), this.microsoftLogsConfiguration()))
+            .done((result) => {
+                if (!result) {
+                    return;
+                }
+                
+                if (this.isMicrosoftLogsEnabled() !== result.isEnabled) { 
+                    if (result.isEnabled) {
+                        new enableAdminLogsMicrosoftCommand()
+                            .execute()
+                            .done(() => this.loadIsMicrosoftLogsEnabled());
+                    } else {
+                        new disableAdminLogsMicrosoftCommand()
+                            .execute()
+                            .done(() => this.loadIsMicrosoftLogsEnabled());
+                    }
+                    
+                }
+                
+                if (result.configuration) {
+                    new saveAdminLogsMicrosoftConfigurationCommand(result.configuration)
+                        .execute()
+                        .done(() => this.loadMicrosoftLogsConfiguration());
                 }
             });
     }
