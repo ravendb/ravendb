@@ -13,9 +13,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
@@ -132,6 +130,19 @@ namespace InterversionTests
                 "current"
             };
             var suit = new Version41X(this);
+            await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
+        }
+
+        [Fact]
+        public async Task UpgradeDirectlyFrom54X()
+        {
+            var latest = "5.4.101";
+            var initialVersions = new[] { latest, latest, latest };
+            var upgradeTo = new List<string>
+            {
+                "current"
+            };
+            var suit = new Version54X(this);
             await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
 
@@ -434,6 +445,42 @@ namespace InterversionTests
         }
 
         [Fact]
+        public async Task ReplicationInMixedCluster_60Leader_with_two_54()
+        {
+            var (leader, peers, local) = await CreateMixedCluster(new[]
+            {
+                "5.4.101",
+                "5.4.101"
+            });
+
+            var stores = await GetStores(leader, peers);
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0];
+
+                var dbName = await CreateDatabase(storeA, 3);
+
+                using (var session = storeA.OpenSession(dbName))
+                {
+                    session.Store(new User
+                    {
+                        Name = "aviv"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    "users/1",
+                    u => u.Name.Equals("aviv"),
+                    TimeSpan.FromSeconds(10),
+                    stores.Stores,
+                    dbName));
+
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
+            }
+        }
+
+        [Fact]
         public async Task SingleSubscriptionMixedClusterEnsureAcknowledgeFallsBackToV52Behavior_RavenDB_17764()
         {
             var proccess526List = await CreateCluster(new string[] { "5.2.6", "5.2.6" });
@@ -550,6 +597,77 @@ namespace InterversionTests
                         if (batch.Items[0].Id == idOf2ndDoc && filesReceived == 2)
                         {
                             await store53.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions()
+                            {
+                                ChangeVector = changeVectorOfFirstDoc,
+                                Name = worker.SubscriptionName
+                            });
+                            amre.Set();
+                        }
+                    };
+
+                    _ = worker.Run(async x =>
+                    {
+                        await amre.WaitAsync(_reasonableWaitTime);
+
+                        filesReceived++;
+
+                        if (filesReceived == 1)
+                            changeVectorOfFirstDoc = x.Items[0].ChangeVector;
+
+                        if (filesReceived == 2)
+                        {
+                            idOf2ndDoc = x.Items[0].Id;
+                            amre.Reset();
+                        }
+
+                        if (filesReceived >= 3)
+                            idOf3rdDoc = x.Items[0].Id;
+
+                    });
+                    await WaitForValueAsync(() => Task.FromResult(idOf2ndDoc == idOf3rdDoc && string.IsNullOrWhiteSpace(idOf3rdDoc) == false), true);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SingleSubscriptionMixedClusterV54StartAgainFromSpecificChangeVector()
+        {
+            var proccess541List = await CreateCluster(new string[] { "5.4.101", "5.4.101" });
+            await UpgradeServerAsync("current", proccess541List[0]);
+
+            using (var store = await GetStore(proccess541List[0].Url, proccess541List[0].Process, null,
+                       new InterversionTestOptions() { ReplicationFactor = 2, CreateDatabase = true }))
+            {
+                var subscriptionName = await store.Subscriptions.CreateAsync<User>(new SubscriptionCreationOptions<User>()
+                {
+                    MentorNode = "A"
+                });
+
+                using (var session = store.OpenAsyncSession(store.Database))
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.StoreAsync(new User(), "users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                await using (var worker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3),
+                    MaxDocsPerBatch = 1,
+                }))
+                {
+                    var amre = new AsyncManualResetEvent();
+                    amre.Set();
+                    var filesReceived = 0;
+                    var changeVectorOfFirstDoc = "";
+                    var idOf2ndDoc = "";
+                    var idOf3rdDoc = "";
+
+                    worker.AfterAcknowledgment += async batch =>
+                    {
+                        if (batch.Items[0].Id == idOf2ndDoc && filesReceived == 2)
+                        {
+                            await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions()
                             {
                                 ChangeVector = changeVectorOfFirstDoc,
                                 Name = worker.SubscriptionName

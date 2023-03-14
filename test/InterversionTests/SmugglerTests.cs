@@ -24,6 +24,7 @@ namespace InterversionTests
     public class SmugglerTests : InterversionTestBase
     {
         const string Server42Version = "4.2.124-nightly-20230112-0944";
+        const string Server54Version = "5.4.101";
         readonly TimeSpan _operationTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
         private readonly DatabaseItemType _operateOnTypes42 = ~(DatabaseItemType.TimeSeries| DatabaseItemType.ReplicationHubCertificates);
         private readonly DatabaseRecordItemType _operateOnRecordTypes42 = ~(DatabaseRecordItemType.TimeSeries | DatabaseRecordItemType.DocumentsCompression |
@@ -107,6 +108,53 @@ namespace InterversionTests
             }
         }
 
+        [Fact]
+        public async Task CanExportFrom54XAndImportToCurrent()
+        {
+            var file = GetTempFileName();
+            using var store54 = await GetDocumentStoreAsync(Server54Version);
+            using var storeCurrent = GetDocumentStore();
+
+            store54.Maintenance.Send(new CreateSampleDataOperation());
+            using (var session = store54.OpenAsyncSession())
+            {
+                for (var i = 0; i < 5; i++)
+                {
+                    var user = new User { Name = "raven" + i };
+                    await session.StoreAsync(user);
+                    session.CountersFor(user).Increment("Like");
+                }
+                await session.SaveChangesAsync();
+            }
+
+            //Export
+            var exportOptions = new DatabaseSmugglerExportOptions();
+            var exportOperation = await store54.Smuggler.ExportAsync(exportOptions, file);
+            await exportOperation.WaitForCompletionAsync(_operationTimeout);
+
+            var expected = await store54.Maintenance.SendAsync(new GetStatisticsOperation());
+
+            //Import
+            var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
+            var importOperation = await storeCurrent.Smuggler.ImportAsync(importOptions, file);
+            await importOperation.WaitForCompletionAsync(_operationTimeout);
+
+            var actual = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
+
+            var export = await GetMetadataCounts(store54);
+            var import = await GetMetadataCounts(storeCurrent);
+
+            //Assert
+            Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
+            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
+
+            Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
+            Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
+            Assert.Equal(expected.CountOfCounterEntries, actual.CountOfCounterEntries);
+
+            Assert.Equal(export, import);
+        }
+
         [Theory]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
@@ -172,6 +220,55 @@ namespace InterversionTests
 
                 Assert.Equal((0,0,0), import);
             }
+        }
+
+        [Fact]
+        public async Task CanExportFromCurrentAndImportTo54()
+        {
+            var file = GetTempFileName();
+            using var store54 = await GetDocumentStoreAsync(Server54Version);
+            using var storeCurrent = GetDocumentStore();
+            //Export
+            storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
+            using (var session = storeCurrent.OpenAsyncSession())
+            {
+                var dateTime = new DateTime(2020, 3, 29);
+
+                for (var i = 0; i < 5; i++)
+                {
+                    var user = new User { Name = "raven" + i };
+                    await session.StoreAsync(user);
+                    session.TimeSeriesFor(user, "Heartrate").Append(dateTime, 59d, "watches/fitbit");
+                }
+                await session.SaveChangesAsync();
+            }
+
+            var exportOptions = new DatabaseSmugglerExportOptions();
+            var exportOperation = await storeCurrent.Smuggler.ExportAsync(exportOptions, file);
+
+            await exportOperation.WaitForCompletionAsync(_operationTimeout);
+
+            DatabaseStatistics expected = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
+
+            //Import
+            var importOptions = new DatabaseSmugglerImportOptions { SkipRevisionCreation = true };
+            var importOperation = await store54.Smuggler.ImportAsync(importOptions, file);
+            await importOperation.WaitForCompletionAsync(_operationTimeout);
+
+            var actual = await store54.Maintenance.SendAsync(new GetStatisticsOperation());
+
+            //Assert
+            Assert.Equal(expected.CountOfIndexes, actual.CountOfIndexes);
+            Assert.Equal(expected.CountOfDocuments, actual.CountOfDocuments);
+
+            var export = await GetMetadataCounts(storeCurrent);
+            var import = await GetMetadataCounts(store54);
+
+            Assert.Equal(expected.CountOfAttachments, actual.CountOfAttachments);
+            Assert.Equal(expected.CountOfRevisionDocuments, actual.CountOfRevisionDocuments);
+            Assert.Equal(expected.CountOfCounterEntries, actual.CountOfCounterEntries);
+
+            Assert.Equal(export, import);
         }
 
         [Theory]
@@ -283,6 +380,43 @@ namespace InterversionTests
         }
 
         [Fact]
+        public async Task CanMigrateFrom54ToCurrent()
+        {
+            using var store54 = await GetDocumentStoreAsync(Server54Version);
+            using var storeCurrent = GetDocumentStore();
+
+            store54.Maintenance.Send(new CreateSampleDataOperation());
+            using (var session = store54.OpenAsyncSession())
+            {
+                for (var i = 0; i < 5; i++)
+                {
+                    var user = new User { Name = "raven" + i };
+                    await session.StoreAsync(user);
+                    session.CountersFor(user).Increment("Like");
+                }
+                await session.SaveChangesAsync();
+            }
+
+            var operation = await Migrate(store54, storeCurrent);
+            await operation.WaitForCompletionAsync(_operationTimeout);
+
+            var fromStat = await store54.Maintenance.SendAsync(new GetStatisticsOperation());
+            var toStat = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
+
+            //Assert
+            Assert.Equal(fromStat.CountOfIndexes, toStat.CountOfIndexes);
+            Assert.True(fromStat.CountOfDocuments < toStat.CountOfDocuments,
+                $"The count of document in target server should be at least the count of the source. source({fromStat.CountOfDocuments}) target({toStat.CountOfDocuments})");
+
+            Assert.Equal(fromStat.CountOfAttachments, toStat.CountOfAttachments);
+            Assert.Equal(fromStat.CountOfCounterEntries, toStat.CountOfCounterEntries);
+
+            var fromMetadataCount = await GetMetadataCounts(store54);
+            var toMetadataCount = await GetMetadataCounts(storeCurrent);
+            Assert.Equal(fromMetadataCount, toMetadataCount);
+        }
+
+        [Fact]
         public async Task CanMigrateFromCurrentTo42()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -326,7 +460,50 @@ namespace InterversionTests
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        
+        [Fact]
+        public async Task CanMigrateFromCurrentTo54()
+        {
+            using var store54 = await GetDocumentStoreAsync(Server54Version);
+            using var storeCurrent = GetDocumentStore();
+
+            storeCurrent.Maintenance.Send(new CreateSampleDataOperation());
+            using (var session = storeCurrent.OpenAsyncSession())
+            {
+                for (var i = 0; i < 5; i++)
+                {
+                    var user = new User { Name = "raven" + i };
+                    await session.StoreAsync(user);
+                    session.CountersFor(user).Increment("Like");
+                }
+                DateTime dateTime = new DateTime(2020, 4, 12);
+                for (var i = 0; i < 5; i++)
+                {
+                    var user = new User { Name = "raven" + i };
+                    await session.StoreAsync(user);
+                    session.TimeSeriesFor(user, "Heartrate").Append(dateTime, 59d, "watches/fitbit");
+                }
+                await session.SaveChangesAsync();
+            }
+
+            var operation = await Migrate(storeCurrent, store54);
+            await operation.WaitForCompletionAsync(_operationTimeout);
+
+            var fromStat = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
+            var toStat = await store54.Maintenance.SendAsync(new GetStatisticsOperation());
+
+            //Assert
+            Assert.Equal(fromStat.CountOfIndexes, toStat.CountOfIndexes);
+            Assert.True(fromStat.CountOfDocuments < toStat.CountOfDocuments,
+                $"The count of document in target server should be at least the count of the source. source({fromStat.CountOfDocuments}) target({toStat.CountOfDocuments})");
+
+            Assert.Equal(fromStat.CountOfAttachments, toStat.CountOfAttachments);
+            Assert.Equal(fromStat.CountOfCounterEntries, toStat.CountOfCounterEntries);
+
+            var fromMetadataCount = await GetMetadataCounts(storeCurrent);
+            var toMetadataCount = await GetMetadataCounts(store54);
+            Assert.Equal(fromMetadataCount, toMetadataCount);
+        }
+
         private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType exclude = DatabaseItemType.None)
         {
             using var client = new HttpClient();
