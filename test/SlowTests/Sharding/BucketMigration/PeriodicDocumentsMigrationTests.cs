@@ -570,7 +570,7 @@ namespace SlowTests.Sharding.BucketMigration
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
-                    url = $"{node.Url}/databases/{node.Database}/admin/documentsMigrator/cleanup";
+                    url = $"{node.Url}/databases/{node.Database}/admin/sharding/resharding/cleanup";
 
                     var request = new HttpRequestMessage { Method = HttpMethod.Post };
 
