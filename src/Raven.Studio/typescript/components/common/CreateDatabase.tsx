@@ -106,6 +106,9 @@ export function CreateDatabase(props: CreateDatabaseProps) {
 
     const toggleCreateFromBackup = () => {
         setCreateFromBackup(!createFromBackup);
+        setManualNodeSelection(false);
+        setShardingEnabled(false);
+        setEncryptionEnabled(false);
     };
 
     //PATHS
@@ -738,7 +741,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                             >
                                 Allow dynamic database distribution
                                 <br />
-                                <small>Maintain replication factor upon node failure</small>
+                                <small className="text-muted">Maintain replication factor upon node failure</small>
                             </Switch>
                         </LicenseRestrictions>
                     ) : (
@@ -1314,8 +1317,6 @@ export function BackupSourceFragmentLocal(props: BackupSourceFragmentLocalProps)
             { node: null, shard: null, directory: null, restorePoint: null },
         ]);
     };
-
-    const updateBackup = () => {};
 
     return (
         <>

@@ -998,7 +998,7 @@ $card-spacer-y: $spacer !default;
 $card-spacer-x: $spacer !default;
 $card-title-spacer-y: $spacer * $spacer-ratio !default;
 $card-border-width: 0 !default;
-$card-border-radius: $border-radius-lg !default;
+$card-border-radius: $border-radius !default;
 $card-border-color: $panel-header-bg !default;
 $card-inner-border-radius: subtract($card-border-radius, $card-border-width) !default;
 $card-cap-padding-y: $card-spacer-y * 0.5 !default;
