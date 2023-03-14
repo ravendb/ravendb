@@ -509,7 +509,7 @@ namespace Raven.Client.Documents.Smuggler
 
             internal void Start()
             {
-                StartTime = SystemTime.UtcNow;
+                StartTime ??= SystemTime.UtcNow;
             }
         }
 
