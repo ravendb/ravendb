@@ -20,25 +20,40 @@ const Template = (args: { withLabel: boolean }) => {
             <Checkbox selected={selected} toggleSelection={toggle}>
                 First checkbox
             </Checkbox>
+            <br />
             <Checkbox selected={selected} toggleSelection={toggle} color="primary">
                 Primary checkbox
             </Checkbox>
-            {/* TODO fix vertical aligment */}
+            <br />
+
             <Checkbox selected={selected} toggleSelection={toggle} color="success" size="lg">
                 Checkbox lg
             </Checkbox>
+            <br />
             <Checkbox selected={selected} toggleSelection={toggle} color="success" size="sm">
                 Checkbox sm ¯\_(ツ)_/¯
             </Checkbox>
+            <br />
             <Checkbox selected={selected} toggleSelection={toggle} color="danger" size="lg" reverse>
                 Checkbox reverse
             </Checkbox>
+            <br />
             <Switch selected={selected} toggleSelection={toggle}>
                 Switch
             </Switch>
+            <br />
+            <Switch size="lg" selected={selected} toggleSelection={toggle} color="primary">
+                Large primary switch
+            </Switch>
+            <br />
             <Switch selected={selected} toggleSelection={toggle} color="info">
                 Info switch
             </Switch>
+            <br />
+            <Switch size="sm" selected={selected} toggleSelection={toggle} color="node">
+                tiny winy switch
+            </Switch>
+            <br />
             <Switch selected={selected} toggleSelection={toggle} reverse color="warning">
                 Switch reverse
             </Switch>

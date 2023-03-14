@@ -904,7 +904,7 @@ $navbar-dark-brand-hover-color: $navbar-dark-active-color !default;
 // Dropdown menu container and contents.
 
 // scss-docs-start dropdown-variables
-$dropdown-min-width: 10rem !default;
+$dropdown-min-width: 0rem !default;
 $dropdown-padding-x: 0 !default;
 $dropdown-padding-y: 0.5rem !default;
 $dropdown-spacer: 0.125rem !default;
