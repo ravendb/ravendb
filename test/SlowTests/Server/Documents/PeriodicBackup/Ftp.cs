@@ -33,7 +33,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await using (var serviceProvider = services.BuildServiceProvider())
             {
                 var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
-                ftpServerHost.StartAsync(CancellationToken.None).Wait();
+                await ftpServerHost.StartAsync(CancellationToken.None);
                 var settings = new FtpSettings
                 {
                     Url = "ftp://127.0.0.1",
@@ -47,7 +47,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var isExist = CheckFile(settings.Url, "testFolder", "testFile", client);
                     Assert.Equal(true, isExist);
                 }
-                ftpServerHost.StopAsync(CancellationToken.None).Wait();
+                await ftpServerHost.StopAsync(CancellationToken.None);
             }
         }
 
@@ -61,7 +61,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await using (var serviceProvider = services.BuildServiceProvider())
             {
                 var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
-                ftpServerHost.StartAsync(CancellationToken.None).Wait();
+                await ftpServerHost.StartAsync(CancellationToken.None);
                 var settings = new FtpSettings
                 {
                     Url = "ftp://127.0.0.1",
@@ -87,7 +87,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(true, isExist);
                 }
 
-                ftpServerHost.StopAsync(CancellationToken.None).Wait();
+                await ftpServerHost.StopAsync(CancellationToken.None);
             }
         }
 
