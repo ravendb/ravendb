@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
@@ -64,7 +65,20 @@ public class KafkaEtlTests : KafkaEtlTestBase
             etlDone.Reset();
         }
     }
-    
+
+    [RequiresKafkaRetryFact]
+    public void ShardedKafkaEtlNotSupported()
+    {
+        using (var store = Sharding.GetDocumentStore())
+        {
+            var error = Assert.ThrowsAny<NotSupportedInShardingException>(() =>
+            {
+                SetupQueueEtlToKafka(store, DefaultScript, DefaultCollections);
+            });
+            Assert.Contains("Queue ETLs are currently not supported in sharding", error.Message);
+        }
+    }
+
     [RequiresKafkaRetryFact]
     public void TestAreHeadersPresent()
     {
