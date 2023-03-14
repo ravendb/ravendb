@@ -4,9 +4,9 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
-    public class ShardedAdminDocumentsMigrationHandler : ShardedDatabaseRequestHandler
+    public class ShardedAdminShardingHandler : ShardedDatabaseRequestHandler
     {
-        [RavenShardedAction("/databases/*/admin/documentsMigrator/cleanup", "POST")]
+        [RavenShardedAction("/databases/*/admin/sharding/resharding/cleanup", "POST")]
         public async Task ExecuteMoveDocuments()
         {
             using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support documents migration operation. " +

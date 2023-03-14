@@ -1,31 +1,25 @@
 ﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminDocumentsMigrationHandler : DatabaseRequestHandler
+    public class AdminShardingHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/documentsMigrator/cleanup", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/sharding/resharding/cleanup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ExecuteMoveDocuments()
         {
             ValidateShardDatabaseName();
 
             await ServerStore.EnsureNotPassiveAsync();
 
-            var database = Database as ShardedDocumentDatabase;
+            var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(Database);
             await database.PeriodicDocumentsMigrator.ExecuteMoveDocumentsAsync();
 
-            var operationId = ServerStore.Operations.GetNextOperationId();
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
-            }
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
 
         private void ValidateShardDatabaseName()
