@@ -110,9 +110,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                         if (!client.DirectoryExists($"/{directory}"))
                             client.CreateDirectory($"/{directory}");
                     }
-                    catch (Exception e)
+                    catch (WebException e)
                     {
-                        throw new Exception();
+                        throw ;
                     }
                 }
             }
@@ -178,9 +178,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     throw new AuthenticationException("Make sure that you provided the correct certificate " +
                                                       "and that the url matches the one that is defined in it", e);
                 }
-                catch (Exception e)
+                catch (WebException e)
                 {
-                    throw new Exception();
+                    throw;
                 }
             }
         }
