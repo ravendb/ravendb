@@ -27,9 +27,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
         {
-            var etlType = EtlConfiguration<ConnectionString>.GetEtlType(configuration);
-            AssertIsEtlTypeSupported(etlType);
-            AssertCanAddOrUpdateEtl(etlType);
+            AssertCanAddOrUpdateEtl(ref configuration);
         }
 
         protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext _, BlittableJsonReaderObject configuration, string raftRequestId)
@@ -60,11 +58,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             return RequestHandler.ServerStore.UpdateEtl(context, RequestHandler.DatabaseName, id.Value, configuration, raftRequestId);
         }
 
-        protected abstract void AssertIsEtlTypeSupported(EtlType type);
-
-        private void AssertCanAddOrUpdateEtl(EtlType type)
+        protected  virtual void AssertCanAddOrUpdateEtl(ref BlittableJsonReaderObject etlConfiguration)
         {
-            switch (type)
+            switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddRavenEtl();
@@ -82,7 +78,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddQueueEtl();
                     break;
                 default:
-                    throw new NotSupportedException($"Unknown ETL type  {type}");
+                    throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }
         }
     }
