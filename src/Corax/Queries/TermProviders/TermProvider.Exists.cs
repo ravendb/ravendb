@@ -35,7 +35,7 @@ namespace Corax.Queries
         {
             while (_iterator.MoveNext(out var keyScope, out var _))
             {
-                term = _searcher.TermQuery(_field, _tree, keyScope.Key.Decoded());
+                term = _searcher.TermQuery(_field, keyScope.Key, _tree);
                 keyScope.Dispose();
                 return true;
             }

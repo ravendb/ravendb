@@ -14,11 +14,11 @@ namespace Corax.Queries
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
-        private readonly Slice _startWith;
+        private readonly CompactKey _startWith;
 
         private CompactTree.Iterator _iterator;
 
-        public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, FieldMetadata field, Slice startWith)
+        public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, FieldMetadata field, CompactKey startWith)
         {
             _searcher = searcher;
             _field = field;
@@ -35,13 +35,14 @@ namespace Corax.Queries
 
         public bool Next(out TermMatch term)
         {
+            var startWith = _startWith.Decoded();
             while (_iterator.MoveNext(out var termScope, out var _))
             {
                 var termSlice = termScope.Key.Decoded();
-                if (termSlice.StartsWith(_startWith))
+                if (termSlice.StartsWith(startWith))
                     continue;
 
-                term = _searcher.TermQuery(_field, _tree, termSlice);
+                term = _searcher.TermQuery(_field, termScope.Key, _tree);
                 return true;
             }
             

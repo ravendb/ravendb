@@ -193,6 +193,7 @@ namespace Voron.Impl
             _allocator.AllocationFailed += MarkTransactionAsFailed;
             _disposeAllocator = allocator == null;
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
+
             Flags = TransactionFlags.Read;
             ImmutableExternalState = previous.ImmutableExternalState;
 
@@ -954,6 +955,27 @@ namespace Voron.Impl
             }
         }
 
+        // We don't really know how many compact keys we are gonna need, therefore the safe bet is to
+        // provide a full blown object pool to handle them. 
+        private ObjectPool<CompactKey> _compactKeyPool;
+
+        public CompactKey AcquireCompactKey()
+        {
+            // Since Compact keys are tied to the underlying low level transaction, it makes
+            // sense to create the object pool upon needing it to avoid wasteful allocations.
+
+            // PERF: If proper profiling indicates a high traffic pathway that could benefit
+            // from it, we should consider changing the behavior to reset the compact key's
+            // underlying owner. This would improve reuse, even though it adds complexity.
+            _compactKeyPool ??= new ObjectPool<CompactKey>(() => new CompactKey(this));
+
+            return _compactKeyPool.Allocate();
+        }
+
+        public void ReleaseCompactKey(CompactKey key)
+        {
+            _compactKeyPool.Free(key);
+        }
 
         private class PagerStateCacheItem
         {

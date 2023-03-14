@@ -101,7 +101,7 @@ namespace Corax.Queries
 
             }
             
-            term = _searcher.TermQuery(_field, _tree, termSlice);
+            term = _searcher.TermQuery(_field, termScope.Key, _tree);
             return true;
         }
 
