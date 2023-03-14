@@ -250,7 +250,7 @@ namespace SlowTests.Authentication
                 }
 
                 //trigger cert refresh
-                await requestExecutor.HttpClient.PostAsync(Uri.EscapeUriString($"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew"), null);
+                await requestExecutor.HttpClient.PostAsync(Uri.EscapeDataString($"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew"), null);
                 
                 await Task.WhenAll(replaceTasks.Values.Select(x => x.WaitAsync()).ToArray());
                 
