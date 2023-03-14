@@ -86,6 +86,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var setStatusCodeOnError = GetBoolValueQueryString("setStatusCodeOnError", required: false) ?? false;
             var topology = ServerStore.GetClusterTopology();
             var tasks = new List<Task<PingResult>>();
+            var tasksResults = new List<PingResult>();
 
             if (string.IsNullOrEmpty(dest))
             {
@@ -100,6 +101,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 tasks.Add(PingOnce(url ?? dest));
             }
 
+            while (tasks.Count > 0)
+            {
+                var task = await Task.WhenAny(tasks);
+                tasks.Remove(task);
+                tasksResults.Add(task.Result);
+
+                if (setStatusCodeOnError && task.Result.HasErrors)
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+            }
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
@@ -108,18 +119,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 writer.WriteStartArray();
 
-                while (tasks.Count > 0)
+                var isFirst = true;
+
+                foreach (var taskResult in tasksResults)
                 {
-                    var task = await Task.WhenAny(tasks);
-                    tasks.Remove(task);
-                    context.Write(writer, task.Result.ToJson());
-
-                    if (setStatusCodeOnError && task.Result.HasErrors)
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-
-                    if (tasks.Count > 0)
+                    if (isFirst == false)
                         writer.WriteComma();
 
+                    isFirst = false;
+
+                    context.Write(writer, taskResult.ToJson());
                     await writer.MaybeFlushAsync();
                 }
 
