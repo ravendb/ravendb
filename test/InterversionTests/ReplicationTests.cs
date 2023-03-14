@@ -120,6 +120,53 @@ namespace InterversionTests
             }
         }
 
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task ExternalReplicationShouldWork_NonShardedAndV54()
+        {
+            var processNode = await GetServerAsync("5.4.5");
+            var dbName = GetDatabaseName();
+            using (var store = GetDocumentStore())
+            using (var oldStore = await GetStore(processNode.Url, processNode.Process, dbName))
+            {
+                await InsertData(store, "$users/1");
+                await InsertData(oldStore, "");
+
+                var suffix = "$users/1";
+
+                var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
+                {
+                    Name = "MyExternalReplication",
+                    Url = oldStore.Urls.First()
+                };
+
+                await SetupReplication(store, externalTask);
+                await SetupReplication(oldStore, store);
+
+                await EnsureReplicatingAsync(oldStore, store);
+                await EnsureReplicatingAsync(store, oldStore);
+
+                for (int i = 1; i < 5; i++)
+                {
+                    using (var oldSession = oldStore.OpenAsyncSession())
+                    {
+                        var id = $"users/{i}{suffix}";
+                        var u = await oldSession.LoadAsync<User>(id);
+                        Assert.NotNull(u);
+                    }
+                }
+
+                for (int i = 1; i < 5; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var id = $"users/{i}";
+                        var u = await session.LoadAsync<User>(id);
+                        Assert.NotNull(u);
+                    }
+                }
+            }
+        }
+
         [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         public async Task ReplicationWithReshardingShouldWorkFromShardedToOldServer()
         {
@@ -259,6 +306,69 @@ namespace InterversionTests
                 }
           
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store.Database);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
+        public async Task ExternalReplicationWithRevisionTombstones_NonShardedToOldServer()
+        {
+            var processNode = await GetServerAsync("5.4.5");
+            var dbName = GetDatabaseName();
+            using (var store = GetDocumentStore())
+            using (var oldStore = await GetStore(processNode.Url, processNode.Process, dbName))
+            {
+                await InsertData(store, "$users/1");
+                await InsertData(oldStore, "");
+
+                var suffix = "$users/1";
+                var id = $"users/1{suffix}";
+
+                var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
+                {
+                    Name = "MyExternalReplication",
+                    Url = oldStore.Urls.First()
+                };
+
+                await SetupReplication(store, externalTask);
+                await SetupReplication(oldStore, store);
+
+                await EnsureReplicatingAsync(oldStore, store);
+                await EnsureReplicatingAsync(store, oldStore);
+
+                using (var s1 = store.OpenSession())
+                {
+                    s1.Delete(id);
+                    s1.SaveChanges();
+                }
+
+                await EnsureReplicatingAsync(store, oldStore);
+                await EnsureReplicatingAsync(store, oldStore);
+                await EnsureReplicatingAsync(store, oldStore);
+
+                await EnsureReplicatingAsync(oldStore, store);
+                await EnsureReplicatingAsync(oldStore, store);
+                await EnsureReplicatingAsync(oldStore, store);
+
+                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                var storage = db.DocumentsStorage;
+                using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombs = storage.GetTombstonesFrom(context, 0).ToList();
+                    Assert.Equal(5, tombs.Count);
+
+                    int revisionTombsCount = 0, documentTombsCount = 0;
+                    foreach (var item in tombs)
+                    {
+                        if (item is RevisionTombstoneReplicationItem)
+                            revisionTombsCount++;
+                        else if (item is DocumentReplicationItem)
+                            documentTombsCount++;
+                    }
+
+                    Assert.Equal(4, revisionTombsCount);
+                    Assert.Equal(1, documentTombsCount);
+                }
             }
         }
 
