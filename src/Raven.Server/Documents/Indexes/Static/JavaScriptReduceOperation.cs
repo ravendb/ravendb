@@ -104,8 +104,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
                 }
 
-                var xIsNotAllNulls = _xKey.IsBufferSet;
-                var yIsNotAllNulls = _yKey.IsBufferSet;
+                var xIsNotAllNulls = _xKey.AllProcessedValuesWereNull == false;
+                var yIsNotAllNulls = _yKey.AllProcessedValuesWereNull == false;
                 // null == null
                 if (xIsNotAllNulls == false && yIsNotAllNulls == false)
                     return true;
