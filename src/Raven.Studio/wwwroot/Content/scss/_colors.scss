@@ -68,6 +68,10 @@ $panel-header-bg: $gray-800;
 $panel-bg-1: $gray-900;
 $panel-bg-2: $gray-800;
 $panel-bg-3: $gray-700;
+$base-panel-header-bg: $panel-header-bg;
+$base-panel-bg-1: $panel-bg-1;
+$base-panel-bg-2: $panel-bg-2;
+$base-panel-bg-3: $panel-bg-3;
 
 $well-bg: $body-bg;
 
@@ -115,6 +119,10 @@ $link-color: $primary;
     $panel-bg-1: $gray-100;
     $panel-bg-2: $gray-200;
     $panel-bg-3: $gray-300;
+    $base-panel-header-bg: $gray-800;
+    $base-panel-bg-1: $gray-900;
+    $base-panel-bg-2: $gray-800;
+    $base-panel-bg-3: $gray-700;
 
     $well-bg: $gray-200;
 
@@ -181,6 +189,10 @@ $link-color: $primary;
     $panel-bg-1: $gray-200;
     $panel-bg-2: $gray-100;
     $panel-bg-3: $white;
+    $base-panel-header-bg: $panel-header-bg;
+    $base-panel-bg-1: $panel-bg-1;
+    $base-panel-bg-2: $panel-bg-2;
+    $base-panel-bg-3: $panel-bg-3;
 
     $well-bg: $gray-400;
 
@@ -249,6 +261,10 @@ $link-color: $primary;
     $panel-bg-1: $gray-900;
     $panel-bg-2: $gray-800;
     $panel-bg-3: $gray-700;
+    $base-panel-header-bg: $panel-header-bg;
+    $base-panel-bg-1: $panel-bg-1;
+    $base-panel-bg-2: $panel-bg-2;
+    $base-panel-bg-3: $panel-bg-3;
 
     $well-bg: $body-bg;
 
@@ -359,3 +375,5 @@ $body-bg-var: var(--bs-body-bg-rgb);
 $text-color-var: var(--text-color);
 $text-muted-var: var(--text-muted);
 $text-emphasis-var: var(--text-emphasis);
+$border-color-var: var(--bs-border-color);
+$border-color-light-var: var(--border-color-light);
