@@ -29,7 +29,7 @@ public class FilterTests : RavenTestBase
     {
         using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
-        Insert(store, data);
+        Insert(store, data, options.DatabaseMode);
         // raw
         using (var s = store.OpenSession())
         {
@@ -58,7 +58,7 @@ select filter(a)").Count();
     {
         using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
-        Insert(store, data);
+        Insert(store, data, options.DatabaseMode);
         Employee result;
         QueryStatistics stats;
         // raw
@@ -179,7 +179,7 @@ select filter(a)").Count();
     {
         using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
-        Insert(store, data);
+        Insert(store, data, options.DatabaseMode);
 
         Employee result;
         QueryStatistics stats;
@@ -242,7 +242,7 @@ select filter(a)").Count();
     {
         using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
-        Insert(store, data);
+        Insert(store, data, options.DatabaseMode);
 
         using (var s = store.OpenSession())
         {
@@ -292,8 +292,8 @@ select filter(a)").Count();
     public void CanUseFilterQueryOnMapIndexes(Options options)
     {
         using var store = GetDocumentStore(options);
-        Insert(store, GetDatabaseItems(additional: new() { (new Employee("Frank", "emps/jane", true, 51, new Location(47.623473f, -122.306009f)), "emps/frank") }));
-
+        var databaseItems = GetDatabaseItems(additional: new() {(new Employee("Frank", "emps/jane", true, 51, new Location(47.623473f, -122.306009f)), "emps/frank")});
+        Insert(store, databaseItems, options.DatabaseMode);
 
         using (var s = store.OpenSession())
         {
@@ -502,7 +502,8 @@ filter Name = 'Frank'")
     public void InvalidFilterQueries(Options options, string q, Type exception)
     {
         using var store = GetDocumentStore();
-        Insert(store, GetDatabaseItems(additional: new() { (new Employee("Frank", "emps/jane", true, 51, new Location(47.623473f, -122.306009f)), "emps/frank") }));
+        var databaseItems = GetDatabaseItems(additional: new() {(new Employee("Frank", "emps/jane", true, 51, new Location(47.623473f, -122.306009f)), "emps/frank")});
+        Insert(store, databaseItems, options.DatabaseMode);
 
         using (var s = store.OpenSession())
         {
@@ -516,7 +517,7 @@ filter Name = 'Frank'")
     public void InvalidFilterQueriesInLinq(Options options)
     {
         using var store = GetDocumentStore(options);
-        Insert(store, GetDatabaseItems());
+        Insert(store, GetDatabaseItems(), options.DatabaseMode);
         {
             using var session = store.OpenSession();
             Assert.Throws(typeof(InvalidOperationException), () =>
@@ -531,7 +532,7 @@ filter Name = 'Frank'")
     public void CanUseFilterQueryOnMapReduce(Options options)
     {
         using var store = GetDocumentStore(options);
-        Insert(store, GetDatabaseItems());
+        Insert(store, GetDatabaseItems(), options.DatabaseMode);
 
         Summary summary;
         using (var s = store.OpenSession())
@@ -582,7 +583,7 @@ filter Name = 'Frank'")
     public async Task AsyncCanUseFilterQueryOnMapReduce(Options options)
     {
         using var store = GetDocumentStore(options);
-        Insert(store, GetDatabaseItems());
+        Insert(store, GetDatabaseItems(), options.DatabaseMode);
 
         Summary summary;
         using (var s = store.OpenAsyncSession())
@@ -616,7 +617,7 @@ filter Name = 'Frank'")
     {
         using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
-        Insert(store, data);
+        Insert(store, data, options.DatabaseMode);
 
         {
             //concat
@@ -729,7 +730,7 @@ filter Name = 'Frank'")
     {
         using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
-        Insert(store, data);
+        Insert(store, data, options.DatabaseMode);
 
         using (var session = store.OpenSession())
         {
@@ -747,12 +748,30 @@ filter Name = 'Frank'")
         }
     }
 
-    private void Insert(DocumentStore store, List<(Employee Entity, string Id)> data)
+    private static void Insert(DocumentStore store, List<(Employee Entity, string Id)> data, RavenDatabaseMode databaseMode)
     {
-        using var bulkInsert = store.BulkInsert();
-        foreach ((Employee entity, string id) in data)
+        switch (databaseMode)
         {
-            bulkInsert.Store(entity, id);
+            case RavenDatabaseMode.Single:
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    foreach ((Employee entity, string id) in data)
+                    {
+                        bulkInsert.Store(entity, id);
+                    }
+                }
+                
+                break;
+            case RavenDatabaseMode.Sharded:
+                foreach ((Employee entity, string id) in data)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(entity, id);
+                        session.SaveChanges();
+                    }
+                }
+                break;
         }
     }
 
