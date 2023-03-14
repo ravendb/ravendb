@@ -54,7 +54,7 @@ public static class SubscriptionBinder
 }
 
 public class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscriptionBinder
-    where TState : SubscriptionConnectionsStateBase<TConnection, TIncludeCommand>
+    where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludeCommand>
     where TConnection : SubscriptionConnectionBase<TIncludeCommand>
     where TIncludeCommand : AbstractIncludesCommand
 {

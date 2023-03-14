@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Subscriptions
         public abstract AbstractSubscriptionProcessor<TIncludesCommand> CreateProcessor(SubscriptionConnectionBase<TIncludesCommand> connection);
 
         public async Task ProcessSubscriptionAsync<TState, TConnection>(TState state)
-            where TState : SubscriptionConnectionsStateBase<TConnection, TIncludesCommand>
+            where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Starting to process subscription"));
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Subscriptions
         /// <returns>Whether succeeded finding any documents to send</returns>
         private async Task<bool> TrySendingBatchToClient<TState, TConnection>(TState state, Stopwatch sendingCurrentBatchStopwatch,
             SubscriptionBatchStatsScope batchScope, SubscriptionBatchStatsAggregator batchStatsAggregator)
-            where TState : SubscriptionConnectionsStateBase<TConnection, TIncludesCommand>
+            where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
             if (await state.WaitForSubscriptionActiveLock(300) == false)
