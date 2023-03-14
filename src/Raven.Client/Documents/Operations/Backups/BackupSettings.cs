@@ -366,6 +366,27 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public string CertificateFileName { get; set; }
 
+        public FtpSettings()
+        {
+        }
+
+        internal FtpSettings(FtpSettings settings)
+        {
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+
+            Url = settings.Url;
+            Port = settings.Port;
+            UserName = settings.UserName;
+            Password = settings.Password;
+            CertificateAsBase64 = settings.CertificateAsBase64;
+            CertificateFileName = settings.CertificateFileName;
+            Disabled = settings.Disabled;
+
+            if (settings.GetBackupConfigurationScript != null)
+                GetBackupConfigurationScript = new GetBackupConfigurationScript(settings.GetBackupConfigurationScript);
+        }
+
         public override bool HasSettings()
         {
             if (base.HasSettings())
