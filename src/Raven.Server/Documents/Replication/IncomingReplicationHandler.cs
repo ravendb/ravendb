@@ -1577,8 +1577,8 @@ namespace Raven.Server.Documents.Replication
 
                         attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue attachmentName);
 
-                        var type = doc.Flags.Contain(DocumentFlags.Revision) ? "Revision" : "Document";
-                        var msg = $"{type} '{doc.Id}' has attachment " +
+                        var type = doc.Flags.Contain(DocumentFlags.Revision) ? $"Revision '{doc.Id}' with change vector '{doc.ChangeVector}'" : $"Document '{doc.Id}'";
+                        var msg = $"{type} has attachment " +
                                   $"named: '{attachmentName?.ToString() ?? "unknown"}', hash: '{hash?.ToString() ?? "unknown"}' " +
                                   $"listed as one of its attachments but it doesn't exist in the attachment storage";
 

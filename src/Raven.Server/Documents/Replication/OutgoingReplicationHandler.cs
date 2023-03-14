@@ -1209,7 +1209,7 @@ namespace Raven.Server.Documents.Replication
             _missingAttachmentsAlert = AlertRaised.Create(
                 _database.Name,
                 "Replication delay due to a missing attachments loop",
-                msg + $"{Environment.NewLine}Please try to delete the missing attachment from '{_database.Name}' on Node {_database.ServerStore.NodeTag} (see additional information regarding the document and attachment below)",
+                msg + $"{Environment.NewLine}Please try to delete the missing attachment from '{_database.Name}' on node {_database.ServerStore.NodeTag} (see additional information regarding the document and attachment below)",
                 AlertType.Replication,
                 NotificationSeverity.Error,
                 details: new ExceptionDetails { Exception = exceptionDetails});
