@@ -6,7 +6,7 @@ class certificateModel {
 
     static allTimeUnits: Array<valueAndLabelItem<timeUnit, string>> = [
         {
-            label: "days",
+            label: "daysssssssss",
             value: "day"
         }, {
             label: "months",
