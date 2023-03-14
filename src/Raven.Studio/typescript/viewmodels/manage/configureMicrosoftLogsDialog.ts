@@ -9,6 +9,8 @@ interface ConfigureMicrosoftLogsDialogResult {
 
 class configureMicrosoftLogsDialog extends dialogViewModelBase {
     
+    view = require("views/manage/configureMicrosoftLogsDialog.html");
+
     code = ko.observable<string>("");
     isEnabled = ko.observable<boolean>(false);
     
