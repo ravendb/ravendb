@@ -760,7 +760,7 @@ namespace Raven.Server.Smuggler.Documents
                         await compareExchangeActions.WriteKeyValueAsync(key, null, item.Document);
                         continue;
                     }
-                    if (compareExchangeActions.MaybeFlush()) // we don't want to keep the cmp xng transaction open for too long
+                    if (compareExchangeActions?.MaybeFlush() == true) // we don't want to keep the cmp xng transaction open for too long
                         await compareExchangeActions.FlushAsync();
                     await documentActions.WriteDocumentAsync(item, result.Documents);
                 }
