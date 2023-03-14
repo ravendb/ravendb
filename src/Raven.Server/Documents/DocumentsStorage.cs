@@ -1781,15 +1781,16 @@ namespace Raven.Server.Documents
 
                 if (flags.Contain(DocumentFlags.HasRevisions))
                 {
-                    revisionsStorage.DeleteRevisionsFor(context, id, purgeOnDelete: true);
+                    revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone?.ChangeVector,
+                        modifiedTicks, nonPersistentFlags | NonPersistentDocumentFlags.FromDeleteDocument, flags);
                 }
 
                 if (flags.Contain(DocumentFlags.HasRevisions) 
                     && revisionsStorage.Configuration == null &&
                     flags.Contain(DocumentFlags.Resolved) == false &&
                     nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
-                    revisionsStorage.DeleteRevisionsFor(context, id);
-
+                revisionsStorage.DeleteRevisionsFor(context, id);
+                
                 if (flags.Contain(DocumentFlags.HasRevisions) &&
                     revisionsStorage.Configuration != null &&
                     nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))

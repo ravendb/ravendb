@@ -67,7 +67,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task EEnforce_Conflicted_PurgeDelete_Configuration_Should_Delete_Conflicted_And_Resolved_Revisions()
+        public async Task Enforce_Conflicted_PurgeDelete_Configuration_Should_Delete_Conflicted_And_Resolved_Revisions()
         {
             using var source = GetDocumentStore();
             using var destination = GetDocumentStore();
