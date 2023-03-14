@@ -224,23 +224,23 @@ var claimsPerProvider = {};
 var claimsModifiedDatePerProvider = {};
 
 for (var i = 0; i < auth.UserAuthDetailIds.length; i++) {
-	var id = auth.UserAuthDetailIds[i];
-	var userAuthDetails = load('UserAuthDetails/' + id, 'UserAuthDetails');
-	if (!userAuthDetails.Items.Claims) return;
+    var id = auth.UserAuthDetailIds[i];
+    var userAuthDetails = load('UserAuthDetails/' + id, 'UserAuthDetails');
+    if (!userAuthDetails.Items.Claims) return;
 
-	// which will cause the mappings for roles to use stale data
-	if (claimsModifiedDatePerProvider[userAuthDetails.Provider] &&
-		claimsModifiedDatePerProvider[userAuthDetails.Provider] > userAuthDetails.ModifiedDate)
-		return;
+    // which will cause the mappings for roles to use stale data
+    if (claimsModifiedDatePerProvider[userAuthDetails.Provider] &&
+        claimsModifiedDatePerProvider[userAuthDetails.Provider] > userAuthDetails.ModifiedDate)
+        return;
 
-	claimsPerProvider[userAuthDetails.Provider] = [];
-	claimsModifiedDatePerProvider[userAuthDetails.Provider] = userAuthDetails.ModifiedDate;
+    claimsPerProvider[userAuthDetails.Provider] = [];
+    claimsModifiedDatePerProvider[userAuthDetails.Provider] = userAuthDetails.ModifiedDate;
 
-	var claims = JSON.parse(userAuthDetails.Items.Claims);
-	for (var j = 0; j < claims.length; j++) {
-		var c = claims[j];
-		claimsPerProvider[userAuthDetails.Provider].push(c);
-	}
+    var claims = JSON.parse(userAuthDetails.Items.Claims);
+    for (var j = 0; j < claims.length; j++) {
+        var c = claims[j];
+        claimsPerProvider[userAuthDetails.Provider].push(c);
+    }
 }
                     var userClaim = {};
                     userClaim.UserId = auth.UserId;
