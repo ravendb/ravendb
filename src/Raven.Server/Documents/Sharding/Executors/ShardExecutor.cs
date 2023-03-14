@@ -92,19 +92,17 @@ namespace Raven.Server.Documents.Sharding.Executors
         {
             var requestExecutors = new Dictionary<int, RequestExecutor>(_databaseRecord.Sharding.Shards.Count);
             
-            PublishedUrls published;
             ClusterTopology clusterTopology;
             
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 clusterTopology = ServerStore.GetClusterTopology(context);
-                published = PublishedUrls.Read(context);
             }
 
             foreach ((int shardNumber, var topology) in _databaseRecord.Sharding.Shards)
             {
-                var urls = topology.AllNodes.Select(tag => published.SelectUrl(tag, clusterTopology)).ToArray();
+                var urls = topology.AllNodes.Select(tag => ServerStore.PublishedUrls.SelectUrl(tag, clusterTopology)).ToArray();
 
                 requestExecutors[shardNumber] = RequestExecutor.CreateForShard(
                     urls,

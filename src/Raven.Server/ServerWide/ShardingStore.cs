@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -114,7 +118,12 @@ namespace Raven.Server.ServerWide
                 HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
                 UseHttpCompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpCompression,
                 UseHttpDecompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpDecompression,
-                GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan
+                GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan,
+                CreateHttpClient = handler =>
+                {
+                    handler.ServerCertificateCustomValidationCallback = ShardingCustomValidationCallback;
+                    return new HttpClient(handler);
+                }
             };
 
         public DocumentConventions DocumentConventionsForOrchestrator =>
@@ -125,8 +134,24 @@ namespace Raven.Server.ServerWide
                 HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
                 UseHttpCompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpCompression,
                 UseHttpDecompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpDecompression,
-                GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan
+                GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan,
+                CreateHttpClient = handler =>
+                {
+                    handler.ServerCertificateCustomValidationCallback = ShardingCustomValidationCallback;
+                    return new HttpClient(handler);
+                }
             };
+
+        private bool ShardingCustomValidationCallback(HttpRequestMessage message, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
+        {
+            if (cert.Thumbprint == _serverStore.Server.Certificate.Certificate.Thumbprint)
+                return true;
+
+            if (cert.GetPublicKeyPinningHash() == _serverStore.Server.Certificate.Certificate.GetPublicKeyPinningHash())
+                return true;
+
+            return RequestExecutor.OnServerCertificateCustomValidationCallback(message, cert, chain, errors);
+        }
 
         private ClusterChanges.DatabaseChangedDelegate CreateDelegateForReshardingStatus(string database, AsyncQueue<string> messages)
         {
