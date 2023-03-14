@@ -1437,6 +1437,16 @@ namespace Raven.Server.Smuggler.Documents
             {
                 throw new NotSupportedException();
             }
+
+            public bool MaybeFlush()
+            {
+                return false;
+            }
+
+            public Task FlushAsync()
+            {
+                return Task.CompletedTask;
+            }
         }
 
         private abstract class StreamActionsBase : IAsyncDisposable

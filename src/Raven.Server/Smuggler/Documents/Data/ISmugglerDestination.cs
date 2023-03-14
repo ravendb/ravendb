@@ -111,6 +111,10 @@ namespace Raven.Server.Smuggler.Documents.Data
         ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument);
 
         ValueTask WriteTombstoneKeyAsync(string key);
+
+        bool MaybeFlush();
+
+        Task FlushAsync();
     }
 
     public interface IDatabaseRecordActions : IAsyncDisposable
