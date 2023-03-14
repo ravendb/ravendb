@@ -170,7 +170,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
                 TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto,
                 TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                FloatParseHandling = FloatParseHandling.Double
+                FloatParseHandling = FloatParseHandling.Double,
+                SerializationBinder = DefaultRavenSerializationBinder.Instance
             };
         }
 

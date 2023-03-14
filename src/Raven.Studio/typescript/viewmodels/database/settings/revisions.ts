@@ -283,7 +283,8 @@ class revisions extends viewModelBase {
                               <li><small>This is the default revision configuration for <strong>conflicting documents only</strong>.</small></li>
                               <li><small>When enabled, a revision is created for each conflicting item.</small></li>
                               <li><small>A revision is also created for the conflict resolution document.</small></li>
-                              <li><small>When a collection specific configuration is defined, it <strong>overrides</strong> these defaults.</li>
+                              <li><small>When Document Defaults or a collection-specific configuration is defined,<br/>
+                                         they <strong>override</strong> the Conflicting Document Defaults.</li>
                           </ul>`,
                 html: true
             });
@@ -415,7 +416,7 @@ class revisions extends viewModelBase {
                 content: `<ul class="margin-top margin-top-xs">
                               <li><small>This is the default revision configuration for all <strong>non-conflicting documents</strong>.</small></li>
                               <li><small>When enabled, a revision is created for all non-conflicting documents.</small></li>
-                              <li><small>When a collection specific configuration is defined, it <strong>overrides</strong> these defaults.</li>
+                              <li><small>When a collection specific configuration is defined, it <strong>overrides</strong> these defaults.</small></li>
                           </ul>`,
                 html: true
             });
