@@ -211,7 +211,7 @@ namespace SlowTests.Authentication
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Certificates | RavenTestCategory.Sharding)]
         public async Task CertificateReplaceSharded()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -250,7 +250,7 @@ namespace SlowTests.Authentication
                 }
 
                 //trigger cert refresh
-                await requestExecutor.HttpClient.PostAsync(Uri.EscapeDataString($"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew"), null);
+                await requestExecutor.HttpClient.PostAsync($"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew", null);
                 
                 await Task.WhenAll(replaceTasks.Values.Select(x => x.WaitAsync()).ToArray());
                 
