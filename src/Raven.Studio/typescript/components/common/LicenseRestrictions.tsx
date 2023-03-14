@@ -2,21 +2,23 @@
 import { Button, PopoverBody, UncontrolledPopover } from "reactstrap";
 import useId from "hooks/useId";
 import { Icon } from "./Icon";
+import classNames from "classnames";
 
 interface LicenseRestrictionsProps {
     children: ReactNode | ReactNode[];
     isAvailable?: boolean;
     featureName?: string | ReactNode | ReactNode[];
     message?: string | ReactNode | ReactNode[];
+    className?: string;
 }
 
 export function LicenseRestrictions(props: LicenseRestrictionsProps): JSX.Element {
-    const { children, isAvailable, featureName, message } = props;
+    const { children, isAvailable, featureName, message, className } = props;
     const containerId = useId("Info");
     if (!isAvailable) {
         return (
             <>
-                <div id={containerId} className="item-disabled">
+                <div id={containerId} className={classNames("item-disabled", className)}>
                     {children}
                 </div>
                 <UncontrolledPopover

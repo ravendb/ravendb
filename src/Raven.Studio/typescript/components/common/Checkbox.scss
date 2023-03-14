@@ -26,7 +26,6 @@ input {
 
 .form-check,
 .form-check-reverse {
-    display: flex !important;
     align-items: center;
     line-height: 1.15em;
     .form-check-input {
@@ -35,6 +34,7 @@ input {
 }
 
 .form-check {
+    display: inline-flex !important;
     .form-check-input {
         margin-top: 0;
     }
@@ -45,6 +45,7 @@ input {
 }
 
 .form-check-reverse {
+    display: flex;
     flex-direction: row-reverse;
     .form-check-label {
         margin-right: 0.75em;
@@ -78,6 +79,13 @@ input {
             margin-left: bs5variables.$form-check-padding-start * -1 * $ratio;
             width: bs5variables.$form-check-input-width * $ratio;
             height: bs5variables.$form-check-input-width * $ratio;
+        }
+
+        &.form-switch {
+            .form-check-input {
+                width: bs5variables.$form-switch-width * $ratio * 0.8;
+                height: bs5variables.$form-check-input-width * $ratio * 0.8;
+            }
         }
 
         &.form-check-reverse {

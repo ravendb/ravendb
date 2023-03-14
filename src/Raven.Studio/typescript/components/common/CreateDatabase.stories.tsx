@@ -25,7 +25,7 @@ export default {
 
 const TemplatePanel = (args: {
     serverAuthentication: boolean;
-    licenseProps: { replication: boolean; sharding: boolean; dynamicDatabaseDistribution: boolean };
+    licenseProps: { encryption: boolean; sharding: boolean; dynamicDatabaseDistribution: boolean };
 }) => {
     const [createDatabaseModal, setCreateDatabaseModal] = useState(true);
     const toggleCreateDatabase = () => setCreateDatabaseModal(!createDatabaseModal);
@@ -56,7 +56,7 @@ const TemplatePanel = (args: {
 export const Panel = boundCopy(TemplatePanel, {
     serverAuthentication: true,
     licenseProps: {
-        replication: true,
+        encryption: true,
         sharding: true,
         dynamicDatabaseDistribution: true,
     },

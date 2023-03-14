@@ -5,6 +5,7 @@ import "./CreateDatabase.scss";
 import {
     Alert,
     Button,
+    ButtonGroup,
     CloseButton,
     Col,
     Collapse,
@@ -33,6 +34,7 @@ import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from 
 import { Steps } from "./Steps";
 import { LicenseRestrictions } from "./LicenseRestrictions";
 import { MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
+import classNames from "classnames";
 
 interface CreateDatabaseProps {
     createDatabaseModal: boolean;
@@ -42,7 +44,7 @@ interface CreateDatabaseProps {
 }
 
 type licenseProps = {
-    replication: boolean;
+    encryption: boolean;
     sharding: boolean;
     dynamicDatabaseDistribution: boolean;
 };
@@ -69,12 +71,8 @@ export function CreateDatabase(props: CreateDatabaseProps) {
 
     const [encryptionEnabled, setEncryptionEnabled] = useState(false);
 
-    const enableEncryption = () => {
-        setEncryptionEnabled(true);
-    };
-
-    const disableEncryption = () => {
-        setEncryptionEnabled(false);
+    const toggleEncryption = () => {
+        setEncryptionEnabled(!encryptionEnabled);
     };
 
     //REPLICATION
@@ -131,7 +129,7 @@ export function CreateDatabase(props: CreateDatabaseProps) {
         {
             id: "encryption",
             label: "Encryption",
-            active: true,
+            active: encryptionEnabled,
         },
         {
             id: "replicationAndSharding",
@@ -182,17 +180,21 @@ export function CreateDatabase(props: CreateDatabaseProps) {
                 setBackupSource={setBackupSource}
                 shardingEnabled={shardingEnabled}
                 nodeList={nodeList.map((node) => node.nodeTag)}
-            />
-        ),
-        createNew: <StepCreateNew />,
-        encryption: (
-            <StepEncryption
-                serverAuthentication={serverAuthentication}
                 encryptionEnabled={encryptionEnabled}
-                enableEncryption={enableEncryption}
-                disableEncryption={disableEncryption}
+                toggleEncryption={toggleEncryption}
+                licenseProps={licenseProps}
+                serverAuthentication={serverAuthentication}
             />
         ),
+        createNew: (
+            <StepCreateNew
+                encryptionEnabled={encryptionEnabled}
+                toggleEncryption={toggleEncryption}
+                serverAuthentication={serverAuthentication}
+                licenseProps={licenseProps}
+            />
+        ),
+        encryption: <StepEncryption />,
         replicationAndSharding: (
             <StepReplicationAndSharding
                 availableNodes={nodeList.length}
@@ -353,9 +355,15 @@ export function CreateDatabase(props: CreateDatabaseProps) {
     );
 }
 
-interface StepBasicSetupProps {}
+interface StepCreateNewProps {
+    encryptionEnabled: boolean;
+    toggleEncryption: () => void;
+    serverAuthentication: boolean;
+    licenseProps: licenseProps;
+}
 
-export function StepCreateNew(props: StepBasicSetupProps) {
+export function StepCreateNew(props: StepCreateNewProps) {
+    const { encryptionEnabled, toggleEncryption, serverAuthentication, licenseProps } = props;
     const newDatabaseImg = require("Content/img/createDatabase/new-database.svg");
     return (
         <div>
@@ -364,132 +372,146 @@ export function StepCreateNew(props: StepBasicSetupProps) {
             </div>
             <h2 className="text-center mb-4">Create new database</h2>
             <Row>
-                <Col lg={{ offset: 2, size: 8 }}>
+                <Col lg={{ offset: 2, size: 8 }} className="text-center">
                     <FormGroup floating>
                         <Input type="text" placeholder="Database Name" name="Database Name" id="DbName" />
                         <Label for="DbName">Database Name</Label>
                     </FormGroup>
+                    <div className="d-flex align-items-center justify-content-center mt-2">
+                        {licenseProps.encryption ? (
+                            <LicenseRestrictions
+                                isAvailable={serverAuthentication}
+                                message={
+                                    <>
+                                        <p className="lead text-warning">
+                                            <Icon icon="unsecure" /> Authentication is off
+                                        </p>
+                                        <p>
+                                            <strong>Encription at Rest</strong> is only possible when authentication is
+                                            enabled and a server certificate has been defined.
+                                        </p>
+                                        <p>
+                                            For more information go to the <a href="#">certificates page</a>
+                                        </p>
+                                    </>
+                                }
+                            >
+                                <Switch
+                                    size="lg"
+                                    color="primary"
+                                    selected={encryptionEnabled}
+                                    toggleSelection={toggleEncryption}
+                                    disabled={!serverAuthentication}
+                                >
+                                    <span className="lead">
+                                        <Icon icon="encryption" className="me-1" />
+                                        Encrypt at Rest
+                                    </span>
+                                </Switch>
+                            </LicenseRestrictions>
+                        ) : (
+                            <LicenseRestrictions
+                                isAvailable={licenseProps.encryption}
+                                featureName={
+                                    <strong className="text-primary">
+                                        <Icon icon="storage" addon="encryption" /> Storage encryption
+                                    </strong>
+                                }
+                            >
+                                <Switch
+                                    size="lg"
+                                    color="primary"
+                                    selected={encryptionEnabled}
+                                    toggleSelection={toggleEncryption}
+                                    disabled={!licenseProps.encryption}
+                                >
+                                    <span className="lead">
+                                        <Icon icon="encryption" className="me-1" />
+                                        Encrypt at Rest
+                                    </span>
+                                </Switch>
+                            </LicenseRestrictions>
+                        )}
+
+                        <Icon icon="info" color="info" id="encryptionInfo" className="ms-1" />
+                    </div>
+                    <UncontrolledPopover
+                        target="encryptionInfo"
+                        placement="top"
+                        trigger="hover"
+                        container="PopoverContainer"
+                    >
+                        <PopoverBody>
+                            Data will be encrypted at the storage engine layer, using <code>XChaCha20-Poly1305</code>{" "}
+                            authenticated encryption algorithm.
+                        </PopoverBody>
+                    </UncontrolledPopover>
                 </Col>
             </Row>
         </div>
     );
 }
 
-interface StepEncryptionProps {
-    serverAuthentication: boolean;
-    encryptionEnabled: boolean;
-    enableEncryption: () => void;
-    disableEncryption: () => void;
-}
+interface StepEncryptionProps {}
 
 export function StepEncryption(props: StepEncryptionProps) {
-    const { serverAuthentication, encryptionEnabled, enableEncryption, disableEncryption } = props;
     const encryptionImg = require("Content/img/createDatabase/encryption.svg");
     const qrImg = require("Content/img/createDatabase/qr.jpg");
     return (
         <div>
-            <Collapse isOpen={!encryptionEnabled}>
-                <div className="d-flex justify-content-center">
-                    <img src={encryptionImg} alt="" className="step-img" />
-                </div>
-            </Collapse>
-            <h2 className="text-center">Encrypt database?</h2>
-
             <div className="d-flex justify-content-center">
-                <Button
-                    active={!encryptionEnabled}
-                    onClick={disableEncryption}
-                    disabled={!serverAuthentication}
-                    outline
-                    className="rounded-pill me-2"
-                >
-                    <Icon icon="unencrypted" /> Don't Encrypt
-                </Button>
-                <Button
-                    active={encryptionEnabled}
-                    onClick={enableEncryption}
-                    disabled={!serverAuthentication}
-                    color="success"
-                    outline
-                    className="rounded-pill"
-                >
-                    <Icon icon="encryption" /> Encrypt
-                </Button>
+                <img src={encryptionImg} alt="" className="step-img" />
             </div>
 
-            {!serverAuthentication ? (
-                <Row className="my-4">
-                    <Col lg={{ size: 8, offset: 2 }}>
-                        <Alert color="info">
-                            <p className="lead">
-                                <Icon icon="unsecure" /> Authentication is off
-                            </p>
-                            <p>
-                                Database encryption is only possible when authentication is enabled and a server
-                                certificate has been defined.
-                            </p>
-                            <p>
-                                For more information go to the <a href="#">certificates page</a>
-                            </p>
-                        </Alert>
-                    </Col>
-                </Row>
-            ) : (
-                <Collapse isOpen={encryptionEnabled}>
-                    <Row className="mt-4">
+            <h2 className="text-center">Encryption at Rest</h2>
+
+            <Row className="mt-4">
+                <Col>
+                    <div className="small-label mb-1">Key (Base64 Encoding)</div>
+                    <InputGroup>
+                        <Input value="13a5f83gy71ws032nm69" />
+                        <Button title="Copy to clipboard">
+                            <Icon icon="copy-to-clipboard" />
+                        </Button>
+                    </InputGroup>
+                    <Row className="mt-2">
                         <Col>
-                            <div className="small-label mb-1">Key (Base64 Encoding)</div>
-                            <InputGroup>
-                                <Input value="13a5f83gy71ws032nm69" />
-                                <Button title="Copy to clipboard">
-                                    <Icon icon="copy-to-clipboard" />
-                                </Button>
-                            </InputGroup>
-                            <Row className="mt-2">
-                                <Col>
-                                    <Button block color="primary" size="sm">
-                                        <Icon icon="download" className="me-1" /> Download encryption key
-                                    </Button>
-                                </Col>
-                                <Col>
-                                    <Button block size="sm">
-                                        <Icon icon="print" className="me-1" /> Print encryption key
-                                    </Button>
-                                </Col>
-                            </Row>
-                            <Alert color="warning" className="d-flex align-items-center mt-2">
-                                <Icon icon="warning" className="fs-2 me-2" />
-                                <div>
-                                    Save the key in a safe place. It will not be available again. If you lose this key
-                                    you could lose access to your data
-                                </div>
-                            </Alert>
+                            <Button block color="primary" size="sm">
+                                <Icon icon="download" className="me-1" /> Download encryption key
+                            </Button>
                         </Col>
-                        <Col lg="auto" className="text-center">
-                            <img src={qrImg} alt="" />
-                            <div className="text-center mt-1">
-                                <small id="qrInfo" className="text-info">
-                                    <Icon icon="info" /> what's this?
-                                </small>
-                            </div>
-                            <UncontrolledPopover
-                                target="qrInfo"
-                                placement="top"
-                                trigger="hover"
-                                container="PopoverContainer"
-                            >
-                                <PopoverBody>TODO: write info about qr code</PopoverBody>
-                            </UncontrolledPopover>
+                        <Col>
+                            <Button block size="sm">
+                                <Icon icon="print" className="me-1" /> Print encryption key
+                            </Button>
                         </Col>
                     </Row>
-                    {/* TODO validate encryption key saved */}
-                    <div className="d-flex justify-content-center mt-3">
-                        <Checkbox size="lg" color="primary" selected={null} toggleSelection={null}>
-                            <span className="lead ms-2">I have saved the encryption key</span>
-                        </Checkbox>
+                    <Alert color="warning" className="d-flex align-items-center mt-2">
+                        <Icon icon="warning" className="fs-2 me-2" />
+                        <div>
+                            Save the key in a safe place. It will not be available again. If you lose this key you could
+                            lose access to your data
+                        </div>
+                    </Alert>
+                </Col>
+                <Col lg="auto" className="text-center">
+                    <img src={qrImg} alt="" />
+                    <div className="text-center mt-1">
+                        <small id="qrInfo" className="text-info">
+                            <Icon icon="info" /> what's this?
+                        </small>
                     </div>
-                </Collapse>
-            )}
+                    <UncontrolledPopover target="qrInfo" placement="top" trigger="hover" container="PopoverContainer">
+                        <PopoverBody>TODO: write info about qr code</PopoverBody>
+                    </UncontrolledPopover>
+                </Col>
+            </Row>
+            {/* TODO validate encryption key saved */}
+            <div className="d-flex justify-content-center mt-3">
+                <Checkbox size="lg" color="primary" selected={null} toggleSelection={null}>
+                    <span className="lead ms-2">I have saved the encryption key</span>
+                </Checkbox>
+            </div>
         </div>
     );
 }
@@ -556,30 +578,35 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                     </span>
                 </Col>
                 <Col>
-                    <span id="ShardingInfo">
-                        <Icon icon="info" color="info" /> What is sharding?
-                    </span>
-                    <LicenseRestrictions
-                        isAvailable={licenseProps.sharding}
-                        featureName={
-                            <strong className="text-shard">
-                                <Icon icon="sharding" /> Sharding
-                            </strong>
-                        }
-                    >
-                        <Switch
-                            selected={shardingEnabled}
-                            toggleSelection={() => toggleSharding()}
-                            color="shard"
-                            disabled={!licenseProps.sharding}
-                            className="mt-1"
+                    <div>
+                        <span id="ShardingInfo">
+                            <Icon icon="info" color="info" /> What is sharding?
+                        </span>
+                    </div>
+                    <div>
+                        <LicenseRestrictions
+                            isAvailable={licenseProps.sharding}
+                            featureName={
+                                <strong className="text-shard">
+                                    <Icon icon="sharding" /> Sharding
+                                </strong>
+                            }
+                            className="d-inline-block"
                         >
-                            Enable{" "}
-                            <strong className="text-shard">
-                                <Icon icon="sharding" /> Sharding
-                            </strong>
-                        </Switch>
-                    </LicenseRestrictions>
+                            <Switch
+                                selected={shardingEnabled}
+                                toggleSelection={() => toggleSharding()}
+                                color="shard"
+                                disabled={!licenseProps.sharding}
+                                className="mt-1"
+                            >
+                                Enable{" "}
+                                <strong className="text-shard">
+                                    <Icon icon="sharding" /> Sharding
+                                </strong>
+                            </Switch>
+                        </LicenseRestrictions>
+                    </div>
                 </Col>
             </Row>
 
@@ -670,7 +697,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                         </Row>
                     </Collapse>
                     <Alert color="info" className=" text-center">
-                        {shardingEnabled ? (
+                        <Collapse isOpen={shardingEnabled}>
                             <>
                                 Data will be divided into{" "}
                                 <strong>
@@ -679,9 +706,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                                 </strong>
                                 .<br />
                             </>
-                        ) : (
-                            <></>
-                        )}
+                        </Collapse>
                         {replicationFactor > 1 ? (
                             <>
                                 {shardingEnabled ? <>Each shard</> : <>Data</>} will be replicated to{" "}
@@ -703,6 +728,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                         <LicenseRestrictions
                             isAvailable={replicationFactor > 1}
                             message="Replication factor is set to 1"
+                            className="d-inline-block"
                         >
                             <Switch
                                 color="primary"
@@ -719,6 +745,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                         <LicenseRestrictions
                             isAvailable={licenseProps.dynamicDatabaseDistribution}
                             featureName="dynamic database distribution"
+                            className="d-inline-block"
                         >
                             <Switch
                                 color="primary"
@@ -728,7 +755,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                             >
                                 Allow dynamic database distribution
                                 <br />
-                                <small>Maintain replication factor upon node failure</small>
+                                <small className="text-muted">Maintain replication factor upon node failure</small>
                             </Switch>
                         </LicenseRestrictions>
                     )}
@@ -737,7 +764,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                     <Switch color="primary" selected={manualNodeSelection} toggleSelection={toggleManualNodeSelection}>
                         Set replication nodes manually
                         <br />
-                        <small>Select nodes from the list in the next step</small>
+                        <small className="text-muted">Select nodes from the list in the next step</small>
                     </Switch>
                 </Col>
             </Row>
@@ -946,6 +973,16 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
             </div>
 
             <h2 className="text-center mb-4">Restore from backup</h2>
+
+            <Row>
+                <Col lg={{ offset: 2, size: 8 }}>
+                    <FormGroup floating>
+                        <Input type="text" placeholder="Database Name" name="Database Name" id="DbName" />
+                        <Label for="DbName">Database Name</Label>
+                    </FormGroup>
+                </Col>
+            </Row>
+
             <Row>
                 <Col sm="6" lg={{ offset: 2, size: 4 }}>
                     <Button
@@ -961,7 +998,6 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
                     </Button>
                 </Col>
                 <Col sm="6" lg="4">
-                    {" "}
                     <LicenseRestrictions
                         isAvailable={licenseIncludesSharding}
                         featureName={
@@ -969,6 +1005,7 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
                                 <Icon icon="sharding" /> Sharding
                             </strong>
                         }
+                        className="d-inline-block"
                     >
                         <Button
                             active={shardingEnabled}
@@ -985,15 +1022,6 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
                     </LicenseRestrictions>
                 </Col>
             </Row>
-            <div className="d-flex justify-content-center mt-4"></div>
-            <Row>
-                <Col lg={{ offset: 2, size: 8 }}>
-                    <FormGroup floating>
-                        <Input type="text" placeholder="Database Name" name="Database Name" id="DbName" />
-                        <Label for="DbName">Database Name</Label>
-                    </FormGroup>
-                </Col>
-            </Row>
         </>
     );
 }
@@ -1003,10 +1031,23 @@ interface StepBackupSourceProps {
     setBackupSource: (source: string) => void;
     shardingEnabled: boolean;
     nodeList: string[];
+    encryptionEnabled: boolean;
+    toggleEncryption: () => void;
+    licenseProps: licenseProps;
+    serverAuthentication: boolean;
 }
 
 export function StepBackupSource(props: StepBackupSourceProps) {
-    const { backupSource, setBackupSource, shardingEnabled, nodeList } = props;
+    const {
+        backupSource,
+        setBackupSource,
+        shardingEnabled,
+        nodeList,
+        encryptionEnabled,
+        toggleEncryption,
+        licenseProps,
+        serverAuthentication,
+    } = props;
 
     const backupSourceImg = require("Content/img/createDatabase/backup-source.svg");
 
@@ -1022,19 +1063,22 @@ export function StepBackupSource(props: StepBackupSourceProps) {
             case "cloud":
                 return (
                     <>
-                        <Icon icon="cloud" className="me-1" /> RavenDB Cloud
+                        <Icon icon="cloud" className="me-1" />
+                        RavenDB Cloud
                     </>
                 );
             case "aws":
                 return (
                     <>
-                        <Icon icon="aws" className="me-1" /> Amazon S3
+                        <Icon icon="aws" className="me-1" />
+                        Amazon S3
                     </>
                 );
             case "azure":
                 return (
                     <>
-                        <Icon icon="azure" className="me-1" /> Microsoft Azure
+                        <Icon icon="azure" className="me-1" />
+                        Microsoft Azure
                     </>
                 );
             case "gcp":
@@ -1089,36 +1133,159 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                     {backupSource === "aws" && backupSourceFragmentAws()}
                     {backupSource === "azure" && backupSourceFragmentAzure()}
                     {backupSource === "gcp" && backupSourceFragmentGcp()}
-                    <Row className="mt-2">
-                        <Col lg="3">
-                            <Label className="col-form-label">Restore Point</Label>
-                        </Col>
-                        <Col>
-                            {backupSource && (
+                    {shardingEnabled ? (
+                        <>
+                            {backupSource != "local" && (
                                 <>
-                                    <UncontrolledDropdown>
-                                        <DropdownToggle caret className="w-100">
-                                            Select
-                                        </DropdownToggle>
-                                        <DropdownMenu className="w-100">
-                                            <DropdownItem>TODO: add restore point selection</DropdownItem>
-                                        </DropdownMenu>
-                                    </UncontrolledDropdown>
-                                    <div className="mt-4">
-                                        <Switch color="primary" selected={null} toggleSelection={null}>
-                                            Disable ongoing tasks after restore
-                                        </Switch>
-                                        <Switch color="primary" selected={null} toggleSelection={null}>
-                                            Skip indexes
-                                        </Switch>
-                                    </div>
+                                    <Row className="mt-2">
+                                        <Col lg="3">
+                                            <label className="col-form-label">Restore&nbsp;Points</label>
+                                        </Col>
+                                        <Col>
+                                            <ButtonGroup className="w-100">
+                                                <UncontrolledDropdown className="me-1">
+                                                    <DropdownToggle caret>
+                                                        <Icon icon="node" color="node" className="me-1" />
+                                                        <strong>DEV</strong>
+                                                    </DropdownToggle>
+                                                    <DropdownMenu>
+                                                        {nodeList.map((node) => (
+                                                            <DropdownItem>
+                                                                <Icon icon="node" color="node" className="me-1" />
+                                                                <strong>{node}</strong>
+                                                            </DropdownItem>
+                                                        ))}
+                                                    </DropdownMenu>
+                                                </UncontrolledDropdown>
+                                                <UncontrolledDropdown className="me-1">
+                                                    <DropdownToggle caret>
+                                                        <Icon icon="shard" color="shard" className="ms-1" />
+                                                        <strong>1</strong>
+                                                    </DropdownToggle>
+                                                    <DropdownMenu>
+                                                        <DropdownItem>
+                                                            <Icon icon="shard" color="shard" className="me-1" />{" "}
+                                                            <strong>1</strong>
+                                                        </DropdownItem>
+                                                    </DropdownMenu>
+                                                </UncontrolledDropdown>
+                                                <RestorePointSelector />
+                                            </ButtonGroup>
+                                        </Col>
+                                    </Row>
+                                    <Row className="mt-2">
+                                        <Col lg={{ offset: 3 }}>
+                                            <Button size="sm" outline color="info" className="rounded-pill">
+                                                <Icon icon="restore-backup" /> Add shard restore point
+                                            </Button>
+                                        </Col>
+                                    </Row>
                                 </>
                             )}
+                        </>
+                    ) : (
+                        <Row className="mt-2">
+                            <Col lg="3">
+                                <Label className="col-form-label">Restore Point</Label>
+                            </Col>
+                            <Col>
+                                {backupSource && (
+                                    <>
+                                        <RestorePointSelector />
+                                    </>
+                                )}
+                            </Col>
+                        </Row>
+                    )}
+
+                    <Row>
+                        <Col lg={{ offset: 3, size: 9 }}>
+                            <div className="mt-4">
+                                <Switch color="primary" selected={null} toggleSelection={null}>
+                                    <Icon icon="ongoing-tasks" addon="cancel" className="me-1" />
+                                    Disable ongoing tasks after restore
+                                </Switch>
+                                <br />
+                                <Switch color="primary" selected={null} toggleSelection={null}>
+                                    <Icon icon="index" className="me-1" /> Skip indexes
+                                </Switch>
+                                <br />
+                                {/* TODO: Lock encryption when the source file is encrypted */}
+                                {licenseProps.encryption ? (
+                                    <LicenseRestrictions
+                                        isAvailable={serverAuthentication}
+                                        message={
+                                            <>
+                                                <p className="lead text-warning">
+                                                    <Icon icon="unsecure" /> Authentication is off
+                                                </p>
+                                                <p>
+                                                    <strong>Encription at Rest</strong> is only possible when
+                                                    authentication is enabled and a server certificate has been defined.
+                                                </p>
+                                                <p>
+                                                    For more information go to the <a href="#">certificates page</a>
+                                                </p>
+                                            </>
+                                        }
+                                        className="d-inline-block"
+                                    >
+                                        <Switch
+                                            color="primary"
+                                            selected={encryptionEnabled}
+                                            toggleSelection={toggleEncryption}
+                                            disabled={!serverAuthentication}
+                                        >
+                                            <Icon icon="encryption" className="me-1" />
+                                            Encrypt at Rest
+                                        </Switch>
+                                    </LicenseRestrictions>
+                                ) : (
+                                    <LicenseRestrictions
+                                        isAvailable={licenseProps.encryption}
+                                        featureName={
+                                            <strong className="text-primary">
+                                                <Icon icon="storage" addon="encryption" /> Storage encryption
+                                            </strong>
+                                        }
+                                        className="d-inline-block"
+                                    >
+                                        <Switch
+                                            color="primary"
+                                            selected={encryptionEnabled}
+                                            toggleSelection={toggleEncryption}
+                                            disabled={!licenseProps.encryption}
+                                        >
+                                            <Icon icon="encryption" className="me-1" />
+                                            Encrypt at Rest
+                                        </Switch>
+                                    </LicenseRestrictions>
+                                )}
+                            </div>
                         </Col>
                     </Row>
                 </>
             </Collapse>
         </>
+    );
+}
+
+interface RestorPointSelectorProps {
+    className?: string;
+    restorePoint?: string;
+}
+export function RestorePointSelector(props: RestorPointSelectorProps) {
+    const { className, restorePoint } = props;
+
+    return (
+        <UncontrolledDropdown className={classNames("flex-grow-1", className)}>
+            <DropdownToggle caret className="w-100">
+                {restorePoint ? <>{restorePoint}</> : <>Select restore point</>}
+            </DropdownToggle>
+            <DropdownMenu className="w-100">
+                <DropdownItem>TODO: add restore point selection</DropdownItem>
+            </DropdownMenu>
+        </UncontrolledDropdown>
     );
 }
 
@@ -1137,14 +1304,18 @@ export function BackupSourceFragmentLocal(props: BackupSourceFragmentLocalProps)
         restorePoint: string;
     };
 
-    const localBackupSources: localBackupSource[] = [
-        {
-            node: "A",
-            shard: 1,
-            directory: "/backups",
-            restorePoint: "2023 February 21st, 11:19 AM, Full Backup",
-        },
-    ];
+    const [localBackupSources, setLocalBackupSources] = useState<Array<localBackupSource>>([
+        { node: "A", shard: 1, directory: "/backups", restorePoint: "2023 February 21st, 11:19 AM, Full Backup" },
+    ]);
+
+    const addBackup = () => {
+        setLocalBackupSources((localBackupSources) => [
+            ...localBackupSources,
+            { node: null, shard: null, directory: null, restorePoint: null },
+        ]);
+    };
+
+    const updateBackup = () => {};
 
     return (
         <>
@@ -1155,35 +1326,46 @@ export function BackupSourceFragmentLocal(props: BackupSourceFragmentLocalProps)
                             <label className="col-form-label">Directory Path & Restore&nbsp;Point</label>
                         </Col>
                         <Col>
-                            <InputGroup>
-                                <UncontrolledDropdown>
-                                    <DropdownToggle caret>Target Node</DropdownToggle>
-                                    <DropdownMenu>
-                                        {nodeList.map((node) => (
-                                            <DropdownItem>
-                                                <Icon icon="node" color="node" className="me-1" />
-                                                <strong>{node}</strong>
-                                            </DropdownItem>
-                                        ))}
-                                    </DropdownMenu>
-                                </UncontrolledDropdown>
-                                <Input placeholder="Enter backup directory path"></Input>
-                                <UncontrolledDropdown>
-                                    <DropdownToggle caret>Target shard</DropdownToggle>
-                                    <DropdownMenu>
-                                        <DropdownItem>
-                                            <Icon icon="shard" color="shard" className="me-1" /> <strong>1</strong>
-                                        </DropdownItem>
-                                    </DropdownMenu>
-                                </UncontrolledDropdown>
-                            </InputGroup>
-                            <Input placeholder="Restore point" className="mt-1"></Input>
+                            {localBackupSources.map((backup) => (
+                                <>
+                                    <InputGroup>
+                                        <UncontrolledDropdown>
+                                            <DropdownToggle caret>
+                                                <Icon icon="node" color="node" className="me-1" />{" "}
+                                                <strong>{backup.node}</strong>
+                                            </DropdownToggle>
+                                            <DropdownMenu>
+                                                {nodeList.map((node) => (
+                                                    <DropdownItem>
+                                                        <Icon icon="node" color="node" className="me-1" />
+                                                        <strong>{node}</strong>
+                                                    </DropdownItem>
+                                                ))}
+                                            </DropdownMenu>
+                                        </UncontrolledDropdown>
+                                        <Input placeholder="Enter backup directory path" value={backup.directory} />
+                                        <UncontrolledDropdown>
+                                            <DropdownToggle caret>
+                                                <Icon icon="shard" color="shard" className="me-1" />{" "}
+                                                <strong>{backup.shard}</strong>
+                                            </DropdownToggle>
+                                            <DropdownMenu>
+                                                <DropdownItem>
+                                                    <Icon icon="shard" color="shard" className="me-1" />{" "}
+                                                    <strong>1</strong>
+                                                </DropdownItem>
+                                            </DropdownMenu>
+                                        </UncontrolledDropdown>
+                                    </InputGroup>
+                                    <RestorePointSelector restorePoint={backup.restorePoint} className="mt-1 mb-3" />
+                                </>
+                            ))}
                         </Col>
                     </Row>
                     <Row className="mt-2">
                         <Col lg={{ offset: 3 }}>
-                            <Button size="sm" outline color="info" className="rounded-pill">
-                                <Icon icon="restore-backup" /> Add backup file
+                            <Button size="sm" outline color="info" className="rounded-pill" onClick={() => addBackup()}>
+                                <Icon icon="restore-backup" /> Add shard backup file
                             </Button>
                         </Col>
                     </Row>
