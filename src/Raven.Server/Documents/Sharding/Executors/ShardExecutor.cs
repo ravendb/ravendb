@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Sharding.Executors
             if (requestExecutors == null)
                 return;
 
-            foreach (var executor in _requestExecutors.Values)
+            foreach (var executor in requestExecutors.Values)
             {
                 try
                 {

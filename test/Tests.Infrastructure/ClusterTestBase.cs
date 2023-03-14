@@ -20,6 +20,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.Stats;
@@ -788,16 +789,16 @@ namespace Tests.Infrastructure
                     customSettings = customSettingsList[i];
                 }
 
-                string serverUrl;
-
+                customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl);
                 if (useSsl)
                 {
-                    serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                    certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl);
+                    serverUrl ??= UseFiddlerUrl("https://127.0.0.1:0");
+                    if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.SetupMode), out var setupMode) == false || setupMode != nameof(SetupMode.LetsEncrypt))
+                        certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl);
                 }
                 else
                 {
-                    serverUrl = UseFiddlerUrl("http://127.0.0.1:0");
+                    serverUrl ??= UseFiddlerUrl("http://127.0.0.1:0");
                     customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
                 }
                 var co = new ServerCreationOptions
@@ -810,7 +811,8 @@ namespace Tests.Infrastructure
                 var server = GetNewServer(co, caller);
                 var port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);
                 var prefix = useSsl ? "https" : "http";
-                serverUrl = UseFiddlerUrl($"{prefix}://127.0.0.1:{port}");
+                var ip = serverUrl.Split(':')[1].Replace("//", "");
+                serverUrl = UseFiddlerUrl($"{prefix}://{ip}:{port}");
                 Servers.Add(server);
                 clusterNodes.Add(server);
 
