@@ -536,7 +536,7 @@ namespace Raven.Server.Utils
         private static readonly List<string> _timeOnlyPropertiesNames = typeof(TimeOnly).GetProperties().Select(i => i.Name).ToList();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe object ConvertLazyStringValue(LazyStringValue value, StringSegment member = default)
+        private static unsafe object ConvertLazyStringValue(LazyStringValue value, StringSegment member = default, bool supportTimeOnlyDateOnly = false)
         {
             var buffer = value.Buffer;
             var size = value.Size;
@@ -550,7 +550,7 @@ namespace Raven.Server.Utils
             // TimeOnly can be parsed also as TimeSpan. To avoid that we want to know the "context".
             if (LazyStringParser.TryParseTimeSpan(buffer, size, out TimeSpan ts))
             {
-                if (member.HasValue && _timeSpanPropertiesNames.Contains(member.Value) == false && _timeOnlyPropertiesNames.Contains(member.Value))
+                if (supportTimeOnlyDateOnly && member.HasValue && _timeSpanPropertiesNames.Contains(member.Value) == false && _timeOnlyPropertiesNames.Contains(member.Value))
                 {
                     if (LazyStringParser.TryParseTimeOnly(buffer, size, out TimeOnly timeOnly))
                         return timeOnly;
@@ -559,7 +559,7 @@ namespace Raven.Server.Utils
                 return ts;
             }
             
-            if (LazyStringParser.TryParseDateOnly(buffer, size, out DateOnly dateOnly))
+            if (supportTimeOnlyDateOnly && LazyStringParser.TryParseDateOnly(buffer, size, out DateOnly dateOnly))
                 return dateOnly;
 
             
@@ -585,7 +585,11 @@ namespace Raven.Server.Utils
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe bool TryConvertStringValue(string value, out object output)
+        internal static unsafe bool TryConvertStringValue(string value, out object output) => TryConvertStringValue(value, supportDateOnlyTimeOnly: false, out output);
+
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe bool TryConvertStringValue(string value, bool supportDateOnlyTimeOnly,  out object output)
         {
             output = null;
 
@@ -603,23 +607,23 @@ namespace Raven.Server.Utils
                 if (output == null && LazyStringParser.TryParseTimeSpan(str, value.Length, out var ts))
                     output = ts;
 
-                if (output == null && LazyStringParser.TryParseDateOnly(str, value.Length, out var dateOnly))
+                if (supportDateOnlyTimeOnly && output == null && LazyStringParser.TryParseDateOnly(str, value.Length, out var dateOnly))
                     output = dateOnly;
 
-                if (output == null && LazyStringParser.TryParseTimeOnly(str, value.Length, out var timeOnly))
+                if (supportDateOnlyTimeOnly && output == null && LazyStringParser.TryParseTimeOnly(str, value.Length, out var timeOnly))
                     output = timeOnly;
             }
 
             return output != null;
         }
 
-        public static object ConvertForIndexing(object value, StringSegment propertyName = default)
+        public static object ConvertForIndexing(object value, StringSegment propertyName = default, bool supportTimeOnlyDateOnly = false)
         {
             if (value == null)
                 return null;
 
             Type objectType = value.GetType();
-            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.String] && TryConvertStringValue((string)value, out object result))
+            if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.String] && TryConvertStringValue((string)value, supportTimeOnlyDateOnly, out object result))
                 return result;
 
             LazyStringValue lazyString = null;
@@ -629,7 +633,7 @@ namespace Raven.Server.Utils
                 lazyString = (LazyStringValue)value;
 
             if (lazyString != null)
-                return ConvertLazyStringValue(lazyString, propertyName);
+                return ConvertLazyStringValue(lazyString, propertyName, supportTimeOnlyDateOnly);
 
             if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.BlittableJsonReaderObject])
                 return TryConvertBlittableJsonReaderObject((BlittableJsonReaderObject) value);

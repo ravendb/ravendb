@@ -10,6 +10,9 @@ namespace Raven.Server.Json
     {
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
         public static BlittableJsonTraverser FlatMapReduceResults = new BlittableJsonTraverser(new char[] { }); // map-reduce results have always a flat structure, let's ignore separators
+        public static BlittableJsonTraverser TimeOnlyDateOnlyAreSupportedFlatMapReduceResults = new (new char[] { }, supportTimeOnlyDateOnly: true);
+        public static BlittableJsonTraverser TimeOnlyDateOnlyAreSupportedDefault = new(supportTimeOnlyDateOnly: true);
+
 
         private const char PropertySeparator = '.';
         private const char CollectionSeparatorStartBracket = '[';
@@ -28,10 +31,13 @@ namespace Raven.Server.Json
             CollectionSeparatorStartBracket
         };
 
-        private BlittableJsonTraverser(char[] nonDefaultSeparators = null)
+        public readonly bool SupportTimeOnlyDateOnly;
+
+        private BlittableJsonTraverser(char[] nonDefaultSeparators = null, bool supportTimeOnlyDateOnly = false)
         {
             if (nonDefaultSeparators != null)
                 _separators = nonDefaultSeparators;
+            SupportTimeOnlyDateOnly = supportTimeOnlyDateOnly;
         }
 
         public object Read(BlittableJsonReaderObject docReader, StringSegment path)

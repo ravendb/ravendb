@@ -352,6 +352,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.DateOnly)
             {
+                
                 var dateOnly = (DateOnly)value;
                 var asString = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
                 var ticks = dateOnly.DayNumber * TimeSpan.TicksPerDay;

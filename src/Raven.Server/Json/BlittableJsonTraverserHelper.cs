@@ -47,7 +47,7 @@ namespace Raven.Server.Json
             if (blittableJsonTraverser.TryRead(document, path, out value, out StringSegment leftPath) &&
                 leftPath.Length == 0)
             {
-                value = TypeConverter.ConvertForIndexing(value, leftPath);
+                value = TypeConverter.ConvertForIndexing(value, leftPath, blittableJsonTraverser.SupportTimeOnlyDateOnly);
                 return true;
             }
 
@@ -60,7 +60,7 @@ namespace Raven.Server.Json
 
         public static bool TryReadComputedProperties(BlittableJsonTraverser blittableJsonTraverser, StringSegment leftPath, ref object value)
         {
-            value = TypeConverter.ConvertForIndexing(value, leftPath);
+            value = TypeConverter.ConvertForIndexing(value, leftPath, blittableJsonTraverser.SupportTimeOnlyDateOnly);
 
             if (leftPath == "Length" || leftPath == "length" ||
                 leftPath == "Count" || leftPath == "count")
@@ -125,7 +125,7 @@ namespace Raven.Server.Json
                     {
                         obj.GetPropertyByIndex(i, ref property);
                         var val = isKey ? property.Name : property.Value;
-                        values[index++] = TypeConverter.ConvertForIndexing(val, default);
+                        values[index++] = TypeConverter.ConvertForIndexing(val, default, supportTimeOnlyDateOnly: blittableJsonTraverser.SupportTimeOnlyDateOnly);
                     }
 
                     value = values;

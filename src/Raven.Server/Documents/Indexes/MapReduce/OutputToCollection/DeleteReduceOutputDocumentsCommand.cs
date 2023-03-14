@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

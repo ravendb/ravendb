@@ -34,7 +34,14 @@ namespace Raven.Server.Documents.Indexes.Persistence
             string storeValueFieldName, ICollection<IndexField> fields = null)
         {
             _index = index ?? throw new ArgumentNullException(nameof(index));
-            _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
+            _blittableTraverser = (storeValue, index.Definition.Version) switch
+            {
+                (storeValue: true, Version: >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField) => BlittableJsonTraverser.TimeOnlyDateOnlyAreSupportedFlatMapReduceResults,
+                (storeValue: false, Version: >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField) => BlittableJsonTraverser.TimeOnlyDateOnlyAreSupportedDefault,
+                (storeValue: true, Version: _) => BlittableJsonTraverser.FlatMapReduceResults,
+                (storeValue: false, Version: _) => BlittableJsonTraverser.Default
+            };
+            
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
             _keyFieldName = keyFieldName ??
