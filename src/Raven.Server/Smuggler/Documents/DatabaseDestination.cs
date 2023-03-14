@@ -593,7 +593,7 @@ namespace Raven.Server.Smuggler.Documents
             private long? _lastClusterTransactionIndex;
             private readonly BackupKind? _backupKind;
             private readonly CancellationToken _token;
-
+            private int _maybeFlushTestCount;
             public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, CancellationToken token)
             {
                 _database = database;
@@ -771,6 +771,19 @@ namespace Raven.Server.Smuggler.Documents
             public JsonOperationContext GetContextForNewCompareExchangeValue()
             {
                 return _context;
+            }
+
+            public bool MaybeFlush()
+            {
+                if (_clusterTransactionCommands.Length == 0)
+                    return false;
+                return ++_maybeFlushTestCount > 1024;
+            }
+
+            public Task FlushAsync()
+            {
+                _maybeFlushTestCount = 0;
+                return SendClusterTransactionsAsync().AsTask();
             }
 
             private struct DisposableReturnedArray<T> : IDisposable
