@@ -152,6 +152,8 @@ namespace Raven.Client.ServerWide
             Stamp = topology.Stamp;
             PriorityOrder = topology.PriorityOrder;
             NodesModifiedAt = topology.NodesModifiedAt;
+
+            ReplicationFactor = topology.ReplicationFactor;
         }
     }
 

@@ -273,6 +273,46 @@ namespace SlowTests.Sharding
         }
 
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task RavenDB_19998_EnsureReplicationFactorOfOrchestratorUpdates()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options))
+            {
+                var record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                var dbTopology = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(2, record.Sharding.Orchestrator.Topology.ReplicationFactor);
+                Assert.Equal(2, dbTopology.Members.Count);
+                Assert.Equal(0, dbTopology.Promotables.Count);
+
+                var allNodes = new[] { "A", "B", "C" };
+
+                var nodeAmount = record.Sharding.Orchestrator.Topology.Members.Count;
+                var nodeInOrchestratorTopology = allNodes.First(x => record.Sharding.Orchestrator.Topology.Members.Contains(x));
+
+                //remove the node from orchestrator topology
+                store.Maintenance.Server.Send(new RemoveNodeFromOrchestratorTopologyOperation(store.Database, nodeInOrchestratorTopology));
+                record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                dbTopology = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(nodeAmount - 1, dbTopology.Members.Count);
+                Assert.Equal(1, record.Sharding.Orchestrator.Topology.ReplicationFactor);
+                Assert.Equal(0, dbTopology.Promotables.Count);
+                Assert.Equal(0, dbTopology.Rehabs.Count);
+                
+                //add node to orchestrator topology
+                store.Maintenance.Server.Send(new AddNodeToOrchestratorTopologyOperation(store.Database, nodeInOrchestratorTopology));
+                record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                dbTopology = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(2, record.Sharding.Orchestrator.Topology.ReplicationFactor);
+                Assert.Equal(nodeAmount - 1, dbTopology.Members.Count);
+                Assert.Equal(1, dbTopology.Promotables.Count);
+                Assert.Equal(nodeInOrchestratorTopology, dbTopology.Promotables[0]);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task RemoveShardFromNode()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
