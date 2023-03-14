@@ -153,8 +153,9 @@ namespace Raven.Server.Documents
         LowerId = 1 << 1,
         Data = 1 << 4,
         ChangeVector = 1 << 5,
+        Flags = 1 << 6,
 
-        All = Id | LowerId | Data | ChangeVector
+        All = Id | LowerId | Data | ChangeVector | Flags
     }
 
 

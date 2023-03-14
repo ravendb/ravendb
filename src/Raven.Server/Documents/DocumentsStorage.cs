@@ -1549,9 +1549,11 @@ namespace Raven.Server.Documents
             if (fields.Contain(DocumentFields.ChangeVector))
                 result.ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
 
+            if (fields.Contain(DocumentFields.Flags))
+                result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+
             result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
             result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
-            result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
             result.StorageId = tvr.Id;
             result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
 

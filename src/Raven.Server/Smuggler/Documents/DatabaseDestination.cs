@@ -1463,9 +1463,13 @@ namespace Raven.Server.Smuggler.Documents
                             _database.DocumentsStorage.RevisionsStorage.Put(context, id, document.Data, document.Flags,
                                 document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
 
-                            if (addHasRevisionsFlag.Contains(id) == false && document.Flags.Contain(DocumentFlags.HasRevisions))
+                            if (addHasRevisionsFlag.Contains(id) == false)
                             {
-                                addHasRevisionsFlag.Add(id);
+                                var actualDocument = _database.DocumentsStorage.Get(context, id, DocumentFields.Flags);
+                                if (actualDocument != null && actualDocument.Flags.Contain(DocumentFlags.HasRevisions) == false)
+                                {
+                                    addHasRevisionsFlag.Add(id);
+                                }
                             }
                         }
 
