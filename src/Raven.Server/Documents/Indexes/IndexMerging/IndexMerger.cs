@@ -1,21 +1,19 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 namespace Raven.Server.Documents.Indexes.IndexMerging
 {
     public class IndexMerger
     {
         private readonly Dictionary<string, IndexDefinition> _indexDefinitions;
-
+        private static readonly IdentifierNameSyntax DefaultDocumentIdentifier = SyntaxFactory.IdentifierName("doc");
         public IndexMerger(Dictionary<string, IndexDefinition> indexDefinitions)
         {
             _indexDefinitions = indexDefinitions
@@ -134,7 +132,11 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
                 var map = SyntaxFactory.ParseExpression(indexData.OriginalMaps.FirstOrDefault()).NormalizeWhitespace();
                 var visitor = new IndexVisitor(indexData);
+                CollectionNameRetriever collectionRetriever = map is QueryExpressionSyntax ? CollectionNameRetriever.QuerySyntax : CollectionNameRetriever.MethodSyntax;
                 visitor.Visit(map);
+                collectionRetriever.Visit(map);
+                indexData.IsMapReduceOrMultiMap |= collectionRetriever.CollectionNames.Length > 1;
+                indexData.Collections = collectionRetriever.CollectionNames;
             }
 
             return indexes;
@@ -142,7 +144,10 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         private bool CanMergeIndexes(IndexData other, IndexData current)
         {
-            if (current.Collection != other.Collection)
+            if (current.Collections.Length > 1 || other.Collections.Length > 1)
+                return false;
+            
+            if (current.Collections[0] != other.Collections[0])
                 return false;
             
             if (current.IndexName == other.IndexName)
@@ -159,10 +164,13 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
             if (current.IsFanout)
                 return false;
+            
             if (current.HasGroup)
                 return false;
+            
             if (current.HasOrder)
                 return false;
+            
             if (current.HasLet)
                 return false;
 
@@ -227,7 +235,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 // for the same key, they have to be the same
                 var ySelectExpr = ExtractValueFromExpression(expressionValue);
                 var xSelectExpr = ExtractValueFromExpression(pair.Value);
-                if (xSelectExpr != ySelectExpr)
+                if (xSelectExpr.Inner != ySelectExpr.Inner)
                 {
                     return false;
                 }
@@ -261,7 +269,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             string TransformAndExtractValueFromExpression(ExpressionSyntax expr) => expr switch
             {
                 InvocationExpressionSyntax ies => RecursivelyTransformInvocationExpressionSyntax(index, ies, out var _).ToString(),
-                _ => ExtractValueFromExpression(expr)
+                _ => ExtractValueFromExpression(expr).Inner
             };
         }
 
@@ -339,9 +347,9 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         private static void TrySetCollectionName(MergeProposal mergeProposal, MergeSuggestions mergeSuggestion)
         {
-            if (mergeProposal.ProposedForMerge[0].Collection != null)
+            if (mergeProposal.ProposedForMerge[0].Collections != null)
             {
-                mergeSuggestion.Collection = mergeProposal.ProposedForMerge[0].Collection;
+                mergeSuggestion.Collection = mergeProposal.ProposedForMerge[0].Collections[0];
             }
 
             else if (mergeProposal.ProposedForMerge[0].FromExpression is SimpleNameSyntax name)
@@ -353,7 +361,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             {
                 var identifier = ExtractIdentifierFromExpression(member);
                 if (identifier == "docs")
-                    mergeSuggestion.Collection = ExtractValueFromExpression(member);
+                    mergeSuggestion.Collection = ExtractValueFromExpression(member).Identifier;
             }
         }
 
@@ -365,24 +373,9 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             {
                 foreach (var curExpr in curProposedData.SelectExpressions)
                 {
-                    var expression = curExpr.Value as MemberAccessExpressionSyntax;
-                    var identifierName = ExtractIdentifierFromExpression(expression);
-
-                    if (identifierName != null && identifierName == curProposedData.FromIdentifier)
-                    {
-                        expression = ChangeParentInMemberSyntaxToDoc(expression);
-                        selectExpressionDict[curExpr.Key] = expression ?? curExpr.Value;
-                    }
-                    else if (expression is null && curExpr.Value is InvocationExpressionSyntax ies)
-                    {
-                        selectExpressionDict[curExpr.Key] = RecursivelyTransformInvocationExpressionSyntax(curProposedData, ies, out message);
-                        if (message != null)
-                            return false;
-                    }
-                    else
-                    {
-                        selectExpressionDict[curExpr.Key] = curExpr.Value;
-                    }
+                    var expr =  curExpr.Value;
+                    var rewritten = RewriteExpressionSyntax(curProposedData, expr, out message);
+                    selectExpressionDict[curExpr.Key] = rewritten ?? expr;
                 }
 
                 mergeSuggestion.CanMerge.Add(curProposedData.IndexName);
@@ -415,7 +408,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 rewrittenArguments.Add(SyntaxFactory.Argument(result));
             }
 
-            ExpressionSyntax invocationExpression = ChangeParentInMemberSyntaxToDoc(ies.Expression as MemberAccessExpressionSyntax) ?? ies.Expression;
+            ExpressionSyntax invocationExpression = RewriteExpressionSyntax(curProposedData, ies.Expression, out message);
 
             return SyntaxFactory.InvocationExpression(invocationExpression,
                 SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList<ArgumentSyntax>(rewrittenArguments)));
@@ -433,46 +426,94 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             message = null;
             return originalExpression switch
             {
-                MemberAccessExpressionSyntax maes => ChangeParentInMemberSyntaxToDoc(maes),
+                MemberAccessExpressionSyntax maes => ChangeParentInMemberSyntaxToDoc(indexData, maes),
                 InvocationExpressionSyntax iesInner => RecursivelyTransformInvocationExpressionSyntax(indexData, iesInner, out message),
                 SimpleLambdaExpressionSyntax =>  originalExpression,
                 IdentifierNameSyntax ins => ChangeIdentifierToIndexMergerDefaultWhenNeeded(ins), 
-                BinaryExpressionSyntax bes => RewriteBinaryExpression(indexData, bes), 
+                BinaryExpressionSyntax bes => RewriteBinaryExpression(indexData, bes),
+                ParenthesizedExpressionSyntax pes => RewriteParenthesizedExpressionSyntax(indexData, pes, out message),
+                LiteralExpressionSyntax => originalExpression,
+                ConditionalExpressionSyntax ces => RewriteConditionalExpressionSyntax(indexData, ces, out message),
+                PrefixUnaryExpressionSyntax pues => pues,
                 _ => null
             };
             
             IdentifierNameSyntax ChangeIdentifierToIndexMergerDefaultWhenNeeded(IdentifierNameSyntax original)
             {
                 if (original.ToFullString() == indexData.FromIdentifier)
-                    return SyntaxFactory.IdentifierName("doc");
+                    return DefaultDocumentIdentifier;
 
                 return original;
             }
+        }
+        
+        private static ExpressionSyntax RewriteParenthesizedExpressionSyntax(IndexData indexData, ParenthesizedExpressionSyntax pes, out string message)
+        {
+            var innerExpression = pes.Expression;
+            var expressionSyntax = RewriteExpressionSyntax(indexData, innerExpression, out message);
+            return SyntaxFactory.ParenthesizedExpression(expressionSyntax);
+        }
+
+        private static ConditionalExpressionSyntax RewriteConditionalExpressionSyntax(IndexData indexData, ConditionalExpressionSyntax ces, out string message)
+        {
+            var condition = RewriteExpressionSyntax(indexData, ces.Condition, out message);
+            if (message is not null)
+                return ces;
+            
+            var whenTrue = RewriteExpressionSyntax(indexData, ces.WhenTrue, out message);
+            if (message is not null)
+                return ces;
+
+            var whenFalse = RewriteExpressionSyntax(indexData, ces.WhenFalse, out message);
+            if (message is not null)
+                return ces;
+
+            return SyntaxFactory.ConditionalExpression(condition, whenTrue, whenFalse);
+        }
+        
+        internal static ExpressionSyntax StripExpressionParenthesis(ExpressionSyntax expr)
+        {
+            while (expr is ParenthesizedExpressionSyntax)
+            {
+                expr = ((ParenthesizedExpressionSyntax)expr).Expression;
+            }
+
+            return expr;
+        }
+
+        internal static SyntaxNode StripExpressionParentParenthesis(SyntaxNode expr)
+        {
+            if (expr == null)
+                return null;
+            while (expr.Parent is ParenthesizedExpressionSyntax)
+            {
+                expr = ((ParenthesizedExpressionSyntax)expr.Parent).Parent;
+            }
+
+            return expr.Parent;
         }
         
         private static BinaryExpressionSyntax RewriteBinaryExpression(IndexData indexData, BinaryExpressionSyntax original)
         {
             var leftSide = RewriteExpressionSyntax(indexData, original.Left, out var _);
             var rightSide = RewriteExpressionSyntax(indexData, original.Right, out var _);
-
             return SyntaxFactory.BinaryExpression(original.Kind(), leftSide, original.OperatorToken, rightSide);
         }
         
-        private static MemberAccessExpressionSyntax ChangeParentInMemberSyntaxToDoc(MemberAccessExpressionSyntax memberAccessExpression)
+        private static MemberAccessExpressionSyntax ChangeParentInMemberSyntaxToDoc(IndexData data, MemberAccessExpressionSyntax memberAccessExpression)
         {
-            if (memberAccessExpression?.Expression is MemberAccessExpressionSyntax)
+            if (memberAccessExpression?.Expression is MemberAccessExpressionSyntax child)
             {
-                var valueStr = ExtractValueFromExpression(memberAccessExpression);
-                var valueExp = SyntaxFactory.ParseExpression(valueStr).NormalizeWhitespace();
-                var innerName = ExtractIdentifierFromExpression(valueExp as MemberAccessExpressionSyntax);
-                var innerMember = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                    SyntaxFactory.IdentifierName("doc"), SyntaxFactory.IdentifierName(innerName));
-                return SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, innerMember, memberAccessExpression.Name);
+                var original = ExtractValueFromExpression(child);
+                var rewrittenInner = SyntaxFactory.ParseExpression(original.Inner).NormalizeWhitespace();
+                var inner = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                    DefaultDocumentIdentifier, SyntaxFactory.IdentifierName(original.Inner));
+                return SyntaxFactory.MemberAccessExpression(memberAccessExpression.Kind(), inner, memberAccessExpression.Name);
             }
-
+            
             if (memberAccessExpression?.Expression is SimpleNameSyntax)
             {
-                return SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.IdentifierName("doc"),
+                return SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, DefaultDocumentIdentifier,
                     memberAccessExpression.Name);
             }
 
@@ -518,22 +559,22 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             return resultingIndexMerge;
         }
 
-        private static string ExtractValueFromExpression(ExpressionSyntax expression)
+        private static (string Identifier, string Inner) ExtractValueFromExpression(ExpressionSyntax expression)
         {
             if (expression == null)
-                return null;
+                return (null, null);
 
             var memberExpression = expression as MemberAccessExpressionSyntax;
             if (memberExpression == null)
-                return expression.ToString();
+                return (null, expression.ToString());
             
             var identifier = ExtractIdentifierFromExpression(memberExpression);
             var value = expression.ToString();
 
             if (identifier == null)
-                return value;
+                return (null, value);
             var parts = value.Split('.');
-            return parts[0] == identifier ? value.Substring(identifier.Length + 1) : value;
+            return parts[0] == identifier ? (identifier, value.Substring(identifier.Length + 1)) : (null, value);
         }
 
         private static string ExtractIdentifierFromExpression(MemberAccessExpressionSyntax expression)

@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         public bool IsFanout { get; set; }
 
-        public string Collection { get; set; }
+        public string[] Collections { get; set; }
         public InvocationExpressionSyntax InvocationExpression { get; set; }
         public IndexDefinition Index => _index;
         public bool IsMapReduceOrMultiMap { get; set; }

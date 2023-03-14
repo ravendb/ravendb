@@ -488,7 +488,7 @@ select new
 {
     Company = doc.Company,
     Employee = doc.Employee,
-    ShipmentLocation = CreateSpatialField(doc.ShipTo.Latitude, doc.ShipTo.Longitude),
+    ShipmentLocation = CreateSpatialField(doc.ShipTo.Location.Latitude, doc.ShipTo.Location.Longitude),
     Total = doc.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
 }", results.Suggestions.First().MergedIndex.Maps.First());
         }
@@ -643,6 +643,48 @@ select new
         [Fact]
         public void IndexDefinitionCanContainLetInInvocationExpressionSyntax() => AssertIndexIsNotCorruptingIndexMerger<IndexWithSyntaxQueryLet>();
 
+        [Fact]
+        public void CanMergeWithConditionalStatementsAndParenthesis()
+        {
+            using var store = GetDocumentStore();
+            var index1 = new IndexWithParenthesisAndConditionalStatementNested();
+            var index2 = new IndexWithLiteral();
+            index1.Execute(store);
+            index2.Execute(store);
+            var indexDefinition1 = store.Maintenance.Send(new GetIndexOperation(index1.IndexName));
+            var indexDefinition2 = store.Maintenance.Send(new GetIndexOperation(index2.IndexName));
+            var merger = new IndexMerger(new Dictionary<string, IndexDefinition>()
+            {
+                {index1.IndexName, indexDefinition1}, {index2.IndexName, indexDefinition2}
+            });
+           
+            Assert.Equal(1, merger.ProposeIndexMergeSuggestions().Suggestions.Count);
+            Assert.Equal(0, merger.ProposeIndexMergeSuggestions().Unmergables.Count);
+            Assert.Equal("docs.AutoIndexMockups.Select(doc => new { Age = doc.Count > 0 ? -1 : doc.Count * 25, SecretField = doc.Name == null ? \"Test\" : doc.Name + \"Maciej\" })", merger.ProposeIndexMergeSuggestions().Suggestions[0].MergedIndex.Maps.First());
+        }
+
+        private class IndexWithParenthesisAndConditionalStatementNested : AbstractIndexCreationTask<AutoIndexMockup>
+        {
+            public IndexWithParenthesisAndConditionalStatementNested()
+            {
+                Map = mockups => mockups.Select(i => new
+                {
+                    SecretField = (i.Name == null ? "Test" : (i.Name + "Maciej" )),
+                });
+            }
+        }
+        
+        private class IndexWithLiteral : AbstractIndexCreationTask<AutoIndexMockup>
+        {
+            public IndexWithLiteral()
+            {
+                Map = mockups => mockups.Select(i => new
+                {
+                    Age = i.Count > 0 ? -1 : i.Count * 25
+                });
+            }
+        }
+        
         private class IndexWithWhere : AbstractIndexCreationTask<AutoIndexMockup>
         {
             public IndexWithWhere()
