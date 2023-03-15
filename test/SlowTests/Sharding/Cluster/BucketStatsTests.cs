@@ -118,7 +118,6 @@ namespace SlowTests.Sharding.Cluster
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanGetBucketStats2()
         {
-            
             using (var store = Sharding.GetDocumentStore())
             {
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));

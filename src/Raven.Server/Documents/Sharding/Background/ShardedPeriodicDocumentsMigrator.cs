@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Background
 {

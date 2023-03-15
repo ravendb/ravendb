@@ -9,7 +9,6 @@ using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding.Background;
 using Raven.Server.Documents.Sharding.Smuggler;
-using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -151,17 +150,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
             }
         }
     }
-
-    public ShardingConfiguration ReadShardingState()
-    {
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (context.OpenReadTransaction())
-        using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardedDatabaseName))
-        {
-            return raw.Sharding.MaterializedConfiguration;
-        }
-    }
-
+    
     protected override ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, int take)
     {
         var batchCollector = new ShardedClusterTransactionBatchCollector(this, take);
@@ -256,6 +245,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
             _bucket = bucket;
             _uptoChangeVector = uptoChangeVector;
         }
+
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Critical, "We need to create here proper tombstones so backup can pick it up RavenDB-19197");

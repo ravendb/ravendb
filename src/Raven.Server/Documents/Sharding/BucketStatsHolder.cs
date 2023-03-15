@@ -1,8 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 
@@ -10,37 +12,34 @@ namespace Raven.Server.Documents.Sharding
 {
     internal unsafe class BucketStatsHolder
     {
-        private readonly ShardedDocumentsStorage _storage;
         private readonly Dictionary<int, Documents.BucketStats> _values;
         private readonly Dictionary<int, ChangeVector> _mergedChangeVectors;
-        private DocumentsOperationContext _ctx;
 
-        public BucketStatsHolder(ShardedDocumentsStorage storage)
+        private static readonly int BucketStatsSize = sizeof(Documents.BucketStats);
+
+        public BucketStatsHolder()
         {
-            _storage = storage;
             _values = new Dictionary<int, Documents.BucketStats>();
             _mergedChangeVectors = new Dictionary<int, ChangeVector>();
         }
 
         public void UpdateBucket(int bucket, long nowTicks, long sizeChange, long numOfDocsChanged)
         {
-            _values.TryGetValue(bucket, out var bucketStats);
+            ref var bucketStats = ref CollectionsMarshal.GetValueRefOrAddDefault(_values, bucket, out _);
 
             bucketStats.Size += sizeChange;
             bucketStats.NumberOfDocuments += numOfDocsChanged;
             bucketStats.LastModifiedTicks = nowTicks;
-
-            _values[bucket] = bucketStats;
         }
 
-        public void UpdateBucket(int bucket, long nowTicks, long sizeChange, long numOfDocsChanged, int changeVectorIndex, ref TableValueReader value)
+        public void UpdateBucketAndChangeVector(DocumentsOperationContext ctx, int bucket, long nowTicks, long sizeChange, long numOfDocsChanged, int changeVectorIndex, ref TableValueReader value)
         {
             UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged);
 
-            var changeVector = TableValueToChangeVector(changeVectorIndex, ref value);
+            var changeVector = DocumentsStorage.TableValueToChangeVector(ctx, changeVectorIndex, ref value);
             if (_mergedChangeVectors.TryGetValue(bucket, out var currentMergedCv))
             {
-                changeVector = currentMergedCv.MergeWith(changeVector, _ctx);
+                changeVector = currentMergedCv.MergeWith(changeVector, ctx);
             }
 
             _mergedChangeVectors[bucket] = changeVector;
@@ -48,72 +47,66 @@ namespace Raven.Server.Documents.Sharding
 
         public void UpdateBucketStatsTreeBeforeCommit(Transaction tx)
         {
-            int bucketStatsSize = sizeof(Documents.BucketStats);
+            var keyBuff = stackalloc byte[sizeof(int)];
             var tree = tx.ReadTree(ShardedDocumentsStorage.BucketStatsSlice);
 
             foreach ((int bucket, Documents.BucketStats inMemoryStats) in _values)
             {
-                using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
+                *(int*)keyBuff = bucket;
+
+                using (Slice.External(tx.Allocator, keyBuff, sizeof(int), ByteStringType.Immutable, out var keySlice))
+                using (MergeStats(tx, tree, inMemoryStats, keySlice, bucket, out var stats, out var mergedCv))
                 {
-                    *(int*)keyBuffer.Ptr = bucket;
-                    var keySlice = new Slice(keyBuffer);
-                    var readResult = tree.Read(keySlice);
-
-                    Documents.BucketStats stats;
-                    IDisposable cvScope = null;
-                    Slice cvSlice = default;
-
-                    if (readResult == null)
-                    {
-                        stats = inMemoryStats;
-                    }
-                    else
-                    {
-                        stats = *(Documents.BucketStats*)readResult.Reader.Base;
-                        stats.Size += inMemoryStats.Size;
-                        stats.NumberOfDocuments += inMemoryStats.NumberOfDocuments;
-                        stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
-
-                        cvScope = stats.GetMergedChangeVector(tx.Allocator, readResult.Reader, out cvSlice);
-                    }
-
                     if (stats.Size == 0 && stats.NumberOfDocuments == 0)
                     {
                         tree.Delete(keySlice);
                         continue;
                     }
 
-                    if (_mergedChangeVectors.TryGetValue(bucket, out var changeVector))
-                    {
-                        using (cvScope)
-                        {
-                            changeVector = changeVector.MergeWith(cvSlice.HasValue ? cvSlice.ToString() : null, _ctx);
-                            cvScope = Slice.From(tx.Allocator, changeVector, out cvSlice);
-                        }
-                    }
-
-                    using (cvScope)
-                    using (tree.DirectAdd(keySlice, bucketStatsSize + cvSlice.Size, out var ptr))
+                    using (tree.DirectAdd(keySlice, BucketStatsSize + mergedCv.Size, out var ptr))
                     {
                         *(Documents.BucketStats*)ptr = stats;
-                        if (cvSlice.HasValue)
-                            cvSlice.CopyTo(ptr + bucketStatsSize);
+                        if (mergedCv.HasValue)
+                            mergedCv.CopyTo(ptr + BucketStatsSize);
                     }
                 }
             }
 
-            _ctx?.Dispose();
-            _ctx = null;
             _values.Clear();
             _mergedChangeVectors.Clear();
         }
 
-        private ChangeVector TableValueToChangeVector(int changeVectorIndex, ref TableValueReader value)
-        {
-            if (_ctx == null)
-                _storage.ContextPool.AllocateOperationContext(out _ctx);
 
-            return DocumentsStorage.TableValueToChangeVector(_ctx, changeVectorIndex, ref value);
+        private ByteStringContext.InternalScope MergeStats(Transaction tx, Tree tree, Documents.BucketStats inMemoryStats, Slice keySlice, int bucket, out Documents.BucketStats stats, out Slice mergedCvSlice)
+        {
+            var ctx = tx.Owner as DocumentsOperationContext;
+            string mergedCv = null;
+            mergedCvSlice = Slices.Empty;
+
+            var readResult = tree.Read(keySlice);
+            if (readResult == null)
+            {
+                stats = inMemoryStats;
+            }
+            else
+            {
+                stats = *(Documents.BucketStats*)readResult.Reader.Base;
+                stats.Size += inMemoryStats.Size;
+                stats.NumberOfDocuments += inMemoryStats.NumberOfDocuments;
+                stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
+
+                mergedCv = stats.GetMergedChangeVector(readResult.Reader);
+            }
+
+            if (_mergedChangeVectors.TryGetValue(bucket, out var changeVector))
+            {
+                mergedCv = changeVector.MergeWith(mergedCv, ctx);
+            }
+
+            if (mergedCv == null) 
+                return default;
+            
+            return Slice.From(tx.Allocator, mergedCv, out mergedCvSlice);
         }
     }
 }

@@ -1409,7 +1409,7 @@ namespace Raven.Server.Documents
             {
                 Memory.Set(newVal.Ptr + existingCounter.Length, 0, empties * SizeOfCounterValues);
             }
-;
+
             var newEntry = (CounterValues*)newVal.Ptr + dbIdIndex;
             newEntry->Value = sourceValue;
             newEntry->Etag = sourceEtag;
@@ -1472,15 +1472,6 @@ namespace Raven.Server.Documents
             }
 
             return countersCount;
-        }
-
-
-        internal IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, Transaction transaction, string docId)
-        {
-            var table = new Table(CountersSchema, transaction);
-
-            foreach (string c in GetCountersForDocumentInternal(context, docId, table))
-                yield return c;
         }
 
         internal static IEnumerable<string> GetCountersForDocumentInternal(DocumentsOperationContext context, string docId, Table table)

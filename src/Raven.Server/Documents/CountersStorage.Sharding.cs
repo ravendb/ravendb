@@ -52,7 +52,8 @@ namespace Raven.Server.Documents
 
         internal static void UpdateBucketStatsForCounterTombstones(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
         {
-            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)CounterTombstonesTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+            // counter tombstones are not replicated, no need to update the merged-cv of the bucket 
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, sizeChange: newValue.Size - oldValue.Size);
         }
     }
 }
