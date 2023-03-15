@@ -35,8 +35,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             _isFanout = definition.GroupByFields.Any(x => x.Value.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues);
             _output = new MapOutput(_isFanout);
-            _blittableJsonTraverser = definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField
-                ? BlittableJsonTraverser.TimeOnlyDateOnlyAreSupportedDefault
+            _blittableJsonTraverser = definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.Base60Version
+                ? ConverterBase.DefaultWithTimeOnlyDateOnlySupport
                 : BlittableJsonTraverser.Default;
         }
 

@@ -9,10 +9,8 @@ namespace Raven.Server.Json
     public class BlittableJsonTraverser
     {
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
-        public static BlittableJsonTraverser FlatMapReduceResults = new BlittableJsonTraverser(new char[] { }); // map-reduce results have always a flat structure, let's ignore separators
-        public static BlittableJsonTraverser TimeOnlyDateOnlyAreSupportedFlatMapReduceResults = new (new char[] { }, supportTimeOnlyDateOnly: true);
-        public static BlittableJsonTraverser TimeOnlyDateOnlyAreSupportedDefault = new(supportTimeOnlyDateOnly: true);
-
+        public readonly static char[] DefaultFlatMapReduceSeparators = new char[] { } ;
+        public static BlittableJsonTraverser FlatMapReduceResults = new BlittableJsonTraverser(DefaultFlatMapReduceSeparators); // map-reduce results have always a flat structure, let's ignore separators
 
         private const char PropertySeparator = '.';
         private const char CollectionSeparatorStartBracket = '[';
@@ -39,6 +37,9 @@ namespace Raven.Server.Json
                 _separators = nonDefaultSeparators;
             SupportTimeOnlyDateOnly = supportTimeOnlyDateOnly;
         }
+
+        internal static BlittableJsonTraverser CreateInstanceForIndexing(char[] nonDefaultSeparators = null, bool supportTimeOnlyDateOnly = false) =>
+            new BlittableJsonTraverser(nonDefaultSeparators, supportTimeOnlyDateOnly);
 
         public object Read(BlittableJsonReaderObject docReader, StringSegment path)
         {
