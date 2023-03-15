@@ -136,7 +136,7 @@ namespace Raven.Server.Rachis
 
             if (guid == RaftIdGenerator.DontCareId)
             {
-                guid = $"DontCare/{index}";
+                return;
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
