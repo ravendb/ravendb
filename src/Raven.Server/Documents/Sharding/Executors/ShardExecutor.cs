@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Sharding.Executors
                 HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
                 UseHttpCompression = store.Configuration.Sharding.ShardExecutorUseHttpCompression,
                 UseHttpDecompression = store.Configuration.Sharding.ShardExecutorUseHttpDecompression,
-                GlobalHttpClientTimeout = store.Configuration.Sharding.OrchestratorTimeoutInMin.AsTimeSpan
+                GlobalHttpClientTimeout = store.Configuration.Sharding.OrchestratorTimeout.AsTimeSpan
             };
 
             _requestExecutors = CreateExecutors();

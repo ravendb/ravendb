@@ -11,7 +11,7 @@ namespace Raven.Server.Config.Categories
     {
         public ShardingConfiguration()
         {
-            OrchestratorTimeoutInMin = new TimeSetting(Timeout.InfiniteTimeSpan);
+            OrchestratorTimeout = new TimeSetting(Timeout.InfiniteTimeSpan);
         }
 
         [Description("The compression level to use when sending import streams to shards during smuggler import")]
@@ -33,7 +33,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(DefaultValueSetInConstructor)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Sharding.OrchestratorTimeoutInMin", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting OrchestratorTimeoutInMin { get; set; }
+        public TimeSetting OrchestratorTimeout { get; set; }
 
         [DefaultValue(10 * 60)]
         [TimeUnit(TimeUnit.Seconds)]
