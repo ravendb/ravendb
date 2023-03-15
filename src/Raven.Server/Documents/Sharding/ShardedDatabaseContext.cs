@@ -130,6 +130,9 @@ namespace Raven.Server.Documents.Sharding
 
         private void OnUrlChange(DatabaseRecord record, long index)
         {
+            // we explicitly do not dispose the old executors here to avoid possible memory invalidation and since this is expected to be rare.
+            // So we rely on the GC to dispose them via the finalizer
+            
             ShardExecutor = new ShardExecutor(ServerStore, _record, _record.DatabaseName);
 
             AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, _record);
@@ -188,7 +191,7 @@ namespace Raven.Server.Documents.Sharding
 
             /*
             we explicitly do not dispose the executors here to avoid possible memory invalidation
-            and we rely on the GC to dispose them
+            and we rely on the GC to dispose them via the finalizer
 
             exceptionAggregator.Execute(() => ShardExecutor?.Dispose());
 
