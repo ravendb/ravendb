@@ -49,9 +49,9 @@ public class CoraxEntryIdEncodings
     [Benchmark]
     public Span<long> ClassicDiscard()
     {
-        EntryIdEncodings.DecodeAndDiscardFrequency(_idsWithEncodingsForClassic, BufferSize);
-        EntryIdEncodings.DecodeAndDiscardFrequency(_idsWithEncodingsForClassic, BufferSize);
-        EntryIdEncodings.DecodeAndDiscardFrequency(_idsWithEncodingsForClassic, BufferSize);
+        EntryIdEncodings.DecodeAndDiscardFrequencyClassic(_idsWithEncodingsForClassic, BufferSize);
+        EntryIdEncodings.DecodeAndDiscardFrequencyClassic(_idsWithEncodingsForClassic, BufferSize);
+        EntryIdEncodings.DecodeAndDiscardFrequencyClassic(_idsWithEncodingsForClassic, BufferSize);
         return _idsWithEncodingsForClassic;
     }
 }
