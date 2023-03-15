@@ -55,13 +55,6 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
         var oldCurrent = _current;
         var newCurrent = new Dictionary<string, RequestExecutor>(StringComparer.OrdinalIgnoreCase);
 
-        PublishedUrls published;
-        using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-        using (context.OpenReadTransaction())
-        {
-            published = PublishedUrls.Read(context);
-        }
-
         foreach (var node in clusterTopology.AllNodes)
         {
             var tag = node.Key;
@@ -69,7 +62,7 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
             if (orchestrator.AllNodes.Contains(tag, StringComparer.OrdinalIgnoreCase) == false)
                 continue;
 
-            var url = published.SelectUrl(tag, clusterTopology);
+            var url = _store.PublishedServerUrls.SelectUrl(tag, clusterTopology);
 
             newCurrent[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
                 ServerStore.Sharding.DocumentConventionsForOrchestrator);

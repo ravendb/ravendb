@@ -188,15 +188,9 @@ namespace Raven.Server.Documents.Sharding
 
             exceptionAggregator.Execute(() => Replication?.Dispose());
 
-
-            /*
-            we explicitly do not dispose the executors here to avoid possible memory invalidation
-            and we rely on the GC to dispose them via the finalizer
-
             exceptionAggregator.Execute(() => ShardExecutor?.Dispose());
 
             exceptionAggregator.Execute(() => AllOrchestratorNodesExecutor?.Dispose());
-            */
 
             exceptionAggregator.Execute(() => SubscriptionsStorage.Dispose());
 

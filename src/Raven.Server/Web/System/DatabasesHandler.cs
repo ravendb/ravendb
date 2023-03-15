@@ -166,14 +166,7 @@ namespace Raven.Server.Web.System
                         return;
                     }
 
-
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
-                    
-                    PublishedUrls publishedUrls = null;
-                    if (usePrivate)
-                    {
-                        publishedUrls = PublishedUrls.Read(context);
-                    }
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -182,15 +175,15 @@ namespace Raven.Server.Web.System
                         if (rawRecord.IsSharded)
                         {
                             dbNodes = rawRecord.Sharding.Orchestrator.Topology.Members.Select(x =>
-                                TopologyNodeToJson(x, GetUrl(x, clusterTopology, publishedUrls), name, ServerNode.Role.Member));
+                                TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member));
                             stampIndex = rawRecord.Sharding.Shards.Max(x => x.Value.Stamp?.Index ?? -1);
                         }
                         else
                         {
                             dbNodes = rawRecord.Topology.Members.Select(x =>
-                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, publishedUrls), name, ServerNode.Role.Member))
+                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Member))
                                 .Concat(rawRecord.Topology.Rehabs.Select(x =>
-                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, publishedUrls), name, ServerNode.Role.Rehab))
+                                    TopologyNodeToJson(x, GetUrl(x, clusterTopology, usePrivate), name, ServerNode.Role.Rehab))
                                 );
                             stampIndex = rawRecord.Topology.Stamp?.Index ?? -1;
                         }
@@ -324,12 +317,16 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private string GetUrl(string tag, ClusterTopology clusterTopology, PublishedUrls publishedUrls)
+        private string GetUrl(string tag, ClusterTopology clusterTopology, bool usePrivate)
         {
-            var url = publishedUrls?.SelectUrl(tag, clusterTopology);
-            if (url != null)
-                return url;
-
+            string url = null;
+            if (usePrivate)
+            {
+                url = ServerStore.PublishedServerUrls?.SelectUrl(tag, clusterTopology);
+                if (url != null)
+                    return url;
+            }
+            
             if (Server.ServerStore.NodeTag == tag)
                 url = ServerStore.GetNodeHttpServerUrl(HttpContext.Request.GetClientRequestedNodeUrl());
 

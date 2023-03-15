@@ -169,7 +169,7 @@ namespace Raven.Server.ServerWide
             [nameof(SourceMigrationCleanupCommand)] = 60_000,
             [nameof(PutShardedSubscriptionCommand)] = 60_000,
             [nameof(CreateNewShardCommand)] = 60_000,
-            [nameof(UpdatePrivateUrlsCommand)] = 60_000,
+            [nameof(UpdateServerPublishedUrlsCommand)] = 60_000,
         };
 
         public static bool CanPutCommand(string command)

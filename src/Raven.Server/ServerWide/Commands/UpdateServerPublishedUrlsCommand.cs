@@ -8,19 +8,19 @@ using Voron;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdatePrivateUrlsCommand : CommandBase
+    public class UpdateServerPublishedUrlsCommand : CommandBase
     {
-        public const string ClusterUrlsKey = "cluster/urls";
+        public const string ClusterUrlsKey = "server-published-urls";
         
         public string NodeTag;
         public string PublicUrl;
         public string PrivateUrl;
 
-        public UpdatePrivateUrlsCommand()
+        public UpdateServerPublishedUrlsCommand()
         {
         }
 
-        public UpdatePrivateUrlsCommand(string nodeTag, string publicUrl, string privateUrl, string raftId) : base(raftId)
+        public UpdateServerPublishedUrlsCommand(string nodeTag, string publicUrl, string privateUrl, string raftId) : base(raftId)
         {
             NodeTag = nodeTag;
             PublicUrl = publicUrl;
@@ -29,7 +29,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public void Update(ClusterOperationContext context, long index)
         {
-            var published = PublishedUrls.Read(context);
+            var published = PublishedServerUrls.Read(context);
             var urls = published.Urls;
 
             if (urls.TryGetValue(NodeTag, out var value))
@@ -65,11 +65,11 @@ namespace Raven.Server.ServerWide.Commands
         }
     }
 
-    public class PublishedUrls : IDynamicJson
+    public class PublishedServerUrls : IDynamicJson
     {
-        private static Func<BlittableJsonReaderObject, PublishedUrls> _convertor = JsonDeserializationBase.GenerateJsonDeserializationRoutine<PublishedUrls>();
+        private static Func<BlittableJsonReaderObject, PublishedServerUrls> _converter = JsonDeserializationBase.GenerateJsonDeserializationRoutine<PublishedServerUrls>();
 
-        [JsonDeserializationStringDictionary(StringComparison.InvariantCultureIgnoreCase)]
+        [JsonDeserializationStringDictionary(StringComparison.OrdinalIgnoreCase)]
         public Dictionary<string, UrlInfo> Urls; // map node tag to private url
 
         public DynamicJsonValue ToJson()
@@ -80,19 +80,19 @@ namespace Raven.Server.ServerWide.Commands
             };
         }
 
-        public static PublishedUrls Read(ClusterOperationContext context)
+        public static PublishedServerUrls Read(ClusterOperationContext context)
         {
-            using (Slice.From(context.Allocator, UpdatePrivateUrlsCommand.ClusterUrlsKey, out var key))
+            using (Slice.From(context.Allocator, UpdateServerPublishedUrlsCommand.ClusterUrlsKey, out var key))
             {
                 var current = ClusterStateMachine.ReadInternal(context, out _, key);
                 if (current == null)
-                    return new PublishedUrls { Urls = new Dictionary<string, UrlInfo>(StringComparer.InvariantCultureIgnoreCase) };
+                    return new PublishedServerUrls { Urls = new Dictionary<string, UrlInfo>(StringComparer.OrdinalIgnoreCase) };
 
-                return _convertor(current);
+                return _converter(current);
             }
         }
 
-        public static void Clear(ClusterOperationContext context) => ClusterStateMachine.DeleteItem(context, UpdatePrivateUrlsCommand.ClusterUrlsKey);
+        public static void Clear(ClusterOperationContext context) => ClusterStateMachine.DeleteItem(context, UpdateServerPublishedUrlsCommand.ClusterUrlsKey);
 
         public string SelectUrl(string requestedTag, ClusterTopology clusterTopology)
         {

@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Sharding.Executors
 
             foreach ((int shardNumber, var topology) in _databaseRecord.Sharding.Shards)
             {
-                var urls = topology.AllNodes.Select(tag => ServerStore.PublishedUrls.SelectUrl(tag, clusterTopology)).ToArray();
+                var urls = topology.AllNodes.Select(tag => ServerStore.PublishedServerUrls.SelectUrl(tag, clusterTopology)).ToArray();
 
                 requestExecutors[shardNumber] = RequestExecutor.CreateForShard(
                     urls,
