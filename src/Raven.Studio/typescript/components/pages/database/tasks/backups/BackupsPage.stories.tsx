@@ -2,13 +2,13 @@
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import { withBootstrap5, forceStoryRerender, withStorybookContexts } from "test/storybookTestUtils";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
 import { boundCopy } from "components/utils/common";
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import { BackupsPage } from "./BackupsPage";
+import { mockStore } from "test/mocks/store/MockStore";
 
 function tasksHolder(storyFn: any) {
     return (
@@ -29,7 +29,9 @@ export default {
 } as ComponentMeta<typeof BackupsPage>;
 
 function commonInit() {
-    accessManager.default.securityClearance("ClusterAdmin");
+    const { accessManager } = mockStore;
+    accessManager.with_securityClearance("ClusterAdmin");
+
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 }
 

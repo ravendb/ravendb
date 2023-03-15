@@ -1,6 +1,5 @@
 ﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
@@ -20,7 +19,9 @@ function commonInit() {
     const { useClusterTopologyManager } = mockHooks;
     useClusterTopologyManager.with_Cluster();
 
-    accessManager.default.securityClearance("ClusterAdmin");
+    const { accessManager } = mockStore;
+    accessManager.with_securityClearance("ClusterAdmin");
+
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 }
 
@@ -53,6 +54,40 @@ export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
     const value = mockStore.databases.with_Cluster();
 
     mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+
+    return (
+        <div style={{ height: "100vh", overflow: "auto" }}>
+            <DatabasesPage />
+        </div>
+    );
+};
+
+export const WithDifferentAccessLevel: ComponentStory<typeof DatabasesPage> = () => {
+    commonInit();
+
+    const { accessManager } = mockStore;
+    accessManager.with_securityClearance("ValidUser");
+
+    const dbAccess: dictionary<databaseAccessLevel> = {
+        admin: "DatabaseAdmin",
+        read_write: "DatabaseReadWrite",
+        read_only: "DatabaseRead",
+    };
+
+    accessManager.with_databaseAccess(dbAccess);
+
+    const adminDb = DatabasesStubs.nonShardedClusterDatabase();
+    adminDb.name = "admin";
+
+    const readWriteDb = DatabasesStubs.nonShardedClusterDatabase();
+    readWriteDb.name = "read_write";
+
+    const readDb = DatabasesStubs.nonShardedClusterDatabase();
+    readDb.name = "read_only";
+
+    mockStore.databases.withDatabases([adminDb.toDto(), readWriteDb.toDto(), readDb.toDto()]);
+
+    mockServices.databasesService.withGetDatabasesState(() => Object.keys(dbAccess));
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>

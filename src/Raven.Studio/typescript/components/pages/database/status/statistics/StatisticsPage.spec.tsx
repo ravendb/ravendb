@@ -1,5 +1,4 @@
-﻿import accessManager from "common/shell/accessManager";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
+﻿import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
@@ -9,6 +8,7 @@ import { composeStory } from "@storybook/testing-react";
 import { boundCopy } from "components/utils/common";
 import * as stories from "../../status/statistics/StatisticsPage.stories";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
+import { mockStore } from "test/mocks/store/MockStore";
 
 function render() {
     const db = DatabasesStubs.shardedDatabase();
@@ -29,7 +29,9 @@ const selectors = {
 
 describe("StatisticsPage", function () {
     beforeEach(() => {
-        accessManager.default.securityClearance("ClusterAdmin");
+        const { accessManager } = mockStore;
+        accessManager.with_securityClearance("ClusterAdmin");
+
         clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
     });
 

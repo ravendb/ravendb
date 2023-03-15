@@ -1,12 +1,12 @@
 import { IndexesPage } from "./IndexesPage";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import React from "react";
-import { withBootstrap5, withStorybookContexts } from "../../../../../test/storybookTestUtils";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
-import accessManager from "common/shell/accessManager";
-import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { IndexesStubs } from "../../../../../test/stubs/IndexesStubs";
+import { IndexesStubs } from "test/stubs/IndexesStubs";
+import { mockStore } from "test/mocks/store/MockStore";
 
 function indexesHolder(storyFn: any) {
     return <div style={{ height: "100vh", overflow: "auto" }}>{storyFn()}</div>;
@@ -19,7 +19,9 @@ export default {
 } as ComponentMeta<typeof IndexesPage>;
 
 function commonInit() {
-    accessManager.default.securityClearance("ClusterAdmin");
+    const { accessManager } = mockStore;
+    accessManager.with_securityClearance("ClusterAdmin");
+
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 }
 

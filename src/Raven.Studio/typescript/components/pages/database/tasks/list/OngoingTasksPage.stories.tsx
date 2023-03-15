@@ -1,13 +1,12 @@
 ﻿import React from "react";
 import { OngoingTasksPage } from "./OngoingTasksPage";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import { forceStoryRerender, withStorybookContexts, withBootstrap5 } from "../../../../../test/storybookTestUtils";
-import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
-import accessManager from "common/shell/accessManager";
+import { forceStoryRerender, withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { mockServices } from "../../../../../test/mocks/services/MockServices";
-import { TasksStubs } from "../../../../../test/stubs/TasksStubs";
-import { boundCopy } from "../../../../utils/common";
+import { mockServices } from "test/mocks/services/MockServices";
+import { TasksStubs } from "test/stubs/TasksStubs";
+import { boundCopy } from "components/utils/common";
 import OngoingTaskRavenEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView;
 import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView;
 import MockTasksService from "../../../../../test/mocks/services/MockTasksService";
@@ -19,6 +18,7 @@ import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.Ongoi
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
+import { mockStore } from "test/mocks/store/MockStore";
 
 function tasksHolder(storyFn: any) {
     return (
@@ -39,7 +39,9 @@ export default {
 } as ComponentMeta<typeof OngoingTasksPage>;
 
 function commonInit() {
-    accessManager.default.securityClearance("ClusterAdmin");
+    const { accessManager } = mockStore;
+    accessManager.with_securityClearance("ClusterAdmin");
+
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 }
 
