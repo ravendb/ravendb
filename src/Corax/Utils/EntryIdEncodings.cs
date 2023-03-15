@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 
 namespace Corax.Utils;
@@ -66,7 +67,7 @@ public static class EntryIdEncodings
     public static long DecodeAndDiscardFrequency(long entryId) => entryId >> EntryIdOffset;
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public static unsafe void DecodeAndDiscardFrequencySimd(Span<long> entries, int read)
+    public static unsafe void DecodeAndDiscardFrequencyAvx2(Span<long> entries, int read)
     {
         int idX = read - (read % Vector256<long>.Count);
         if (read < Vector256<long>.Count)
@@ -91,6 +92,32 @@ public static class EntryIdEncodings
         
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    public static unsafe void DecodeAndDiscardFrequencyNeon(Span<long> entries, int read)
+    {
+        int idX = read - (read % Vector128<long>.Count);
+        if (read < Vector128<long>.Count)
+            goto Classic;
+
+        fixed (long* currentPtr = entries)
+        {
+            var currentIdx = currentPtr;
+            var endIdx = (currentIdx + idX);
+
+            for (; currentIdx < endIdx; currentIdx += VectorLongSize)
+            {
+                var innerBuffer = AdvSimd.LoadVector128(currentIdx);
+                var shiftRightLogical = AdvSimd.ShiftRightLogical(innerBuffer, EntryIdOffset);
+                AdvSimd.Store(currentIdx, shiftRightLogical);
+            }
+        }
+
+        Classic:
+        if (idX < read)
+            DecodeAndDiscardFrequencyClassic(entries.Slice(idX), read - idX);
+        
+    }
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static void DecodeAndDiscardFrequencyClassic(Span<long> entries, int read)
     {
@@ -104,7 +131,9 @@ public static class EntryIdEncodings
     public static void DecodeAndDiscardFrequency(Span<long> entries, int read)
     {
         if (Avx2.IsSupported)
-            DecodeAndDiscardFrequencySimd(entries, read);
+            DecodeAndDiscardFrequencyAvx2(entries, read);
+        else if (AdvSimd.IsSupported)
+            DecodeAndDiscardFrequencyNeon(entries, read);
         else
             DecodeAndDiscardFrequencyClassic(entries, read);
     }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using Corax.Utils;
 using Xunit;
@@ -37,13 +38,25 @@ public class QuantizationTest : RavenTestBase
     [InlineData(33)]
     [InlineData(1)]
 
-    public void SimdInstructionCorrectlyIgnoresFrequency(int size)
+    public void Avx2InstructionCorrectlyIgnoresFrequency(int size)
     {
+        if (Avx2.IsSupported == false && AdvSimd.IsSupported == false)
+            return;
+
         var random = new Random(2337);
         var ids = Enumerable.Range(0, size).Select(i => (long)random.Next(31_111, 59_999)).ToArray();
-        var idsWithShifted = ids.Select(i => i << 10).ToArray();
         
-        EntryIdEncodings.DecodeAndDiscardFrequencySimd(idsWithShifted.AsSpan(), size);
+        var idsWithShifted = ids.Select(i => i << 10).ToArray();
+        var idsWithShiftedCopy = idsWithShifted.ToArray();
+        
+        EntryIdEncodings.DecodeAndDiscardFrequencyClassic(idsWithShiftedCopy.AsSpan(), size);
+        
+        if (Avx2.IsSupported)
+            EntryIdEncodings.DecodeAndDiscardFrequencyAvx2(idsWithShifted.AsSpan(), size);
+        else if (AdvSimd.IsSupported)
+            EntryIdEncodings.DecodeAndDiscardFrequencyNeon(idsWithShifted.AsSpan(), size);
+
         Assert.Equal(ids, idsWithShifted);
+        Assert.Equal(idsWithShifted, idsWithShiftedCopy);
     }
 }
