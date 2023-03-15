@@ -1091,11 +1091,13 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                         Google Cloud Platform
                     </>
                 );
+            default:
+                throw new Error("Unhandled backup source: " + source);
         }
     };
     return (
         <>
-            <Collapse isOpen={backupSource === null}>
+            <Collapse isOpen={!backupSource}>
                 <div className="d-flex justify-content-center">
                     <img src={backupSourceImg} alt="" className="step-img" />
                 </div>
@@ -1127,18 +1129,18 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                     </UncontrolledDropdown>
                 </Col>
             </Row>
-            <Collapse isOpen={backupSource != null}>
+            <Collapse isOpen={!!backupSource}>
                 <>
                     {backupSource === "local" && (
                         <BackupSourceFragmentLocal shardingEnabled={shardingEnabled} nodeList={nodeList} />
                     )}
-                    {backupSource === "cloud" && backupSourceFragmentCloud()}
-                    {backupSource === "aws" && backupSourceFragmentAws()}
-                    {backupSource === "azure" && backupSourceFragmentAzure()}
-                    {backupSource === "gcp" && backupSourceFragmentGcp()}
+                    {backupSource === "cloud" && BackupSourceFragmentCloud()}
+                    {backupSource === "aws" && BackupSourceFragmentAws()}
+                    {backupSource === "azure" && BackupSourceFragmentAzure()}
+                    {backupSource === "gcp" && BackupSourceFragmentGcp()}
                     {shardingEnabled ? (
                         <>
-                            {backupSource != "local" && (
+                            {backupSource !== "local" && (
                                 <>
                                     <Row className="mt-2">
                                         <Col lg="3">
@@ -1387,7 +1389,7 @@ export function BackupSourceFragmentLocal(props: BackupSourceFragmentLocalProps)
     );
 }
 
-export function backupSourceFragmentCloud() {
+export function BackupSourceFragmentCloud() {
     return (
         <div className="mt-2">
             <Row>
@@ -1420,7 +1422,7 @@ export function backupSourceFragmentCloud() {
     );
 }
 
-export function backupSourceFragmentAws() {
+export function BackupSourceFragmentAws() {
     const [useCustomHost, setUseCustomHost] = useState(false);
     const toggleUseCustomHost = () => {
         setUseCustomHost(!useCustomHost);
@@ -1510,7 +1512,7 @@ export function backupSourceFragmentAws() {
     );
 }
 
-export function backupSourceFragmentAzure() {
+export function BackupSourceFragmentAzure() {
     return (
         <div className="mt-2">
             <Row className="mt-2">
@@ -1554,7 +1556,7 @@ export function backupSourceFragmentAzure() {
     );
 }
 
-export function backupSourceFragmentGcp() {
+export function BackupSourceFragmentGcp() {
     return (
         <div className="mt-2">
             <Row className="mt-2">

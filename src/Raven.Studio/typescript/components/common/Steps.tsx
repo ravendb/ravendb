@@ -3,14 +3,14 @@ import classNames from "classnames";
 
 import "./Steps.scss";
 import { Icon } from "./Icon";
-interface Props {
+interface StepsProps {
     current: number;
     steps: string[];
     onClick: (stepNum: number) => void;
     className?: string;
 }
 
-export class Steps extends React.Component<Props> {
+export class Steps extends React.Component<StepsProps> {
     render() {
         const { current, steps, onClick, className } = this.props;
 

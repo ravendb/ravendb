@@ -16,7 +16,6 @@ $active-color: colors.$primary;
         .steps-label {
             position: absolute;
             left: 50%;
-            //top: sizes.$gutter + sizes.$gutter-xxs;
             padding: sizes.$gutter-xs;
             transform: translateX(-50%);
             text-align: center;
