@@ -300,10 +300,10 @@ namespace SlowTests.Sharding
                 Assert.Equal(1, record.Sharding.Orchestrator.Topology.ReplicationFactor);
                 Assert.Equal(0, dbTopology.Promotables.Count);
                 Assert.Equal(0, dbTopology.Rehabs.Count);
-                
+
                 Assert.Equal(dbTopology.Members.Count, modifyResult.OrchestratorTopology.Members.Count);
                 Assert.Equal(dbTopology.Rehabs.Count, modifyResult.OrchestratorTopology.Rehabs.Count);
-                
+
                 //add node to orchestrator topology
                 modifyResult = store.Maintenance.Server.Send(new AddNodeToOrchestratorTopologyOperation(store.Database, nodeInOrchestratorTopology));
                 record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
@@ -313,7 +313,7 @@ namespace SlowTests.Sharding
                 Assert.Equal(1, dbTopology.Promotables.Count);
                 Assert.Equal(nodeInOrchestratorTopology, dbTopology.Promotables[0]);
 
-            	Assert.Equal(dbTopology.Members.Count, modifyResult.OrchestratorTopology.Members.Count);
+                Assert.Equal(dbTopology.Members.Count, modifyResult.OrchestratorTopology.Members.Count);
                 Assert.Equal(dbTopology.Rehabs.Count, modifyResult.OrchestratorTopology.Rehabs.Count);
             }
         }
