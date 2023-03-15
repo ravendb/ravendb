@@ -133,7 +133,7 @@ namespace Raven.Server.Config
                         return configurationValueAsSize.GetValue(SizeUnit.Value).ToString();
                     case ConfigurationEntryType.Time:
                         var configurationValueAsTime = (TimeSetting)configurationValue;
-                        return configurationValueAsTime.GetValue(TimeUnit.Value).ToString();
+                        return configurationValueAsTime.GetValueAsString(TimeUnit.Value);
                     default:
                         throw new NotSupportedException($"Type '{Type}' is not supported.");
                 }
