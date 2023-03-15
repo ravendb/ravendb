@@ -98,7 +98,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(1024)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Storage.FreeSpaceAlertThresholdInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public Size? FreeSpaceAlertThresholdInMb { get; set; }
+        public Size? FreeSpaceAlertThreshold { get; set; }
 
         [Description("Number of Journals files for each storage, before forcing a sync and removing unused journal files.")]
         [DefaultValue(2)]
