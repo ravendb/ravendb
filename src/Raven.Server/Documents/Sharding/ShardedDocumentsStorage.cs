@@ -12,7 +12,6 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Voron.Util;
 using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Conflicts;
 using static Raven.Server.Documents.Schemas.Counters;
@@ -44,7 +43,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         : base(documentDatabase, addToInitLog)
     {
         _documentDatabase = documentDatabase;
-        _bucketStats = new BucketStatsHolder(this);
+        _bucketStats = new BucketStatsHolder();
 
         OnBeforeCommit += _bucketStats.UpdateBucketStatsTreeBeforeCommit;
     }
@@ -185,9 +184,9 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         var span = new ReadOnlySpan<byte>(idPtr, idSize);
         
-        var database = tx.Owner as ShardedDocumentDatabase;
-        var config = database?.ShardingConfiguration;
-        var bucket = ShardHelper.GetBucketFor(config, span);
+        var docsCtx = tx.Owner as DocumentsOperationContext;
+        var database = docsCtx?.DocumentDatabase as ShardedDocumentDatabase;
+        var bucket = ShardHelper.GetBucketFor(database?.ShardingConfiguration, span);
 
         *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
         *(long*)(buffer.Ptr + sizeof(int)) = etag;
@@ -220,8 +219,8 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             var flags = TableValueToFlags((int)TombstoneTable.Flags, ref newValue);
             if (flags.Contain(DocumentFlags.Artificial))
             {
-                // we don't want to update the merged-cv of the bucket for Artificial tombstones
-                UpdateBucketStatsInternal(tx, key, ref TableValueReaderUtils.EmptyReader, changeVectorIndex: -1, sizeChange: newValue.Size - oldValue.Size);
+                // we don't want to update the merged-cv of the bucket for artificial tombstones
+                UpdateBucketStatsInternal(tx, key, sizeChange: newValue.Size - oldValue.Size);
                 return;
             }
         }
@@ -231,7 +230,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     internal static void UpdateBucketStatsInternal(Transaction tx, Slice key, ref TableValueReader value, int changeVectorIndex, long sizeChange, int numOfDocsChanged = 0)
     {
-        if (tx.Owner is not ShardedDocumentDatabase documentDatabase)
+        if (tx.Owner is not DocumentsOperationContext { DocumentDatabase: ShardedDocumentDatabase documentDatabase } context)
             return;
 
         var nowTicks = documentDatabase.Time.GetUtcNow().Ticks;
@@ -240,15 +239,27 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         if (value.Size == 0)
         {
-            // item deletion or put/delete attachment stream or artificial-tombstone insertion
-            // in all cases there's no need to update the merged-cv
+            // item deletion 
+            // no need to update the merged-cv
             inMemoryBucketStats.UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged);
             return;
         }
 
         // item was inserted/updated 
         // need to update the merged-cv of the bucket
-        inMemoryBucketStats.UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged, changeVectorIndex, ref value);
+        inMemoryBucketStats.UpdateBucketAndChangeVector(context, bucket, nowTicks, sizeChange, numOfDocsChanged, changeVectorIndex, ref value);
+    }
+
+    internal static void UpdateBucketStatsInternal(Transaction tx, Slice key, long sizeChange, int numOfDocsChanged = 0)
+    {
+        if (tx.Owner is not DocumentsOperationContext { DocumentDatabase: ShardedDocumentDatabase documentDatabase })
+            return;
+
+        var nowTicks = documentDatabase.Time.GetUtcNow().Ticks;
+        var bucket = *(int*)key.Content.Ptr;
+        var inMemoryBucketStats = documentDatabase.ShardedDocumentsStorage._bucketStats;
+
+        inMemoryBucketStats.UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged);
     }
 
     public ChangeVector GetMergedChangeVectorInBucket(DocumentsOperationContext context, int bucket)

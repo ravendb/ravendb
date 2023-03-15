@@ -31,7 +31,7 @@ namespace Raven.Server.Documents
             _context = context;
             _changes = changes;
 
-            transaction.Owner = _context.DocumentDatabase;
+            transaction.Owner = _context;
             transaction.OnBeforeCommit += _context.DocumentDatabase.DocumentsStorage.OnBeforeCommit;
         }
 

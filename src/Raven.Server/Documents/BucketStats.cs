@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using Sparrow.Server;
+using Sparrow;
 using Voron;
 
 namespace Raven.Server.Documents
@@ -16,18 +16,13 @@ namespace Raven.Server.Documents
         [FieldOffset(16)]
         public long LastModifiedTicks;
 
-        public unsafe ByteStringContext.InternalScope GetMergedChangeVector(ByteStringContext context, ValueReader reader, out Slice changeVector)
+        public unsafe string GetMergedChangeVector(ValueReader reader)
         {
             if (reader.Length <= sizeof(BucketStats))
-            {
-                changeVector = default;
                 return default;
-            }
-
-            return Slice.From(context,
-                reader.Base + sizeof(BucketStats),
-                reader.Length - sizeof(BucketStats),
-                out changeVector);
+            
+            return Encodings.Utf8.GetString(reader.Base + sizeof(BucketStats), reader.Length - sizeof(BucketStats));
         }
+
     }
 }

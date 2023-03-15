@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Voron.Impl;
 
 namespace Voron.Data.Tables
@@ -241,7 +242,8 @@ namespace Voron.Data.Tables
 
                 using (tx.Allocator.Allocate(newValue.Size, out var buffer))
                 {
-                    // todo RavenDB-18105 : try to optimize this - avoid creating a copy of the value here
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
+                        "RavenDB-18105 : try to optimize this - avoid creating a copy of the value here");
 
                     newValue.CopyTo(buffer.Ptr);
                     var reader = newValue.CreateReader(buffer.Ptr);

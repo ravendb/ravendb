@@ -10,7 +10,6 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Attachments;
-using Voron.Util;
 
 namespace Raven.Server.Documents
 {
@@ -53,7 +52,7 @@ namespace Raven.Server.Documents
 
             using (GetBucketFromAttachmentKey(context, attachmentKey, out var bucketSlice))
             {
-                ShardedDocumentsStorage.UpdateBucketStatsInternal(context.Transaction.InnerTransaction, key: bucketSlice, value: ref TableValueReaderUtils.EmptyReader, changeVectorIndex: -1, sizeChange: sizeChange);
+                ShardedDocumentsStorage.UpdateBucketStatsInternal(context.Transaction.InnerTransaction, key: bucketSlice, sizeChange: sizeChange);
             }
         }
 
@@ -66,8 +65,7 @@ namespace Raven.Server.Documents
                     break;
             }
 
-
-            var database = context.Transaction.InnerTransaction.Owner as ShardedDocumentDatabase;
+            var database = context.DocumentDatabase as ShardedDocumentDatabase;
             
             var bucket = ShardHelper.GetBucketFor(database.ShardingConfiguration, attachmentKey.AsReadOnlySpan()[..sizeOfDocId]);
 

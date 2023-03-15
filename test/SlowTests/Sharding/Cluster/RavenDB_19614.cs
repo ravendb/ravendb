@@ -37,7 +37,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User(), $"users/{i}/$abc");
+                        await session.StoreAsync(new User(), $"users/{i}/$abc");
                     }
 
                     await session.SaveChangesAsync();
@@ -239,7 +239,7 @@ namespace SlowTests.Sharding.Cluster
         public async Task CanGetMergedChangeVectorInBucketFromBucketStats_InCluster()
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 2, orchestratorReplicationFactor: 3);
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
             
             using (var store = Sharding.GetDocumentStore(options))
             {
