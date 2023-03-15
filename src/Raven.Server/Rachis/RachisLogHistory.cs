@@ -134,6 +134,11 @@ namespace Raven.Server.Rachis
             if (guid == null) // shouldn't happened in new cluster version!
                 return;
 
+            if (guid == RaftIdGenerator.DontCareId)
+            {
+                guid = $"DontCare/{index}";
+            }
+
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
             var type = GetTypeFromCommand(cmd);
 
