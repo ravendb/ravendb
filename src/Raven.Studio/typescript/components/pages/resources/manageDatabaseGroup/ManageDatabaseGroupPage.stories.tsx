@@ -2,7 +2,6 @@
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import { ManageDatabaseGroupPage } from "components/pages/resources/manageDatabaseGroup/ManageDatabaseGroupPage";
 import React from "react";
-import accessManager from "common/shell/accessManager";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import licenseModel from "models/auth/licenseModel";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
@@ -17,7 +16,8 @@ export default {
 } as ComponentMeta<typeof ManageDatabaseGroupPage>;
 
 function commonInit() {
-    accessManager.default.securityClearance("ClusterAdmin");
+    const { accessManager } = mockStore;
+    accessManager.with_securityClearance("ClusterAdmin");
 
     const { useClusterTopologyManager } = mockHooks;
     useClusterTopologyManager.with_Single();

@@ -4,7 +4,16 @@ import { composeStories } from "@storybook/testing-react";
 
 import * as stories from "./DatabasesPage.stories";
 
-const { Single, Cluster, Sharded, DifferentNodeStates, WithLoadError } = composeStories(stories);
+const { Single, Cluster, Sharded, DifferentNodeStates, WithLoadError, WithDifferentAccessLevel } =
+    composeStories(stories);
+
+const selectors = {
+    disableButton: "Disable",
+    enableButton: "Enable",
+    pauseIndexing: "Pause indexing",
+    disableIndexing: "Disable indexing",
+    compactDatabase: "Compact database",
+};
 
 describe("DatabasesPage", function () {
     it("can render single view", async () => {
@@ -12,6 +21,12 @@ describe("DatabasesPage", function () {
 
         await screen.findByText(/Manage group/i);
         await screen.findByText("3 Indexing errors");
+
+        expect(await screen.findAllByText(selectors.disableButton)).toHaveLength(2); // disable + disable indexing
+
+        expect(await screen.findByText(selectors.pauseIndexing)).toBeInTheDocument();
+        expect(await screen.findByText(selectors.disableIndexing)).toBeInTheDocument();
+        expect(await screen.findByText(selectors.compactDatabase)).toBeInTheDocument();
     });
 
     it("can render cluster view", async () => {
@@ -48,5 +63,21 @@ describe("DatabasesPage", function () {
 
         await screen.findByText("9 Indexing errors");
         await screen.findByText("18 Indexing errors");
+    });
+
+    it("can render different access modes", async () => {
+        const { screen } = rtlRender(<WithDifferentAccessLevel />);
+
+        expect(await screen.findAllByText(/Manage group/i)).toHaveLength(3);
+
+        expect(await screen.findAllByText("9 Indexing errors")).toHaveLength(3);
+
+        expect(screen.queryByText(selectors.disableButton)).not.toBeInTheDocument();
+        expect(screen.queryByText(selectors.enableButton)).not.toBeInTheDocument();
+        expect(screen.queryByText(selectors.disableIndexing)).not.toBeInTheDocument();
+        expect(screen.queryByText(selectors.compactDatabase)).not.toBeInTheDocument();
+
+        // db admin can pause indexing
+        expect(screen.queryByText(selectors.pauseIndexing)).toBeInTheDocument();
     });
 });

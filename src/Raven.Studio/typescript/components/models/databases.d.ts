@@ -28,6 +28,8 @@ export interface DatabaseLocalInfo {
     backupInfo: Raven.Client.ServerWide.Operations.BackupInfo;
 }
 
+export type DatabaseState = "Loading" | "Error" | "Offline" | "Disabled" | "Online";
+
 export interface DatabaseSharedInfo {
     name: string;
     sharded: this is ShardedDatabaseSharedInfo;

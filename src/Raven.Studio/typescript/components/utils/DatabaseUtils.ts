@@ -1,6 +1,12 @@
-﻿import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+﻿import {
+    DatabaseLocalInfo,
+    DatabaseSharedInfo,
+    DatabaseState,
+    ShardedDatabaseSharedInfo,
+} from "components/models/databases";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import moment from "moment";
+import { locationAwareLoadableData } from "components/models/common";
 
 export default class DatabaseUtils {
     static formatName(name: string) {
@@ -25,6 +31,26 @@ export default class DatabaseUtils {
         } else {
             return undefined;
         }
+    }
+
+    static getDatabaseState(
+        db: DatabaseSharedInfo,
+        localInfo: locationAwareLoadableData<DatabaseLocalInfo>[]
+    ): DatabaseState {
+        if (localInfo.every((x) => x.status === "loading" || x.status === "idle")) {
+            return "Loading";
+        }
+        if (localInfo.some((x) => x.status === "success" && x.data.loadError)) {
+            return "Error";
+        }
+        if (localInfo.every((x) => x.status === "success" && !x.data.upTime)) {
+            return "Offline";
+        }
+        if (db.disabled) {
+            return "Disabled";
+        }
+
+        return "Online";
     }
 
     static getLocations(db: DatabaseSharedInfo): databaseLocationSpecifier[] {

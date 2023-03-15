@@ -1,27 +1,36 @@
-﻿export function DatabasesCounter(): JSX.Element {
-    return null; //TODO:
+﻿import { useAppSelector } from "components/store";
+import { selectDatabasesSummary } from "components/common/shell/databasesSlice";
+import React from "react";
+import { shallowEqual } from "react-redux";
 
-    /* TODO:
+export function DatabasesCounter(): JSX.Element {
+    const databasesSummary = useAppSelector(selectDatabasesSummary, shallowEqual);
+
     return (
         <div className="database-counter on-base-background">
-            <span>
-                <strong data-bind="text: databases().sortedDatabases().length" /> Databases
+            <span className="px-1">
+                <strong>{databasesSummary.count}</strong> Databases
             </span>
-            <span data-bind="visible: $root.databasesByState().online">
-                <strong className="text-success" data-bind="text: $root.databasesByState().online" /> Online
-            </span>
-            <span data-bind="visible: $root.databasesByState().errored">
-                <strong className="text-danger" data-bind="text: $root.databasesByState().errored" /> Errored
-            </span>
-            <span data-bind="visible: $root.databasesByState().disabled">
-                <strong className="text-warning" data-bind="text: $root.databasesByState().disabled" /> Disabled
-            </span>
-            <span data-bind="visible: $root.databasesByState().offline">
-                <strong className="text-muted" data-bind="text: $root.databasesByState().offline" /> Offline
-            </span>
-            <span data-bind="visible: $root.databasesByState().remote">
-                <strong className="text-muted" data-bind="text: $root.databasesByState().remote" /> Remote
-            </span>
+            {databasesSummary.online > 0 && (
+                <span className="px-1">
+                    <strong className="text-success">{databasesSummary.online}</strong> Online
+                </span>
+            )}
+            {databasesSummary.error > 0 && (
+                <span className="px-1">
+                    <strong className="text-danger">{databasesSummary.error}</strong> Errored
+                </span>
+            )}
+            {databasesSummary.disabled > 0 && (
+                <span className="px-1">
+                    <strong className="text-warning">{databasesSummary.disabled}</strong> Disabled
+                </span>
+            )}
+            {databasesSummary.offline > 0 && (
+                <span className="px-1">
+                    <strong className="text-muted">{databasesSummary.offline}</strong> Offline
+                </span>
+            )}
         </div>
-    )*/
+    );
 }

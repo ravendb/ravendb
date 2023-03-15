@@ -13,10 +13,7 @@ interface DatabaseDistributionProps {
 }
 
 function formatUptime(uptime: string) {
-    if (uptime) {
-        return genUtils.timeSpanAsAgo(uptime, false);
-    }
-    return "Offline";
+    return uptime ?? "Offline";
 }
 
 export function DatabaseDistribution(props: DatabaseDistributionProps) {

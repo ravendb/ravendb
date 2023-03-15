@@ -58,31 +58,28 @@ interface DatabasePanelProps {
 }
 
 function getStatusColor(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<DatabaseLocalInfo>[]) {
-    if (localInfo.some((x) => x.status === "success" && x.data.loadError)) {
-        return "danger";
+    const state = DatabaseUtils.getDatabaseState(db, localInfo);
+    switch (state) {
+        case "Loading":
+            return "secondary";
+        case "Error":
+            return "danger";
+        case "Offline":
+            return "secondary";
+        case "Disabled":
+            return "warning";
+        default:
+            return "success";
     }
-    if (localInfo.every((x) => x.status === "success" && !x.data.upTime)) {
-        return "secondary";
-    }
-    if (db.disabled) {
-        return "warning";
-    }
-    return "success";
 }
 
 function badgeText(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<DatabaseLocalInfo>[]) {
-    if (localInfo.some((x) => x.status === "success" && x.data.loadError)) {
-        return "Error";
-    }
-    if (localInfo.every((x) => x.status === "success" && !x.data.upTime)) {
-        return "Offline";
+    const state = DatabaseUtils.getDatabaseState(db, localInfo);
+    if (state === "Loading") {
+        return "Loading...";
     }
 
-    if (db.disabled) {
-        return "Disabled";
-    }
-
-    return "Online";
+    return state;
 }
 
 interface DatabaseTopologyProps {
@@ -194,10 +191,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
 
-    //TODO: review data-bind!
-    //TODO: review action access for non-admin users!
     //TODO: show commands errors!
-    //TODO: cleanance on toggle db state vs disable indexing (and can't reload db)s
 
     const dbAccess: databaseAccessLevel = useAppSelector(selectEffectiveDatabaseAccessLevel(db.name));
 
@@ -370,58 +364,59 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 Manage group
                             </Button>
 
-                            <UncontrolledDropdown className="me-1">
-                                <ButtonGroup>
-                                    <Button onClick={onToggleDatabase}>
-                                        {db.disabled ? (
-                                            <span>
-                                                <i className="icon-database-cutout icon-addon-play2 me-1" /> Enable
-                                            </span>
-                                        ) : (
-                                            <span>
-                                                <i className="icon-database-cutout icon-addon-cancel me-1" /> Disable
-                                            </span>
+                            {isAdminAccessOrAbove(db) && (
+                                <UncontrolledDropdown className="me-1">
+                                    <ButtonGroup>
+                                        {isOperatorOrAbove() && (
+                                            <Button onClick={onToggleDatabase}>
+                                                {db.disabled ? (
+                                                    <span>
+                                                        <i className="icon-database-cutout icon-addon-play2 me-1" />{" "}
+                                                        Enable
+                                                    </span>
+                                                ) : (
+                                                    <span>
+                                                        <i className="icon-database-cutout icon-addon-cancel me-1" />{" "}
+                                                        Disable
+                                                    </span>
+                                                )}
+                                            </Button>
                                         )}
-                                    </Button>
-                                    <DropdownToggle caret></DropdownToggle>
-                                </ButtonGroup>
-                                <DropdownMenu end>
-                                    {canPauseAnyIndexing && (
-                                        <DropdownItem onClick={() => onTogglePauseIndexing(true)}>
-                                            <i className="icon-pause me-1" /> Pause indexing
-                                        </DropdownItem>
-                                    )}
-                                    {canResumeAnyPausedIndexing && (
-                                        <DropdownItem onClick={() => onTogglePauseIndexing(false)}>
-                                            <i className="icon-play me-1" /> Resume indexing
-                                        </DropdownItem>
-                                    )}
-                                    {canDisableIndexing && (
-                                        <DropdownItem onClick={() => onToggleDisableIndexing(true)}>
-                                            <i className="icon-stop me-1" /> Disable indexing
-                                        </DropdownItem>
-                                    )}
-                                    {canEnableIndexing && (
-                                        <DropdownItem onClick={() => onToggleDisableIndexing(false)}>
-                                            <i className="icon-play me-1" /> Enable indexing
-                                        </DropdownItem>
-                                    )}
-                                    <DropdownItem divider />
-                                    <DropdownItem onClick={onCompactDatabase}>
-                                        <i className="icon-compact me-1" /> Compact database
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
+                                        <DropdownToggle caret></DropdownToggle>
+                                    </ButtonGroup>
 
-                            {/* TODO
-                            <Button className="me-1">
-                                <i className="icon-refresh-stats" />
-                            </Button> 
-                             <button className="btn btn-success"
-                                    data-bind="click: _.partial($root.updateDatabaseInfo, name), enable: canNavigateToDatabase(), disable: isBeingDeleted"
-                                    title="Refresh database statistics">
-                                <i className="icon-refresh-stats"/>
-                            </button>*/}
+                                    <DropdownMenu end>
+                                        {canPauseAnyIndexing && (
+                                            <DropdownItem onClick={() => onTogglePauseIndexing(true)}>
+                                                <i className="icon-pause me-1" /> Pause indexing
+                                            </DropdownItem>
+                                        )}
+                                        {canResumeAnyPausedIndexing && (
+                                            <DropdownItem onClick={() => onTogglePauseIndexing(false)}>
+                                                <i className="icon-play me-1" /> Resume indexing
+                                            </DropdownItem>
+                                        )}
+                                        {canDisableIndexing && (
+                                            <DropdownItem onClick={() => onToggleDisableIndexing(true)}>
+                                                <i className="icon-stop me-1" /> Disable indexing
+                                            </DropdownItem>
+                                        )}
+                                        {canEnableIndexing && (
+                                            <DropdownItem onClick={() => onToggleDisableIndexing(false)}>
+                                                <i className="icon-play me-1" /> Enable indexing
+                                            </DropdownItem>
+                                        )}
+                                        {isOperatorOrAbove() && (
+                                            <>
+                                                <DropdownItem divider />
+                                                <DropdownItem onClick={onCompactDatabase}>
+                                                    <i className="icon-compact me-1" /> Compact database
+                                                </DropdownItem>
+                                            </>
+                                        )}
+                                    </DropdownMenu>
+                                </UncontrolledDropdown>
+                            )}
 
                             <UncontrolledDropdown>
                                 {isOperatorOrAbove() && (
@@ -435,8 +430,6 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                             }
                                             color={db.lockMode === "Unlock" && "danger"}
                                             disabled={db.lockMode !== "Unlock"}
-                                            data-bind=" disable: isBeingDeleted() || lockMode() !== 'Unlock', 
-                                        css: { 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) }"
                                         >
                                             {lockChanges && <Spinner size="sm" />}
                                             {!lockChanges && db.lockMode === "Unlock" && <i className="icon-trash" />}

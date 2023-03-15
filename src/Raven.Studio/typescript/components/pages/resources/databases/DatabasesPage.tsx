@@ -4,7 +4,7 @@ import { DatabasesToolbarActions } from "./partials/DatabasesToolbarActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { DatabasesCounter } from "./partials/DatabasesCounter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
+import { DatabaseSharedInfo } from "../../../models/databases";
 import { Col, Row } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
@@ -12,21 +12,18 @@ import {
     loadDatabaseDetails,
     openCreateDatabaseFromRestoreDialog,
     selectAllDatabases,
+    selectDatabaseSearchCriteria,
+    selectFilteredDatabases,
+    throttledReloadDatabaseDetails,
 } from "components/common/shell/databasesSlice";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
+import useInterval from "hooks/useInterval";
+import { shallowEqual } from "react-redux";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
-}
-
-function filterDatabases(databases: DatabaseSharedInfo[], criteria: DatabaseFilterCriteria) {
-    if (criteria.searchText) {
-        return databases.filter((x) => x.name.toLowerCase().includes(criteria.searchText.toLowerCase()));
-    }
-
-    return databases;
 }
 
 interface DatabasesPageProps {
@@ -37,25 +34,19 @@ interface DatabasesPageProps {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function DatabasesPage(props: DatabasesPageProps) {
     const databases = useAppSelector(selectAllDatabases);
+    const searchCriteria = useAppSelector(selectDatabaseSearchCriteria, shallowEqual);
 
     const dispatch = useAppDispatch();
 
-    const [filter, setFilter] = useState<DatabaseFilterCriteria>(() => ({
-        searchText: "",
-    }));
+    useInterval(() => dispatch(throttledReloadDatabaseDetails), 5000);
 
     const { nodeTags } = useClusterTopologyManager();
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
 
-    const filteredDatabases = useMemo(() => {
-        //TODO: filter and sort databases
-        //TODO: update selection if needed
-        return filterDatabases(databases, filter);
-    }, [filter, databases]);
+    const filteredDatabases = useAppSelector(selectFilteredDatabases);
 
     useEffect(() => {
-        //TODO: make sure we can reload details when we add/remove db
         dispatch(loadDatabaseDetails(nodeTags));
     }, [dispatch, nodeTags]);
 
@@ -124,8 +115,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
             <Row className="mb-4">
                 <Col sm="auto">
                     <DatabasesFilter
-                        filter={filter}
-                        setFilter={setFilter}
+                        filter={searchCriteria}
                         selectionState={databasesSelectionState}
                         toggleSelectAll={toggleSelectAll}
                     />

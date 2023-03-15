@@ -1,27 +1,24 @@
-﻿import React, { ChangeEvent, useCallback } from "react";
+﻿import React, { ChangeEvent } from "react";
 import { DatabaseFilterCriteria } from "components/models/databases";
 import { CheckboxTriple } from "components/common/CheckboxTriple";
 import { Col, Input, InputGroup, Row } from "reactstrap";
+import { useAppDispatch } from "components/store";
+import { filterTextSet } from "components/common/shell/databasesSlice";
 
 interface DatabasesFilterProps {
     filter: DatabaseFilterCriteria;
-    setFilter: React.Dispatch<React.SetStateAction<DatabaseFilterCriteria>>;
     toggleSelectAll: () => void;
     selectionState: checkbox;
 }
 
 export function DatabasesFilter(props: DatabasesFilterProps) {
-    const { filter, toggleSelectAll, selectionState, setFilter } = props;
+    const { filter, toggleSelectAll, selectionState } = props;
 
-    const onSearchTextChange = useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {
-            setFilter((f) => ({
-                ...f,
-                searchText: e.target.value,
-            }));
-        },
-        [setFilter]
-    );
+    const dispatch = useAppDispatch();
+
+    const onSearchTextChange = (e: ChangeEvent<HTMLInputElement>) => {
+        dispatch(filterTextSet(e.target.value));
+    };
 
     return (
         <Row>

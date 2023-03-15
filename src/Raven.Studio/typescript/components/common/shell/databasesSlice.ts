@@ -1,5 +1,5 @@
 ﻿import { createAsyncThunk, createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
-import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
+import { DatabaseFilterCriteria, DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import genUtils from "common/generalUtils";
 import { AppAsyncThunk, AppDispatch, AppThunk, RootState } from "components/store";
 import createDatabase from "viewmodels/resources/createDatabase";
@@ -17,6 +17,8 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseLocationComparator } from "components/utils/common";
 import disableIndexingToggleConfirm from "viewmodels/resources/disableIndexingToggleConfirm";
 import notificationCenter from "common/notifications/notificationCenter";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 interface DatabasesState {
     /**
@@ -32,6 +34,8 @@ interface DatabasesState {
      */
     localDatabaseDetailedLoadStatus: EntityState<perNodeTagLoadStatus>;
     activeDatabase: string;
+
+    searchCriteria: DatabaseFilterCriteria;
 }
 
 const databasesAdapter = createEntityAdapter<DatabaseSharedInfo>({
@@ -59,11 +63,70 @@ const initialState: DatabasesState = {
     localDatabaseDetailedInfo: localDatabaseInfoAdapter.getInitialState(),
     localDatabaseDetailedLoadStatus: localDatabaseDetailedLoadStatusAdapter.getInitialState(),
     activeDatabase: null,
+    searchCriteria: {
+        searchText: "",
+    },
 };
 
 const sliceName = "databases";
 
 export const selectAllDatabases = (store: RootState) => databasesSelectors.selectAll(store.databases.databases);
+
+export const selectDatabaseSearchCriteria = (store: RootState) => store.databases.searchCriteria;
+
+export const selectDatabasesSummary = (store: RootState) => {
+    const allDatabases = selectAllDatabases(store);
+
+    let loading = 0;
+    let error = 0;
+    let offline = 0;
+    let disabled = 0;
+    let online = 0;
+
+    allDatabases.forEach((db) => {
+        const perNodeState = selectDatabaseState(db.name)(store);
+        const state = DatabaseUtils.getDatabaseState(db, perNodeState);
+        switch (state) {
+            case "Loading":
+                loading++;
+                break;
+            case "Error":
+                error++;
+                break;
+            case "Offline":
+                offline++;
+                break;
+            case "Disabled":
+                disabled++;
+                break;
+            case "Online":
+                online++;
+                break;
+            default:
+                assertUnreachable(state);
+        }
+    });
+
+    return {
+        count: allDatabases.length,
+        loading,
+        error,
+        offline,
+        disabled,
+        online,
+    };
+};
+
+export const selectFilteredDatabases = (store: RootState): DatabaseSharedInfo[] => {
+    const criteria = selectDatabaseSearchCriteria(store);
+    const databases = selectAllDatabases(store);
+
+    if (criteria.searchText) {
+        return databases.filter((x) => x.name.toLowerCase().includes(criteria.searchText.toLowerCase()));
+    }
+
+    return databases;
+};
 
 export const selectActiveDatabase = (store: RootState) => store.databases.activeDatabase;
 
@@ -74,6 +137,7 @@ export function selectDatabaseByName(name: string) {
 export function selectDatabaseState(name: string) {
     return (store: RootState) => {
         const db = selectDatabaseByName(name)(store);
+
         const locations = DatabaseUtils.getLocations(db);
 
         return locations.map((location): locationAwareLoadableData<DatabaseLocalInfo> => {
@@ -186,7 +250,9 @@ export const databasesSlice = createSlice({
             //TODO: update in shallow mode?
             databasesAdapter.setAll(state.databases, action.payload);
         },
-
+        filterTextSet: (state, action: PayloadAction<string>) => {
+            state.searchCriteria.searchText = action.payload;
+        },
         initDetails: {
             reducer: (state, action: PayloadAction<{ nodeTags: string[] }>) => {
                 localDatabaseDetailedLoadStatusAdapter.setAll(
@@ -207,22 +273,13 @@ export const databasesSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
-        builder.addCase(fetchDatabases.pending, (state, action) => {
-            localDatabaseDetailedLoadStatusAdapter.setOne(state.localDatabaseDetailedLoadStatus, {
-                nodeTag: action.meta.arg,
-                status: "loading",
-            });
-        });
-
         builder.addCase(fetchDatabases.fulfilled, (state, action) => {
             const nodeTag = action.meta.arg;
-            localDatabaseDetailedLoadStatusAdapter.setOne(state.localDatabaseDetailedLoadStatus, {
-                nodeTag,
-                status: "success",
-            });
+
+            state.localDatabaseDetailedLoadStatus.entities[nodeTag].status = "success";
 
             action.payload.Databases.forEach((db) => {
-                localDatabaseInfoAdapter.setOne(state.localDatabaseDetailedInfo, {
+                const newEntity: DatabaseLocalInfo = {
                     name: DatabaseUtils.shardGroupKey(db.Name),
                     location: {
                         nodeTag,
@@ -234,13 +291,20 @@ export const databasesSlice = createSlice({
                     indexingStatus: db.IndexingStatus,
                     indexingErrors: db.IndexingErrors,
                     performanceHints: db.PerformanceHints,
-                    upTime: db.UpTime,
+                    upTime: db.UpTime ? genUtils.timeSpanAsAgo(db.UpTime, false) : null, // we format here to avoid constant updates of UI
                     backupInfo: db.BackupInfo,
                     totalSize: db.TotalSize,
                     tempBuffersSize: db.TempBuffersSize,
-                });
+                };
+
+                const existingInfo = localDatabaseDetailedInfoSelectors.selectById(
+                    state.localDatabaseDetailedInfo,
+                    localDatabaseInfoAdapter.selectId(newEntity)
+                );
+                if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
+                    localDatabaseInfoAdapter.setOne(state.localDatabaseDetailedInfo, newEntity);
+                }
             });
-            //TODO: remove old items!
         });
 
         builder.addCase(fetchDatabases.rejected, (state, action) => {
@@ -252,7 +316,7 @@ export const databasesSlice = createSlice({
     },
 });
 
-export const { databasesLoaded, activeDatabaseChanged, initDetails } = databasesSlice.actions;
+export const { databasesLoaded, activeDatabaseChanged, initDetails, filterTextSet } = databasesSlice.actions;
 
 export const loadDatabaseDetails = (nodeTags: string[]) => async (dispatch: AppDispatch, getState: () => RootState) => {
     dispatch(initDetails(nodeTags));
@@ -261,6 +325,21 @@ export const loadDatabaseDetails = (nodeTags: string[]) => async (dispatch: AppD
 
     await Promise.all(tasks);
 };
+
+export const reloadDatabaseDetails = async (dispatch: AppDispatch, getState: () => RootState) => {
+    //TODO: read from redux!
+    const nodeTags =
+        clusterTopologyManager.default
+            .topology()
+            ?.nodes()
+            ?.map((x) => x.tag()) ?? [];
+
+    const tasks = nodeTags.map((nodeTag) => dispatch(fetchDatabases(nodeTag)));
+
+    await Promise.all(tasks);
+};
+
+export const throttledReloadDatabaseDetails = _.throttle(reloadDatabaseDetails, 8000);
 
 const fetchDatabases = createAsyncThunk(sliceName + "/fetchDatabases", async (nodeTag: string) => {
     return await services.databasesService.getDatabasesState(nodeTag);
