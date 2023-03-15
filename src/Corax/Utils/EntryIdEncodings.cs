@@ -73,17 +73,15 @@ public static class EntryIdEncodings
         if (read < Vector256<long>.Count)
             goto Classic;
 
-        fixed (long* currentPtr = entries)
+        ref var start = ref entries[0];
+        int currentIdx = 0;
+        while (currentIdx < idX)
         {
-            var currentIdx = currentPtr;
-            var endIdx = (currentIdx + idX);
-
-            for (; currentIdx < endIdx; currentIdx += VectorLongSize)
-            {
-                var innerBuffer = Avx.LoadVector256(currentIdx);
-                var shiftRightLogical = Avx2.ShiftRightLogical(innerBuffer, EntryIdOffset);
-                Avx.Store(currentIdx, shiftRightLogical);
-            }
+            ref var currentPtr = ref Unsafe.Add(ref start, currentIdx);
+            var innerBuffer = Avx.LoadVector256((long*)Unsafe.AsPointer(ref currentPtr));
+            var shiftRightLogical = Avx2.ShiftRightLogical(innerBuffer, EntryIdOffset);
+            Avx.Store((long*)Unsafe.AsPointer(ref currentPtr), shiftRightLogical);
+            currentIdx += Vector256<long>.Count;
         }
 
         Classic:
@@ -99,17 +97,15 @@ public static class EntryIdEncodings
         if (read < Vector128<long>.Count)
             goto Classic;
 
-        fixed (long* currentPtr = entries)
+        ref var start = ref entries[0];
+        int currentIdx = 0;
+        while (currentIdx < idX)
         {
-            var currentIdx = currentPtr;
-            var endIdx = (currentIdx + idX);
-
-            for (; currentIdx < endIdx; currentIdx += Vector128<long>.Count)
-            {
-                var innerBuffer = AdvSimd.LoadVector128(currentIdx);
-                var shiftRightLogical = AdvSimd.ShiftRightLogical(innerBuffer, EntryIdOffset);
-                AdvSimd.Store(currentIdx, shiftRightLogical);
-            }
+            ref var currentPtr = ref Unsafe.Add(ref start, currentIdx);
+            var innerBuffer = AdvSimd.LoadVector128((long*)Unsafe.AsPointer(ref currentPtr));
+            var shiftRightLogical = AdvSimd.ShiftRightLogical(innerBuffer, EntryIdOffset);
+            Avx.Store((long*)Unsafe.AsPointer(ref currentPtr), shiftRightLogical);
+            currentIdx += Vector128<long>.Count;
         }
 
         Classic:
