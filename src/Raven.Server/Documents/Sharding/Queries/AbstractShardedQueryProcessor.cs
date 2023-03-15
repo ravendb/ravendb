@@ -201,7 +201,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             Query.Metadata.IndexName,
             canReadFromCache: ExistingResultEtag != null,
             _raftUniqueRequestId,
-            RequestHandler.ServerStore.Configuration.Sharding.OrchestratorTimeoutInMin.AsTimeSpan);
+            RequestHandler.ServerStore.Configuration.Sharding.OrchestratorTimeout.AsTimeSpan);
     }
 
     protected virtual void AssertQueryExecution()
