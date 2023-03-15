@@ -104,7 +104,7 @@ public static class EntryIdEncodings
             var currentIdx = currentPtr;
             var endIdx = (currentIdx + idX);
 
-            for (; currentIdx < endIdx; currentIdx += VectorLongSize)
+            for (; currentIdx < endIdx; currentIdx += Vector128<long>.Count)
             {
                 var innerBuffer = AdvSimd.LoadVector128(currentIdx);
                 var shiftRightLogical = AdvSimd.ShiftRightLogical(innerBuffer, EntryIdOffset);
@@ -119,9 +119,9 @@ public static class EntryIdEncodings
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    internal static void DecodeAndDiscardFrequencyClassic(Span<long> entries, int read)
+    public static void DecodeAndDiscardFrequencyClassic(Span<long> entries, int read)
     {
-        for (int i = 0; i < read; ++i)
+        for (int i = read - 1; i >= 0; --i)
         {
             entries[i] >>= EntryIdOffset;
         }
@@ -161,22 +161,45 @@ public static class EntryIdEncodings
 
     private static readonly short[] FrequencyTable = Enumerable.Range(0, byte.MaxValue).Select(i => FrequencyReconstructionFromQuantizationFromFunction(i)).ToArray();
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static long FrequencyQuantization(short frequency)
+    {
+        if (Lzcnt.IsSupported)
+            return LzcntFrequencyQuantization(frequency);
+
+        return ClassicFrequencyQuantization(frequency);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private static long LzcntFrequencyQuantization(short frequency)
     {
         if (frequency < 16)
             return frequency;
-        
-        var leadingZeros = Lzcnt.LeadingZeroCount((uint)frequency) ;
+
+        var leadingZeros = Lzcnt.LeadingZeroCount((uint)frequency);
         var level = (28 - leadingZeros + (leadingZeros & 0b1)) >> 1;
         var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
         Debug.Assert((long)mod < 16);
         return ((long)(level << 4)) | (long)mod;
     }
-    
+
+    private static long ClassicFrequencyQuantization(short frequency)
+    {
+        if (frequency < 16) //shortcut
+            return frequency;
+
+        int level = 0;
+        for (level = 0; level < 16 && frequency >= Step[level]; ++level)
+        {
+        } // look up for range
+
+        var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
+        Debug.Assert((long)mod < 16);
+        return ((long)(level << 4)) | (long)mod;
+    }
+
     internal static short FrequencyReconstructionFromQuantization(long encoded) => FrequencyTable[encoded];
 
-    
+
     internal static short FrequencyReconstructionFromQuantizationFromFunction(long encoded)
     {
         var level = (encoded & (0b1111 << 4)) >> 4;
@@ -186,12 +209,11 @@ public static class EntryIdEncodings
         var mantissa = encoded & 0b1111;
         return (short)(Step[level - 1] + LevelSizeInStep[level] * mantissa);
     }
-    
+
     //Posting list contains encoded ids only but in matches we deal with decoded.
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static long PrepareIdForPruneInPostingList(long entryId) => entryId << EntryIdEncodings.EntryIdOffset + 1;
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal static long PrepareIdForSeekInPostingList(long entryId) => entryId << EntryIdEncodings.EntryIdOffset;
-
 }
