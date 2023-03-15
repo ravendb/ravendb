@@ -19,13 +19,7 @@ interface CheckboxProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"
 
 export function Checkbox(props: CheckboxProps) {
     const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
-    let inputId: string;
-    if (id) {
-        inputId = id;
-    } else {
-        inputId = useId("checkbox");
-    }
-
+    const inputId = id && useId("checkbox");
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
     const colorClass = `form-check-${color ?? "secondary"}`;
     const sizeClass = size ? `form-check-${size}` : undefined;

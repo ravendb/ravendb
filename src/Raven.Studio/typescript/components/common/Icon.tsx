@@ -13,9 +13,5 @@ export function Icon(props: IconProps) {
     const iconClasses = "icon-" + icon;
     const addonClasses = addon ? "icon-addon-" + addon : null;
     const colorClasses = color ? "text-" + color : null;
-    return (
-        <>
-            <i className={classNames(iconClasses, addonClasses, colorClasses, className)} {...rest} />
-        </>
-    );
+    return <i className={classNames(iconClasses, addonClasses, colorClasses, className)} {...rest} />;
 }
