@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 
 namespace Raven.Server.Config.Settings
 {
@@ -67,6 +68,16 @@ namespace Raven.Server.Config.Settings
                 default:
                     throw new ArgumentOutOfRangeException(nameof(requestedUnit), requestedUnit, "Unknown TimeUnit value");
             }
+        }
+
+        public string GetValueAsString(TimeUnit requestedUnit)
+        {
+            if (AsTimeSpan.Equals(Timeout.InfiniteTimeSpan))
+            {
+                return "Infinite";
+            }
+
+            return GetValue(requestedUnit).ToString();
         }
     }
 
