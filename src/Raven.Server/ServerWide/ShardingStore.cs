@@ -144,9 +144,13 @@ namespace Raven.Server.ServerWide
 
         private bool ShardingCustomValidationCallback(HttpRequestMessage message, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
         {
+            // We only care about the certificate that the orchestrator going to use and the shard is going to respond
+            // In most cases is simply going to be the same certificate
+
             if (cert.Thumbprint == _serverStore.Server.Certificate.Certificate.Thumbprint)
                 return true;
 
+            // Here we handle the case of the server certificate replacement 
             if (cert.GetPublicKeyPinningHash() == _serverStore.Server.Certificate.Certificate.GetPublicKeyPinningHash())
                 return true;
 
