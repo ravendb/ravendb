@@ -20,6 +20,9 @@ namespace Raven.Server.Documents.Indexes.Persistence
 {
     public abstract class ConverterBase : IDisposable
     {
+        public static readonly BlittableJsonTraverser FlatMapReduceResultsWithTimeOnlyDateOnlySupport = BlittableJsonTraverser.CreateInstanceForIndexing(BlittableJsonTraverser.DefaultFlatMapReduceSeparators, supportTimeOnlyDateOnly: true);
+        public static readonly BlittableJsonTraverser DefaultWithTimeOnlyDateOnlySupport =  BlittableJsonTraverser.CreateInstanceForIndexing(supportTimeOnlyDateOnly: true);
+        
         protected readonly BlittableJsonTraverser _blittableTraverser;
         protected readonly Index _index;
         protected readonly Dictionary<string, IndexField> _fields;
@@ -36,8 +39,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
             _index = index ?? throw new ArgumentNullException(nameof(index));
             _blittableTraverser = (storeValue, index.Definition.Version) switch
             {
-                (storeValue: true, Version: >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField) => BlittableJsonTraverser.TimeOnlyDateOnlyAreSupportedFlatMapReduceResults,
-                (storeValue: false, Version: >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField) => BlittableJsonTraverser.TimeOnlyDateOnlyAreSupportedDefault,
+                (storeValue: true, Version: >= IndexDefinitionBaseServerSide.IndexVersion.Base60Version) => FlatMapReduceResultsWithTimeOnlyDateOnlySupport,
+                (storeValue: false, Version: >= IndexDefinitionBaseServerSide.IndexVersion.Base60Version) => DefaultWithTimeOnlyDateOnlySupport,
                 (storeValue: true, Version: _) => BlittableJsonTraverser.FlatMapReduceResults,
                 (storeValue: false, Version: _) => BlittableJsonTraverser.Default
             };
