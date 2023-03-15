@@ -216,7 +216,9 @@ public abstract class AbstractExecutor : IDisposable
         {
             Dispose();
         }
+#pragma warning disable CS0168
         catch (Exception e)
+#pragma warning restore CS0168
         {
 #if DEBUG
             Console.WriteLine($"Finalizer of {GetType()} got an exception:{Environment.NewLine}" + e);

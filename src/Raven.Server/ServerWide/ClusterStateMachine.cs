@@ -640,8 +640,8 @@ namespace Raven.Server.ServerWide
                         }
                         break;
 
-                    case nameof(UpdatePrivateUrlsCommand):
-                        var command = (UpdatePrivateUrlsCommand)CommandBase.CreateFrom(cmd);
+                    case nameof(UpdateServerPublishedUrlsCommand):
+                        var command = (UpdateServerPublishedUrlsCommand)CommandBase.CreateFrom(cmd);
                         command.Update(context, index);
                         NotifyValueChanged(context, type, index);
                         break;

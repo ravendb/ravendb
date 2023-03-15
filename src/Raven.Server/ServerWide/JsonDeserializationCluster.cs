@@ -271,7 +271,7 @@ namespace Raven.Server.ServerWide
             [nameof(SourceMigrationSendCompletedCommand)] = GenerateJsonDeserializationRoutine<SourceMigrationSendCompletedCommand>(),
             [nameof(DestinationMigrationConfirmCommand)] = GenerateJsonDeserializationRoutine<DestinationMigrationConfirmCommand>(),
             [nameof(SourceMigrationCleanupCommand)] = GenerateJsonDeserializationRoutine<SourceMigrationCleanupCommand>(),
-            [nameof(UpdatePrivateUrlsCommand)] = GenerateJsonDeserializationRoutine<UpdatePrivateUrlsCommand>()
+            [nameof(UpdateServerPublishedUrlsCommand)] = GenerateJsonDeserializationRoutine<UpdateServerPublishedUrlsCommand>()
         };
     }
 }

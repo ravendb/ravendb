@@ -820,10 +820,10 @@ namespace Raven.Server.ServerWide
             using (Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-                PublishedUrls = PublishedUrls.Read(context);
+                PublishedServerUrls = PublishedServerUrls.Read(context);
             }
 
-            Task.Run(PublishPrivateUrlAsync);
+            _ = Task.Run(PublishServerUrlAsync).IgnoreUnobservedExceptions();
             
             SorterCompilationCache.Instance.AddServerWideItems(this);
             AnalyzerCompilationCache.Instance.AddServerWideItems(this);
@@ -839,23 +839,26 @@ namespace Raven.Server.ServerWide
             InitializationCompleted.Set();
         }
 
-        private async Task PublishPrivateUrlAsync()
+        private async Task PublishServerUrlAsync()
         {
-            var publicUrl = GetNodeHttpServerUrl();
-            var privateUrl = Configuration.Core.ClusterServerUrl?.ToString() ?? publicUrl;
+            string publicUrl = null;
+            string privateUrl = null;
 
             while (ServerShutdown.IsCancellationRequested == false)
             {
                 try
                 {
-                    var cmd = new UpdatePrivateUrlsCommand(NodeTag, publicUrl, privateUrl, Guid.NewGuid().ToString());
+                    publicUrl ??= GetNodeHttpServerUrl();
+                    privateUrl ??= Configuration.Core.ClusterServerUrl?.ToString() ?? publicUrl;
+
+                    var cmd = new UpdateServerPublishedUrlsCommand(NodeTag, publicUrl, privateUrl, Guid.NewGuid().ToString());
                     await SendToLeaderAsync(cmd);
                     return;
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to update my private url to {privateUrl}", e);
+                        Logger.Operations($"Failed to update my private url to {privateUrl ?? "N/A"}", e);
 
                     await Task.Delay(1000, ServerShutdown);
                 }
@@ -1276,11 +1279,11 @@ namespace Raven.Server.ServerWide
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
 
-                case nameof(UpdatePrivateUrlsCommand):
+                case nameof(UpdateServerPublishedUrlsCommand):
                     using (Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        PublishedUrls = PublishedUrls.Read(context);
+                        PublishedServerUrls = PublishedServerUrls.Read(context);
                     }
 
                     foreach (var orchestrator in DatabasesLandlord.ShardedDatabasesCache.Values)
@@ -1295,7 +1298,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public PublishedUrls PublishedUrls;
+        public PublishedServerUrls PublishedServerUrls;
 
         private void RescheduleTimerIfDatabaseIdle(string db, object state)
         {

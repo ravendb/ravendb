@@ -95,18 +95,8 @@ namespace Raven.Server.ServerWide
             using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                PublishedUrls.Clear(ctx);
+                PublishedServerUrls.Clear(ctx);
                 tx.Commit();
-            }
-        }
-
-        public string ReadPublishedUrls()
-        {
-            using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                var val = PublishedUrls.Read(ctx);
-                return ctx.ReadObject(val.ToJson(), "read-published-urls").ToString();
             }
         }
 
@@ -118,7 +108,8 @@ namespace Raven.Server.ServerWide
                 HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
                 UseHttpCompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpCompression,
                 UseHttpDecompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpDecompression,
-                GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan,
+                GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeout.AsTimeSpan,
+                HttpClientType = typeof(ShardingStore),
                 CreateHttpClient = handler =>
                 {
                     handler.ServerCertificateCustomValidationCallback = ShardingCustomValidationCallback;
@@ -126,21 +117,7 @@ namespace Raven.Server.ServerWide
                 }
             };
 
-        public DocumentConventions DocumentConventionsForOrchestrator =>
-            new()
-            {
-                SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
-                MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
-                HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
-                UseHttpCompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpCompression,
-                UseHttpDecompression = _serverStore.Configuration.Sharding.ShardExecutorUseHttpDecompression,
-                GlobalHttpClientTimeout = _serverStore.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan,
-                CreateHttpClient = handler =>
-                {
-                    handler.ServerCertificateCustomValidationCallback = ShardingCustomValidationCallback;
-                    return new HttpClient(handler);
-                }
-            };
+        public DocumentConventions DocumentConventionsForOrchestrator => DocumentConventionsForShard;
 
         private bool ShardingCustomValidationCallback(HttpRequestMessage message, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
         {

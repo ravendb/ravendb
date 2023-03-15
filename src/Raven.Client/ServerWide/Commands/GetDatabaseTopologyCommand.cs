@@ -18,11 +18,16 @@ namespace Raven.Client.ServerWide.Commands
             Timeout = TimeSpan.FromSeconds(15);
         }
 
-        public GetDatabaseTopologyCommand(string debugTag, Guid? applicationIdentifier, bool usePrivateUrls = false)
+        internal GetDatabaseTopologyCommand(string debugTag, Guid? applicationIdentifier, bool usePrivateUrls)
+            : this(debugTag, applicationIdentifier)
+        {
+            _usePrivateUrls = usePrivateUrls;
+        }
+
+        public GetDatabaseTopologyCommand(string debugTag, Guid? applicationIdentifier)
             : this(debugTag)
         {
             _applicationIdentifier = applicationIdentifier;
-            _usePrivateUrls = usePrivateUrls;
         }
 
         public GetDatabaseTopologyCommand(string debugTag) : this()
