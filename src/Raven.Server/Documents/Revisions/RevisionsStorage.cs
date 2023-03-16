@@ -783,15 +783,11 @@ namespace Raven.Server.Documents.Revisions
                 string changeVector, long lastModifiedTicks, out long passedCount, bool deletedDoc = false, RevisionsCollectionConfiguration docConfiguration = null)
         {
             long maxEtagDeleted = 0;
-            var counts = new Dictionary<RevisionsCollectionConfiguration, long>();
+            var counts = new Dictionary<RevisionsCollectionConfiguration, RevisionConfigurationDeleteState>();
             Table writeTable = null;
             string currentCollection = null;
             passedCount = 0;
             int removed = 0;
-
-            if (deletedDoc)
-            {
-            }
 
             while (true)
             {
@@ -864,56 +860,63 @@ namespace Raven.Server.Documents.Revisions
             RemoveAndThenBreak
         }
 
-        private DeleteRevisionsState ShouldRemoveRevision(Dictionary<RevisionsCollectionConfiguration, long> counts, RevisionsCollectionConfiguration configuration,
+        private class RevisionConfigurationDeleteState
+        {
+            public long TotalCount;
+            public long DeletedCount;
+        }
+
+        private DeleteRevisionsState ShouldRemoveRevision(Dictionary<RevisionsCollectionConfiguration, RevisionConfigurationDeleteState> counts, RevisionsCollectionConfiguration configuration,
             DateTime revisionLastModifiedTime, bool deletedDoc)
         {
-            configuration.MaximumRevisionsToDeleteUponDocumentUpdate = 3;
             if (counts.ContainsKey(configuration) == false)
             {
-                counts[configuration] = 0;
+                counts[configuration] = new RevisionConfigurationDeleteState
+                {
+                    TotalCount = 0,
+                    DeletedCount = 0
+                };
             }
+            counts[configuration].TotalCount++;
 
-            var count = counts[configuration];
+            if (counts[configuration].DeletedCount >= (configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue))
+            {
+                return DeleteRevisionsState.Break;
+            }
 
             if (configuration.Disabled)
             {
-                return DeleteRevisionsState.Skip;
+                return RemoveRevision();
             }
 
             if (configuration.PurgeOnDelete && deletedDoc)
             {
-                counts[configuration]++;
-                if (counts[configuration] >= (configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue))
+                return RemoveRevision();
+            }
+
+            var revisionAge = _database.Time.GetUtcNow().Ticks - revisionLastModifiedTime.Ticks;
+            if (configuration.MinimumRevisionAgeToKeep.HasValue &&
+                revisionAge > configuration.MinimumRevisionAgeToKeep.Value.Ticks)
+                return RemoveRevision();
+
+            if (configuration.MinimumRevisionsToKeep.HasValue &&
+                configuration.MinimumRevisionsToKeep.Value < counts[configuration].TotalCount)
+            {
+                return RemoveRevision();
+            }
+
+            return DeleteRevisionsState.Skip;
+
+            DeleteRevisionsState RemoveRevision()
+            {
+                counts[configuration].DeletedCount++;
+                counts[configuration].TotalCount--;
+                if (counts[configuration].DeletedCount >= (configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue))
                 {
                     return DeleteRevisionsState.RemoveAndThenBreak;
                 }
                 return DeleteRevisionsState.Remove;
             }
-
-            if (configuration.MinimumRevisionsToKeep.HasValue &&
-                configuration.MinimumRevisionsToKeep.Value >= count)
-                return DeleteRevisionsState.Skip;
-
-            if (configuration.MinimumRevisionAgeToKeep.HasValue &&
-                _database.Time.GetUtcNow().Ticks - revisionLastModifiedTime.Ticks <= configuration.MinimumRevisionAgeToKeep.Value.Ticks)
-                return DeleteRevisionsState.Skip;
-
-            if (count <= (configuration.MinimumRevisionsToKeep ?? long.MaxValue))
-            {
-                return DeleteRevisionsState.Skip;
-            }
-
-            if (count >= (configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue))
-            {
-                return DeleteRevisionsState.Break;
-            }
-
-            counts[configuration]++;
-            if (counts[configuration] >= (configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue))
-            {
-                return DeleteRevisionsState.RemoveAndThenBreak;
-            }
-            return DeleteRevisionsState.Remove;
         }
 
         public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)
