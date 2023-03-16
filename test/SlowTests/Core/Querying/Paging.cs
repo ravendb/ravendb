@@ -32,12 +32,14 @@ namespace SlowTests.Core.Querying
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Name = "Company1" });
-                    session.Store(new Company { Name = "Company1" });
-                    session.Store(new Company { Name = "Company2" });
-                    session.Store(new Company { Name = "Company3" });
-                    session.Store(new Company { Name = "Company4" });
-                    session.Store(new Company { Name = "Company5" });
-                    session.Store(new Company { Name = "Company6" });
+                    session.SaveChanges();
+
+                    for (var i = 1; i < 7; i++)
+                    {
+                        session.Store(new Company { Name = $"Company{i}" });
+                        session.SaveChanges();
+                    }
+                    
                     session.Store(new Company { Name = "ompany7" });
                     session.SaveChanges();
 
