@@ -200,13 +200,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public CompiledIndexField[] GroupByFields;
 
-        private HashSet<string> _groupByFieldNames;
+        private List<string> _groupByFieldNames;
 
-        public HashSet<string> GroupByFieldNames
+        public List<string> GroupByFieldNames
         {
             get
             {
-                return _groupByFieldNames ??= GroupByFields.Select(x => x.Name).ToHashSet();
+                return _groupByFieldNames ??= GroupByFields.Select(x => x.Name).ToList();
             }
         }
 

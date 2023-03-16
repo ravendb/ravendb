@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using Sparrow;
 using Raven.Client;
-using Raven.Client.Exceptions;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -27,6 +26,8 @@ namespace Raven.Server.Documents.Queries.AST
         public ValueExpression Offset;
         public ValueExpression Limit;
         public ValueExpression FilterLimit;
+
+        public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> CachedOrderBy;
 
         public Query ShallowCopy()
         {

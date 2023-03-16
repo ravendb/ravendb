@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using NetTopologySuite.Algorithm;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Timings;
@@ -82,7 +83,7 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
             var merger = CreateMapReduceQueryResultsMerger(result);
             result.Results = merger.Merge();
 
-            var orderByFields = OrderByFields?.ToArray() ?? Query.Metadata.OrderBy;
+            var orderByFields = Query.Metadata.CachedOrderBy ?? Query.Metadata.OrderBy;
             if (orderByFields?.Length > 0)
             {
                 // apply ordering after the re-reduce of a map-reduce index

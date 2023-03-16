@@ -19,13 +19,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public readonly AutoIndexField[] OrderedGroupByFields;
 
-        private HashSet<string> _groupByFieldNames;
+        private List<string> _groupByFieldNames;
 
-        public HashSet<string> GroupByFieldNames
+        public List<string> GroupByFieldNames
         {
             get
             {
-                return _groupByFieldNames ??= GroupByFields.Keys.ToHashSet();
+                return _groupByFieldNames ??= GroupByFields.Keys.ToList();
             }
         }
 

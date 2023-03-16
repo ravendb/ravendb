@@ -232,23 +232,25 @@ function execute(doc, args){
 
         public string SumInJs;
 
-        private HashSet<string> _groupByFieldsByName;
+        public OrderByField[] CachedOrderBy;
 
-        public HashSet<string> GroupByFieldNames
+        private List<string> _groupByFieldsByName;
+
+        public List<string> GroupByFieldNames
         {
             get
             {
-                return _groupByFieldsByName ??= GroupBy.Select(x => x.Name.Value).ToHashSet();
+                return _groupByFieldsByName ??= GroupBy.Select(x => x.Name.Value).ToList();
             }
         }
 
-        private HashSet<string> _orderByFieldsByName;
+        private HashSet<string> _orderByFieldNames;
 
         public HashSet<string> OrderByFieldNames
         {
             get
             {
-                return _orderByFieldsByName ??= OrderBy.Select(x => x.Name.Value).ToHashSet();
+                return _orderByFieldNames ??= OrderBy.Select(x => x.Name.Value).ToHashSet();
             }
         }
 

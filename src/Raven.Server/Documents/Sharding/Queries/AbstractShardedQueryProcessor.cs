@@ -52,8 +52,6 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     protected readonly long? ExistingResultEtag;
     protected readonly bool MetadataOnly;
 
-    protected List<OrderByField> OrderByFields;
-
     protected AbstractShardedQueryProcessor(
         TransactionOperationContext context,
         ShardedDatabaseRequestHandler requestHandler,
@@ -242,7 +240,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         var isProjectionQuery = query.Select?.Count > 0 ||
                                 query.SelectFunctionBody.FunctionText != null;
 
-        HashSet<string> reduceKeys = null;
+        List<string> groupByFields = null;
 
         if (IsMapReduceIndex || IsAutoMapReduceQuery)
         {
@@ -251,32 +249,35 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
             if (query.Limit != null)
             {
-                reduceKeys = GetGroupByFields();
+                groupByFields = GetGroupByFields();
 
+                if (query.CachedOrderBy != null)
+                {
+                    queryChanges |= QueryChanges.UseCachedOrderByFieldsInMapReduce;
+                }
                 if (query.OrderBy == null)
                 {
                     // we have a limit but not an order by
-                    // we need to add the reduce keys in order to get correct results
+                    // we need to add the group by fields in order to get correct results
                     queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
                 }
                 else
                 {
                     // we have a limit and order by fields
                     // we need to get all results if the order by isn't done on the group by fields
-
                     foreach (var orderByField in Query.Metadata.OrderByFieldNames)
                     {
-                        if (reduceKeys.Contains(orderByField) == false)
+                        if (groupByFields.Contains(orderByField) == false)
                         {
-                            // we found an order by field that isn't a reduce key, we must get all the results
+                            // we found an order by field that isn't a group by field, we must get all the results
                             queryChanges |= QueryChanges.RewriteForLimitWithOrderByInMapReduce;
                             break;
                         }
                     }
 
-                    // we are missing some reduce keys
+                    // we are missing some group by fields
                     if (queryChanges.HasFlag(QueryChanges.RewriteForLimitWithOrderByInMapReduce) == false &&
-                        Query.Metadata.OrderByFieldNames.Count != reduceKeys.Count)
+                        Query.Metadata.OrderByFieldNames.Count != groupByFields.Count)
                     {
                         queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
                     }
@@ -345,29 +346,35 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             RemoveLimitAndOffset();
         }
 
-        if (queryChanges.HasFlag(QueryChanges.UpdateOrderByFieldsInMapReduce))
+        if (queryChanges.HasFlag(QueryChanges.UseCachedOrderByFieldsInMapReduce))
         {
-            clone.OrderBy ??= new List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)>();
-            OrderByFields = new List<OrderByField>();
+            clone.OrderBy = query.CachedOrderBy;
+        }
+        else if (queryChanges.HasFlag(QueryChanges.UpdateOrderByFieldsInMapReduce))
+        {
+            query.CachedOrderBy = clone.OrderBy ??= new List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)>();
+            var orderByFields = new List<OrderByField>();
 
             if (Query.Metadata.OrderBy != null)
             {
                 // add existing order by fields
                 foreach (var orderByField in Query.Metadata.OrderBy)
                 {
-                    OrderByFields.Add(orderByField);
+                    orderByFields.Add(orderByField);
                 }
             }
 
-            // add the missing reduce keys
-            foreach (var reduceKey in reduceKeys)
+            // add the missing group by fields
+            foreach (var groupByField in groupByFields)
             {
-                if (Query.Metadata.OrderBy != null && Query.Metadata.OrderByFieldNames.Contains(reduceKey))
+                if (Query.Metadata.OrderBy != null && Query.Metadata.OrderByFieldNames.Contains(groupByField))
                     continue;
 
-                clone.OrderBy.Add((new FieldExpression(new List<StringSegment> { reduceKey }), OrderByFieldType.Implicit, Ascending: true));
-                OrderByFields.Add(new OrderByField(new QueryFieldName(reduceKey, isQuoted: false), OrderByFieldType.Implicit, ascending: true));
+                clone.OrderBy.Add((new FieldExpression(new List<StringSegment> {groupByField}), OrderByFieldType.Implicit, Ascending: true));
+                orderByFields.Add(new OrderByField(new QueryFieldName(groupByField, isQuoted: false), OrderByFieldType.Implicit, ascending: true));
             }
+
+            Query.Metadata.CachedOrderBy = orderByFields.ToArray();
         }
 
         if (queryChanges.HasFlag(QueryChanges.RewriteForPaging))
@@ -419,7 +426,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
         else if (queryChanges.HasFlag(QueryChanges.RewriteForProjectionFromAutoMapReduceQuery))
         {
-            var missingGroupByFieldsFromProjection = Query.Metadata.GroupBy.Select(x => x.Name.Value).ToHashSet();
+            var missingGroupByFieldsFromProjection = Query.Metadata.GroupByFieldNames.ToHashSet(); // need a new instance here
             var groupByFieldsCount = missingGroupByFieldsFromProjection.Count;
             var hasKeyField = false;
 
@@ -449,9 +456,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             {
                 // we must have the group by fields in order for the re-reduce to work
                 // for example: select sum("Count"), key() as Name
-                // if we have more than 1 reduce key, it will returned as a compound value
+                // if we have more than 1 group by field, it will returned as a compound value
                 // which isn't good for us because we need the actual fields in order to re-reduce
-                // the only case when we don't need this is when we have only 1 reduce key
+                // the only case when we don't need this is when we have only 1 group by field
                 foreach (var field in missingGroupByFieldsFromProjection)
                 {
                     clone.Select.Add((new FieldExpression(new List<StringSegment> { field }), null));
@@ -477,22 +484,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    [Flags]
-    private enum QueryChanges
+    private List<string> GetGroupByFields()
     {
-        None = 0,
-
-        RewriteForPaging = 1 << 0,
-        RewriteForProjectionFromMapReduceIndex = 1 << 1,
-        RewriteForProjectionFromAutoMapReduceQuery = 1 << 2,
-        RewriteForFilterInMapReduce = 1 << 3,
-        RewriteForLimitWithOrderByInMapReduce = 1 << 4,
-        UpdateOrderByFieldsInMapReduce = 1 << 5
-    }
-
-    private HashSet<string> GetGroupByFields()
-    {
-        HashSet<string> groupByFields;
+        List<string> groupByFields;
 
         if (IsAutoMapReduceQuery)
         {
@@ -710,6 +704,20 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
 
         return DocumentLastModifiedComparer.Throwing;
+    }
+
+    [Flags]
+    private enum QueryChanges
+    {
+        None = 0,
+
+        RewriteForPaging = 1 << 0,
+        RewriteForProjectionFromMapReduceIndex = 1 << 1,
+        RewriteForProjectionFromAutoMapReduceQuery = 1 << 2,
+        RewriteForFilterInMapReduce = 1 << 3,
+        RewriteForLimitWithOrderByInMapReduce = 1 << 4,
+        UpdateOrderByFieldsInMapReduce = 1 << 5,
+        UseCachedOrderByFieldsInMapReduce = 1 << 6
     }
 
     protected enum QueryType
