@@ -101,7 +101,7 @@ unsafe partial class CompactTree
                     state = ref cursor._stk[cursor._pos];
                     VerifyNode(ref state); // We check the integrity of the current node.                    
                 }
-                while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch));
+                while (state.Header->IsBranch);
             }            
         }
     }

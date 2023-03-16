@@ -44,7 +44,7 @@ namespace Voron.Data.CompactTrees
                     goto Failure;
 
                 int randomEntry;
-                while (!state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+                while (state.Header->IsBranch)
                 {
                     randomEntry = _generator.Next(state.Header->NumberOfEntries);
 
