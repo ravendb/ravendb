@@ -1,17 +1,49 @@
 @use "sass:math";
 
+@function decimal-round($number, $digits: 0, $mode: round) {
+    $n: 1;
+    // $number must be a number
+    @if type-of($number) != number {
+        @warn '#{ $number } is not a number.';
+        @return $number;
+    }
+    // $digits must be a unitless number
+    @if type-of($digits) != number {
+        @warn '#{ $digits } is not a number.';
+        @return $number;
+    } @else if not unitless($digits) {
+        @warn '#{ $digits } has a unit.';
+        @return $number;
+    }
+    @if $digits > 0 {
+        @for $i from 1 through $digits {
+            $n: $n * 10;
+        }
+    }
+    @if $mode == round {
+        @return math.div(math.round($number * $n), $n);
+    } @else if $mode == ceil {
+        @return math.div(math.ceil($number * $n), $n);
+    } @else if $mode == floor {
+        @return math.div(math.floor($number * $n), $n);
+    } @else {
+        @warn '#{ $mode } is undefined keyword.';
+        @return $number;
+    }
+}
+
 $global-easing: cubic-bezier(0, 0.5, 0.5, 1);
 $global-easing-in-out: cubic-bezier(0.6, 0, 0.6, 1);
 $global-easing-out: cubic-bezier(0.5, 0, 1, 0.5);
 
 $gutter: 30px;
 $gutter-ratio: 1.618;
-$gutter-md: math.round($gutter * $gutter-ratio);
-$gutter-lg: math.round($gutter-md * $gutter-ratio);
-$gutter-xl: math.round($gutter-lg * $gutter-ratio);
-$gutter-sm: math.round(math.div($gutter, $gutter-ratio));
-$gutter-xs: math.round(math.div($gutter-sm, $gutter-ratio));
-$gutter-xxs: math.round(math.div($gutter-xs, $gutter-ratio));
+$gutter-md: decimal-round(($gutter * $gutter-ratio), 1);
+$gutter-lg: decimal-round(($gutter-md * $gutter-ratio), 1);
+$gutter-xl: decimal-round(($gutter-lg * $gutter-ratio), 1);
+$gutter-sm: decimal-round((math.div($gutter, $gutter-ratio)), 1);
+$gutter-xs: decimal-round((math.div($gutter-sm, $gutter-ratio)), 1);
+$gutter-xxs: decimal-round((math.div($gutter-xs, $gutter-ratio)), 1);
 
 $gutters: (
     xxs: $gutter-xxs,
@@ -37,9 +69,9 @@ $screen-md-max: ($screen-lg-min - 1) !default;
 
 $font-size-root: 14px !default;
 $font-size-base: 1rem !default; // Assumes the browser default, typically `16px`
-$font-size-sm: math.round($font-size-base * 0.875) !default;
-$font-size-lg: math.round($font-size-base * 1.25) !default;
-$font-size-xs: math.round($font-size-base * 0.7) !default;
+$font-size-sm: $font-size-base * 0.875 !default;
+$font-size-lg: $font-size-base * 1.25 !default;
+$font-size-xs: $font-size-base * 0.7 !default;
 
 $border-width: 1px;
 $btn-border-width: 2px;
