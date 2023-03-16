@@ -661,8 +661,9 @@ limit 1
                 {
                     session.Store(new User { Name = "Grisha", LastName = "Kotler", Count = 10 }, "users/1");
                     session.Store(new User { Name = "Grisha", LastName = "Kotler", Count = 10 }, "users/2");
-                    session.Store(new User { Name = "Grisha", LastName = "A", Count = 21 }, "users/3$3");
                     session.Store(new User { Name = "Grisha", LastName = "Kotler", Count = 10 }, "users/4$3");
+                    session.Store(new User { Name = "Grisha", LastName = "A", Count = 21 }, "users/3$3");
+
                     session.SaveChanges();
 
                     Indexes.WaitForIndexing(store);
@@ -678,6 +679,26 @@ limit 1
 
                     queryResult = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
                         .OrderByDescending(x => x.Name)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal("A", queryResult[0].LastName);
+                    Assert.Equal(21, queryResult[0].Sum);
+                    
+                    queryResult = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
+                        .OrderBy(x => x.Name)
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Grisha", queryResult[0].Name);
+                    Assert.Equal("A", queryResult[0].LastName);
+                    Assert.Equal(21, queryResult[0].Sum);
+
+                    queryResult = session.Query<UserMapReduceWithTwoReduceKeys.Result, UserMapReduceWithTwoReduceKeys>()
+                        .OrderBy(x => x.Name)
                         .Take(1)
                         .ToList();
 
