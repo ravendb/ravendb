@@ -230,6 +230,9 @@ namespace Voron.Data.Tables
 
         public void ForgetAboutCompressed(long id)
         {
+            if (_tx.CachedDecompressedBuffersByStorageId == null)
+                return;
+
             if (_tx.CachedDecompressedBuffersByStorageId.Remove(id, out var t))
             {
                 _tx.Allocator.Release(ref t);
@@ -433,7 +436,7 @@ namespace Voron.Data.Tables
             var ptr = DirectReadRaw(id, out int size, out bool compressed);
 
             if (compressed)
-                _tx.CachedDecompressedBuffersByStorageId?.Remove(id);
+                ForgetAboutCompressed(id);
 
             ByteStringContext<ByteStringMemoryCache>.InternalScope decompressValue = default;
 
