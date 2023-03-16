@@ -682,7 +682,8 @@ namespace Raven.Server.Smuggler.Documents
             await using (var compareExchangeActions = _destination.CompareExchange(context, BackupKind, withDocuments: true))
             {
                 List<string> legacyIdsToDelete = null;
-
+                Func<Task> beforeFlush = compareExchangeActions == null ? null : async () => await compareExchangeActions.FlushAsync();
+                
                 await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections, documentActions))
                 {
                     _token.ThrowIfCancellationRequested();
@@ -760,9 +761,8 @@ namespace Raven.Server.Smuggler.Documents
                         await compareExchangeActions.WriteKeyValueAsync(key, null, item.Document);
                         continue;
                     }
-                    if (compareExchangeActions?.MaybeFlush() == true) // we don't want to keep the cmp xng transaction open for too long
-                        await compareExchangeActions.FlushAsync();
-                    await documentActions.WriteDocumentAsync(item, result.Documents);
+                        
+                    await documentActions.WriteDocumentAsync(item, result.Documents, beforeFlush);
                 }
 
                 await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, documentActions, result);

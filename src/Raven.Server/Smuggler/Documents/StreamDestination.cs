@@ -1197,24 +1197,29 @@ namespace Raven.Server.Smuggler.Documents
                 _filterMetadataProperty = filterMetadataProperty;
             }
 
-            public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
+            public ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<Task> beforeFlush)
             {
                 if (item.Attachments != null)
                     throw new NotSupportedException();
 
-                var document = item.Document;
-                using (document)
+                return new ValueTask(AsyncWork());
+
+                async Task AsyncWork()
                 {
-                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
-                        await WriteUniqueAttachmentStreamsAsync(document, progress);
+                    var document = item.Document;
+                    using (document)
+                    {
+                        if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                            await WriteUniqueAttachmentStreamsAsync(document, progress);
 
-                    if (First == false)
-                        Writer.WriteComma();
-                    First = false;
+                        if (First == false)
+                            Writer.WriteComma();
+                        First = false;
 
-                    Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
+                        Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
 
-                    await Writer.MaybeFlushAsync();
+                        await Writer.MaybeFlushAsync();
+                    }
                 }
             }
 
@@ -1438,14 +1443,10 @@ namespace Raven.Server.Smuggler.Documents
                 throw new NotSupportedException();
             }
 
-            public bool MaybeFlush()
-            {
-                return false;
-            }
 
-            public Task FlushAsync()
+            public ValueTask FlushAsync()
             {
-                return Task.CompletedTask;
+                return ValueTask.CompletedTask;
             }
         }
 

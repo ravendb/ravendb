@@ -300,7 +300,7 @@ namespace Raven.Server.Smuggler.Documents
                     _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
             }
 
-            public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
+            public ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<Task> beforeFlushing)
             {
                 if (item.Attachments != null)
                 {
@@ -311,7 +311,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _command.Add(item);
-                await HandleBatchOfDocumentsIfNecessaryAsync();
+                return HandleBatchOfDocumentsIfNecessaryAsync(beforeFlushing);
             }
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -320,7 +320,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Tombstone = tombstone
                 });
-                await HandleBatchOfDocumentsIfNecessaryAsync();
+                await HandleBatchOfDocumentsIfNecessaryAsync(null);
             }
 
             public async ValueTask WriteConflictAsync(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -329,7 +329,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Conflict = conflict
                 });
-                await HandleBatchOfDocumentsIfNecessaryAsync();
+                await HandleBatchOfDocumentsIfNecessaryAsync(null);
             }
 
             public async ValueTask DeleteDocumentAsync(string id)
@@ -513,43 +513,49 @@ namespace Raven.Server.Smuggler.Documents
                 _revisionDeleteCommand = null;
             }
 
-            private async ValueTask HandleBatchOfDocumentsIfNecessaryAsync()
+            private ValueTask HandleBatchOfDocumentsIfNecessaryAsync(Func<Task> beforeFlush)
             {
                 var commandSize = _command.GetCommandAllocationSize();
                 var prevDoneAndHasEnough = commandSize > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
                 var currentReachedLimit = commandSize > _enqueueThreshold.GetValue(SizeUnit.Bytes);
 
                 if (currentReachedLimit == false && prevDoneAndHasEnough == false)
-                    return;
-
-                var prevCommand = _prevCommand;
-                var prevCommandTask = _prevCommandTask;
-
-                var commandTask = _database.TxMerger.Enqueue(_command);
-                // we ensure that we first enqueue the command to if we
-                // fail to do that, we won't be waiting on the previous
-                // one
-                _prevCommand = _command;
-                _prevCommandTask = commandTask;
-
-                if (prevCommand != null)
                 {
-                    using (prevCommand)
-                    {
-                        await prevCommandTask;
-                        Debug.Assert(prevCommand.IsDisposed == false,
-                            "we rely on reusing this context on the next batch, so it has to be disposed here");
-                    }
+                    return ValueTask.CompletedTask;
                 }
 
-                _command = new MergedBatchPutCommand(_database, _buildType, _log,
-                    _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
-                {
-                    IsRevision = _isRevision,
-                };
+                return new ValueTask(SubmitNextBatch());
 
-                if (_throwOnCollectionMismatchError == false)
-                    _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
+                async Task SubmitNextBatch()
+                {
+                    if (beforeFlush != null)
+                        await beforeFlush();
+                    var prevCommand = _prevCommand;
+                    var prevCommandTask = _prevCommandTask;
+
+                    var commandTask = _database.TxMerger.Enqueue(_command);
+                    // we ensure that we first enqueue the command to if we
+                    // fail to do that, we won't be waiting on the previous
+                    // one
+                    _prevCommand = _command;
+                    _prevCommandTask = commandTask;
+
+                    if (prevCommand != null)
+                    {
+                        using (prevCommand)
+                        {
+                            await prevCommandTask;
+                            Debug.Assert(prevCommand.IsDisposed == false,
+                                "we rely on reusing this context on the next batch, so it has to be disposed here");
+                        }
+                    }
+
+                    _command = new MergedBatchPutCommand(_database, _buildType, _log,
+                        _missingDocumentsForRevisions, _documentIdsOfMissingAttachments) { IsRevision = _isRevision, };
+
+                    if (_throwOnCollectionMismatchError == false)
+                        _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
+                }
             }
 
             private async ValueTask FinishBatchOfDocumentsAsync()
@@ -593,7 +599,6 @@ namespace Raven.Server.Smuggler.Documents
             private long? _lastClusterTransactionIndex;
             private readonly BackupKind? _backupKind;
             private readonly CancellationToken _token;
-            private int _maybeFlushTestCount;
             public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, CancellationToken token)
             {
                 _database = database;
@@ -711,36 +716,43 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            private async ValueTask SendClusterTransactionsAsync()
+            private ValueTask SendClusterTransactionsAsync()
             {
                 if (_clusterTransactionCommands.Length == 0)
-                    return;
+                    return ValueTask.CompletedTask;
 
-                var parsedCommands = _clusterTransactionCommands.GetArraySegment();
+                return new ValueTask(AsyncWork());
 
-                var raftRequestId = RaftIdGenerator.NewId();
-                var options = new ClusterTransactionCommand.ClusterTransactionOptions(string.Empty, disableAtomicDocumentWrites: false, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
-                var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
-
-                var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
-                clusterTransactionCommand.FromBackup = true;
-
-                var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-                for (int i = 0; i < _clusterTransactionCommands.Length; i++)
+                async Task AsyncWork()
                 {
-                    _clusterTransactionCommands[i].Document.Dispose();
-                }
+                    var parsedCommands = _clusterTransactionCommands.GetArraySegment();
 
-                _clusterTransactionCommands.Clear();
-                _documentContextHolder.Reset();
+                    var raftRequestId = RaftIdGenerator.NewId();
+                    var options = new ClusterTransactionCommand.ClusterTransactionOptions(string.Empty, disableAtomicDocumentWrites: false,
+                        ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
+                    var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
 
-                if (clusterTransactionResult.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
-                    throw new ClusterTransactionConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
+                    var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
+                    clusterTransactionCommand.FromBackup = true;
+
+                    var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+                    for (int i = 0; i < _clusterTransactionCommands.Length; i++)
                     {
-                        ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
-                    };
+                        _clusterTransactionCommands[i].Document.Dispose();
+                    }
 
-                _lastClusterTransactionIndex = clusterTransactionResult.Index;
+                    _clusterTransactionCommands.Clear();
+                    _documentContextHolder.Reset();
+
+                    if (clusterTransactionResult.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
+                        throw new ClusterTransactionConcurrencyException(
+                            $"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
+                        {
+                            ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
+                        };
+
+                    _lastClusterTransactionIndex = clusterTransactionResult.Index;
+                }
             }
 
             private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)
@@ -773,17 +785,9 @@ namespace Raven.Server.Smuggler.Documents
                 return _context;
             }
 
-            public bool MaybeFlush()
+            public ValueTask FlushAsync()
             {
-                if (_clusterTransactionCommands.Length == 0)
-                    return false;
-                return ++_maybeFlushTestCount > 1024;
-            }
-
-            public Task FlushAsync()
-            {
-                _maybeFlushTestCount = 0;
-                return SendClusterTransactionsAsync().AsTask();
+                return SendClusterTransactionsAsync();
             }
 
             private struct DisposableReturnedArray<T> : IDisposable
