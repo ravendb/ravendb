@@ -50,9 +50,12 @@ unsafe partial class CompactTree
         var currentDictionary = this._llt.GetEncodingDictionary(_state.TreeDictionaryId);
         var newDictionary = PersistentDictionary.CreateIfBetter(_llt, trainer, tester, currentDictionary);
 
-        // If the new dictionary is actually better, then update the current dictionary at the tree level.    
+        // If the new dictionary is actually better, then update the current dictionary at the tree level.
+        // It is important to note because it is a common source of misunderstandings, that new dictionaries
+        // are not used during the transaction that creates them. They are ready up for the next write
+        // transaction to be able to migrate old pages or create new ones with it. 
         if (currentDictionary != newDictionary)
-            _state.TreeDictionaryId = newDictionary.PageNumber;
+            _state.TreeDictionaryId = newDictionary.DictionaryId;
 
         // We will update the number of entries regardless if we updated the current dictionary or not. 
         _state.NextTrainAt = (long)(Math.Max(_state.NextTrainAt, _state.NumberOfEntries) * 1.5);

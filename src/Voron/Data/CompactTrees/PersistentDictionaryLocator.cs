@@ -48,10 +48,12 @@ namespace Voron.Data.CompactTrees
             ref var item = ref _cache[position];
             if (item.PageNumber == pageNumber)
             {
-                // We will copy the reference and ensure again we have the right dictionary because there may be
+                // We will copy the reference and check again we have the right dictionary because there may be
                 // multiple threads accessing the same locator at any time. 
                 dictionary = item.Dictionary;
-                return dictionary.PageNumber == pageNumber;
+                if (dictionary == null)
+                    return false;
+                return dictionary.DictionaryId == pageNumber;
             }
 
             dictionary = default;
@@ -64,7 +66,10 @@ namespace Voron.Data.CompactTrees
             var position = pageNumber & _andMask;
 
             // No check need to be done at this level because at the read side we will
-            // make sure to get the proper dictionary. 
+            // make sure to get the proper dictionary. It doesn't matter in which order
+            // we store the page and the dictionary since race conditions are guaranteed
+            // to happen at this level. That's why we do a double check on the dictionary
+            // we retrieve itself on the TryGet method.
             ref var item = ref _cache[position];
             item.Dictionary = dictionary;
             item.PageNumber = pageNumber;
