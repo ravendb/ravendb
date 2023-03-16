@@ -1234,7 +1234,7 @@ namespace Voron.Data.CompactTrees
 
             Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
 
-            state.Header->DictionaryId = newDictionary.PageNumber;
+            state.Header->DictionaryId = newDictionary.DictionaryId;
 
             return true;
 
