@@ -33,12 +33,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
         
-        public async Task CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, JsonOperationContext context)
+        public async Task CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, JsonOperationContext context, SubscriptionConnection.ParsedSubscription sub)
         {
             if (TrafficWatchManager.HasRegisteredClients)
                 AddStringToHttpContext(bjro.ToString(), TrafficWatchChangeType.Subscriptions);
 
-            var sub = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
             var changeVectorValidationResult = await TryValidateChangeVector(options, sub);
 
             var (etag, _) = await ServerStore.SendToLeaderAsync(new PutShardedSubscriptionCommand(DatabaseContext.DatabaseName, options.Query, options.MentorNode, GetRaftRequestIdFromQuery())

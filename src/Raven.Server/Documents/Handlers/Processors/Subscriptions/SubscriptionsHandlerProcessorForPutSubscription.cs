@@ -16,7 +16,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
         {
             using (context.OpenReadTransaction())
             {
-                await RequestHandler.CreateInternalAsync(bjro, options, context, id, disabled);
+                var sub = ParseSubscriptionQuery(options.Query);
+                await RequestHandler.CreateInternalAsync(bjro, options, context, id, disabled, sub);
             }
         }
     }

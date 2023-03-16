@@ -98,12 +98,10 @@ namespace Raven.Server.Documents.Handlers
             return gotChanges;
         }
 
-        public async Task CreateInternalAsync(BlittableJsonReaderObject bjro, SubscriptionCreationOptions options, DocumentsOperationContext context, long? id, bool? disabled)
+        public async Task CreateInternalAsync(BlittableJsonReaderObject bjro, SubscriptionCreationOptions options, DocumentsOperationContext context, long? id, bool? disabled, SubscriptionConnection.ParsedSubscription sub)
         {
             if (TrafficWatchManager.HasRegisteredClients)
                 AddStringToHttpContext(bjro.ToString(), TrafficWatchChangeType.Subscriptions);
-
-            var sub = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
 
             if (Enum.TryParse(options.ChangeVector, out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
             {

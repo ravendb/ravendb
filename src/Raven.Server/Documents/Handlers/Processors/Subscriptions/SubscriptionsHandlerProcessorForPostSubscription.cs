@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -17,7 +18,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                await RequestHandler.CreateInternalAsync(bjro, options, context, id, disabled);
+                var sub = ParseSubscriptionQuery(options.Query);
+                await RequestHandler.CreateInternalAsync(bjro, options, context, id, disabled, sub);
             }
         }
     }
