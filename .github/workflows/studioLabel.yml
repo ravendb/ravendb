@@ -11,7 +11,16 @@ jobs:
     name: Label
     runs-on: windows-latest
     steps:
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            src:
+              - '!src/Raven.Studio/**/*'
+
       - uses: actions/checkout@v2
+        if: steps.changes.outputs.src != 'true'
+        
       - name: Set Label
         env:
           githubOwner: ${{ github.event.pull_request.base.repo.owner.login }}
@@ -19,5 +28,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMPlus_ReadyToRunExcludeList: 'System.Security.Cryptography.X509Certificates'
           Raven_Enable_Per_Test_Logging: 'true'
-        if: contains(github.event.pull_request.labels.*.name, env.newLabel) == false && (startsWith( github.event.pull_request.base.ref, 'v' ) || startsWith( github.event.pull_request.base.ref, 'feature' ))
+        if: steps.changes.outputs.src != 'true' && contains(github.event.pull_request.labels.*.name, env.newLabel) == false && (startsWith( github.event.pull_request.base.ref, 'v' ) || startsWith( github.event.pull_request.base.ref, 'feature' ))
         run: ./scripts/githubActions/set_github_label.ps1 -owner ${{env.githubOwner}} -repo ${{env.repoName}} -pullRequestId ${{ github.event.pull_request.number }} -label "Studio"
+        
+

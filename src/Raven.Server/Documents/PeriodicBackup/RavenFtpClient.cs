@@ -139,7 +139,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private FtpWebRequest CreateFtpWebRequest(string url, string method, bool keepAlive)
         {
+#pragma warning disable SYSLIB0014
             var request = (FtpWebRequest)WebRequest.Create(new Uri(url));
+#pragma warning restore SYSLIB0014
             request.Method = method;
 
             request.Credentials = new NetworkCredential(_userName, _password);

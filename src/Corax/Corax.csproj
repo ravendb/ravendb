@@ -4,7 +4,7 @@
     <Description>Corax - Low level indexing engine</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.3</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.4</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Corax</AssemblyName>
     <PackageId>Corax</PackageId>
@@ -27,7 +27,7 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Spatial4n" Version="0.4.1.1" />
   </ItemGroup>
 
