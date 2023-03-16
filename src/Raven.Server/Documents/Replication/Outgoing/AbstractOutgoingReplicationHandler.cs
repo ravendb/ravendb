@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public void Start()
         {
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(Replication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName, 
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(Replication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
                     _databaseName, Destination.FromString(), pullReplicationAsHub: false));
         }
 
@@ -435,10 +435,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _notificationCenter.Add(AlertRaised.Create(
                 _databaseName,
                 "Replication delay due to a missing attachments loop",
-                msg + $"{Environment.NewLine}Please try to delete the missing attachment from '{_databaseName}' (see additional information regarding the document and attachment below)",
+                msg + $"{Environment.NewLine}Please try to delete the missing attachment from '{_databaseName}' on node {_server.NodeTag} (see additional information regarding the document and attachment below)",
                 AlertType.Replication,
                 NotificationSeverity.Error,
-                details: new ExceptionDetails { Exception = exceptionDetails}));
+                details: new ExceptionDetails { Exception = exceptionDetails }));
 
             throw new MissingAttachmentException($"{msg}.{Environment.NewLine}{exceptionDetails}");
         }

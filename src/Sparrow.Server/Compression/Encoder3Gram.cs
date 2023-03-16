@@ -483,6 +483,12 @@ namespace Sparrow.Server.Compression
                     entry.PrefixLength = (byte)symbolLength;
                 }
 
+                if (entry.PrefixLength == 0)
+                {
+                    i--;
+                    continue;
+                }
+                    
                 Debug.Assert(entry.PrefixLength > 0);
 
                 entry.Code = symbolCodeList[i].Code;

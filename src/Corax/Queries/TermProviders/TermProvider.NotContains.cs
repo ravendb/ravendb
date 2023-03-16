@@ -11,11 +11,11 @@ namespace Corax.Queries
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
-        private readonly Slice _term;
+        private readonly CompactKey _term;
 
         private CompactTree.Iterator _iterator;
 
-        public NotContainsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice term)
+        public NotContainsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey term)
         {
             _tree = tree;
             _searcher = searcher;
@@ -33,13 +33,14 @@ namespace Corax.Queries
 
         public bool Next(out TermMatch term)
         {
-            var contains = _term;
-            while (_iterator.MoveNext(out Slice termSlice, out var _))
+            var contains = _term.Decoded();
+            while (_iterator.MoveNext(out var termScope, out var _))
             {
+                var termSlice = termScope.Key.Decoded();
                 if (termSlice.Contains(contains))
                     continue;
 
-                term = _searcher.TermQuery(_field, _tree, termSlice);
+                term = _searcher.TermQuery(_field, termScope.Key, _tree);
                 return true;
             }
 

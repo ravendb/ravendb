@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             _indexData = indexData;
             indexData.NumberOfFromClauses = 0;
             indexData.SelectExpressions = new();
-            _indexData.Collection = null;
+            _indexData.Collections = null;
         }
 
         public override SyntaxNode VisitQueryExpression(QueryExpressionSyntax node)
