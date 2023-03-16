@@ -163,10 +163,25 @@ public static class EntryIdEncodings
     {
         if (Lzcnt.IsSupported)
             return LzcntFrequencyQuantization(frequency);
-
+        if (ArmBase.Arm64.IsSupported)
+            ArmLzcntFrequencyQuantization(frequency);
+        
         return ClassicFrequencyQuantization(frequency);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private static long ArmLzcntFrequencyQuantization(short frequency)
+    {
+        if (frequency < 16)
+            return frequency;
+
+        var leadingZeros = ArmBase.Arm64.LeadingZeroCount((uint)frequency);
+        var level = (28 - leadingZeros + (leadingZeros & 0b1)) >> 1;
+        var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
+        Debug.Assert((long)mod < 16);
+        return ((long)(level << 4)) | (long)mod;
+    }
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static long LzcntFrequencyQuantization(short frequency)
     {
