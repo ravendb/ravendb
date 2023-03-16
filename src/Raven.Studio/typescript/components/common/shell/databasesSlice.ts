@@ -1,5 +1,10 @@
 ﻿import { createAsyncThunk, createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
-import { DatabaseFilterCriteria, DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
+import {
+    DatabaseFilterCriteria,
+    DatabaseLocalInfo,
+    DatabaseSharedInfo,
+    ShardedDatabaseSharedInfo,
+} from "components/models/databases";
 import genUtils from "common/generalUtils";
 import { AppAsyncThunk, AppDispatch, AppThunk, RootState } from "components/store";
 import createDatabase from "viewmodels/resources/createDatabase";
@@ -131,7 +136,20 @@ export const selectFilteredDatabases = (store: RootState): DatabaseSharedInfo[] 
 export const selectActiveDatabase = (store: RootState) => store.databases.activeDatabase;
 
 export function selectDatabaseByName(name: string) {
-    return (store: RootState) => databasesSelectors.selectById(store.databases.databases, name);
+    return (store: RootState) => {
+        if (DatabaseUtils.isSharded(name)) {
+            const rootDatabaseName = DatabaseUtils.shardGroupKey(name);
+            const rootDatabase = databasesSelectors.selectById(
+                store.databases.databases,
+                rootDatabaseName
+            ) as ShardedDatabaseSharedInfo;
+            if (!rootDatabase) {
+                return null;
+            }
+            return rootDatabase.shards.find((x) => x.name === name);
+        }
+        return databasesSelectors.selectById(store.databases.databases, name);
+    };
 }
 
 export function selectDatabaseState(name: string) {
