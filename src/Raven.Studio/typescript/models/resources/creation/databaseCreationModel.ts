@@ -12,6 +12,10 @@ import getCloudBackupCredentialsFromLinkCommand = require("commands/resources/ge
 import backupCredentials = require("models/resources/creation/backupCredentials");
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
+type shardTopologyItem = {
+    replicas: KnockoutObservableArray<clusterNode>;
+}
+
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
     
@@ -33,15 +37,8 @@ class databaseCreationModel {
             enabled: ko.observable<boolean>(false)
         },
         {
-            name: "Sharding",
-            id: "sharding",
-            alwaysEnabled: false,
-            disableToggle: ko.observable<boolean>(false),
-            enabled: ko.observable<boolean>(false)
-        },
-        {
-            name: "Replication",
-            id: "replication",
+            name: "Replication & Sharding",
+            id: "replicationAndSharding",
             alwaysEnabled: true,
             disableToggle: ko.observable<boolean>(false),
             enabled: ko.observable<boolean>(true)
@@ -120,24 +117,23 @@ class databaseCreationModel {
         backupEncryptionKey: this.restore.backupEncryptionKey
     });
     
-    replication = {
+    replicationAndSharding = {
         replicationFactor: ko.observable<number>(2),
         manualMode: ko.observable<boolean>(false),
         dynamicMode: ko.observable<boolean>(true),
-        nodes: ko.observableArray<clusterNode>([])
+        nodes: ko.observableArray<clusterNode>([]),
+        orchestrators: ko.observableArray<clusterNode>([]),
+        enableSharding: ko.observable<boolean>(false),
+        numberOfShards: ko.observable<number>(1),
+        shardTopology: ko.observableArray<shardTopologyItem>([])
     };
     
-    sharding = {
-        numberOfShards: ko.observable<number>(1),
-    }
-
     replicationValidationGroup = ko.validatedObservable({
-        replicationFactor: this.replication.replicationFactor,
-        nodes: this.replication.nodes
-    });
-
-    shardingValidationGroup = ko.validatedObservable({
-        numbeOfShards: this.sharding.numberOfShards
+        replicationFactor: this.replicationAndSharding.replicationFactor,
+        nodes: this.replicationAndSharding.nodes,
+        orchestrators: this.replicationAndSharding.orchestrators,
+        numberOfShards: this.replicationAndSharding.numberOfShards,
+        shardTopology: this.replicationAndSharding.shardTopology
     });
 
     path = {
@@ -184,30 +180,33 @@ class databaseCreationModel {
         const encryptionConfig = this.getEncryptionConfigSection();
         encryptionConfig.validationGroup = this.encryptionValidationGroup;
         
-        const replicationConfig = this.configurationSections.find(x => x.id === "replication");
+        const replicationConfig = this.configurationSections.find(x => x.id === "replicationAndSharding");
         replicationConfig.validationGroup = this.replicationValidationGroup;
-
-        const shardingConfig = this.configurationSections.find(x => x.id === "sharding");
-        shardingConfig.validationGroup = this.shardingValidationGroup;
 
         const pathConfig = this.configurationSections.find(x => x.id === "path");
         pathConfig.validationGroup = this.pathValidationGroup;
 
         encryptionConfig.enabled.subscribe(() => {
             if (this.creationMode === "newDatabase") {
-                this.replication.replicationFactor(this.replication.nodes().length);
+                this.replicationAndSharding.replicationFactor(this.replicationAndSharding.nodes().length);
             }
         });
 
-        this.replication.nodes.subscribe(nodes => {
-            this.replication.replicationFactor(nodes.length);
+        this.replicationAndSharding.nodes.subscribe(nodes => {
+            this.replicationAndSharding.replicationFactor(nodes.length);
         });
 
-        this.replication.replicationFactor.subscribe(factor => {
+        this.replicationAndSharding.replicationFactor.subscribe(factor => {
             if (factor === 1) {
-                this.replication.dynamicMode(false);
+                this.replicationAndSharding.dynamicMode(false);
             }
+            
+            this.assertShardTopologySpace();
         });
+        
+        this.replicationAndSharding.numberOfShards.subscribe(() => {
+           this.assertShardTopologySpace();
+        })
 
         this.restoreSourceObject.subscribe(() => {
             this.clearRestorePoints();
@@ -269,6 +268,34 @@ class databaseCreationModel {
             "remoteFolderAzureChanged", "remoteFolderAmazonChanged", "remoteFolderGoogleCloudChanged"];
         
         _.bindAll(this, ...methods);
+    }
+    
+    private assertShardTopologySpace() {
+        const factor = this.replicationAndSharding.replicationFactor();
+        const shardCount = this.replicationAndSharding.numberOfShards();
+        
+        // assert we have space for manual sharding topology
+        this.replicationAndSharding.shardTopology().forEach(shard => {
+            const currentReplicas = shard.replicas.length;
+            if (currentReplicas < factor) {
+                Array.from(Array(factor - currentReplicas)).forEach(() => {
+                    shard.replicas.push(null);
+                });
+            }
+        });
+
+        // assert we have space for manual sharding topology
+        const currentLength = this.replicationAndSharding.shardTopology().length;
+        if (currentLength < shardCount) {
+            const replicationFactor = this.replicationAndSharding.replicationFactor();
+
+            Array.from(Array(shardCount - currentLength)).forEach(() => {
+                const newItem: shardTopologyItem = {
+                    replicas: ko.observableArray(new Array(replicationFactor).fill(null))
+                }
+                this.replicationAndSharding.shardTopology.push(newItem);
+            });
+        }
     }
     
     downloadCloudCredentials(link: string) {
@@ -359,10 +386,6 @@ class databaseCreationModel {
         return this.configurationSections.find(x => x.id === "encryption");
     }
 
-    getShardingConfigSection() {
-        return this.configurationSections.find(x => x.id === "sharding");
-    }
-
     protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
         const maxLength = 248;
 
@@ -425,8 +448,7 @@ class databaseCreationModel {
                 }]
         });
         
-        this.setupReplicationValidation(maxReplicationFactor);
-        this.setupShardingValidation();
+        this.setupReplicationAndShardingValidation(maxReplicationFactor);
         this.setupEncryptionValidation();
         
         if (this.creationMode === "restore") {
@@ -434,19 +456,26 @@ class databaseCreationModel {
         }
     }
     
-    private setupReplicationValidation(maxReplicationFactor: number) {
-        this.replication.nodes.extend({
+    private setupReplicationAndShardingValidation(maxReplicationFactor: number) {
+        this.replicationAndSharding.nodes.extend({
             validation: [{
-                validator: () => !this.replication.manualMode() || this.replication.replicationFactor() > 0,
+                validator: () => !this.replicationAndSharding.manualMode() || this.replicationAndSharding.replicationFactor() > 0,
                 message: `Please select at least one node.`
             }]
         });
 
-        this.replication.replicationFactor.extend({
+        this.replicationAndSharding.orchestrators.extend({
+            validation: [{
+                validator: () => !this.replicationAndSharding.manualMode() || !this.replicationAndSharding.enableSharding() || this.replicationAndSharding.orchestrators().length > 0,
+                message: `Please select at least one node.`
+            }]
+        });
+
+        this.replicationAndSharding.replicationFactor.extend({
             required: true,
             validation: [
                 {
-                    validator: (val: number) => val >= 1 || this.replication.manualMode(),
+                    validator: (val: number) => val >= 1 || this.replicationAndSharding.manualMode(),
                     message: `Replication factor must be at least 1.`
                 },
                 {
@@ -457,11 +486,9 @@ class databaseCreationModel {
             ],
             digit: true
         });
-    }
-    
-    private setupShardingValidation() {
-        this.sharding.numberOfShards.extend({
-            required: true,
+
+        this.replicationAndSharding.numberOfShards.extend({
+            required: () => this.replicationAndSharding.enableSharding(),
             validation: [
                 {
                     validator: (val: number) => val >= 1,
@@ -470,6 +497,49 @@ class databaseCreationModel {
             ],
             digit: true
         });
+        
+        this.replicationAndSharding.shardTopology.extend({
+            required: true,
+            validation: [
+                {
+                    validator: () => {
+                        if (!this.replicationAndSharding.enableSharding() || !this.replicationAndSharding.manualMode()) {
+                            return true;
+                        }
+                        
+                        const shardTopology = this.replicationAndSharding.shardTopology();
+                        const shards = this.replicationAndSharding.numberOfShards();
+                        const replicas = this.replicationAndSharding.replicationFactor();
+                        const shardInUse = shardTopology.slice(0, shards);
+                        
+                        return shardInUse.every(s => {
+                            const replicasInUse = s.replicas().slice(0, replicas);
+                            return replicasInUse.some(x => x);
+                        });
+                    },
+                    message: "Each shard needs at least one replica"
+                },
+                {
+                    validator: () => {
+                        if (!this.replicationAndSharding.enableSharding() || !this.replicationAndSharding.manualMode()) {
+                            return true;
+                        }
+                        
+                        const shardTopology = this.replicationAndSharding.shardTopology();
+                        const shards = this.replicationAndSharding.numberOfShards();
+                        const replicas = this.replicationAndSharding.replicationFactor();
+                        const shardInUse = shardTopology.slice(0, shards);
+
+                        return shardInUse.every(s => {
+                            const replicasInUse = s.replicas().slice(0, replicas);
+                            const usedNodes = replicasInUse.filter(x => x).map(x => x.tag());
+                            return usedNodes.length === new Set(usedNodes).size;
+                        });
+                    },
+                    message: "Invalid shard topology - replicas must reside on different nodes"
+                }
+            ]
+        })
     }
     
     private setupRestoreValidation() {
@@ -545,11 +615,11 @@ class databaseCreationModel {
     
     private topologyToDto(): Raven.Client.ServerWide.DatabaseTopology {
         const topology = {
-            DynamicNodesDistribution: this.replication.dynamicMode()
+            DynamicNodesDistribution: this.replicationAndSharding.dynamicMode()
         } as Raven.Client.ServerWide.DatabaseTopology;
 
-        if (this.replication.manualMode()) {
-            const nodes = this.replication.nodes();
+        if (this.replicationAndSharding.manualMode()) {
+            const nodes = this.replicationAndSharding.nodes();
             topology.Members = nodes.map(node => node.tag());
         }
         return topology;
@@ -567,16 +637,27 @@ class databaseCreationModel {
             settings[configuration.core.dataDirectory] = dataDir;
         }
 
-        const sharded = this.getShardingConfigSection().enabled();
+        const sharded = this.replicationAndSharding.enableSharding();
+        const manualMode = this.replicationAndSharding.manualMode();
         const shards: Record<string, Raven.Client.ServerWide.DatabaseTopology> = {};
-        const numberOfShards = this.sharding.numberOfShards();
+        const numberOfShards = this.replicationAndSharding.numberOfShards();
         if (numberOfShards && sharded) {
             for (let i = 0; i < numberOfShards; i++) {
-                shards[i.toString()] = {} as Raven.Client.ServerWide.DatabaseTopology;
+                const shardTopology = {
+                } as Raven.Client.ServerWide.DatabaseTopology;
+                
+                if (manualMode) {
+                    const shardLayout = this.replicationAndSharding.shardTopology()[i].replicas().slice(0, numberOfShards);
+                    shardTopology.Members = shardLayout.filter(x => x).map(x => x.tag());
+                }
+                
+                shards[i.toString()] = shardTopology;
             }
         }
         
-        const clusterNodeTags = clusterTopologyManager.default.topology()?.nodes().map(x => x.tag()) ?? [];
+        const orchestrators = manualMode 
+            ? this.replicationAndSharding.orchestrators().map(x => x.tag()) 
+            : (clusterTopologyManager.default.topology()?.nodes().map(x => x.tag()) ?? []);
         
         return {
             DatabaseName: this.name(),
@@ -588,7 +669,7 @@ class databaseCreationModel {
                 Shards: shards,
                 Orchestrator: {
                     Topology: {
-                        Members: clusterNodeTags
+                        Members: orchestrators
                     }
                 }
             } : null
