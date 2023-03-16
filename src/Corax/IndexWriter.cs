@@ -401,7 +401,6 @@ namespace Corax
         public void UpdateDynamicFieldsMapping(IndexFieldsMapping current)
         {
             _dynamicFieldsMapping = current;
-
         }
 
         private const string SuggestionsTreePrefix = "__Suggestion_";
@@ -454,6 +453,7 @@ namespace Corax
             _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
         }
 
+        /// <returns>Encoded id (with freq/container_type)</returns>
         public long Index(string id, Span<byte> data)
         {
             using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
@@ -462,11 +462,12 @@ namespace Corax
 
         public long Index(string id, Span<byte> data, float documentBoost)
         {
-            var entryId = Index(id, data);
-            AppendDocumentBoost(entryId, documentBoost);
-            return entryId;
+            var idInTree = Index(id, data);
+            AppendDocumentBoost(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree), documentBoost);
+            return idInTree;
         }
         
+        /// <returns>Encoded id (with freq/container_type)</returns>
         private unsafe long Index(Slice id, Span<byte> data)
         {
             _numberOfModifications++;
@@ -523,12 +524,14 @@ namespace Corax
         //We've to add entry container id (without frequency etc) here because in 'SortingMatch' we have already decoded ids.
         private unsafe void AppendDocumentBoost(long entryId, float documentBoost, bool isUpdate = false)
         {
+            EntryIdEncodings.AssertIsNotEncodedContainerId(entryId);
+            
             if (documentBoost.AlmostEquals(1f))
             {
                 
                 // We don't store `1` but if user update boost value to 1 we've to delete the previous one
                 if (isUpdate)
-                    _documentBoost.Delete(EntryIdEncodings.DecodeAndDiscardFrequency(entryId));
+                    _documentBoost.Delete(entryId);
                 
                 return;
             }
@@ -539,24 +542,27 @@ namespace Corax
 
             documentBoost = MathF.Log(documentBoost + 1); // ensure we've positive number
             
-            using var __ = _documentBoost.DirectAdd(EntryIdEncodings.DecodeAndDiscardFrequency(entryId), out _, out byte* boostPtr);
+            using var __ = _documentBoost.DirectAdd(entryId, out _, out byte* boostPtr);
             float* floatBoostPtr = (float*)boostPtr;
             *floatBoostPtr = documentBoost;
         }
 
+
+        /// <param name="entryId">Container id of entry (without encodings)</param>
         private unsafe void RemoveDocumentBoost(long entryId)
         {
-            _documentBoost.Delete(EntryIdEncodings.DecodeAndDiscardFrequency(entryId));
-        }
-
-        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries, float documentBoost)
-        {
-            var entryId = Update(field, key, id, data, ref numberOfEntries);
-            AppendDocumentBoost(entryId, documentBoost, true);
-            return entryId;
+            EntryIdEncodings.AssertIsNotEncodedContainerId(entryId);
+            _documentBoost.Delete(entryId);
         }
         
-       // idInTree - encoded with frequency and container type
+        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries, float documentBoost)
+        {
+            var idInTree = Update(field, key, id, data, ref numberOfEntries);
+            AppendDocumentBoost(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree), documentBoost, true);
+            return idInTree;
+        }
+        
+       /// <returns>Encoded entryId</returns>
         public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries)
         {
             if (TryGetEntryTermId(field, key, out var idInTree) == false)
@@ -1326,10 +1332,10 @@ namespace Corax
         /// <param name="idInTree">With frequencies and container type.</param>
         private void RecordDeletion(long idInTree)
         {
+            var entryId = EntryIdEncodings.GetContainerId(idInTree);
             if ((idInTree & (long)TermIdMask.Set) != 0)
             {
-                var id = EntryIdEncodings.GetContainerId(idInTree);
-                var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, id);
+                var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, entryId);
                 ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
                 
                 using var set = new PostingList(Transaction.LowLevelTransaction, Slices.Empty, setState);
@@ -1343,8 +1349,7 @@ namespace Corax
             }
             else if ((idInTree & (long)TermIdMask.Small) != 0)
             {
-                var id = EntryIdEncodings.GetContainerId(idInTree);
-                var smallSet = Container.Get(Transaction.LowLevelTransaction, id).ToSpan();
+                var smallSet = Container.Get(Transaction.LowLevelTransaction, entryId).ToSpan();
                 // combine with existing value
                 var cur = 0L;
                 var count = ZigZagEncoding.Decode<int>(smallSet, out var pos);
@@ -1359,7 +1364,7 @@ namespace Corax
             }
             else
             {
-                _deletedEntries.Add(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree));
+                _deletedEntries.Add(entryId);
                 _numberOfModifications--;
             }
         }
@@ -1485,7 +1490,7 @@ namespace Corax
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 
-                bool found = fieldTree.TryGetNextValue(termsSpan, out var existing, out var scope);
+                bool found = fieldTree.TryGetNextValue(termsSpan, out var existingIdInTree, out var scope);
                 if (entries.TotalAdditions > 0 && found == false)
                 {
                     if (entries.TotalRemovals != 0)
@@ -1499,7 +1504,7 @@ namespace Corax
                 }
                 else
                 {
-                    switch (AddEntriesToTerm(tmpBuf, existing, ref entries, out termId))
+                    switch (AddEntriesToTerm(tmpBuf, existingIdInTree, ref entries, out termId))
                     {
                         case AddEntriesToTermResult.UpdateTermId:
                             dumper.WriteAddition(term, termId);
@@ -1532,25 +1537,28 @@ namespace Corax
             RemoveTermId
         }
 
-        private AddEntriesToTermResult AddEntriesToTerm(Span<byte> tmpBuf, long existing, ref EntriesModifications entries, out long termId)
+
+        /// <param name="idInTree">encoded</param>
+        /// <param name="termId">encoded</param>
+        private AddEntriesToTermResult AddEntriesToTerm(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
-            if ((existing & (long)TermIdMask.Set) != 0)
+            if ((idInTree & (long)TermIdMask.Set) != 0)
             {
-                return AddEntriesToTermResultViaLargeSet(ref entries, out termId, existing & Constants.StorageMask.ContainerType);
+                return AddEntriesToTermResultViaLargeSet(ref entries, out termId, idInTree & Constants.StorageMask.ContainerType);
             }
-            if ((existing & (long)TermIdMask.Small) != 0)
+            if ((idInTree & (long)TermIdMask.Small) != 0)
             {
-                return AddEntriesToTermResultViaSmallSet(tmpBuf, ref entries, out termId, existing & Constants.StorageMask.ContainerType);
+                return AddEntriesToTermResultViaSmallSet(tmpBuf, ref entries, out termId, idInTree & Constants.StorageMask.ContainerType);
             }
-            return AddEntriesToTermResultSingleValue(tmpBuf, existing, ref entries, out termId);
+            return AddEntriesToTermResultSingleValue(tmpBuf, idInTree, ref entries, out termId);
         }
 
-        private AddEntriesToTermResult AddEntriesToTermResultViaSmallSet(Span<byte> tmpBuf, ref EntriesModifications entries, out long termId, long id)
+        private AddEntriesToTermResult AddEntriesToTermResultViaSmallSet(Span<byte> tmpBuf, ref EntriesModifications entries, out long termIdInTree, long idInTree)
         {
-            id = EntryIdEncodings.GetContainerId(id);
+            var containerId = EntryIdEncodings.GetContainerId(idInTree);
             
             var llt = Transaction.LowLevelTransaction;
-            var smallSet = Container.GetMutable(llt, id);
+            var smallSet = Container.GetMutable(llt, containerId);
             Debug.Assert(entries.Removals.ToArray().Distinct().Count() == entries.TotalRemovals, $"Removals list is not distinct.");
             int removalIndex = 0;
             
@@ -1599,38 +1607,38 @@ namespace Corax
 
             if (entries.TotalAdditions == 0)
             {
-                Container.Delete(llt, _postingListContainerId, id);
-                termId = -1;
+                Container.Delete(llt, _postingListContainerId, containerId);
+                termIdInTree = -1;
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
             if (TryDeltaEncodingToBuffer(entries.Additions, tmpBuf, out var encoded) == false)
             {
-                AddNewTermToSet(entries.Additions, out termId);
+                AddNewTermToSet(entries.Additions, out termIdInTree);
                 return AddEntriesToTermResult.UpdateTermId;
             }
 
             if (encoded.TryCopyTo(smallSet))
             {
                 // can update in place
-                termId = -1;
+                termIdInTree = -1;
                 return AddEntriesToTermResult.NothingToDo;
             }
 
-            Container.Delete(llt, _postingListContainerId, id);
+            Container.Delete(llt, _postingListContainerId, containerId);
             var allocatedSize = encoded.Length + 32 - (encoded.Length % 32);
 
-            termId = Container.Allocate(llt, _postingListContainerId, allocatedSize, out var space);
-            termId = EntryIdEncodings.Encode(termId, 0, TermIdMask.Small);
+            termIdInTree = Container.Allocate(llt, _postingListContainerId, allocatedSize, out var space);
+            termIdInTree = EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.Small);
             
             encoded.CopyTo(space);
             return AddEntriesToTermResult.UpdateTermId;
         }
 
-        private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long existing, ref EntriesModifications entries, out long termId)
+        private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
             entries.AssertPreparationIsNotFinished();
-            var (existingEntryId, existingFrequency) = EntryIdEncodings.Decode(existing);
+            var (existingEntryId, existingFrequency) = EntryIdEncodings.Decode(idInTree);
 
             // single
             if (entries.TotalAdditions == 1 && entries.Additions[0] == existingEntryId && entries.AdditionsFrequency[0] == existingFrequency && entries.TotalRemovals == 0)
@@ -1643,7 +1651,7 @@ namespace Corax
             if (entries.TotalRemovals != 0)
             {
                 if (entries.Removals[0] != existingEntryId || entries.RemovalsFrequency[0] != existingFrequency || entries.TotalRemovals != 1)
-                    throw new InvalidDataException($"Attempt to delete id {string.Join(", ", entries.Removals.ToArray())} that does not exists, only value is: {existing}");
+                    throw new InvalidDataException($"Attempt to delete id {string.Join(", ", entries.Removals.ToArray())} that does not exists, only value is: {idInTree}");
 
                 if (entries.TotalAdditions == 0)
                 {
@@ -1662,9 +1670,9 @@ namespace Corax
 
         private AddEntriesToTermResult AddEntriesToTermResultViaLargeSet(ref EntriesModifications entries, out long termId, long id)
         {
-            id = EntryIdEncodings.GetContainerId(id);
+            var containerId = EntryIdEncodings.GetContainerId(id);
             var llt = Transaction.LowLevelTransaction;
-            var setSpace = Container.GetMutable(llt, id);
+            var setSpace = Container.GetMutable(llt, containerId);
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             
             entries.PrepareDataForCommiting();
@@ -1675,7 +1683,7 @@ namespace Corax
             if (numberOfEntries == 0)
             {
                 llt.FreePage(postingListState.RootPage);
-                Container.Delete(llt, _postingListContainerId, id);
+                Container.Delete(llt, _postingListContainerId, containerId);
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
