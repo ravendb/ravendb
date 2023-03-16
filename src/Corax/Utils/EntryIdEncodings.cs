@@ -78,9 +78,10 @@ public static class EntryIdEncodings
         while (currentIdx < idX)
         {
             ref var currentPtr = ref Unsafe.Add(ref start, currentIdx);
-            var innerBuffer = Avx.LoadVector256((long*)Unsafe.AsPointer(ref currentPtr));
+            var innerBuffer = Vector256.LoadUnsafe(ref currentPtr);
             var shiftRightLogical = Avx2.ShiftRightLogical(innerBuffer, EntryIdOffset);
-            Avx.Store((long*)Unsafe.AsPointer(ref currentPtr), shiftRightLogical);
+            Vector256.StoreUnsafe(shiftRightLogical, ref currentPtr); 
+
             currentIdx += Vector256<long>.Count;
         }
 
@@ -102,9 +103,10 @@ public static class EntryIdEncodings
         while (currentIdx < idX)
         {
             ref var currentPtr = ref Unsafe.Add(ref start, currentIdx);
-            var innerBuffer = AdvSimd.LoadVector128((long*)Unsafe.AsPointer(ref currentPtr));
+            var innerBuffer = Vector128.LoadUnsafe(ref currentPtr);
             var shiftRightLogical = AdvSimd.ShiftRightLogical(innerBuffer, EntryIdOffset);
-            Avx.Store((long*)Unsafe.AsPointer(ref currentPtr), shiftRightLogical);
+            Vector128.StoreUnsafe(shiftRightLogical, ref currentPtr); 
+            
             currentIdx += Vector128<long>.Count;
         }
 
