@@ -224,7 +224,7 @@ interface operationIdDto {
     OperationId: number;
 }
 
-type availableConfigurationSectionId = "restore" | "encryption" | "replication" | "sharding" | "path";
+type availableConfigurationSectionId = "restore" | "encryption" | "replicationAndSharding" | "path";
 
 type restoreSource = "local" | "cloud" | "amazonS3" | "azure" | "googleCloud";
 

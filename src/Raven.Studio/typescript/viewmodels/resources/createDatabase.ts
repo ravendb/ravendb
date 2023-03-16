@@ -30,7 +30,7 @@ class createDatabase extends dialogViewModelBase {
     
     static readonly legacyKeySizes = [128, 192, 256];
 
-    static readonly defaultSection = "replication";
+    static readonly defaultSection: availableConfigurationSectionId = "replicationAndSharding";
     
     clientVersion = viewModelBase.clientVersion;
 
@@ -53,6 +53,7 @@ class createDatabase extends dialogViewModelBase {
     enforceManualNodeSelection: KnockoutComputed<boolean>;
     disableReplicationFactorInput: KnockoutComputed<boolean>;
     selectionState: KnockoutComputed<checkbox>;
+    orchestratorSelectionState: KnockoutComputed<checkbox>;
     canUseDynamicOption: KnockoutComputed<boolean>; 
     defaultReplicationFactor = ko.observable<number>();
 
@@ -73,8 +74,7 @@ class createDatabase extends dialogViewModelBase {
     advancedVisibility = {
         restore: ko.pureComputed(() => this.currentAdvancedSection() === "restore"),
         encryption: ko.pureComputed(() => this.currentAdvancedSection() === "encryption"),
-        replication: ko.pureComputed(() => this.currentAdvancedSection() === "replication"),
-        sharding: ko.pureComputed(() => this.currentAdvancedSection() === "sharding"),
+        replicationAndSharding: ko.pureComputed(() => this.currentAdvancedSection() === "replicationAndSharding"),
         path: ko.pureComputed(() => this.currentAdvancedSection() === "path")
     };
 
@@ -96,7 +96,7 @@ class createDatabase extends dialogViewModelBase {
         
         this.encryptionSection = setupEncryptionKey.forDatabase(this.databaseModel.encryption.key, this.databaseModel.encryption.confirmation, this.databaseModel.name);
 
-        this.bindToCurrentInstance("showAdvancedConfigurationFor", "toggleSelectAll");
+        this.bindToCurrentInstance("showAdvancedConfigurationFor", "toggleSelectAll", "orchestratorToggleSelectAll", "setShardTopologyNode", "getShardTopologyNode");
     }
 
     activate() {
@@ -131,6 +131,7 @@ class createDatabase extends dialogViewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        
         this.encryptionSection.syncQrCode();
         this.setupDisableReasons("#savingKeyData");
         
@@ -158,12 +159,12 @@ class createDatabase extends dialogViewModelBase {
         });
 
         if (this.databaseModel.isFromBackup) {
-            this.databaseModel.replication.replicationFactor(1);
+            this.databaseModel.replicationAndSharding.replicationFactor(1);
         }
         
         // if we have single node - select it to make things easier
         if (this.clusterNodes.length === 1) {
-            this.databaseModel.replication.nodes([this.clusterNodes[0]]);
+            this.databaseModel.replicationAndSharding.nodes([this.clusterNodes[0]]);
         }
         
         this.databaseModel.restore.selectedRestorePoint.subscribe(restorePoint => {
@@ -183,14 +184,17 @@ class createDatabase extends dialogViewModelBase {
         this.clusterNodes = topology.nodes();
         
         const defaultReplicationFactor = this.defaultReplicationFactor() || this.clusterNodes.length;
-        this.databaseModel.replication.replicationFactor(defaultReplicationFactor);
+        this.databaseModel.replicationAndSharding.replicationFactor(defaultReplicationFactor);
+        
+        // also preset orchestrators in case of sharding
+        this.databaseModel.replicationAndSharding.orchestrators(this.clusterNodes.slice());
     }
 
     protected initObservables() {
         this.canUseDynamicOption = ko.pureComputed(() => {
             const fromBackup = this.databaseModel.isFromBackup;
             const enforceManual = this.enforceManualNodeSelection();
-            const replicationFactor = this.databaseModel.replication.replicationFactor();
+            const replicationFactor = this.databaseModel.replicationAndSharding.replicationFactor();
             return !fromBackup && !enforceManual && replicationFactor !== 1;
         });
 
@@ -219,26 +223,26 @@ class createDatabase extends dialogViewModelBase {
             const creationMode = this.databaseModel.creationMode;
             const canUseManualMode = creationMode === "newDatabase";
             if (encryptionEnabled && canUseManualMode) {
-                this.databaseModel.replication.dynamicMode(false);
-                this.databaseModel.replication.manualMode(true);
+                this.databaseModel.replicationAndSharding.dynamicMode(false);
+                this.databaseModel.replicationAndSharding.manualMode(true);
             }
         });
 
         this.showDynamicDatabaseDistributionWarning = ko.pureComputed(() => {
             const hasDynamicDatabaseDistribution = licenseModel.licenseStatus().HasDynamicNodesDistribution;
             if (!hasDynamicDatabaseDistribution) {
-                this.databaseModel.replication.dynamicMode(false);
+                this.databaseModel.replicationAndSharding.dynamicMode(false);
             }
             return !hasDynamicDatabaseDistribution;
         });
 
         this.showReplicationFactorWarning = ko.pureComputed(() => {
-            const factor = this.databaseModel.replication.replicationFactor();
+            const factor = this.databaseModel.replicationAndSharding.replicationFactor();
             return factor === 1;
         });
 
         this.showNumberOfShardsWarning = ko.pureComputed(() => {
-            const shards = this.databaseModel.sharding.numberOfShards();
+            const shards = this.databaseModel.replicationAndSharding.numberOfShards();
             return shards === 0;
         });
 
@@ -250,12 +254,25 @@ class createDatabase extends dialogViewModelBase {
         });
 
         this.disableReplicationFactorInput = ko.pureComputed(() => {
-            return this.databaseModel.replication.manualMode();
+            const manual = this.databaseModel.replicationAndSharding.manualMode();
+            const sharded = this.databaseModel.replicationAndSharding.enableSharding();
+            return manual && !sharded;
         });
 
         this.selectionState = ko.pureComputed<checkbox>(() => {
             const clusterNodes = this.clusterNodes;
-            const selectedCount = this.databaseModel.replication.nodes().length;
+            const selectedCount = this.databaseModel.replicationAndSharding.nodes().length;
+
+            if (clusterNodes.length && selectedCount === clusterNodes.length)
+                return "checked";
+            if (selectedCount > 0)
+                return "some_checked";
+            return "unchecked";
+        });
+
+        this.orchestratorSelectionState = ko.pureComputed<checkbox>(() => {
+            const clusterNodes = this.clusterNodes;
+            const selectedCount = this.databaseModel.replicationAndSharding.orchestrators().length;
 
             if (clusterNodes.length && selectedCount === clusterNodes.length)
                 return "checked";
@@ -311,9 +328,9 @@ class createDatabase extends dialogViewModelBase {
 
         this.databaseLocationInfoToDisplay = ko.pureComputed(() => {
             const databaseLocationInfo = this.databaseLocationInfo();
-            const selectedNodes = this.databaseModel.replication.nodes().map(x => x.tag());
-            const replicationFactor = this.databaseModel.replication.replicationFactor();
-            if (this.databaseModel.replication.manualMode()) {
+            const selectedNodes = this.databaseModel.replicationAndSharding.nodes().map(x => x.tag());
+            const replicationFactor = this.databaseModel.replicationAndSharding.replicationFactor();
+            if (this.databaseModel.replicationAndSharding.manualMode()) {
                 if (selectedNodes.length === 0) {
                     return [];
                 }
@@ -332,8 +349,8 @@ class createDatabase extends dialogViewModelBase {
 
         this.databaseLocationInfoMessage = ko.pureComputed(() => {
             const message = "The data files will be created in";
-            const selectedNodes = this.databaseModel.replication.nodes().map(x => x.tag());
-            if (this.databaseModel.replication.manualMode()) {
+            const selectedNodes = this.databaseModel.replicationAndSharding.nodes().map(x => x.tag());
+            if (this.databaseModel.replicationAndSharding.manualMode()) {
                 if (selectedNodes.length === 0) {
                     return null;
                 }
@@ -342,7 +359,7 @@ class createDatabase extends dialogViewModelBase {
             }
 
             const numberOfClusterNodes = this.clusterNodes.length;
-            const replicationFactor = Math.min(this.databaseModel.replication.replicationFactor(), numberOfClusterNodes);
+            const replicationFactor = Math.min(this.databaseModel.replicationAndSharding.replicationFactor(), numberOfClusterNodes);
             if (replicationFactor === 0) {
                 return null;
             }
@@ -478,7 +495,7 @@ class createDatabase extends dialogViewModelBase {
         this.spinners.create(true);
 
         const databaseDocument = this.databaseModel.toDto();
-        const replicationFactor = this.databaseModel.replication.replicationFactor();
+        const replicationFactor = this.databaseModel.replicationAndSharding.replicationFactor();
 
         if (shouldActive) {
             databasesManager.default.activateAfterCreation(databaseDocument.DatabaseName);
@@ -488,7 +505,7 @@ class createDatabase extends dialogViewModelBase {
 
         const encryptionSection = this.databaseModel.configurationSections.find(x => x.id === "encryption");
         if (encryptionSection.enabled()) {
-            const nodeTags = this.databaseModel.replication.nodes().map(x => x.tag());
+            const nodeTags = this.databaseModel.replicationAndSharding.nodes().map(x => x.tag());
             this.encryptionSection.configureEncryption(this.databaseModel.encryption.key(), nodeTags)
                 .done(() => encryptionTask.resolve())
                 .fail(() => this.spinners.create(false));
@@ -535,7 +552,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleSelectAll() {
-        const replicationConfig = this.databaseModel.replication;
+        const replicationConfig = this.databaseModel.replicationAndSharding;
         const selectedCount = replicationConfig.nodes().length;
 
         if (selectedCount > 0) {
@@ -545,9 +562,42 @@ class createDatabase extends dialogViewModelBase {
         }
     }
 
+    orchestratorToggleSelectAll() {
+        const replicationConfig = this.databaseModel.replicationAndSharding;
+        const selectedCount = replicationConfig.orchestrators().length;
+
+        if (selectedCount > 0) {
+            replicationConfig.orchestrators([]);
+        } else {
+            replicationConfig.orchestrators(this.clusterNodes.slice());
+        }
+    }
+
     redirectToCertificates(){
         dialog.close(this);
         router.navigate(appUrl.forCertificates());
+    }
+    
+    setShardTopologyNode(shardNumber: number, replica: number, node: clusterNode): void {
+        const topology = this.databaseModel.replicationAndSharding.shardTopology();
+        const shardTopology = topology[shardNumber];
+        if (!shardTopology) {
+            return;
+        }
+        
+        const replicasCopy = shardTopology.replicas().slice();
+        replicasCopy[replica] = node;
+        shardTopology.replicas(replicasCopy);
+    }
+    
+    getShardTopologyNode(shardNumber: number, replica: number): string {
+        const topology = this.databaseModel.replicationAndSharding.shardTopology();
+        const shardTopology = topology[shardNumber];
+        if (!shardTopology) {
+            return null;
+        }
+        
+        return shardTopology.replicas()[replica]?.tag() ?? null;
     }
 }
 

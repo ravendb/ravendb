@@ -5,7 +5,8 @@
                 <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
                 <h4 class="modal-title" id="newDatabaseLabel">
                     <i class="icon-new-database"></i>
-                    <span>New database 
+                    <span>
+                        New database 
                         <span data-bind="visible: databaseModel.creationMode === 'restore'">from backup (Restore)</span>
                     </span>
                 </h4>
@@ -53,11 +54,7 @@
                             </div>
                         </div>
                         <div>
-                            <div class="replication" data-bind="template: { name: 'create-db-replication' }, visible: advancedVisibility.replication()">
-                            </div>
-                        </div>
-                        <div>
-                            <div class="replication" data-bind="template: { name: 'create-db-sharding' }, visible: advancedVisibility.sharding()">
+                            <div class="replication" data-bind="template: { name: 'create-db-replication' }, visible: advancedVisibility.replicationAndSharding()">
                             </div>
                         </div>
                         <div>
@@ -568,8 +565,8 @@
 </script>
 
 <script type="text/html" id="create-db-replication">
-    <h3>Replication Configuration</h3>
-    <div data-bind="with: databaseModel.replication" class="margin-top-sm">
+    <h3>Replication &amp; Sharding Configuration</h3>
+    <div data-bind="with: databaseModel.replicationAndSharding" class="margin-top-sm">
         <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackup ? '' : '62px' }">
             <div class="input-group" title="Set the number of nodes that will contain the database" 
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
@@ -602,55 +599,130 @@
                 Your current license doesn't include the dynamic database distribution feature.
             </div>
         </div>
+    </div>
+
+    <div data-bind="with: databaseModel.replicationAndSharding">
+        <div data-bind="visible: !$root.databaseModel.isFromBackup">
+            <div class="toggle">
+                <input class="styled" type="checkbox" id="sharded_db" data-bind="checked: enableSharding">
+                <label for="sharded_db">Enable sharding</label>
+            </div>
+        </div>
+
+        <div class="margin-top-sm" data-bind="collapse: enableSharding">
+            <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackup ? '' : '62px' }">
+                <div class="input-group" title="Set the number of shards for the the database"
+                     data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showNumberOfShardsWarning()) }, validationElement: numberOfShards">
+                    <span class="input-group-addon">Number of Shards</span>
+                    <input class="form-control" type="number" min="1" title="Set the number of shards for the database" placeholder="Enter number of shards"
+                           data-bind="numericInput: numberOfShards, disable: $root.databaseModel.isFromBackup" />
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div data-bind="with: databaseModel.replicationAndSharding">
         <div data-bind="visible: !$root.databaseModel.isFromBackup">
             <div class="toggle">
                 <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection()">
-                <label for="manual_mode">Set replication nodes manually</label>
+                <label for="manual_mode">Set nodes layout manually</label>
             </div>
             <small class="toggle-caption" data-bind="visible: !$root.enforceManualNodeSelection() && !manualMode()">Replication nodes will be selected randomly among the cluster's nodes.</small>
             <small class="toggle-caption" data-bind="visible: !$root.enforceManualNodeSelection() && manualMode()">Select replication nodes from the list below.</small>
             <small class="toggle-caption" data-bind="visible: $root.enforceManualNodeSelection">Encryption was enabled. Please choose replication nodes manually.</small>
         </div>
-        <div class="bg-info padding no-margin" data-bind="visible: manualMode()">
-            <small>Available nodes</small>
-            <div class="checkbox">
-                <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">
-                <label for="toggle_all_in_cluster"><i class="icon-cluster"></i><span>All cluster nodes</span></label>
-            </div>
-            <div data-bind="foreach: $root.clusterNodes">
-                <div class="checkbox checkbox-info" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
-                    <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_' + $index() }, checked: $parent.nodes, checkedValue: $data">
-                    <label data-bind="attr: { for: 'cluster_node_' + $index() }">
-                        <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span> &nbsp; <small data-bind="text: serverUrl()"></small>
-                    </label>
-                </div>
-            </div>
+        <div data-bind="if: manualMode() && enableSharding()">
+            <div data-bind="template: { name: 'manual-selection-sharded' }"></div>
         </div>
-        <div data-bind="validationElement: nodes">
-            <div class="help-block" data-bind="validationMessage: nodes"></div>
-        </div>  
+        <div data-bind="if: manualMode() && !enableSharding()">
+            <div data-bind="template: { name: 'manual-selection-non-sharded' }"></div>
+        </div>
     </div>
 </script>
 
-<script type="text/html" id="create-db-sharding">
-    <h3>Sharding Configuration</h3>
-    <div data-bind="with: databaseModel.sharding" class="margin-top-sm">
-        <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackup ? '' : '62px' }">
-            <div class="input-group" title="Set the number of shards for the the database"
-                 data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showNumberOfShardsWarning()) }, validationElement: numberOfShards">
-                <span class="input-group-addon">Number of Shards</span>
-                <input class="form-control" type="number" min="1" title="Set the number of shards for the database" placeholder="Enter number of shards"
-                       data-bind="numericInput: numberOfShards, disable: $root.databaseModel.isFromBackup" />
-            </div>
+<script type="text/html" id="manual-selection-sharded">
+    <div class="bg-info padding no-margin" data-bind="visible: manualMode()">
+        <small>Orchestrator nodes</small>
+        <div class="checkbox">
+            <input type="checkbox" id="toggle_all_in_cluster_sharded" class="styled" data-bind="checkboxTriple: $root.orchestratorSelectionState, event: { change: $root.orchestratorToggleSelectAll }">
+            <label for="toggle_all_in_cluster_sharded"><i class="icon-cluster"></i><span>All cluster nodes</span></label>
         </div>
-        <div class="bg-info padding no-margin">
-            <small>Available nodes</small>
-            <div data-bind="foreach: $root.clusterNodes">
-                <label data-bind="attr: { for: 'cluster_node_' + $index() }">
-                    <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span>&nbsp;<small data-bind="text: serverUrl()"></small>
+        <div data-bind="foreach: $root.clusterNodes">
+            <div class="checkbox checkbox-info" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
+                <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_sharding_' + $index() }, checked: $parent.orchestrators, checkedValue: $data">
+                <label data-bind="attr: { for: 'cluster_node_sharding_' + $index() }">
+                    <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span> &nbsp; <small data-bind="text: serverUrl()"></small>
                 </label>
             </div>
         </div>
+    </div>
+    <div data-bind="validationElement: orchestrators">
+        <div class="help-block" data-bind="validationMessage: orchestrators"></div>
+    </div>
+    
+    <div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>&nbsp;</th>
+                    <!-- ko foreach: new Array(replicationFactor()) -->
+                    <th>Replica <span data-bind="text: $index() + 1"></span></th>
+                    <!-- /ko -->
+                </tr>
+            </thead>
+            <tbody>
+            <!-- ko foreach: new Array(numberOfShards()) -->
+            <tr>
+                <td data-bind="text: 'Shard #' + $index()"></td>
+                <!-- ko foreach: new Array($parent.replicationFactor()) -->
+                <td>
+                    <div class="flex-grow">
+                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                            <span data-bind="text: $root.getShardTopologyNode($parentContext.$index(), $index()) ?? 'None'"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="#" data-bind="click: _.partial($root.setShardTopologyNode, $parentContext.$index(), $index(), null)">None</a>
+                            </li>
+                            <!-- ko foreach: $root.clusterNodes -->
+                            <li>
+                                <a href="#" data-bind="text: tag, click: _.partial($root.setShardTopologyNode, $parentContext.$parentContext.$index(), $parentContext.$index(), $data)"></a>
+                            </li>
+                            <!-- /ko -->
+                        </ul>
+                    </div>
+                    
+                </td>
+                <!-- /ko -->
+            </tr>
+            <!-- /ko -->
+            </tbody>
+        </table>
+        <div data-bind="validationElement: shardTopology">
+            <div class="help-block" data-bind="validationMessage: shardTopology"></div>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="manual-selection-non-sharded">
+    <div class="bg-info padding no-margin" data-bind="visible: manualMode()">
+        <small>Available nodes</small>
+        <div class="checkbox">
+            <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">
+            <label for="toggle_all_in_cluster"><i class="icon-cluster"></i><span>All cluster nodes</span></label>
+        </div>
+        <div data-bind="foreach: $root.clusterNodes">
+            <div class="checkbox checkbox-info" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
+                <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_' + $index() }, checked: $parent.nodes, checkedValue: $data">
+                <label data-bind="attr: { for: 'cluster_node_' + $index() }">
+                    <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span> &nbsp; <small data-bind="text: serverUrl()"></small>
+                </label>
+            </div>
+        </div>
+    </div>
+    <div data-bind="validationElement: nodes">
+        <div class="help-block" data-bind="validationMessage: nodes"></div>
     </div>
 </script>
 
