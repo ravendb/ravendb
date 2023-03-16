@@ -740,8 +740,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public void WhereIn(string fieldName, IEnumerable<object> values, bool exact = false)
         {
             AssertMethodIsCurrentlySupported(nameof(WhereIn));
-            
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            var nestedPath = fieldName.Contains('.');
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: nestedPath);
 
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);

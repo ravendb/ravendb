@@ -1,9 +1,29 @@
 ﻿using System.Text;
+using System;
+using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Queries
 {
     public static class QueryFieldUtil
     {
+        private static readonly HashSet<string> AliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "AS",
+            "SELECT",
+            "WHERE",
+            "GROUP",
+            "ORDER",
+            "INCLUDE",
+            "UPDATE",
+            "LIMIT",
+            "OFFSET"
+        };
+
+        public static bool IsKeyword(int start, int end, StringBuilder sb)
+        {
+            return AliasKeywords.Contains(sb.ToString(start, end - start - 1));
+        }
+        
         public static string EscapeIfNecessary(string name)
         {
             return EscapeIfNecessary(name, isPath: false);
@@ -44,6 +64,13 @@ namespace Raven.Client.Documents.Queries
                         sb.Insert(i, '\'');
                         i++;
                     }
+                    
+                    if (IsKeyword(lastTermStart, i + 1, sb))
+                    {
+                        sb.Insert(lastTermStart, '\'');
+                        i++;
+                        sb.Insert(i, '\'');
+                    }
 
                     lastTermStart = i+1;
                     continue;
@@ -64,7 +91,7 @@ namespace Raven.Client.Documents.Queries
 
             return sb.ToString();
 
-                bool ShouldEscape(string s)
+            bool ShouldEscape(string s)
             {
                 var escape = false;
 

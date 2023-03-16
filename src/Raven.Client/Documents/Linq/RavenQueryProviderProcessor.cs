@@ -703,10 +703,20 @@ namespace Raven.Client.Documents.Linq
 
             var propertyName = GetPropertyName(result.Path, expression.NodeType);
 
+            if(_aliasKeywords.Any(s => propertyName.IndexOf(s, StringComparison.OrdinalIgnoreCase) >= 0))
+                propertyName = AddAliasIfNeeded(propertyName);
+            
             return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath, result.Args)
             {
                 MaybeProperty = result.MaybeProperty
             };
+        }
+
+        private string AddAliasIfNeeded(string propertyName)
+        {
+            var fromAlias = $"{DefaultAliasPrefix}{_aliasesCount++}";
+            AddFromAlias(fromAlias);
+            return $"{fromAlias}.{propertyName}";
         }
 
         private string GetPropertyName(string selectPath, ExpressionType type)
