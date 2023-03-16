@@ -1,5 +1,5 @@
 ﻿import { IndexNodeInfo, IndexSharedInfo } from "components/models/indexes";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import classNames from "classnames";
 import { IndexProgressTooltip } from "./IndexProgressTooltip";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
@@ -171,6 +171,22 @@ interface JoinedIndexProgressProps {
     index: IndexSharedInfo;
 }
 
+function calculateOverallProgress(index: IndexSharedInfo) {
+    const allProgresses = index.nodesInfo.filter((x) => x.status === "success" && x.progress);
+    if (!allProgresses.length) {
+        return 0;
+    }
+
+    const processed = allProgresses.reduce((p, c) => p + c.progress.global.processed, 0);
+    const total = allProgresses.reduce((p, c) => p + c.progress.global.total, 0);
+
+    if (total === 0) {
+        return 1;
+    }
+
+    return processed / total;
+}
+
 export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
     const { index } = props;
 
@@ -222,8 +238,10 @@ export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
     }
 
     if (index.nodesInfo.some((x) => x.progress)) {
+        const overallProgress = calculateOverallProgress(index);
+
         return (
-            <ProgressCircle inline state="running">
+            <ProgressCircle inline state="running" progress={overallProgress}>
                 Running
             </ProgressCircle>
         );
