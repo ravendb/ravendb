@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -15,6 +16,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
     {
         public AbstractSubscriptionsHandlerProcessorForPostSubscription([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
+        }
+
+        public virtual SubscriptionConnection.ParsedSubscription ParseSubscriptionQuery(string query)
+        {
+            return SubscriptionConnection.ParseSubscriptionQuery(query);
         }
 
         protected abstract ValueTask CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, TransactionOperationContext context);

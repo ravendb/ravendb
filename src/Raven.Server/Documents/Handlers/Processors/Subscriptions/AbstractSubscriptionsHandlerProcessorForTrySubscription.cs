@@ -16,6 +16,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
         {
         }
 
+        public virtual SubscriptionConnection.ParsedSubscription ParseSubscriptionQuery(string query)
+        {
+            return SubscriptionConnection.ParseSubscriptionQuery(query);
+        }
+
         protected abstract ValueTask TryoutSubscriptionAsync(TOperationContext context, SubscriptionConnection.ParsedSubscription subscription, SubscriptionTryout tryout, int pageSize);
 
         public override async ValueTask ExecuteAsync()
@@ -25,7 +30,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 using var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), null);
                 var tryout = JsonDeserializationServer.SubscriptionTryout(json);
 
-                var sub = SubscriptionConnection.ParseSubscriptionQuery(tryout.Query);
+                var sub = ParseSubscriptionQuery(tryout.Query);
 
                 if (sub.Collection == null)
                     throw new ArgumentException("Collection must be specified");
