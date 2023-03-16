@@ -69,7 +69,7 @@ export const selectAllIndexesLoadStatus = (state: RootState) => state.statistics
 const fetchEssentialStats = createAsyncThunk(sliceName + "/fetchEssentialStats", async (_, thunkAPI: AppThunkApi) => {
     const state = thunkAPI.getState();
     const dbName = databaseNameSelector(state);
-    const db = selectDatabaseByName(dbName)(thunkAPI.getState());
+    const db = selectDatabaseByName(dbName)(state);
     return services.databasesService.getEssentialStats(db);
 });
 
