@@ -719,6 +719,11 @@ namespace Sparrow.Server
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get { return (int)(End - Current); }
             }
+
+            public override string ToString()
+            {
+                return $"{nameof(Start)}: {(long)Start}, {nameof(End)}: {(long)End}, {nameof(Size)}: {Size}, {nameof(SizeLeft)}: {SizeLeft}";
+            }
         }
 
         // Log₂(MinBlockSizeInBytes)
