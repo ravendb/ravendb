@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -198,7 +199,7 @@ public class RavenDnsRecordHelper
                 HashSet<string> actualIps;
                 try
                 {
-                    actualIps = (await Dns.GetHostAddressesAsync(hostname, cts.Token)).Select(address => address.ToString()).ToHashSet();
+                    actualIps = (await Dns.GetHostAddressesAsync(hostname, AddressFamily.InterNetwork, cts.Token)).Select(address => address.ToString()).ToHashSet();
                 }
                 catch (Exception e)
                 {
