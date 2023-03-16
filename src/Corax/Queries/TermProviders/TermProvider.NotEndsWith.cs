@@ -14,13 +14,14 @@ namespace Corax.Queries
     [DebuggerDisplay("{DebugView,nq}")]
     public struct NotEndsWithTermProvider : ITermProvider
     {
-        private readonly IndexSearcher _searcher;
-        private readonly CompactTree.Iterator _iterator;
-        private readonly FieldMetadata _field;
-        private readonly Slice _endsWith;
         private readonly CompactTree _tree;
+        private readonly IndexSearcher _searcher;
+        private readonly FieldMetadata _field;
+        private readonly CompactKey _endsWith;
 
-        public NotEndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice endsWith)
+        private CompactTree.Iterator _iterator;
+
+        public NotEndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
         {
             _searcher = searcher;
             _field = field;
@@ -32,19 +33,19 @@ namespace Corax.Queries
 
         public void Reset()
         {
-
             _iterator.Reset();
         }
 
         public bool Next(out TermMatch term)
         {
-
-            while (_iterator.MoveNext(out Slice termSlice, out var _))
+            var suffix = _endsWith.Decoded();
+            while (_iterator.MoveNext(out var termScope, out var _))
             {
-                if (termSlice.EndsWith(_endsWith))
+                var termSlice = termScope.Key.Decoded();
+                if (termSlice.EndsWith(suffix))
                     continue;
 
-                term = _searcher.TermQuery(_field, _tree, termSlice);
+                term = _searcher.TermQuery(_field, termScope.Key, _tree);
                 return true;
             }
 

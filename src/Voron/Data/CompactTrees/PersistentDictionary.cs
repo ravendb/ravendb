@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Server;
 using Sparrow.Server.Binary;
 using Sparrow.Server.Compression;
 using Voron.Exceptions;
@@ -47,7 +48,7 @@ namespace Voron.Data.CompactTrees
     public unsafe partial class PersistentDictionary 
     {
         private readonly Page _page;
-        
+
         public long PageNumber => _page.PageNumber;
         
         private readonly HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>> _encoder;
@@ -183,6 +184,18 @@ namespace Voron.Data.CompactTrees
             _encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
                 new Encoder3Gram<NativeMemoryEncoderState>(
                     new NativeMemoryEncoderState(page.DataPointer + PersistentDictionaryHeader.SizeOf, header->TableSize)));
+        }
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateFrozen(ByteStringContext context, Page page, out PersistentDictionary dictionary)
+        {
+            PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)page.DataPointer;
+
+            var content = page.AsSpan();
+            var scope = context.Allocate(content.Length, out var output);
+            content.CopyTo(output.ToSpan());
+
+            dictionary = new PersistentDictionary(new Page(output.Ptr));
+            return scope;
         }
 
         public void Decode(int keyLengthInBits, ReadOnlySpan<byte> key, ref Span<byte> decodedKey)

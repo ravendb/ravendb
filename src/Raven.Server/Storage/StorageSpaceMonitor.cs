@@ -185,10 +185,10 @@ namespace Raven.Server.Storage
         
         internal static bool IsLowSpace(Size totalFreeSpace, Size diskSpace, StorageConfiguration config, out string reason, bool simulateLowDiskSpace = false)
         {
-            if (config.FreeSpaceAlertThresholdInMb != null &&
-                totalFreeSpace < config.FreeSpaceAlertThresholdInMb.Value)
+            if (config.FreeSpaceAlertThreshold != null &&
+                totalFreeSpace < config.FreeSpaceAlertThreshold.Value)
             {
-                reason = $"has {totalFreeSpace} of free space which is below the configured threshold ({config.FreeSpaceAlertThresholdInMb.Value})";
+                reason = $"has {totalFreeSpace} of free space which is below the configured threshold ({config.FreeSpaceAlertThreshold.Value})";
                 return true;
             }
 

@@ -483,7 +483,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     // the other side will receive negative ack and will retry sending again.
                                     try
                                     {
-                                        AssertAttachmentsFromReplication(context, doc.Id, document);
+                                        AssertAttachmentsFromReplication(context, doc);
                                     }
                                     catch (MissingAttachmentException)
                                     {
@@ -674,9 +674,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
             }
 
-            public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+            public void AssertAttachmentsFromReplication(DocumentsOperationContext context, DocumentReplicationItem doc)
             {
-                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(document))
+                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(doc.Data))
                 {
                     if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         continue;
@@ -694,7 +694,8 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                         attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue attachmentName);
 
-                        var msg = $"Document '{id}' has attachment " +
+                        var type = doc.Flags.Contain(DocumentFlags.Revision) ? $"Revision '{doc.Id}' with change vector '{doc.ChangeVector}'" : $"Document '{doc.Id}'";
+                        var msg = $"{type} has attachment " +
                                   $"named: '{attachmentName?.ToString() ?? "unknown"}', hash: '{hash?.ToString() ?? "unknown"}' " +
                                   $"listed as one of its attachments but it doesn't exist in the attachment storage";
 

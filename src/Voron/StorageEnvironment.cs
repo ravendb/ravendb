@@ -35,6 +35,7 @@ using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
+using Sparrow.Server.Collections;
 
 namespace Voron
 {
@@ -67,15 +68,17 @@ namespace Voron
         /// This is the shared storage where we are going to store all the static constants for names.
         /// WARNING: This context will never be released, so only static constants should be added here.
         /// </summary>
-        private static readonly ByteStringContext _labelsContext = new ByteStringContext(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes);
+        private static readonly ByteStringContext _staticContext = new ByteStringContext(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes);
+
+        private readonly ByteStringContext _storageContext;
 
         public static IDisposable GetStaticContext(out ByteStringContext ctx)
         {
-            Monitor.Enter(_labelsContext);
+            Monitor.Enter(_staticContext);
 
-            ctx = _labelsContext;
+            ctx = _staticContext;
 
-            return new DisposableAction(() => Monitor.Exit(_labelsContext));
+            return new DisposableAction(() => Monitor.Exit(_staticContext));
         }
 
         private readonly StorageEnvironmentOptions _options;
@@ -147,6 +150,7 @@ namespace Voron
                 _validPages[_validPages.Length - 1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
+                _storageContext = new ByteStringContext(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes);
 
                 options.InvokeOnDirectoryInitialize();
 
@@ -546,6 +550,7 @@ namespace Voron
                     _scratchBufferPool,
                     _decompressionBuffers,
                     _options.OwnsPagers ? _options : null,
+                    _storageContext
                 })
                 {
                     try
@@ -1467,6 +1472,24 @@ namespace Voron
         {
             internal Action ActionToCallDuringFullBackupRighAfterCopyHeaders;
         }
+
+
+        // We create a single thread-safe persistent dictionary locator with enough state to deal with almost any scenario.
+        internal PersistentDictionaryLocator DictionaryLocator { get; } = new PersistentDictionaryLocator(1024);
+
+        public PersistentDictionary CreateEncodingDictionary(Page dictionaryPage)
+        {
+            // Since when a dictionary is created it will never be reclaimed, we can create frozen dictionaries
+            // and don't care about reclaiming the memory until the storage environment gets disposed.
+            PersistentDictionary.CreateFrozen(_storageContext, dictionaryPage, out var dictionary);
+
+            // Since the construction of new dictionaries happen at the end of the commit phase, we can safely
+            // add the dictionary to the global shared cache. 
+            DictionaryLocator.Set(dictionary.PageNumber, dictionary);
+
+            return dictionary;
+    }
+
     }
 
     public class StorageEnvironmentWithType

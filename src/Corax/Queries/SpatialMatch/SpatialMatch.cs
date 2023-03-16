@@ -56,7 +56,7 @@ public class SpatialMatch : IQueryMatch
             _startsWithDisposeHandler?.Dispose();
             _startsWithDisposeHandler = Slice.From(_allocator, result.Geohash, out var term);
             _isTermMatch = result.isTermMatch;
-            _currentMatch = _indexSearcher.TermQuery(_field, _tree, term);
+            _currentMatch = _indexSearcher.TermQuery(_field, term, _tree);
 
             return true;
         }

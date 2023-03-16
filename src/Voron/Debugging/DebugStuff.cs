@@ -325,19 +325,22 @@ namespace Voron.Debugging
             var entries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
             for (int i = 0; i < header->NumberOfEntries; i++)
             {
-                CompactTree.GetEntry(tree, page, entries[i], out var key, out var val);
-                string keyText = key.Length != 0 ? Encoding.UTF8.GetString(key) : "---first---";
-                
-                if (header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+                if (CompactTree.GetEntry(tree, page, entries[i], out var keyScope, out var val))
                 {
-                    sw.Write($"<li>{keyText} {val}</li>");
-                }
-                else
-                {
-                    if (key.Length == 0)
-                        keyText = "[smallest]";
+                    var key = keyScope.Key.Decoded();
+                    string keyText = key.Length != 0 ? Encoding.UTF8.GetString(key) : "---first---";
 
-                    RenderPageInternal(tree, tree.Llt.GetPage(val), sw, keyText, false);
+                    if (header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+                    {
+                        sw.Write($"<li>{keyText} {val}</li>");
+                    }
+                    else
+                    {
+                        if (key.Length == 0)
+                            keyText = "[smallest]";
+
+                        RenderPageInternal(tree, tree.Llt.GetPage(val), sw, keyText, false);
+                    }
                 }
             }
 

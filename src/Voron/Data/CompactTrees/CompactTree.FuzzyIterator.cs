@@ -35,22 +35,7 @@ namespace Voron.Data.CompactTrees
                 Seek(_baseKey);
             }
 
-            public bool MoveNext(out Slice key, out long value, out float score)
-            {
-                var next = MoveNext(out Span<byte> keySpan, out value, out score);
-                if (next)
-                {
-                    Slice.From(_tree._llt.Allocator, keySpan, out key);
-                }
-                else
-                {
-                    key = default(Slice);
-                }
-
-                return next;
-            }
-
-            public bool MoveNext(out Span<byte> key, out long value, out float score)
+            public bool MoveNext(out CompactKeyCacheScope scope, out long value, out float score)
             {
                 LevenshteinDistance distance = default;
 
@@ -62,9 +47,10 @@ namespace Voron.Data.CompactTrees
                     Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
                     if (state.LastSearchPosition < state.Header->NumberOfEntries && state.LastSearchPosition >= 0) // same page
                     {
-                        GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[state.LastSearchPosition], out key, out value);
-                        state.LastSearchPosition++;                        
+                        GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[state.LastSearchPosition], out scope, out value);
+                        state.LastSearchPosition++;
 
+                        var key = scope.Key.Decoded();
                         float currentScore = distance.GetDistance(_baseKey, key);
                         if (currentScore < _minScore)
                             continue;
@@ -86,8 +72,8 @@ namespace Voron.Data.CompactTrees
                         goto IsDone;
                 }
 
-            IsDone:
-                key = default;
+                IsDone:
+                scope = default;
                 value = default;
                 score = 0;
                 return false;
