@@ -54,7 +54,7 @@ unsafe partial class CompactTree
             ref var state = ref cState._stk[cState._pos];
 
             // While we haven't seen this page, we can process it. 
-            while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
+            while (state.Header->IsBranch)
             {
                 // If we have seen this page before, we just continue down the path. 
                 if (_pagesSeen.Contains(state.Page.PageNumber))
@@ -93,7 +93,7 @@ unsafe partial class CompactTree
 
             // If the current page is a leaf we are going to retrieve a single random key and setup everything
             // to start the random process of keys generation from the root again on the next call. 
-            if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+            if (state.Header->IsLeaf)
             {
                 int randomEntry = _generator.Next(state.Header->NumberOfEntries);
                 if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[randomEntry], out scope, out _) == false)

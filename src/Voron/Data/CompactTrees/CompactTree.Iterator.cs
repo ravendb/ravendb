@@ -49,7 +49,7 @@ namespace Voron.Data.CompactTrees
                 ref var cState = ref _cursor;
                 ref var state = ref cState._stk[cState._pos];
 
-                while (!state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+                while (state.Header->IsBranch)
                 {
                     var next = GetValue(ref state, 0);
                     _tree.PushPage(next, ref cState);

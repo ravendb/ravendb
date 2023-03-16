@@ -232,7 +232,8 @@ namespace Voron.Data.CompactTrees
                     var next = GetValue(ref state, state.LastSearchPosition);
                     PushPage(next, ref cstate);
                     state = ref cstate._stk[cstate._pos];
-                } while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch));
+                } 
+                while (state.Header->IsBranch);
                 return true;
             }
         }
@@ -1404,7 +1405,7 @@ namespace Voron.Data.CompactTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void FindPageFor(ref IteratorCursorState cstate, ref CursorState state, CompactKey compactKey, bool tryRecompress = false)
         {
-            while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
+            while (state.Header->IsBranch)
             {
                 // PERF: We aim to carry out the dictionary migration during the search process. This is because even though it may take longer,
                 // we can offset the cost of future key re-encoding along the way. We could choose to do this either before or after
@@ -1738,7 +1739,7 @@ namespace Voron.Data.CompactTrees
             encodedKey.Set(key);
             encodedKey.ChangeDictionary(state.Header->DictionaryId);
 
-            while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
+            while (state.Header->IsBranch)
             {
                 FuzzySearchPageAndPushNext(encodedKey, ref cstate);
                 state = ref cstate._stk[cstate._pos];

@@ -36,5 +36,9 @@ namespace Voron.Data.CompactTrees
                 return floor / sizeof(short);
             }
         }
+
+        public bool IsBranch => (((byte)PageFlags) & (byte)CompactPageFlags.Branch) != 0;
+
+        public bool IsLeaf => (((byte)PageFlags) & (byte)CompactPageFlags.Leaf) != 0;
     }
 }
