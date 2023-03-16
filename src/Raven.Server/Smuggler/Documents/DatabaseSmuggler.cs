@@ -141,7 +141,7 @@ namespace Raven.Server.Smuggler.Documents
             EnsureStepProcessed(result.Counters, skipped);
             EnsureStepProcessed(result.Tombstones, skipped);
             EnsureStepProcessed(result.Conflicts, skipped);
-            EnsureStepProcessed(result.Indexes,  indexesSkipped ?? skipped);
+            EnsureStepProcessed(result.Indexes, indexesSkipped ?? skipped);
             EnsureStepProcessed(result.Identities, skipped);
             EnsureStepProcessed(result.CompareExchange, skipped);
             EnsureStepProcessed(result.CompareExchangeTombstones, skipped);
@@ -682,8 +682,8 @@ namespace Raven.Server.Smuggler.Documents
             await using (var compareExchangeActions = _destination.CompareExchange(context, BackupKind, withDocuments: true))
             {
                 List<string> legacyIdsToDelete = null;
-                Func<Task> beforeFlush = compareExchangeActions == null ? null : async () => await compareExchangeActions.FlushAsync();
-                
+                Func<ValueTask> beforeFlush = compareExchangeActions == null ? null : compareExchangeActions.FlushAsync;
+
                 await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections, documentActions))
                 {
                     _token.ThrowIfCancellationRequested();
@@ -761,7 +761,7 @@ namespace Raven.Server.Smuggler.Documents
                         await compareExchangeActions.WriteKeyValueAsync(key, null, item.Document);
                         continue;
                     }
-                        
+
                     await documentActions.WriteDocumentAsync(item, result.Documents, beforeFlush);
                 }
 

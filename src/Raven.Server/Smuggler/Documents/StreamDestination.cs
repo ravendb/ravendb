@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
-using NuGet.Protocol;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -28,7 +27,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
@@ -39,7 +37,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
-using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -1197,7 +1194,7 @@ namespace Raven.Server.Smuggler.Documents
                 _filterMetadataProperty = filterMetadataProperty;
             }
 
-            public ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<Task> beforeFlush)
+            public ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlush)
             {
                 if (item.Attachments != null)
                     throw new NotSupportedException();

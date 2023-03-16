@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -300,7 +299,7 @@ namespace Raven.Server.Smuggler.Documents
                     _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
             }
 
-            public ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<Task> beforeFlushing)
+            public ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlushing)
             {
                 if (item.Attachments != null)
                 {
@@ -513,7 +512,7 @@ namespace Raven.Server.Smuggler.Documents
                 _revisionDeleteCommand = null;
             }
 
-            private ValueTask HandleBatchOfDocumentsIfNecessaryAsync(Func<Task> beforeFlush)
+            private ValueTask HandleBatchOfDocumentsIfNecessaryAsync(Func<ValueTask> beforeFlush)
             {
                 var commandSize = _command.GetCommandAllocationSize();
                 var prevDoneAndHasEnough = commandSize > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
