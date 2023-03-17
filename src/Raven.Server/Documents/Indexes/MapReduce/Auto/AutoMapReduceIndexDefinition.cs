@@ -19,15 +19,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public readonly AutoIndexField[] OrderedGroupByFields;
 
-        private List<string> _groupByFieldNames;
-
-        public List<string> GroupByFieldNames
-        {
-            get
-            {
-                return _groupByFieldNames ??= GroupByFields.Keys.ToList();
-            }
-        }
+        public List<string> GroupByFieldNames { get; }
 
         public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
             : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, deploymentMode, clusterState, indexVersion)
@@ -35,6 +27,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             OrderedGroupByFields = groupByFields.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
 
             GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
+
+            GroupByFieldNames = groupByFields.Select(x => x.Name).ToList();
 
             MapAndGroupByFields = new Dictionary<string, AutoIndexField>(MapFields.Count + GroupByFields.Count);
 

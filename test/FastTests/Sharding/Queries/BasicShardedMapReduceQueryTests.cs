@@ -276,10 +276,10 @@ select sum(""Count"") as Sum, key() as Name")
                         .Take(1)
                         .ToList();
 
-                    Assert.Equal(1, queryResult.Count);
-                    Assert.Equal("Jane", queryResult[0].Name);
+                    Assert.Equal(1, queryResult2.Count);
+                    Assert.Equal("Jane", queryResult2[0].Name);
                     Assert.Equal("Doe", queryResult2[0].LastName);
-                    Assert.Equal(30, queryResult[0].Sum);
+                    Assert.Equal(30, queryResult2[0].Sum);
                 }
             }
         }
