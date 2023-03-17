@@ -559,19 +559,19 @@ $btn-link-disabled-color: $text-muted !default;
 // Allows for customizing button radius independently from global border radius
 $btn-border-radius: $border-radius !default;
 $btn-border-radius-sm: $border-radius-sm !default;
-$btn-border-radius-lg: $border-radius-lg !default;
+$btn-border-radius-lg: $border-radius-sm !default;
 
-$btn-transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out,
+$btn-transition: color 0.05s ease-in-out, background-color 0.05s ease-in-out, border-color 0.05s ease-in-out,
     box-shadow 0.15s ease-in-out !default;
 
 $btn-hover-bg-shade-amount: 15% !default;
-$btn-hover-bg-tint-amount: 15% !default;
-$btn-hover-border-shade-amount: 20% !default;
-$btn-hover-border-tint-amount: 10% !default;
-$btn-active-bg-shade-amount: 20% !default;
-$btn-active-bg-tint-amount: 20% !default;
+$btn-hover-bg-tint-amount: 30% !default;
+$btn-hover-border-shade-amount: 10% !default;
+$btn-hover-border-tint-amount: 50% !default;
+$btn-active-bg-shade-amount: 30% !default;
+$btn-active-bg-tint-amount: 40% !default;
 $btn-active-border-shade-amount: 25% !default;
-$btn-active-border-tint-amount: 10% !default;
+$btn-active-border-tint-amount: 00% !default;
 // scss-docs-end btn-variables
 
 // Forms
