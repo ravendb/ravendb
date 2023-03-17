@@ -81,7 +81,6 @@ public unsafe class CompactKey : IDisposable
     public byte* EncodedWithPtr(long dictionaryId, out int lengthInBits)
     {
         [SkipLocalsInit]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         byte* EncodeFromDecodedForm()
         {
             Debug.Assert(IsValid, "At this stage we either created the key using an unencoded version. Current dictionary cannot be invalid.");

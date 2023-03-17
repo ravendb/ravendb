@@ -80,7 +80,6 @@ namespace Sparrow.Server.Compression
             _encoder.DecodeBatch(in inputBuffers, outputSizes, in outputBuffers);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SkipLocalsInit]
         public int Encode(in ReadOnlySpan<byte> data, in Span<byte> outputBuffer)
         {
