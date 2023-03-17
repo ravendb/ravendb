@@ -10,21 +10,10 @@ import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.Ongoin
 import { BackupsPage } from "./BackupsPage";
 import { mockStore } from "test/mocks/store/MockStore";
 
-function tasksHolder(storyFn: any) {
-    return (
-        <div
-            className="flex-vertical absolute-fill content-margin backups"
-            style={{ height: "100vh", overflow: "auto" }}
-        >
-            {storyFn()}
-        </div>
-    );
-}
-
 export default {
     title: "Pages/Backups",
     component: BackupsPage,
-    decorators: [withStorybookContexts, tasksHolder, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
 } as ComponentMeta<typeof BackupsPage>;
 

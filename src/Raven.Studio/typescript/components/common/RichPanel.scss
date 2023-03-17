@@ -1,6 +1,8 @@
 ﻿@use "sass:math";
 @use "Content/scss/bs5variables";
 
+$status-border-radius: bs5variables.$gutter-xs;
+
 .rich-panel-item {
     & + .rich-panel-item {
         margin-top: bs5variables.$gutter-sm;
@@ -35,23 +37,22 @@
 
     &.active {
         &::before {
-            $bg-offset: 3px;
-            $width: bs5variables.$gutter-sm;
+            $width: bs5variables.$gutter;
 
             content: "active";
             position: absolute;
             top: 0;
-            left: ($width * -1) + 1px;
-            border-radius: 0 bs5variables.$border-radius-lg bs5variables.$border-radius-lg 0;
+            left: ($width * -1) + $status-border-radius - 2;
+            border-radius: 0 $status-border-radius $status-border-radius 0;
             height: 100%;
             width: $width;
-            line-height: $width - $bg-offset;
+            line-height: $width - $status-border-radius;
             z-index: 1;
             writing-mode: vertical-rl;
             transform: rotate(180.1deg);
             text-align: center;
             color: bs5variables.$black;
-            box-shadow: ($width * -1 + $bg-offset) 0px 0px 0px bs5variables.$primary-var inset;
+            box-shadow: ($width * -1 + $status-border-radius) 0px 0px 0px bs5variables.$primary-var inset;
             font-size: bs5variables.$badge-font-size;
             font-weight: bs5variables.$badge-font-weight;
             text-transform: uppercase;
@@ -64,7 +65,7 @@
         transform: rotate(180.1deg);
         text-transform: uppercase;
         letter-spacing: 0.1em;
-        border-radius: 0 bs5variables.$border-radius-lg bs5variables.$border-radius-lg 0 !important;
+        border-radius: 0 $status-border-radius $status-border-radius 0 !important;
     }
 
     .rich-panel-details {

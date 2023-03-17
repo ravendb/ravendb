@@ -20,21 +20,10 @@ import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.O
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import { mockStore } from "test/mocks/store/MockStore";
 
-function tasksHolder(storyFn: any) {
-    return (
-        <div
-            className="destinations flex-vertical absolute-fill content-margin manage-ongoing-tasks"
-            style={{ height: "100vh", overflow: "auto" }}
-        >
-            {storyFn()}
-        </div>
-    );
-}
-
 export default {
     title: "Pages/Ongoing tasks page",
     component: OngoingTasksPage,
-    decorators: [withStorybookContexts, tasksHolder, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5],
     excludeStories: /Template$/,
 } as ComponentMeta<typeof OngoingTasksPage>;
 
