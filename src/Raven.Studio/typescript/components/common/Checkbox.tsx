@@ -19,7 +19,7 @@ interface CheckboxProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"
 
 export function Checkbox(props: CheckboxProps) {
     const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
-    const inputId = id && useId("checkbox");
+    const inputId = id ?? useId("checkbox");
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
     const colorClass = `form-check-${color ?? "secondary"}`;
     const sizeClass = size ? `form-check-${size}` : undefined;
@@ -37,8 +37,8 @@ export function Checkbox(props: CheckboxProps) {
 }
 
 export function Switch(props: CheckboxProps) {
-    const { selected, toggleSelection, children, color, size, reverse, className, disabled, ...rest } = props;
-    const inputId = useId("checkbox");
+    const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
+    const inputId = id ?? useId("checkbox");
 
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
     const colorClass = `form-check-${color ?? "secondary"}`;
@@ -57,8 +57,8 @@ export function Switch(props: CheckboxProps) {
 }
 
 export function Radio(props: CheckboxProps) {
-    const { selected, toggleSelection, children, color, size, reverse, className, disabled, ...rest } = props;
-    const inputId = useId("checkbox");
+    const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
+    const inputId = id ?? useId("checkbox");
 
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
     const colorClass = `form-check-${color ?? "secondary"}`;
