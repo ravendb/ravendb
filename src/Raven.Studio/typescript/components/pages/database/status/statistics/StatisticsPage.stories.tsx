@@ -25,11 +25,7 @@ export const StatisticsTemplate = (args: { db: database; stats?: IndexStats[] })
 
     indexesService.withGetStats(args.stats);
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <StatisticsPage database={args.db} />
-        </div>
-    );
+    return <StatisticsPage database={args.db} />;
 };
 
 export const StatsSingleNode = boundCopy(StatisticsTemplate, {

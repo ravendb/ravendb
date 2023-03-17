@@ -34,11 +34,7 @@ export const SingleNode: ComponentStory<typeof ManageDatabaseGroupPage> = () => 
 
     mockStore.databases.withDatabases([db.toDto()]);
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <ManageDatabaseGroupPage db={db} />
-        </div>
-    );
+    return <ManageDatabaseGroupPage db={db} />;
 };
 
 export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -54,11 +50,7 @@ export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = (
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <ManageDatabaseGroupPage db={db} />
-        </div>
-    );
+    return <ManageDatabaseGroupPage db={db} />;
 };
 
 export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -68,11 +60,7 @@ export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <ManageDatabaseGroupPage db={db} />
-        </div>
-    );
+    return <ManageDatabaseGroupPage db={db} />;
 };
 
 export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -85,11 +73,7 @@ export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
 
     const db = DatabasesStubs.shardedDatabase();
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <ManageDatabaseGroupPage db={db} />
-        </div>
-    );
+    return <ManageDatabaseGroupPage db={db} />;
 };
 
 export const ClusterWithDeletion: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -101,11 +85,7 @@ export const ClusterWithDeletion: ComponentStory<typeof ManageDatabaseGroupPage>
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <ManageDatabaseGroupPage db={db} />
-        </div>
-    );
+    return <ManageDatabaseGroupPage db={db} />;
 };
 
 export const ClusterWithFailure: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -120,11 +100,7 @@ export const ClusterWithFailure: ComponentStory<typeof ManageDatabaseGroupPage> 
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <ManageDatabaseGroupPage db={db} />
-        </div>
-    );
+    return <ManageDatabaseGroupPage db={db} />;
 };
 
 export const PreventDeleteIgnore: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -136,11 +112,7 @@ export const PreventDeleteIgnore: ComponentStory<typeof ManageDatabaseGroupPage>
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <ManageDatabaseGroupPage db={db} />
-        </div>
-    );
+    return <ManageDatabaseGroupPage db={db} />;
 };
 
 export const PreventDeleteError: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
@@ -152,9 +124,5 @@ export const PreventDeleteError: ComponentStory<typeof ManageDatabaseGroupPage> 
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <ManageDatabaseGroupPage db={db} />
-        </div>
-    );
+    return <ManageDatabaseGroupPage db={db} />;
 };

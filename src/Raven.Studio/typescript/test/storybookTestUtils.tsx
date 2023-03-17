@@ -4,7 +4,6 @@ import { configureMockServices, ServiceProvider } from "components/hooks/useServ
 import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
 
-
 export function storybookContainerPublicContainer(storyFn: any) {
     return (
         <div className="container">
@@ -28,14 +27,19 @@ export function forceStoryRerender() {
 
 export function withStorybookContexts(storyFn: any) {
     return (
-        <div style={{ margin: "50px" }}>
-            <ServiceProvider services={mockServices.context}>
-                <ChangesProvider changes={mockHooks.useChanges.mock}>{storyFn()}</ChangesProvider>
-            </ServiceProvider>
-        </div>
+        <ServiceProvider services={mockServices.context}>
+            <ChangesProvider changes={mockHooks.useChanges.mock}>{storyFn()}</ChangesProvider>
+        </ServiceProvider>
     );
 }
 
 export function withBootstrap5(storyFn: any) {
-    return <div className="bs5">{storyFn()}</div>;
+    return (
+        <>
+            <div className="bs5" style={{ padding: "30px" }}>
+                {storyFn()}
+            </div>
+            <style>{`body {overflow: auto !important;}`}</style>
+        </>
+    );
 }

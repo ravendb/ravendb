@@ -41,11 +41,7 @@ export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
 
     mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <DatabasesPage />
-        </div>
-    );
+    return <DatabasesPage />;
 };
 
 export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
@@ -55,11 +51,7 @@ export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
 
     mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <DatabasesPage />
-        </div>
-    );
+    return <DatabasesPage />;
 };
 
 export const WithDifferentAccessLevel: ComponentStory<typeof DatabasesPage> = () => {
@@ -89,11 +81,7 @@ export const WithDifferentAccessLevel: ComponentStory<typeof DatabasesPage> = ()
 
     mockServices.databasesService.withGetDatabasesState(() => Object.keys(dbAccess));
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <DatabasesPage />
-        </div>
-    );
+    return <DatabasesPage />;
 };
 
 export const WithLoadError: ComponentStory<typeof DatabasesPage> = () => {
@@ -105,11 +93,7 @@ export const WithLoadError: ComponentStory<typeof DatabasesPage> = () => {
         loadError: ["B"],
     });
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <DatabasesPage />
-        </div>
-    );
+    return <DatabasesPage />;
 };
 
 export const WithDeletion: ComponentStory<typeof DatabasesPage> = () => {
@@ -121,11 +105,7 @@ export const WithDeletion: ComponentStory<typeof DatabasesPage> = () => {
 
     mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <DatabasesPage />
-        </div>
-    );
+    return <DatabasesPage />;
 };
 
 export const Single: ComponentStory<typeof DatabasesPage> = () => {
@@ -135,11 +115,7 @@ export const Single: ComponentStory<typeof DatabasesPage> = () => {
 
     mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <DatabasesPage />
-        </div>
-    );
+    return <DatabasesPage />;
 };
 
 export const CompactDatabaseAuto: ComponentStory<typeof DatabasesPage> = () => {
@@ -149,11 +125,7 @@ export const CompactDatabaseAuto: ComponentStory<typeof DatabasesPage> = () => {
 
     mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <DatabasesPage compact={value.name} />
-        </div>
-    );
+    return <DatabasesPage compact={value.name} />;
 };
 
 function assignNodeType(tag: string): databaseGroupNodeType {
@@ -185,9 +157,5 @@ export const DifferentNodeStates: ComponentStory<typeof DatabasesPage> = () => {
 
     mockServices.databasesService.withGetDatabasesState(() => [clusterDb.name, ...shardedDb.shards.map((x) => x.name)]);
 
-    return (
-        <div style={{ height: "100vh", overflow: "auto" }}>
-            <DatabasesPage />
-        </div>
-    );
+    return <DatabasesPage />;
 };

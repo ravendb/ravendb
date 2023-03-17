@@ -8,14 +8,10 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 
-function indexesHolder(storyFn: any) {
-    return <div style={{ height: "100vh", overflow: "auto" }}>{storyFn()}</div>;
-}
-
 export default {
     title: "Pages/Indexes page",
     component: IndexesPage,
-    decorators: [withStorybookContexts, indexesHolder, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof IndexesPage>;
 
 function commonInit() {
