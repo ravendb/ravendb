@@ -340,7 +340,7 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
     }
     &.collapse-menu #main-menu {
         overflow: visible;
-        z-index: 999;
+        z-index: 1001;
         .btn-expand-menu {
             display: block;
         }

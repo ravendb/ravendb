@@ -642,15 +642,15 @@
 
 <script type="text/html" id="manual-selection-sharded">
     <div class="bg-info padding no-margin" data-bind="visible: manualMode()">
-        <small>Orchestrator nodes</small>
-        <div class="checkbox">
+        <h3>Orchestrator nodes</h3>
+        <div class="checkbox checkbox-info margin-bottom-xxs">
             <input type="checkbox" id="toggle_all_in_cluster_sharded" class="styled" data-bind="checkboxTriple: $root.orchestratorSelectionState, event: { change: $root.orchestratorToggleSelectAll }">
             <label for="toggle_all_in_cluster_sharded"><i class="icon-cluster"></i><span>All cluster nodes</span></label>
         </div>
         <div data-bind="foreach: $root.clusterNodes">
-            <div class="checkbox checkbox-info" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
+            <div class="checkbox checkbox-success padding-left-md" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
                 <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_sharding_' + $index() }, checked: $parent.orchestrators, checkedValue: $data">
-                <label data-bind="attr: { for: 'cluster_node_sharding_' + $index() }">
+                <label class="text-success" data-bind="attr: { for: 'cluster_node_sharding_' + $index() }">
                     <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span> &nbsp; <small data-bind="text: serverUrl()"></small>
                 </label>
             </div>
@@ -707,15 +707,15 @@
 
 <script type="text/html" id="manual-selection-non-sharded">
     <div class="bg-info padding no-margin" data-bind="visible: manualMode()">
-        <small>Available nodes</small>
-        <div class="checkbox">
+        <h3>Available nodes</h3>
+        <div class="checkbox checkbox-info margin-bottom-xxs">
             <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">
             <label for="toggle_all_in_cluster"><i class="icon-cluster"></i><span>All cluster nodes</span></label>
         </div>
         <div data-bind="foreach: $root.clusterNodes">
-            <div class="checkbox checkbox-info" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
+            <div class="checkbox checkbox-success padding-left-md" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
                 <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_' + $index() }, checked: $parent.nodes, checkedValue: $data">
-                <label data-bind="attr: { for: 'cluster_node_' + $index() }">
+                <label class="text-success" data-bind="attr: { for: 'cluster_node_' + $index() }">
                     <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span> &nbsp; <small data-bind="text: serverUrl()"></small>
                 </label>
             </div>
