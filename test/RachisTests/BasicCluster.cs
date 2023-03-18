@@ -169,7 +169,7 @@ namespace RachisTests
             var expected = "0123456789";
             var a = SetupServer(true);
             var b = SetupServer();
-
+            var c = 'test'
             await a.AddWitnessToClusterAsync(b.Url);
             await b.WaitForTopology(Leader.TopologyModification.Witness);
 
