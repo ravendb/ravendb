@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Sharding
                 stats.NumberOfDocuments += inMemoryStats.NumberOfDocuments;
                 stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
 
-                mergedCv = stats.GetMergedChangeVector(readResult.Reader);
+                mergedCv = Documents.BucketStats.GetMergedChangeVector(readResult.Reader);
             }
 
             if (_mergedChangeVectors.TryGetValue(bucket, out var changeVector))

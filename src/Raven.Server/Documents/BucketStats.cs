@@ -16,7 +16,7 @@ namespace Raven.Server.Documents
         [FieldOffset(16)]
         public long LastModifiedTicks;
 
-        public unsafe string GetMergedChangeVector(ValueReader reader)
+        public static unsafe string GetMergedChangeVector(ValueReader reader)
         {
             if (reader.Length <= sizeof(BucketStats))
                 return default;
