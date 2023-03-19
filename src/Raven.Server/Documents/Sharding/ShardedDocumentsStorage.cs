@@ -4,7 +4,6 @@ using System.Linq;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -185,7 +184,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         var span = new ReadOnlySpan<byte>(idPtr, idSize);
         
         var docsCtx = tx.Owner as DocumentsOperationContext;
-        var database = docsCtx?.DocumentDatabase as ShardedDocumentDatabase;
+        var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(docsCtx?.DocumentDatabase);
         var bucket = ShardHelper.GetBucketFor(database?.ShardingConfiguration, span);
 
         *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
@@ -270,10 +269,10 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         {
             *(int*)keyBuffer.Ptr = Bits.SwapBytes(bucket);
             var readResult = tree.Read(new Slice(keyBuffer));
-            if (readResult == null || readResult.Reader.Length <= sizeof(Documents.BucketStats))
+            if (readResult == null)
                 return null;
 
-            var cvStr = Encodings.Utf8.GetString(readResult.Reader.Base + sizeof(Documents.BucketStats), readResult.Reader.Length - sizeof(Documents.BucketStats));
+            var cvStr = Documents.BucketStats.GetMergedChangeVector(readResult.Reader);
             return context.GetChangeVector(cvStr);
         }
     }
