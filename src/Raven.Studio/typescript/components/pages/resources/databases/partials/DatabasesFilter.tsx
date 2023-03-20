@@ -1,18 +1,17 @@
 ﻿import React, { ChangeEvent } from "react";
 import { DatabaseFilterCriteria } from "components/models/databases";
-import { CheckboxTriple } from "components/common/CheckboxTriple";
-import { Col, Input, InputGroup, Row } from "reactstrap";
+import { Col, Input, Row } from "reactstrap";
 import { useAppDispatch } from "components/store";
 import { filterTextSet } from "components/common/shell/databasesSlice";
+import { InputItem, MultiToggle } from "components/common/MultiToggle";
+import "./DatabasesFilter.scss";
 
 interface DatabasesFilterProps {
     filter: DatabaseFilterCriteria;
-    toggleSelectAll: () => void;
-    selectionState: checkbox;
 }
 
 export function DatabasesFilter(props: DatabasesFilterProps) {
-    const { filter, toggleSelectAll, selectionState } = props;
+    const { filter } = props;
 
     const dispatch = useAppDispatch();
 
@@ -20,23 +19,36 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
         dispatch(filterTextSet(e.target.value));
     };
 
+    const filterByStateList: InputItem[] = [
+        { value: "all", label: "All", count: 1 },
+        { value: "online", label: "Online", count: 1 },
+        { value: "offline", label: "Offline", count: 1 },
+        { value: "disabled", label: "Disabled", count: 1 },
+        { value: "errored", label: "Errored", count: 1 },
+        { value: "local", label: "Local", count: 1 },
+        { value: "remote", label: "Remote", count: 1 },
+    ];
+
     return (
-        <Row>
-            <Col sm="auto">
-                <CheckboxTriple onChanged={toggleSelectAll} state={selectionState} title="Select all or none" />
-            </Col>
-            <Col>
-                <InputGroup>
+        <>
+            <Row className="d-flex align-items-end mb-3">
+                <Col>
+                    <div className="small-label ms-1 mb-1">Filter by name</div>
                     <Input
                         type="text"
-                        placeholder="Filter"
                         accessKey="/"
+                        placeholder="e.g. database1"
                         title="Filter databases (Alt+/)"
                         value={filter.searchText}
                         onChange={onSearchTextChange}
+                        className="filtering-input"
                     />
-                </InputGroup>
-            </Col>
+                </Col>
+                <Col>
+                    <MultiToggle inputList={filterByStateList} label="Filter by state"></MultiToggle>
+                </Col>
+                <Col></Col>
+            </Row>
             {/* TODO <div className="btn-group">
                 <button type="button" className="btn btn-default dropdown-toggle" data-toggle="dropdown"
                         data-bind="css: { 'active': filters.requestedState() !== 'all' }"
@@ -95,7 +107,7 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
                     </li>
                 </ul>
             </div>*/}
-        </Row>
+        </>
     );
 }
 

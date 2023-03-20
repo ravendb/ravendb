@@ -1,5 +1,4 @@
-﻿import React, { ReactNode } from "react";
-
+﻿import React from "react";
 import "./MultiToggle.scss";
 import useId from "hooks/useId";
 import classNames from "classnames";
@@ -7,6 +6,7 @@ import classNames from "classnames";
 export interface InputItem {
     label: string;
     value: string;
+    count?: number;
 }
 
 interface ToggleProps {
@@ -46,7 +46,7 @@ export function MultiToggle(props: MultiToggleProps) {
             {label && <div className="small-label ms-1 mb-1">{label}</div>}
             <div className="multi-toggle-list">
                 {inputList.map((inputItem) => (
-                    <div className="multi-toggle-item">
+                    <div className="multi-toggle-item" key={inputItem.value}>
                         <input
                             id={uniqueId + inputItem.value}
                             type={radio ? "radio" : "checkbox"}
@@ -54,7 +54,12 @@ export function MultiToggle(props: MultiToggleProps) {
                             value={inputItem.value}
                         />
                         <label htmlFor={uniqueId + inputItem.value}>
-                            <span>{inputItem.label}</span>
+                            <span>
+                                {inputItem.label}
+                                {inputItem.count >= 0 && (
+                                    <span className="multi-toggle-item-count">{inputItem.count}</span>
+                                )}
+                            </span>
                         </label>
                     </div>
                 ))}

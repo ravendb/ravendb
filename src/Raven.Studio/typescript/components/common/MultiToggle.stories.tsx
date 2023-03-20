@@ -20,9 +20,9 @@ export function MultiToggles() {
 
     const checkboxList = [
         { value: "normal", label: "Normal" },
-        { value: "error", label: "Error/Faulty" },
+        { value: "error", label: "Error/Faulty", count: 3 },
         { value: "stale", label: "Stale" },
-        { value: "rolling", label: "Rolling deployment" },
+        { value: "rolling", label: "Rolling deployment", count: 0 },
         { value: "paused", label: "Paused" },
         { value: "disabled", label: "Disabled" },
         { value: "idle", label: "Idle" },
