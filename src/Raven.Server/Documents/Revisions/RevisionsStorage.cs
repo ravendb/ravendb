@@ -690,7 +690,7 @@ namespace Raven.Server.Documents.Revisions
             return passed < revisionsCount;
         }
 
-        public bool DeleteRevisionsFor(DocumentsOperationContext context, string id, bool purgeOnDelete = false)
+        public bool DeleteRevisionsFor(DocumentsOperationContext context, string id, bool purgeOnDelete = false, bool deleteAllRevisionsByForce = false)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
@@ -714,6 +714,11 @@ namespace Raven.Server.Documents.Revisions
                 if (deletedDoc)
                 {
                     configuration = GetRevisionsConfiguration(collectionName.Name, local.Tombstone.Flags);
+                }
+                if (deleteAllRevisionsByForce)
+                {
+                    purgeOnDelete = true;
+                    configuration = new RevisionsCollectionConfiguration { PurgeOnDelete = true };
                 }
                 var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, changeVector, lastModifiedTicks, out _, deletedDoc: purgeOnDelete, docConfiguration: configuration);
                 var left = IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
@@ -1523,10 +1528,10 @@ namespace Raven.Server.Documents.Revisions
                 {
                     configuration = GetRevisionsConfiguration(collectionName.Name, local.Tombstone.Flags);
                 }
-                else
-                {
-                    configuration = GetRevisionsConfiguration(collectionName.Name, local.Document?.Flags ?? DocumentFlags.None);
-                }
+                // else
+                // {
+                //     configuration = GetRevisionsConfiguration(collectionName.Name, local.Document?.Flags ?? DocumentFlags.None);
+                // }
 
                 var needToDeleteMore = DeleteOldRevisions(context, table, prefixSlice, 
                     NonPersistentDocumentFlags.None,
