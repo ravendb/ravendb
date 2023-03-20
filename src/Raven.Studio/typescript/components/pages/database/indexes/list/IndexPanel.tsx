@@ -64,7 +64,7 @@ export const IndexPanel = forwardRef(IndexPanelInternal);
 function getPriorityColor(index: IndexSharedInfo) {
     switch (index.priority) {
         case "Normal":
-            return "light";
+            return "secondary";
         case "High":
             return "warning";
         case "Low":
@@ -81,7 +81,7 @@ function getLockColor(index: IndexSharedInfo) {
         case "LockedError":
             return "warning";
         case "Unlock":
-            return "light";
+            return "secondary";
         default:
             assertUnreachable(index.lockMode);
     }

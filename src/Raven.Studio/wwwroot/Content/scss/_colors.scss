@@ -51,6 +51,7 @@ $brand-cloud: #37c4ac !default;
 $brand-hr: #f78831 !default;
 
 $secondary: $gray-600;
+$secondary-outline: $gray-300; //fix outline button contrast
 $body-bg: $black;
 $border-color: $gray-300;
 $border-color-light: $gray-600;
@@ -100,7 +101,8 @@ $link-color: $primary;
     $white: #f4f5fb;
 
     $primary: #cf1f5d;
-    $secondary: $gray-200;
+    $secondary: $gray-400;
+    $secondary-outline: $gray-600; //fix outline button contrast
 
     $body-bg: $black;
     $border-color: $gray-600;
@@ -165,6 +167,7 @@ $link-color: $primary;
 
     $primary: #419ca6;
     $secondary: $gray-400;
+    $secondary-outline: $gray-600; //fix outline button contrast
     $success: $color-3;
     $info: $color-4;
     $warning: $color-2;
@@ -244,6 +247,8 @@ $link-color: $primary;
 
     $primary: #cf1f5d;
     $secondary: $gray-600;
+    $secondary-outline: $gray-300; //fix outline button contrast
+
     $body-bg: $black;
     $border-color: $gray-300;
     $border-color-light: $gray-600;
