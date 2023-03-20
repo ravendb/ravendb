@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Sharding;
@@ -49,6 +51,16 @@ public class ShardReplicationLoader : ReplicationLoader
         }
 
         return base.CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams, getLatestEtagMessage);
+    }
+
+    protected override DatabaseOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
+    {
+        if (node is BucketMigrationReplication migrationNode)
+        {
+            return new OutgoingMigrationReplicationHandler(this, ShardedDocumentDatabase.CastToShardedDocumentDatabase(Database), migrationNode, info);
+        }
+
+        return base.GetOutgoingReplicationHandlerInstance(info, node);
     }
 
     protected override void HandleReplicationChanges(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)

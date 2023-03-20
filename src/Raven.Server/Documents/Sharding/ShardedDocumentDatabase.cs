@@ -130,7 +130,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
             if (process.SourceShard == ShardNumber && process.Status == MigrationStatus.OwnershipTransferred)
             {
-                index = (long)Hashing.XXHash64.CalculateRaw(process.LastSourceChangeVector);
+                index = (long)Hashing.XXHash64.CalculateRaw(process.LastSourceChangeVector ?? $"No docs for {process.MigrationIndex}");
 
                 if (_confirmations.TryGetValue(index, out t))
                 {
@@ -207,6 +207,12 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public async Task DeleteBucket(int bucket, long migrationIndex, string uptoChangeVector)
     {
+        if (string.IsNullOrEmpty(uptoChangeVector))
+        {
+            await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex);
+            return;
+        }
+
         while (true)
         {
             var cmd = new DeleteBucketCommand(this, bucket, uptoChangeVector);
