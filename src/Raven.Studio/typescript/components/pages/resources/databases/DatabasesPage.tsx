@@ -2,7 +2,6 @@
 import { DatabasePanel } from "./partials/DatabasePanel";
 import { DatabasesToolbarActions } from "./partials/DatabasesToolbarActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
-import { DatabasesCounter } from "./partials/DatabasesCounter";
 import { NoDatabases } from "./partials/NoDatabases";
 import { DatabaseSharedInfo } from "../../../models/databases";
 import { Col, Row } from "reactstrap";
@@ -20,9 +19,11 @@ import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
 import { shallowEqual } from "react-redux";
+import { CheckboxTriple } from "components/common/CheckboxTriple";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
+    toggleSelectAll?: () => void;
 }
 
 interface DatabasesPageProps {
@@ -116,18 +117,18 @@ export function DatabasesPage(props: DatabasesPageProps) {
             <div id="dropdownContainer"></div> {/*fixes rendering order bug on hover animation */}
             <Row className="mb-4">
                 <Col sm="auto">
-                    <DatabasesFilter
-                        filter={searchCriteria}
-                        selectionState={databasesSelectionState}
-                        toggleSelectAll={toggleSelectAll}
+                    <CheckboxTriple
+                        onChanged={toggleSelectAll}
+                        state={databasesSelectionState}
+                        title="Select all or none"
                     />
                 </Col>
                 <Col>
                     <DatabasesToolbarActions selectedDatabases={selectedDatabases} />
                 </Col>
             </Row>
+            <DatabasesFilter filter={searchCriteria} />
             <div className="flex-grow scroll js-scroll-container">
-                <DatabasesCounter />
                 <div>
                     {filteredDatabases.map((db) => (
                         <DatabasePanel
