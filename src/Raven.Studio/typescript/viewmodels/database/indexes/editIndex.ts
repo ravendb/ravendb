@@ -207,13 +207,13 @@ class editIndex extends shardViewModelBase {
         })
 
         this.inheritSearchEngineText = ko.pureComputed(() => {
-            const engineFormatted = editIndex.formatEngine(this.defaultSearchEngine());
-            return `Inherit (${engineFormatted})`;
+            const engine = this.defaultSearchEngine();
+            return `Inherit (${engine})`;
         });
 
         this.effectiveSearchEngineText = ko.pureComputed(() => {
             if (this.searchEngineConfiguration()) {
-                return editIndex.formatEngine(this.searchEngineConfiguration());
+                return this.searchEngineConfiguration();
     }
 
             return this.inheritSearchEngineText();
@@ -230,13 +230,6 @@ class editIndex extends shardViewModelBase {
         }) 
     }
     
-    static formatEngine(engine: Raven.Client.Documents.Indexes.SearchEngineType) {
-        if (engine === "Corax") {
-            return engine + " - experimental";
-        }
-        return engine;
-    }
-
     canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
         const indexToEditName = indexToEdit || undefined;
         
