@@ -15,7 +15,8 @@ internal static class DevelopmentHelper
 
     internal enum Feature
     {
-        Sharding
+        Sharding,
+        Cluster
     }
 
     internal enum TeamMember
