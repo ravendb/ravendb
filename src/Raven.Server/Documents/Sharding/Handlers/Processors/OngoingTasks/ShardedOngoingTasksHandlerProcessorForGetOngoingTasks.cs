@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
@@ -15,25 +16,26 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override bool SupportsCurrentNode => true;
-
-        protected override async ValueTask HandleCurrentNodeAsync()
-        {
-            var result = GetOngoingTasksInternal();
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            {
-                context.Write(writer, result.ToJson());
-            }
-        }
+        protected override bool SupportsCurrentNode => false;
 
         protected override RavenCommand<OngoingTasksResult> CreateCommandForNode(string nodeTag)
         {
             return new GetOngoingTasksInfoCommand(nodeTag);
         }
 
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<OngoingTasksResult> command, OperationCancelToken token) => RequestHandler.DatabaseContext.AllOrchestratorNodesExecutor.ExecuteForNodeAsync(command, command.SelectedNodeTag, token.Token);
+        protected override bool IsCurrentNode(out string nodeTag)
+        {
+            nodeTag = GetNodeTag(required: false);
+            return false;
+        }
+
+        protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
+
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<OngoingTasksResult> command, OperationCancelToken token)
+        {
+            var shard = GetShardNumber();
+            return RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(command, shard, token.Token);
+        }
     }
 
     internal class GetOngoingTasksInfoCommand : RavenCommand<OngoingTasksResult>

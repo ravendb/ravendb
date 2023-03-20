@@ -30,7 +30,7 @@ internal abstract class AbstractHandlerProxyProcessor<TRequestHandler, TOperatio
         return true;
     }
 
-    protected bool IsCurrentNode(out string nodeTag)
+    protected virtual bool IsCurrentNode(out string nodeTag)
     {
         nodeTag = GetNodeTag(required: SupportsCurrentNode == false);
 
