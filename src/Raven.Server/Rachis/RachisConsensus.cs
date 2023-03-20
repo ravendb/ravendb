@@ -1494,12 +1494,14 @@ namespace Raven.Server.Rachis
             var guid = LogHistory.GetGuidFromCommand(cmd);
             if (guid == RaftIdGenerator.DontCareId)
             {
-                var newGuid = $"DontCare/{lastIndex}";
+                var newGuid = $"DontCare/{term}-{lastIndex}";
                 cmd.Modifications = new DynamicJsonValue { [nameof(CommandBase.UniqueRequestId)] = newGuid };
+                BlittableJsonReaderObject newCmd;
                 using (cmd)
                 {
-                    cmd = context.ReadObject(cmd, newGuid);
+                    newCmd = context.ReadObject(cmd, newGuid);
                 }
+                cmd = newCmd;
             }
             
             using (table.Allocate(out TableValueBuilder tvb))
