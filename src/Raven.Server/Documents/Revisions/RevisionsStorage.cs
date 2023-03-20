@@ -686,6 +686,7 @@ namespace Raven.Server.Documents.Revisions
                 deletedDoc: deletedDoc, docConfiguration: configuration);
 
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
+
             return passed < revisionsCount;
         }
 
@@ -699,7 +700,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Tried to delete all revisions for '{id}' but no revisions found.");
-                    return false;
+                    return true;
                 }
 
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -712,11 +713,11 @@ namespace Raven.Server.Documents.Revisions
                 RevisionsCollectionConfiguration configuration = null;
                 if (deletedDoc)
                 {
-                    configuration = GetRevisionsConfiguration(collectionName.Name, local.Document.Flags);
+                    configuration = GetRevisionsConfiguration(collectionName.Name, local.Tombstone.Flags);
                 }
                 var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, changeVector, lastModifiedTicks, out _, deletedDoc: purgeOnDelete, docConfiguration: configuration);
                 var left = IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
-                if (left == 0)
+                if (left <= 0)
                 {
                     DeleteCountOfRevisions(context, prefixSlice);
                     return true;
@@ -783,6 +784,12 @@ namespace Raven.Server.Documents.Revisions
         private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
         string changeVector, long lastModifiedTicks, out long passedCount, bool deletedDoc = false, RevisionsCollectionConfiguration docConfiguration = null)
         {
+            // RevisionsCollectionConfiguration disabledConfiguration = null;
+            // if (docConfiguration != null && docConfiguration.Disabled)
+            // {
+            //     disabledConfiguration = docConfiguration;
+            // }
+
             if (docConfiguration != null && docConfiguration.PurgeOnDelete == false)
             {
                 deletedDoc = false;
@@ -793,10 +800,16 @@ namespace Raven.Server.Documents.Revisions
 
             if (deletedDoc)
             {
-                DeleteRevisionsInternal(context, table, prefixSlice, changeVector, lastModifiedTicks, counts, 
+                DeleteRevisionsInternal(context, table, prefixSlice, changeVector, lastModifiedTicks, counts,
                     DeleteType.PurgeOnDelete, out long removed, docConfiguration: docConfiguration);
                 return removed;
             }
+            // else if (disabledConfiguration != null)
+            // {
+            //     DeleteRevisionsInternal(context, table, prefixSlice, changeVector, lastModifiedTicks, counts,
+            //         DeleteType.DisabledConfiguration, out long removed, docConfiguration: disabledConfiguration);
+            //     return removed;
+            // }
             else
             {
                 var shouldContinue = DeleteRevisionsInternal(context, table, prefixSlice, changeVector, lastModifiedTicks, counts,
@@ -862,6 +875,14 @@ namespace Raven.Server.Documents.Revisions
                 docConfiguration = null;
             }
 
+            // if (deleteType == DeleteType.DisabledConfiguration)
+            // {
+            //     if (docConfiguration == null)
+            //         throw new NullReferenceException("If deleteType is 'DeleteType.DisabledConfiguration' docConfiguration cannot be null!");
+            //     if (docConfiguration.Disabled == false)
+            //         throw new InvalidOperationException("If deleteType is 'DeleteType.DisabledConfiguration' docConfiguration.Disabled should be true!");
+            // }
+
             if (deleteType == DeleteType.LimitNumberOfRevisions && docConfiguration != null && docConfiguration.MinimumRevisionsToKeep.HasValue == false)
             {
                 return true;
@@ -896,10 +917,11 @@ namespace Raven.Server.Documents.Revisions
                             break;
                         }
 
-                        if ((deleteType == DeleteType.PurgeOnDelete) ||
+                        if (config.Disabled ||
+                            deleteType == DeleteType.PurgeOnDelete ||
                             (deleteType == DeleteType.Age &&
                              config.MinimumRevisionAgeToKeep.HasValue &&
-                            _database.Time.GetUtcNow().Ticks - revision.LastModified.Ticks > config.MinimumRevisionAgeToKeep.Value.Ticks) ||
+                             _database.Time.GetUtcNow().Ticks - revision.LastModified.Ticks > config.MinimumRevisionAgeToKeep.Value.Ticks) ||
                             (deleteType == DeleteType.LimitNumberOfRevisions &&
                              config.MinimumRevisionsToKeep < counts[config].TotalCount))
                         {
@@ -955,7 +977,8 @@ namespace Raven.Server.Documents.Revisions
         {
             PurgeOnDelete,
             Age,
-            LimitNumberOfRevisions
+            LimitNumberOfRevisions,
+            // DisabledConfiguration
         }
 
         public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)
@@ -1473,11 +1496,6 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private static readonly RevisionsCollectionConfiguration ZeroConfiguration = new RevisionsCollectionConfiguration
-        {
-            MinimumRevisionsToKeep = 0
-        };
-
         private long EnforceConfigurationFor(DocumentsOperationContext context, string id, ref bool moreWork)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
@@ -1504,6 +1522,10 @@ namespace Raven.Server.Documents.Revisions
                 if (deletedDoc)
                 {
                     configuration = GetRevisionsConfiguration(collectionName.Name, local.Tombstone.Flags);
+                }
+                else
+                {
+                    configuration = GetRevisionsConfiguration(collectionName.Name, local.Document?.Flags ?? DocumentFlags.None);
                 }
 
                 var needToDeleteMore = DeleteOldRevisions(context, table, prefixSlice, 
