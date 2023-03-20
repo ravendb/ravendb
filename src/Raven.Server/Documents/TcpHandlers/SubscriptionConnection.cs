@@ -155,6 +155,7 @@ namespace Raven.Server.Documents.TcpHandlers
             TcpConnection = connectionOptions;
             _subscriptionConnectionInProgress = subscriptionConnectionInProgress;
             ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
+            _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
             _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, connectionOptions.ProtocolVersion);
             Stats = new SubscriptionConnectionStats();
