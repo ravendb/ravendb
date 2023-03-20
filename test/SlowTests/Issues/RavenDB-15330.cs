@@ -10,6 +10,7 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -32,7 +33,11 @@ public class RavenDB_15330 : ClusterTestBase
     [Fact]
     public async Task Command_With_DontCareId_Should_Be_Committed()
     {
-        DebuggerAttachedTimeout.DisableLongTimespan = true;
+        DoNotReuseServer();
+        var typeProp = nameof(RachisLogHistory.LogHistoryColumn.Type);
+        var stateProp = nameof(RachisLogHistory.LogHistoryColumn.State);
+        var indexProp = nameof(RachisLogHistory.LogHistoryColumn.Index);
+
         var server = GetNewServer();
         using var store = GetDocumentStoreForRollingIndexes(new RavenTestBase.Options
         {
@@ -52,11 +57,24 @@ public class RavenDB_15330 : ClusterTestBase
         {
             var historyLog = server.ServerStore.Engine.LogHistory.GetHistoryLogs(context);
             bool contain = false;
+            bool first = true;
+            long lastIndex = 0;
             foreach (var djv in historyLog)
             {
-                if (djv!=null && 
-                    djv["Type"] != null && djv["Type"].ToString() == nameof(PutRollingIndexCommand) && 
-                    djv["State"]!=null && djv["State"].ToString() == "Committed")
+                if (first)
+                {
+                    lastIndex = long.Parse(djv[indexProp].ToString());
+                    first = false;
+                }
+                else
+                {
+                    var currentIndex = long.Parse(djv[indexProp].ToString());
+                    Assert.Equal(lastIndex+1, currentIndex);
+                    lastIndex = currentIndex;
+                }
+
+                if (djv[typeProp] != null && djv[typeProp].ToString() == nameof(PutRollingIndexCommand) && 
+                    djv[stateProp] !=null && djv[stateProp].ToString() == "Committed")
                 {
                     contain = true;
                     break;

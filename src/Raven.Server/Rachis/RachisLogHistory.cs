@@ -135,9 +135,7 @@ namespace Raven.Server.Rachis
                 return;
 
             if (guid == RaftIdGenerator.DontCareId)
-            {
                 return;
-            }
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
             var type = GetTypeFromCommand(cmd);
