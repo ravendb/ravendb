@@ -162,9 +162,18 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         title="Click to view alerts in Notification Center"
                         className="text-warning"
                     >
-                        <a href="#" onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}>
-                            <i className="icon-warning me-1" /> {alerts} Alerts
-                        </a>
+                        {db.currentNode.relevant ? (
+                            <a
+                                href="#"
+                                onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
+                            >
+                                <i className="icon-warning me-1" /> {alerts} Alerts
+                            </a>
+                        ) : (
+                            <>
+                                <i className="icon-warning me-1" /> {alerts} Alerts
+                            </>
+                        )}
                     </RichPanelDetailItem>
                 )}
                 {performanceHints > 0 && (
@@ -173,9 +182,18 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         title="Click to view performance hints in Notification Center"
                         className="text-info"
                     >
-                        <a href="#" onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}>
-                            <i className="icon-rocket me-1" /> {performanceHints} Performance hints
-                        </a>
+                        {db.currentNode.relevant ? (
+                            <a
+                                href="#"
+                                onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
+                            >
+                                <i className="icon-rocket me-1" /> {performanceHints} Performance hints
+                            </a>
+                        ) : (
+                            <>
+                                <i className="icon-rocket me-1" /> {performanceHints} Performance hints
+                            </>
+                        )}
                     </RichPanelDetailItem>
                 )}
                 {hasAnyLoadError && (
