@@ -91,4 +91,37 @@ export const parameters = {
       date: /Date$/,
     },
   },
+  backgrounds: {
+    default: 'twitter',
+    values: [
+      {
+        name: 'default-body',
+        value: '#181826',
+      },
+      {
+        name: 'default-panel',
+        value: '#1e1f2b',
+      },
+      {
+        name: 'default-panel-header',
+        value: '#262936',
+      },
+      {
+        name: 'blue-body',
+        value: '#172138',
+      },
+      {
+        name: 'blue-panel',
+        value: '#e1e3ef',
+      },
+      {
+        name: 'blue-panel-header',
+        value: '#f4f5fb',
+      },
+      {
+        name: 'light-body',
+        value: '#dbdde3',
+      },      
+    ],
+  },
 }

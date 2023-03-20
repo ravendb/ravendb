@@ -11,9 +11,7 @@ export default {
 export function Variants() {
     return (
         <>
-            <Card className="p-4">
-                <AllButtons />
-            </Card>
+            <AllButtons />
         </>
     );
 }
