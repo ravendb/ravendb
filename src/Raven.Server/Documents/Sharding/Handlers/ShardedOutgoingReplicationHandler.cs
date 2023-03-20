@@ -14,7 +14,6 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
 
@@ -79,15 +78,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             catch (Exception e)
             {
                 batch?.BatchSent?.TrySetException(e);
-                try
-                {
-                    _tcpConnectionOptions.Dispose();
-                }
-                catch
-                {
-                    // nothing we can do
-                }
-
                 throw;
             }
         }

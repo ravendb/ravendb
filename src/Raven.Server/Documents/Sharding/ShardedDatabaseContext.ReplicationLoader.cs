@@ -102,13 +102,21 @@ namespace Raven.Server.Documents.Sharding
 
                     AddAndStartIncomingInstance(shardedIncomingHandler);
                 }
-                catch (Exception)
+                catch
                 {
+                    try
+                    {
+                        shardedIncomingHandler.Dispose();
+                    }
+                    catch
+                    {
+                        // do nothing
+                    }
                     try
                     {
                         tcpConnectionOptions.Dispose();
                     }
-                    catch (Exception)
+                    catch
                     {
                         // do nothing
                     }
