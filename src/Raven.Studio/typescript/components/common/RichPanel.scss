@@ -4,6 +4,8 @@
 $status-border-radius: bs5variables.$gutter-xs;
 
 .rich-panel-item {
+    transition: box-shadow 0.25s bs5variables.$global-easing;
+
     & + .rich-panel-item {
         margin-top: bs5variables.$gutter-sm;
     }
@@ -36,28 +38,18 @@ $status-border-radius: bs5variables.$gutter-xs;
     }
 
     &.active {
-        &::before {
-            $width: bs5variables.$gutter;
+        $bulge-width: bs5variables.$gutter-xxs;
+        $border-offset: 2px;
+        $border-width: bs5variables.$border-width;
 
-            content: "active";
-            position: absolute;
-            top: 0;
-            left: ($width * -1) + $status-border-radius - 2;
-            border-radius: 0 $status-border-radius $status-border-radius 0;
-            height: 100%;
-            width: $width;
-            line-height: $width - $status-border-radius;
-            z-index: 1;
-            writing-mode: vertical-rl;
-            transform: rotate(180.1deg);
-            text-align: center;
-            color: bs5variables.$black;
-            box-shadow: ($width * -1 + $status-border-radius) 0px 0px 0px bs5variables.$primary-var inset;
-            font-size: bs5variables.$badge-font-size;
-            font-weight: bs5variables.$badge-font-weight;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
+        box-shadow: 0px 0px 0px $border-offset rgba(bs5variables.$body-bg-var, 1),
+            0px 0px 0px ($border-offset + $border-width) bs5variables.$primary-var,
+            (($bulge-width + $border-offset) * -1) 0px 0px ($border-offset + $border-width) bs5variables.$primary-var;
+    }
+
+    &.with-status {
+        border-top-left-radius: $status-border-radius;
+        border-bottom-left-radius: $status-border-radius;
     }
 
     .rich-panel-status {

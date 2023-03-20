@@ -300,7 +300,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     return (
         <RichPanel
-            className={classNames("flex-row", {
+            className={classNames("flex-row", "with-status", {
                 active: activeDatabase === db.name,
                 relevant: true,
             })}

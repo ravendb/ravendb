@@ -76,7 +76,7 @@ $base-panel-bg-3: $panel-bg-3;
 
 $well-bg: $body-bg;
 
-$primary: #ff75d6;
+$primary: $color-5;
 $success: $color-3;
 $info: $color-4;
 $warning: $color-2;
@@ -84,7 +84,7 @@ $danger: $color-1;
 $light: $gray-100;
 $dark: $gray-900;
 
-$link-color: $primary;
+$link-color: #c072ee;
 
 // Blue Theme
 @if $theme == "blue" {
@@ -165,7 +165,7 @@ $link-color: $primary;
     $color-5-2: darken(#d85b9a, 5%);
     $color-5-3: darken(#ed558c, 5%);
 
-    $primary: #419ca6;
+    $primary: $color-5;
     $secondary: $gray-400;
     $secondary-outline: $gray-600; //fix outline button contrast
     $success: $color-3;
