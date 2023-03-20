@@ -1411,7 +1411,7 @@ namespace Raven.Server.Documents.Replication
             return null;
         }
 
-        private DatabaseOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
+        protected virtual DatabaseOutgoingReplicationHandler GetOutgoingReplicationHandlerInstance(TcpConnectionInfo info, ReplicationNode node)
         {
             if (Database == null)
                 return null;
@@ -1428,9 +1428,6 @@ namespace Raven.Server.Documents.Replication
                     break;
                 case ExternalReplication externalNode:
                     outgoingReplication = new OutgoingExternalReplicationHandler(this, Database, externalNode, info);
-                    break;
-                case BucketMigrationReplication migrationNode:
-                    outgoingReplication = new OutgoingMigrationReplicationHandler(this, ShardedDocumentDatabase.CastToShardedDocumentDatabase(Database), migrationNode, info);
                     break;
                 default:
                     throw new ArgumentException($"Unknown node type {node.GetType().FullName}");

@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public readonly BucketMigrationReplication BucketMigrationNode;
         public long LastSentEtag;
 
-        public OutgoingMigrationReplicationHandler(ReplicationLoader parent, ShardedDocumentDatabase database, BucketMigrationReplication node, TcpConnectionInfo connectionInfo) : base(parent, database, node, connectionInfo)
+        public OutgoingMigrationReplicationHandler(ShardReplicationLoader parent, ShardedDocumentDatabase database, BucketMigrationReplication node, TcpConnectionInfo connectionInfo) : base(parent, database, node, connectionInfo)
         {
             _shardedDatabase = database;
             BucketMigrationNode = node;
@@ -52,6 +52,14 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             var request = base.GetInitialHandshakeRequest();
             request[nameof(ReplicationLatestEtagRequest.MigrationIndex)] = BucketMigrationNode.MigrationIndex;
+
+            // we generate random but stable guid to allow creating several replication channels from this source to the same destination
+            // so we can start a new bucket migration while the previous one is might be still open
+            var r = new Random((int)BucketMigrationNode.MigrationIndex);
+            Span<byte> guid = stackalloc byte[16];
+            r.NextBytes(guid);
+            request[nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = new Guid(guid).ToString();
+
             return request;
         }
 
