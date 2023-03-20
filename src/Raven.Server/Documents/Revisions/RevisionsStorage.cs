@@ -88,6 +88,7 @@ namespace Raven.Server.Documents.Revisions
         public const long NotDeletedRevisionMarker = 0;
 
         private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration { Disabled = true };
+        private readonly RevisionsCollectionConfiguration _forceCreatedConfiguration = new RevisionsCollectionConfiguration { Disabled = false };
 
         public RevisionsStorage(DocumentDatabase database, Transaction tx)
         {
@@ -259,7 +260,12 @@ namespace Raven.Server.Documents.Revisions
                 {
                     return ConflictConfiguration.Default;
                 }
-            
+
+                if (flags.Contain(DocumentFlags.ForceCreated))
+                {
+                    return _forceCreatedConfiguration;
+                }
+
                 return _emptyConfiguration;
             }
             
@@ -274,8 +280,16 @@ namespace Raven.Server.Documents.Revisions
                     return ConflictConfiguration.Default;
                 }
             }
-            
-            return Configuration.Default ?? _emptyConfiguration;
+
+            if (Configuration.Default != null)
+            {
+                return Configuration.Default;
+            }
+            if (flags.Contain(DocumentFlags.ForceCreated))
+            {
+                return _forceCreatedConfiguration;
+            }
+            return _emptyConfiguration;
 
             // // Specific Collection config
             // if (collection != null &&
@@ -297,6 +311,11 @@ namespace Raven.Server.Documents.Revisions
             // if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted) && ConflictConfiguration.Default.Disabled == false)
             // {
             //     return ConflictConfiguration.Default;
+            // }
+            //
+            // if (flags.Contain(DocumentFlags.ForceCreated))
+            // {
+            //     return _forceCreatedConfiguration;
             // }
             //
             // return _emptyConfiguration;
@@ -473,6 +492,8 @@ namespace Raven.Server.Documents.Revisions
                     return true;
 
                 flags |= DocumentFlags.Revision;
+                if(nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation))
+                    flags |= DocumentFlags.ForceCreated;
                 var etag = _database.DocumentsStorage.GenerateNextEtag();
                 var newEtagSwapBytes = Bits.SwapBytes(etag);
 
@@ -916,12 +937,17 @@ namespace Raven.Server.Documents.Revisions
                         var collection = CollectionName.GetCollectionName(revision.Data);
                         var config = docConfiguration ?? GetRevisionsConfiguration(collection, revision.Flags);
 
+                        // if (revision.Flags.Contain(DocumentFlags.ForceCreated))
+                        // {
+                        // }
+
                         if (config.MaximumRevisionsToDeleteUponDocumentUpdate <= counts[config].DeletedCount)
                         {
                             reachedMaxUponUpdate = true;
                             break;
                         }
 
+                        // if ((config.Disabled && revision.Flags.Contain(DocumentFlags.ForceCreated)==false) ||
                         if (config.Disabled ||
                             deleteType == DeleteType.PurgeOnDelete ||
                             (deleteType == DeleteType.Age &&
