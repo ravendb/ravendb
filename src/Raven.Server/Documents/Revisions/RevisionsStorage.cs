@@ -922,7 +922,7 @@ namespace Raven.Server.Documents.Revisions
             long maxEtagDeleted = 0;
             var reachedMaxUponUpdate = false;
             var passedAllWithoutRemoving = false;
-            var tables = new Dictionary<RevisionsCollectionConfiguration, Table>();
+            var tables = new Dictionary<string, Table>();
 
             while (reachedMaxUponUpdate == false && passedAllWithoutRemoving == false)
             {
@@ -968,13 +968,13 @@ namespace Raven.Server.Documents.Revisions
                                 }
 
                                 Table writeTable = null;
-                                if (tables.ContainsKey(config) && tables[config]!=null)
+                                if (tables.ContainsKey(collection) && tables[collection] !=null)
                                 {
-                                    writeTable = tables[config];
+                                    writeTable = tables[collection];
                                 }
                                 else
                                 {
-                                    tables[config] = writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(collection));
+                                    tables[collection] = writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(collection));
                                 }
 
                                 writeTable.DeleteByKey(keySlice);
