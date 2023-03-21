@@ -37,7 +37,11 @@ using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
+using RavenServerBackupUtils = Raven.Server.Utils.BackupUtils;
 using Index = Raven.Server.Documents.Indexes.Index;
+using Sparrow;
+using Sparrow.Server.Exceptions;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -123,10 +127,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected async Task<Stream> CopyRemoteStreamLocally(Stream stream)
         {
-            return await CopyRemoteStreamLocally(stream, _serverStore.Configuration.Storage.TempPath);
+            return await CopyRemoteStreamLocally(stream, _serverStore.Configuration);
         }
 
-        public static async Task<Stream> CopyRemoteStreamLocally(Stream stream, PathSetting tempPath)
+        public static async Task<Stream> CopyRemoteStreamLocally(Stream stream, RavenConfiguration configuration)
         {
             if (stream.CanSeek)
                 return stream;
@@ -134,8 +138,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // This is meant to be used by ZipArchive, which will copy the data locally because is *must* be seekable.
             // To avoid reading everything to memory, we copy to a local file instead. Note that this also ensure that we
             // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
-            var basePath = tempPath?.FullPath ?? Path.GetTempPath();
-            var filePath = Path.Combine(basePath, $"{Guid.NewGuid()}.restore-local-file");
+
+            var filePath = RavenServerBackupUtils.GetBackupTempPath(configuration, $"{Guid.NewGuid()}.snapshot-restore").FullPath;
+            AssertFreeSpace(stream, filePath);
+            
             var file = SafeFileStream.Create(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
                 32 * 1024, FileOptions.DeleteOnClose);
 
@@ -163,7 +169,48 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 throw;
             }
+        }
 
+        private static void AssertFreeSpace(Stream stream, string filePath)
+        {
+            long streamLength;
+
+            try
+            {
+                streamLength = stream.Length;
+            }
+            catch (NotSupportedException)
+            {
+                // nothing we can do
+                return;
+            }
+
+            var driveName = DiskUtils.GetDriveInfo(filePath, DriveInfo.GetDrives(), out string _).DriveName;
+            if (driveName == null)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to get drive name for file '{filePath}'");
+
+                return;
+            }
+
+            var spaceInfo = DiskUtils.GetDiskSpaceInfo(driveName);
+            if (spaceInfo == null)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to get space info for drive '{driveName}'");
+
+                return;
+            }
+
+            // + we need to download the snapshot
+            // + we need as much space to restore it
+            // + leave 1GB of free space
+            var freeSpaceNeeded = new Sparrow.Size(streamLength * 2, SizeUnit.Bytes) + new Sparrow.Size(1, SizeUnit.Gigabytes);
+
+            if (freeSpaceNeeded > spaceInfo.TotalFreeSpace)
+                throw new DiskFullException($"There is not enough space on '{driveName}', we need at least {freeSpaceNeeded} in order to successfully restore a snapshot. " +
+                                            $"Currently available space is {spaceInfo.TotalFreeSpace}.");
         }
 
         protected abstract Task<Stream> GetStream(string path);
