@@ -816,7 +816,7 @@ namespace Raven.Server.ServerWide
 
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex);
-            
+
             using (Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -824,7 +824,7 @@ namespace Raven.Server.ServerWide
             }
 
             _ = Task.Run(PublishServerUrlAsync).IgnoreUnobservedExceptions();
-            
+
             SorterCompilationCache.Instance.AddServerWideItems(this);
             AnalyzerCompilationCache.Instance.AddServerWideItems(this);
 
@@ -848,11 +848,18 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
+                    if (IsPassive())
+                        await Engine.WaitForLeaveState(RachisState.Passive, ServerShutdown);
+
                     publicUrl ??= GetNodeHttpServerUrl();
                     privateUrl ??= Configuration.Core.ClusterServerUrl?.ToString() ?? publicUrl;
 
                     var cmd = new UpdateServerPublishedUrlsCommand(NodeTag, publicUrl, privateUrl, Guid.NewGuid().ToString());
                     await SendToLeaderAsync(cmd);
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
                     return;
                 }
                 catch (Exception e)
@@ -878,7 +885,7 @@ namespace Raven.Server.ServerWide
                 {
                     bool noSwapFile = swapSize == Size.Zero;
                     string title = noSwapFile ? "No swap file" : "Low swap size";
-                    string message = noSwapFile ? $"There is no swap file, it is advised to set up a '{Configuration.PerformanceHints.MinSwapSize}' swap file" : 
+                    string message = noSwapFile ? $"There is no swap file, it is advised to set up a '{Configuration.PerformanceHints.MinSwapSize}' swap file" :
                         $"The current swap size is '{swapSize}' and it is lower then the threshold defined '{Configuration.PerformanceHints.MinSwapSize}'";
 
                     NotificationCenter.Add(AlertRaised.Create(null,
@@ -1307,12 +1314,12 @@ namespace Raven.Server.ServerWide
 
             if (state is long taskId == false)
             {
-                Debug.Assert(state == null, 
+                Debug.Assert(state == null,
                     $"This is probably a bug. This method should be called only for {nameof(PutServerWideBackupConfigurationCommand)} and the state should be the database periodic backup task id.");
                 //The database is excluded from the server-wide backup.
                 return;
             }
-            
+
             PeriodicBackupConfiguration backupConfig;
             DatabaseTopology topology;
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -1325,7 +1332,7 @@ namespace Raven.Server.ServerWide
                 if (backupConfig == null)
                 {
                     //`indexPerDatabase` was collected from the previous transaction. The database can be excluded in the meantime. 
-                    if(Logger.IsInfoEnabled)
+                    if (Logger.IsInfoEnabled)
                         Logger.Info($"Could not reschedule the wakeup timer for idle database '{db}', because there is no backup task with id '{taskId}'.");
                     return;
                 }
