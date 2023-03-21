@@ -11,8 +11,8 @@ namespace Raven.Client.Documents.Operations
             Collections = new Dictionary<string, long>();
         }
 
-        public int CountOfDocuments { get; set; }
-        public int CountOfConflicts { get; set; }
+        public long CountOfDocuments { get; set; }
+        public long CountOfConflicts { get; set; }
 
         public Dictionary<string, long> Collections { get; set; }
 
