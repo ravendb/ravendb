@@ -7,6 +7,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 
@@ -83,6 +84,19 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 ChangeVector = Encoding.UTF8.GetString(Reader.ReadExactly(changeVectorSize), changeVectorSize);
 
             TransactionMarker = *(short*)Reader.ReadExactly(sizeof(short));
+        }
+
+        public virtual DynamicJsonValue ToDebugJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Type)] = Type,
+                [nameof(Size)] = Size,
+                [nameof(TransactionMarker)] = TransactionMarker,
+                [nameof(ChangeVector)] = ChangeVector,
+                [nameof(Etag)] = Etag,
+                ["LastModified"] = new DateTime(LastModifiedTicks).ToString("O")
+            };
         }
 
         protected unsafe int WriteCommon(Slice changeVector, byte* tempBuffer)

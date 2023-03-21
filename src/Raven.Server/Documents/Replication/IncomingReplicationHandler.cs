@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -1190,11 +1191,7 @@ namespace Raven.Server.Documents.Replication
                                 if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
                                     continue;
 
-                                // tombstone structure means doc-id | REC-SEP | ...
-                                var keySpan = attachmentTombstone.Key.AsReadOnlySpan();
-                                int endOfDocumentId = keySpan.IndexOf(SpecialChars.RecordSeparator);
-                                Debug.Assert(endOfDocumentId != -1);
-                                string documentId = Encoding.UTF8.GetString(keySpan[..endOfDocumentId]);// will throw if no separator found 
+                                string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key); 
                                 pendingAttachmentsTombstoneUpdates ??= new();
                                 pendingAttachmentsTombstoneUpdates.Add((documentId, attachmentTombstone.ChangeVector, attachmentTombstone.LastModifiedTicks));
 
@@ -1208,7 +1205,7 @@ namespace Raven.Server.Documents.Replication
                                 Slice id;
                                 if (_isSink)
                                 {
-                                    var currentId = revisionTombstone.Id.ToString();
+                                    var currentId = revisionTombstone.Id.ToString(CultureInfo.InvariantCulture);
                                     ReplaceKnownSinkEntries(context, ref currentId);
                                     toDispose.Add(Slice.From(context.Allocator, currentId, out id));
                                 }

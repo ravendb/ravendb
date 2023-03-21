@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using Nest;
 using Raven.Client.Util;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 
@@ -18,6 +21,15 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public DateTime From;
         public DateTime To;
 
+        public override DynamicJsonValue ToDebugJson()
+        {
+            var djv = base.ToDebugJson();
+            djv[nameof(Collection)] = Collection.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
+            djv[nameof(From)] = From.ToString("O");
+            djv[nameof(To)] = To.ToString("O");
+            return djv;
+        }
         public override long AssertChangeVectorSize()
         {
             return sizeof(byte) + // type
@@ -100,6 +112,15 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Name; // original casing
         public LazyStringValue Collection;
         public TimeSeriesValuesSegment Segment;
+        
+        public override DynamicJsonValue ToDebugJson()
+        {
+            var djv = base.ToDebugJson();
+            djv[nameof(Collection)] = Collection.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Name)] = Name.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
+            return djv;
+        }
 
         public override long AssertChangeVectorSize()
         {

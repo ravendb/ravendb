@@ -65,35 +65,13 @@ namespace Raven.Server.Documents.Handlers
                     TombstoneRead = new OutgoingReplicationStatsScope(runStats),
                     TimeSeriesRead = new OutgoingReplicationStatsScope(runStats),
                 };
-                var array = new DynamicJsonArray();
 
-                foreach (ReplicationBatchItem item in ReplicationDocumentSender.GetReplicationItems(Database, context, etag, stats, false).Take(pageSize))
-                {
-                    var djv = new DynamicJsonValue
-                    {
-                        [nameof(item.ChangeVector)] = item.ChangeVector,
-                        [nameof(item.Etag)] = item.Etag,
-                        [nameof(item.Type)] = item.Type,
-                        [nameof(item.TransactionMarker)] = item.TransactionMarker,
-                    };
-                    switch (item)
-                    {
-                        case DocumentReplicationItem i:
-                            djv[nameof(i.Collection)] = i.Collection;
-                            djv[nameof(i.Id)] = i.Id;
-                            djv[nameof(i.Flags)] = i.Flags;
-                            break;
-                        case AttachmentReplicationItem a:
-                            djv[nameof(a.Base64Hash)] = a.Base64Hash.ToString();
-                            djv[nameof(a.Name)] = a.Name.ToString();
-                            djv[nameof(a.ContentType)] = a.ContentType.ToString();
-                            break;
-                    }
-                    array.Add(djv);
-                }
+                var items = ReplicationDocumentSender.GetReplicationItems(Database, context, etag, stats, false)
+                    .Take(pageSize);
+                
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Results"] = array
+                    ["Results"] = new DynamicJsonArray(items.Select(x=>x.ToDebugJson()))
                 });
             }
         }
