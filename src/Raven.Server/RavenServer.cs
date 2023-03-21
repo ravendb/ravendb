@@ -2625,14 +2625,6 @@ namespace Raven.Server
                                         _ => PullReplicationMode.None
                                     };
 
-#pragma warning disable CS0618 // Type or member is obsolete
-                                    if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0) // legacy
-                                    {
-                                        return pullReplication.Certificates.ContainsKey(certificate.Thumbprint) &&
-                                            expectedMode == PullReplicationMode.HubToSink;
-                                    }
-#pragma warning restore CS0618 // Type or member is obsolete
-
                                     if ((pullReplication.Mode & expectedMode) != expectedMode || expectedMode == PullReplicationMode.None)
                                     {
                                         msg = "The expected replication mode does not match the replication mode on the replication hub";

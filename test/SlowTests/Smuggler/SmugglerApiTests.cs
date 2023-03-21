@@ -781,48 +781,6 @@ namespace SlowTests.Smuggler
         }
 
         [Fact]
-        public async Task CanImportLegacyCounters()
-        {
-            var assembly = typeof(SmugglerApiTests).Assembly;
-
-            using (var fs = assembly.GetManifestResourceStream("SlowTests.Data.legacy-counters.4.1.5.ravendbdump"))
-            using (var store = GetDocumentStore())
-            {
-                var options = new DatabaseSmugglerImportOptions();
-                options.OperateOnTypes &= ~DatabaseItemType.CounterGroups;
-
-#pragma warning disable 618
-                options.OperateOnTypes |= DatabaseItemType.Counters;
-#pragma warning restore 618
-
-                var operation = await store.Smuggler.ImportAsync(options, fs);
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-
-                Assert.Equal(1059, stats.CountOfDocuments);
-                Assert.Equal(3, stats.CountOfIndexes);
-                Assert.Equal(4645, stats.CountOfRevisionDocuments);
-                Assert.Equal(17, stats.CountOfAttachments);
-
-                Assert.Equal(29, stats.CountOfCounterEntries);
-
-                using (var session = store.OpenSession())
-                {
-                    var q = session.Query<Supplier>().ToList();
-                    Assert.Equal(29, q.Count);
-
-                    foreach (var supplier in q)
-                    {
-                        var counters = session.CountersFor(supplier).GetAll();
-                        Assert.Equal(1, counters.Count);
-                        Assert.Equal(10, counters["likes"]);
-                    }
-                }
-            }
-        }
-
-        [Fact]
         public async Task ShouldAvoidCreatingNewRevisionsDuringImport()
         {
             var file = GetTempFileName();

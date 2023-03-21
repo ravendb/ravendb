@@ -57,14 +57,11 @@ namespace StressTests.Server.Replication
                 ModifyDatabaseName = _ => sinkDB
             }))
             {
-                await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)
+                await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)));
+                await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(pullReplicationName, new ReplicationHubAccess
                 {
-#pragma warning disable CS0618 // Type or member is obsolete
-                    Certificates = new Dictionary<string, string>
-#pragma warning restore CS0618 // Type or member is obsolete
-                    {
-                        [pullReplicationCertificate.Thumbprint] = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Cert))
-                    }
+                    Name = pullReplicationCertificate.Thumbprint,
+                    CertificateBase64 = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Cert))
                 }));
 
                 var configurationResult = await SetupPullReplicationAsync(pullReplicationName, sinkStore, pullReplicationCertificate, hubStore);

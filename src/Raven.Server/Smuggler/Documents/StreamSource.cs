@@ -1037,9 +1037,6 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchangeTombstones:
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
-#pragma warning disable 618
-                case DatabaseItemType.Counters:
-#pragma warning restore 618
                 case DatabaseItemType.CounterGroups:
                     return await SkipArrayAsync(onSkipped, null, token);
 
@@ -1992,11 +1989,6 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.CounterGroups), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.CounterGroups;
-
-#pragma warning disable 618
-            if (type.Equals(nameof(DatabaseItemType.Counters), StringComparison.OrdinalIgnoreCase))
-                return DatabaseItemType.Counters;
-#pragma warning restore 618
 
             if (type.Equals(nameof(DatabaseItemType.TimeSeries), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.TimeSeries;

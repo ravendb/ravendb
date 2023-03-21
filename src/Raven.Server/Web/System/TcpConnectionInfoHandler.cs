@@ -142,21 +142,12 @@ namespace Raven.Server.Web.System
                         if (serverStore.Cluster.TryReadPullReplicationDefinition(database, remoteTask, context, out var pullReplication))
                         {
                             var cert = httpContext.Connection.ClientCertificate;
-#pragma warning disable CS0618 // Type or member is obsolete
-                            if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0)
-                            {
-                                if (pullReplication.Certificates.ContainsKey(cert.Thumbprint))
-                                    return true;
-                            }
-#pragma warning restore CS0618 // Type or member is obsolete
-                            else
-                            {
-                                if (serverStore.Cluster.IsReplicationCertificate(context, database, remoteTask, cert, out _))
-                                    return true;
 
-                                if (serverStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(context, database, remoteTask, cert, serverStore.Configuration.Security, out _))
-                                    return true;
-                            }
+                            if (serverStore.Cluster.IsReplicationCertificate(context, database, remoteTask, cert, out _))
+                                return true;
+
+                            if (serverStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(context, database, remoteTask, cert, serverStore.Configuration.Security, out _))
+                                return true;
                         }
 
                         await RequestRouter.UnlikelyFailAuthorizationAsync(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);
@@ -183,7 +174,7 @@ namespace Raven.Server.Web.System
             if (pinToMentorNode)
             {
                 if (topology.AllNodes.Contains(mentorNode))
-                    return new List<string> {mentorNode};
+                    return new List<string> { mentorNode };
             }
 
             var list = new List<string>();

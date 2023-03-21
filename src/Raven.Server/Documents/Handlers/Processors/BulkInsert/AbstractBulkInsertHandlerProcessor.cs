@@ -9,7 +9,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Raven.Server.Documents.Handlers.BulkInsert;
 
@@ -175,9 +174,6 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                             _progress.BatchCount++;
                             _progress.Total += numberOfCommands;
                             _progress.LastProcessedId = array[numberOfCommands - 1].Id;
-#pragma warning disable CS0618 // Type or member is obsolete
-                            _progress.Processed = _progress.DocumentsProcessed;
-#pragma warning restore CS0618 // Type or member is obsolete
 
                             _onProgress?.Invoke(_progress);
                         }

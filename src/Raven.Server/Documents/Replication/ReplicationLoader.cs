@@ -375,12 +375,6 @@ namespace Raven.Server.Documents.Replication
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Push Replication");
                             if (certificate == null)
                                 throw new InvalidOperationException("Incoming filtered replication is only supported when using a certificate");
-#pragma warning disable CS0618 // Type or member is obsolete
-                            if (pullReplicationDefinition.Certificates != null && pullReplicationDefinition.Certificates.Count > 0)
-#pragma warning restore CS0618 // Type or member is obsolete
-                                throw new InvalidOperationException(
-                                    "Incoming filtered replication is not supported on legacy replication hub. Make sure that there are no inline certificates on the replication hub: " +
-                                    pullReplicationDefinition.Name);
 
                             allowedPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedSinkToHubPaths, header.ReplicationHubAccess.AllowedHubToSinkPaths);
                             preventDeletionsMode = pullReplicationDefinition.PreventDeletionsMode;

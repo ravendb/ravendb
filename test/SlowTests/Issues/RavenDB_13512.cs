@@ -51,59 +51,5 @@ namespace SlowTests.Issues
                 }
             }
         }
-
-        [Fact]
-        public async Task Can_restore_legacy_counters_from_incremental_backup()
-        {
-            var assemblyPrefix = "SlowTests.Data.RavenDB_13512.Incremental.";
-
-            var backupPath = NewDataPath(forceCreateDir: true);
-
-            var fullBackupPath = Path.Combine(backupPath, "17.ravendb-full-backup");
-            var incrementalBackupPath1 = Path.Combine(backupPath, "18.ravendb-incremental-backup");
-            var incrementalBackupPath2 = Path.Combine(backupPath, "18-01.ravendb-incremental-backup");
-
-            RavenDB_13468.ExtractFile(fullBackupPath, assemblyPrefix + "17.ravendb-full-backup");
-            RavenDB_13468.ExtractFile(incrementalBackupPath1, assemblyPrefix + "18.ravendb-incremental-backup");
-            RavenDB_13468.ExtractFile(incrementalBackupPath2, assemblyPrefix + "18-01.ravendb-incremental-backup");
-
-            using (var store = GetDocumentStore())
-            {
-                var importOptions = new DatabaseSmugglerImportOptions();
-#pragma warning disable 618
-                importOptions.OperateOnTypes |= DatabaseItemType.Counters;
-#pragma warning restore 618
-
-                await store.Smuggler.ImportIncrementalAsync(importOptions, backupPath);
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var user1 = await session.LoadAsync<User>("users/1");
-                    Assert.NotNull(user1);
-
-                    var metadata = session.Advanced.GetMetadataFor(user1);
-                    Assert.True(metadata.ContainsKey("@counters"));
-
-                    var counters = await session.CountersFor(user1).GetAllAsync();
-                    Assert.Equal(100, counters.Count);
-                    for (int i = 0; i < counters.Count; i++)
-                    {
-                        Assert.True(counters.TryGetValue("counter/" + i, out var val));
-                        Assert.Equal(i * 3, val);
-                    }
-
-                    var user2 = await session.LoadAsync<User>("users/2");
-                    Assert.NotNull(user2);
-
-                    counters = await session.CountersFor(user2).GetAllAsync();
-                    Assert.Equal(100, counters.Count);
-                    for (int i = 0; i < counters.Count; i++)
-                    {
-                        Assert.True(counters.TryGetValue("counter/" + i, out var val));
-                        Assert.Equal(i * 2, val);
-                    }
-                }
-            }
-        }
     }
 }

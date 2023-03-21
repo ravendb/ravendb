@@ -206,59 +206,6 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
-        public async Task CanImportLegacyCountersToShard()
-        {
-            var assembly = typeof(SmugglerApiTests).Assembly;
-            var file = GetTempFileName();
-            using (var fs = assembly.GetManifestResourceStream("SlowTests.Data.legacy-counters.4.1.5.ravendbdump"))
-            using (var store = Sharding.GetDocumentStore())
-            {
-                var options = new DatabaseSmugglerImportOptions();
-
-
-#pragma warning disable 618
-                options.OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Counters;
-#pragma warning restore 618
-
-                var operation = await store.Smuggler.ImportAsync(options, fs);
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
-                {
-                    OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.CounterGroups
-                }, file);
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                using (var store2 = GetDocumentStore())
-                {
-                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
-                    {
-                        OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.CounterGroups
-                    }, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
-
-                    Assert.Equal(1059, stats.CountOfDocuments);
-                    Assert.Equal(29, stats.CountOfCounterEntries);
-
-                    using (var session = store2.OpenSession())
-                    {
-                        var q = session.Query<Supplier>().ToList();
-                        Assert.Equal(29, q.Count);
-
-                        foreach (var supplier in q)
-                        {
-                            var counters = session.CountersFor(supplier).GetAll();
-                            Assert.Equal(1, counters.Count);
-                            Assert.Equal(10, counters["likes"]);
-                        }
-                    }
-                }
-            }
-        }
-
         [Fact(Skip = "For testing")]
         public async Task RegularToRegular()
         {
