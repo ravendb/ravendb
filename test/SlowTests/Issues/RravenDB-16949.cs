@@ -195,12 +195,11 @@ namespace SlowTests.Issues
                 }
                 using (var session = store.OpenAsyncSession())
                 {
-
-                    var revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 1000).Result.Count;
+                    var revisionCount = await session.Advanced.Revisions.GetCountForAsync("users/1");
                     Assert.Equal(501, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 1000).Result.Count;
+                    revisionCount = await session.Advanced.Revisions.GetCountForAsync("users/2");
                     Assert.Equal(631, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("orders/1", 0, 1000).Result.Count;
+                    revisionCount = await session.Advanced.Revisions.GetCountForAsync("orders/1");
                     Assert.Equal(501, revisionCount);
                 }
 
@@ -228,15 +227,16 @@ namespace SlowTests.Issues
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenAsyncSession())
                 {
-                    var revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/1", 0, 100).Result.Count;
-                    Assert.Equal(10, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<User>("users/2", 0, 100).Result.Count;
-                    Assert.Equal(10, revisionCount);
-                    revisionCount = session.Advanced.Revisions.GetForAsync<Order>("orders/1", 0, 100).Result.Count;
-                    Assert.Equal(33, revisionCount);
+                    var revisionCount = await session.Advanced.Revisions.GetCountForAsync("users/1");
+                    Assert.Equal(501 - 100, revisionCount);
+                    revisionCount = await session.Advanced.Revisions.GetCountForAsync("users/2");
+                    Assert.Equal(631 - 100, revisionCount);
+                    revisionCount = await session.Advanced.Revisions.GetCountForAsync("orders/1");
+                    Assert.Equal(501 - 35, revisionCount);
                 }
             }
         }

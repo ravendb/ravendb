@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Revisions
         public const long NotDeletedRevisionMarker = 0;
 
         private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration { Disabled = true };
-        private readonly RevisionsCollectionConfiguration _forceCreatedConfiguration = new RevisionsCollectionConfiguration { Disabled = false };
+        internal readonly RevisionsCollectionConfiguration _forceCreatedConfiguration = new RevisionsCollectionConfiguration { Disabled = false };
 
         public RevisionsStorage(DocumentDatabase database, Transaction tx)
         {
@@ -254,71 +254,71 @@ namespace Raven.Server.Documents.Revisions
 
         public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None)
         {
-            if (Configuration == null)
-            {
-                if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
-                {
-                    return ConflictConfiguration.Default;
-                }
-
-                if (flags.Contain(DocumentFlags.ForceCreated))
-                {
-                    return _forceCreatedConfiguration;
-                }
-
-                return _emptyConfiguration;
-            }
-            
-            if (Configuration.Collections != null &&
-                Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
-                return configuration;
-            
-            if (Configuration.Default == null)
-            {
-                if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
-                {
-                    return ConflictConfiguration.Default;
-                }
-            }
-
-            if (Configuration.Default != null)
-            {
-                return Configuration.Default;
-            }
-            if (flags.Contain(DocumentFlags.ForceCreated))
-            {
-                return _forceCreatedConfiguration;
-            }
-            return _emptyConfiguration;
-
-            // // Specific Collection config
-            // if (collection != null &&
-            //     Configuration != null && 
-            //     Configuration.Collections != null &&
-            //     Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration) &&
-            //     configuration.Disabled==false)
+            // if (Configuration == null)
+            // {
+            //     if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
+            //     {
+            //         return ConflictConfiguration.Default;
+            //     }
+            //
+            //     if (flags.Contain(DocumentFlags.ForceCreated))
+            //     {
+            //         return _forceCreatedConfiguration;
+            //     }
+            //
+            //     return _emptyConfiguration;
+            // }
+            //
+            // if (Configuration.Collections != null &&
+            //     Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
             //     return configuration;
             //
-            // // Default (All collections) config
-            // if (Configuration != null &&
-            //     Configuration.Default != null &&
-            //     Configuration.Default.Disabled == false)
+            // if (Configuration.Default == null)
+            // {
+            //     if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
+            //     {
+            //         return ConflictConfiguration.Default;
+            //     }
+            // }
+            //
+            // if (Configuration.Default != null)
             // {
             //     return Configuration.Default;
             // }
-            //
-            // // Conflicted config
-            // if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted) && ConflictConfiguration.Default.Disabled == false)
-            // {
-            //     return ConflictConfiguration.Default;
-            // }
-            //
             // if (flags.Contain(DocumentFlags.ForceCreated))
             // {
             //     return _forceCreatedConfiguration;
             // }
-            //
             // return _emptyConfiguration;
+
+            // Specific Collection config
+            if (collection != null &&
+                Configuration != null && 
+                Configuration.Collections != null &&
+                Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration) &&
+                configuration.Disabled==false)
+                return configuration;
+            
+            // Default (All collections) config
+            if (Configuration != null &&
+                Configuration.Default != null &&
+                Configuration.Default.Disabled == false)
+            {
+                return Configuration.Default;
+            }
+            
+            // Conflicted config
+            if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted) && ConflictConfiguration.Default.Disabled == false)
+            {
+                return ConflictConfiguration.Default;
+            }
+            
+            if (flags.Contain(DocumentFlags.ForceCreated))
+            {
+                return _forceCreatedConfiguration;
+            }
+            
+            return _emptyConfiguration;
         }
 
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags,
@@ -937,17 +937,12 @@ namespace Raven.Server.Documents.Revisions
                         var collection = CollectionName.GetCollectionName(revision.Data);
                         var config = docConfiguration ?? GetRevisionsConfiguration(collection, revision.Flags);
 
-                        // if (revision.Flags.Contain(DocumentFlags.ForceCreated))
-                        // {
-                        // }
-
                         if (config.MaximumRevisionsToDeleteUponDocumentUpdate <= counts[config].DeletedCount)
                         {
                             reachedMaxUponUpdate = true;
                             break;
                         }
 
-                        // if ((config.Disabled && revision.Flags.Contain(DocumentFlags.ForceCreated)==false) ||
                         if (config.Disabled ||
                             deleteType == DeleteType.PurgeOnDelete ||
                             (deleteType == DeleteType.Age &&
@@ -1008,8 +1003,7 @@ namespace Raven.Server.Documents.Revisions
         {
             PurgeOnDelete,
             Age,
-            LimitNumberOfRevisions,
-            // DisabledConfiguration
+            LimitNumberOfRevisions
         }
 
         public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)
@@ -1529,6 +1523,9 @@ namespace Raven.Server.Documents.Revisions
 
         private long EnforceConfigurationFor(DocumentsOperationContext context, string id, ref bool moreWork)
         {
+            if (id == "users/1")
+            {
+            }
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var prefixSlice))
             {

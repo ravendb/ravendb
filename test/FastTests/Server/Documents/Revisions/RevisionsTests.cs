@@ -919,11 +919,28 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task CanExcludeEntitiesFromRevisions()
         {
+            var configuration = new RevisionsConfiguration
+            {
+                Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                {
+                    ["Users"] = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = true,
+                        MinimumRevisionsToKeep = 123
+                    },
+                    ["Comments"] = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = true // => go to the default (which is null, that's why there is no revision for this collection).
+                    }
+                }
+            };
+
             var user = new User {Name = "User Name"};
             var comment = new Comment {Name = "foo"};
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(user);
@@ -1046,7 +1063,17 @@ namespace FastTests.Server.Documents.Revisions
             var product = new Product {Description = "A fine document db", Quantity = 5};
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                var configuration = new RevisionsConfiguration
+                {
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        ["Products"] = new RevisionsCollectionConfiguration
+                        {
+                            Disabled = true // => go to the default (which is null, that's why there is no revision for this collection).
+                        }
+                    }
+                };
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(product);

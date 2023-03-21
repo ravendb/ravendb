@@ -1237,6 +1237,8 @@ namespace SlowTests.Issues
             Assert.True(WaitForDocument<Propagation>(sinkStore2, "bar", x => x.Completed == true));
             Assert.True(WaitForDocument<Propagation>(sinkStore1, "foo", x => x.Completed == true));
 
+            var forceCreatedConfiguration = hubDb.DocumentsStorage.RevisionsStorage._forceCreatedConfiguration;
+            forceCreatedConfiguration.Disabled = true;
             using (var token = new OperationCancelToken(hubDb.Configuration.Databases.OperationTimeout.AsTimeSpan, hubDb.DatabaseShutdown, CancellationToken.None))
                 await hubDb.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 

@@ -279,7 +279,8 @@ namespace SlowTests.Server.Documents.Revisions
                 WaitForMarker(store2, store1);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
-
+                var conflictedConfig = db.DocumentsStorage.RevisionsStorage.ConflictConfiguration;
+                conflictedConfig.Default.Disabled = true;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
