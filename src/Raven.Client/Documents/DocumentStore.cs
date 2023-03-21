@@ -46,6 +46,22 @@ namespace Raven.Client.Documents
 
         public override IHiLoIdGenerator HiLoIdGenerator => _asyncMultiDbHiLo;
 
+        ~DocumentStore()
+        {
+            try
+            {
+                DisposeCertificateIfNeeded();
+            }
+            catch
+            {
+#if DEBUG
+                throw;
+#else
+                // ignored
+#endif
+            }
+        }
+
         /// <summary>
         /// Gets or sets the identifier for this store.
         /// </summary>
@@ -70,10 +86,9 @@ namespace Raven.Client.Documents
         /// </summary>
         public override void Dispose()
         {
-            BeforeDispose?.Invoke(this, EventArgs.Empty);
-#if DEBUG
             GC.SuppressFinalize(this);
-#endif
+
+            BeforeDispose?.Invoke(this, EventArgs.Empty);
 
             foreach (var value in _aggressiveCacheChanges.Values)
             {
@@ -119,6 +134,8 @@ namespace Raven.Client.Documents
 
                 kvp.Value.Value.Dispose();
             }
+
+            DisposeCertificateIfNeeded();
         }
 
         /// <summary>
@@ -471,14 +488,14 @@ namespace Raven.Client.Documents
         /// </summary>
         public override event EventHandler BeforeDispose;
 
-        public override DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
+        public override DatabaseSmuggler Smuggler => _smuggler ??= new DatabaseSmuggler(this);
 
         public override MaintenanceOperationExecutor Maintenance
         {
             get
             {
                 AssertInitialized();
-                return _maintenanceOperationExecutor ?? (_maintenanceOperationExecutor = new MaintenanceOperationExecutor(this));
+                return _maintenanceOperationExecutor ??= new MaintenanceOperationExecutor(this);
             }
         }
 
@@ -508,6 +525,15 @@ namespace Raven.Client.Documents
         public override BulkInsertOperation BulkInsert(BulkInsertOptions options, CancellationToken token = default)
         {
             return BulkInsert(null, options, token);
+        }
+
+        private void DisposeCertificateIfNeeded()
+        {
+            if (Conventions.DisposeCertificate)
+            {
+                throw new InvalidOperationException("Fix me!");
+                Certificate?.Dispose();
+            }
         }
     }
 }
