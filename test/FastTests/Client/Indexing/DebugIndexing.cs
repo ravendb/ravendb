@@ -52,10 +52,6 @@ namespace FastTests.Client.Indexing
                         ["p0"] = q.QueryParameters["p0"]
                     }, "query/parameters"))
                     {
-#pragma warning disable 618
-                        Start = q.Start,
-                        PageSize = q.PageSize,
-#pragma warning restore 618
                         SkipDuplicateChecking = q.SkipDuplicateChecking,
                         WaitForNonStaleResults = q.WaitForNonStaleResults,
                         WaitForNonStaleResultsTimeout = q.WaitForNonStaleResultsTimeout

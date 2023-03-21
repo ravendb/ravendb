@@ -14,30 +14,12 @@ namespace Raven.Client.Extensions
             writer.WriteString(query.Query);
             writer.WriteComma();
 
-#pragma warning disable 618
-            if (query.PageSizeSet && query.PageSize >= 0)
-            {
-                writer.WritePropertyName(nameof(query.PageSize));
-                writer.WriteInteger(query.PageSize);
-                writer.WriteComma();
-            }
-#pragma warning restore 618
-
             if (query.WaitForNonStaleResults)
             {
                 writer.WritePropertyName(nameof(query.WaitForNonStaleResults));
                 writer.WriteBool(query.WaitForNonStaleResults);
                 writer.WriteComma();
             }
-
-#pragma warning disable 618
-            if (query.Start > 0)
-            {
-                writer.WritePropertyName(nameof(query.Start));
-                writer.WriteInteger(query.Start);
-                writer.WriteComma();
-            }
-#pragma warning restore 618
 
             if (query.WaitForNonStaleResultsTimeout.HasValue)
             {

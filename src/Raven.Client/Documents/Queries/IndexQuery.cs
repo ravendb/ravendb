@@ -29,10 +29,6 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(WaitForNonStaleResults);
                 hasher.Write(SkipDuplicateChecking);
                 hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
-#pragma warning disable 618
-                hasher.Write(Start);
-                hasher.Write(PageSize);
-#pragma warning restore 618
                 hasher.Write(QueryParameters, conventions, serializer);
 
                 return hasher.GetHash();
@@ -111,13 +107,6 @@ namespace Raven.Client.Documents.Queries
 
     public abstract class IndexQueryBase<T> : IIndexQuery, IEquatable<IndexQueryBase<T>>
     {
-        private long _pageSize = int.MaxValue;
-
-        /// <summary>
-        /// Whether the page size was explicitly set or still at its default value
-        /// </summary>
-        protected internal bool PageSizeSet { get; private set; }
-
         /// <summary>
         /// Actual query that will be performed (Lucene syntax).
         /// </summary>
@@ -126,26 +115,6 @@ namespace Raven.Client.Documents.Queries
         public T QueryParameters { get; set; }
 
         public ProjectionBehavior? ProjectionBehavior { get; set; }
-
-        /// <summary>
-        /// Number of records that should be skipped.
-        /// </summary>
-        [Obsolete("Use OFFSET in RQL instead")]
-        public long Start { get; set; }
-
-        /// <summary>
-        /// Maximum number of records that will be retrieved.
-        /// </summary>
-        [Obsolete("Use LIMIT in RQL instead")]
-        public long PageSize
-        {
-            get => _pageSize;
-            set
-            {
-                _pageSize = value;
-                PageSizeSet = true;
-            }
-        }
 
         /// <summary>
         /// When set to <c>true</c>> server side will wait until result are non stale or until timeout
@@ -166,12 +135,7 @@ namespace Raven.Client.Documents.Queries
             if (ReferenceEquals(this, other))
                 return true;
 
-            return PageSizeSet.Equals(other.PageSizeSet) &&
-#pragma warning disable 618
-                   PageSize == other.PageSize &&
-                   Start == other.Start &&
-#pragma warning restore 618
-                   string.Equals(Query, other.Query) &&
+            return string.Equals(Query, other.Query) &&
                    WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
                    WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
                    ProjectionBehavior == other.ProjectionBehavior;
@@ -190,12 +154,7 @@ namespace Raven.Client.Documents.Queries
         {
             unchecked
             {
-                var hashCode = PageSizeSet.GetHashCode();
-#pragma warning disable 618
-                hashCode = (hashCode * 397) ^ PageSize.GetHashCode();
-                hashCode = (hashCode * 397) ^ Start.GetHashCode();
-#pragma warning restore 618
-                hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
+                var hashCode = Query?.GetHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (ProjectionBehavior != null ? ProjectionBehavior.GetHashCode() : 0);
                 return hashCode;
@@ -215,8 +174,6 @@ namespace Raven.Client.Documents.Queries
 
     public interface IIndexQuery
     {
-        long PageSize { set; get; }
-
         TimeSpan? WaitForNonStaleResultsTimeout { get; }
     }
 }
