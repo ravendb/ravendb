@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             return RequestHandler.Database.Operations.GetNextOperationId();
         }
 
-        protected override async ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId)
+        protected override async ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? startTime)
         {
             // task id == raft index
             // we must wait here to ensure that the task was actually created on this node
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             if (nodeTag == ServerStore.NodeTag)
             {
-                RequestHandler.Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup, operationId);
+                RequestHandler.Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup, operationId, startTime);
                 return true;
             }
 

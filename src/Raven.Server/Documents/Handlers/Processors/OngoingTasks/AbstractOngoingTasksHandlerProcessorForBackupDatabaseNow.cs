@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Sparrow.Json;
@@ -13,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected abstract ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId);
+        protected abstract ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? startTime);
 
         protected abstract long GetNextOperationId();
 
@@ -22,8 +23,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             var taskId = RequestHandler.GetLongQueryString("taskId");
             var isFullBackup = RequestHandler.GetBoolValueQueryString("isFullBackup", required: false) ?? true;
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
+            var startTime = RequestHandler.GetDateTimeQueryString("startTime", required: false);
 
-            var isResponsibleNode = await ScheduleBackupOperationAsync(taskId, isFullBackup, operationId);
+            var isResponsibleNode = await ScheduleBackupOperationAsync(taskId, isFullBackup, operationId, startTime);
 
             if (isResponsibleNode)
             {

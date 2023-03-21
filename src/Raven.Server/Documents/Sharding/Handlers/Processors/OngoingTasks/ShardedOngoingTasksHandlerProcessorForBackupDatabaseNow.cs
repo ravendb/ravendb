@@ -1,7 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.ServerWide.Context;
 
@@ -13,18 +15,18 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId)
+        protected override ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? _)
         {
             var token = RequestHandler.CreateTimeLimitedOperationToken();
-
+            var startTime = SystemTime.UtcNow;
             var t = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartBackupOperationResult>, ShardedBackupResult, ShardedBackupProgress>(operationId,
                 Server.Documents.Operations.OperationType.DatabaseBackup,
                 "Backup of sharded database : " + RequestHandler.DatabaseName,
                 detailedDescription: null,
-                (_, shardNumber) => new StartBackupOperation.StartBackupCommand(isFullBackup, taskId, operationId),
+                (_, shardNumber) => new StartBackupOperation.StartBackupCommand(isFullBackup, taskId, operationId, startTime),
                 token);
 
-            _ = t.ContinueWith(_ =>
+            t.ContinueWith(_ =>
             {
                 token.Dispose();
             });

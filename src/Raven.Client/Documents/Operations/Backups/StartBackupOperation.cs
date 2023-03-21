@@ -1,7 +1,9 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
@@ -29,6 +31,7 @@ namespace Raven.Client.Documents.Operations.Backups
             private readonly bool? _isFullBackup;
             private readonly long _taskId;
             private readonly long? _operationId;
+            private readonly DateTime? _startTime;
 
             public StartBackupCommand(bool? isFullBackup, long taskId)
             {
@@ -36,11 +39,10 @@ namespace Raven.Client.Documents.Operations.Backups
                 _taskId = taskId;
             }
 
-            internal StartBackupCommand(bool? isFullBackup, long taskId, long operationId) : this(isFullBackup, taskId)
+            internal StartBackupCommand(bool? isFullBackup, long taskId, long operationId, DateTime? startTime = null) : this(isFullBackup, taskId)
             {
-                _isFullBackup = isFullBackup;
-                _taskId = taskId;
                 _operationId = operationId;
+                _startTime = startTime;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -51,6 +53,8 @@ namespace Raven.Client.Documents.Operations.Backups
                     url += $"&isFullBackup={_isFullBackup}";
                 if (_operationId.HasValue)
                     url += $"&operationId={_operationId}";
+                if (_startTime.HasValue)
+                    url += $"&startTime={_startTime.Value.GetDefaultRavenFormat()}";
 
                 var request = new HttpRequestMessage
                 {
