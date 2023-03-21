@@ -18,6 +18,7 @@ namespace Sparrow.Platform.Posix
         {
             if (MissingCgroupFiles.Contains(fileName))
                 return null;
+            
             try
             {
                 var txt = File.ReadAllText(fileName);
@@ -29,7 +30,7 @@ namespace Sparrow.Platform.Posix
             }
             catch (Exception e)
             {
-                if(e is DirectoryNotFoundException)
+                if (e is DirectoryNotFoundException)
                     MissingCgroupFiles.Add(fileName);
                 
                 if (IsOldFileAlert.TryAdd(fileName) && Logger.IsOperationsEnabled)
