@@ -185,7 +185,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 return;
             }
 
-            var driveName = DiskUtils.GetDriveInfo(filePath, DriveInfo.GetDrives(), out string _).DriveName;
+            var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
+            var driveName = DiskUtils.GetDriveInfo(filePath, drivesInfo, out _)?.DriveName;
             if (driveName == null)
             {
                 if (Logger.IsInfoEnabled)
@@ -204,9 +205,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             // + we need to download the snapshot
-            // + we need as much space to restore it
             // + leave 1GB of free space
-            var freeSpaceNeeded = new Sparrow.Size(streamLength * 2, SizeUnit.Bytes) + new Sparrow.Size(1, SizeUnit.Gigabytes);
+            var freeSpaceNeeded = new Sparrow.Size(streamLength, SizeUnit.Bytes) + new Sparrow.Size(1, SizeUnit.Gigabytes);
 
             if (freeSpaceNeeded > spaceInfo.TotalFreeSpace)
                 throw new DiskFullException($"There is not enough space on '{driveName}', we need at least {freeSpaceNeeded} in order to successfully restore a snapshot. " +
