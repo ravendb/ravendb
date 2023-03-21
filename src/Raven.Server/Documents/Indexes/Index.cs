@@ -843,7 +843,6 @@ namespace Raven.Server.Documents.Indexes
                     SearchEngineType = SearchEngineType.Lucene;
                     break;
                 case SearchEngineType.Corax:
-                    RavenConfiguration.AssertCanUseCoraxFeature(DocumentDatabase.ServerStore.Configuration);
                     IndexPersistence = new CoraxIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
                     SearchEngineType = SearchEngineType.Corax;
                     break;
