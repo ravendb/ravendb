@@ -478,7 +478,11 @@ namespace SlowTests.Authentication
             {
                 Database = store.Database,
                 Urls = store.Urls,
-                Certificate = clientCertificate
+                Certificate = clientCertificate,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             }.Initialize())
             {
                 using var session = testedStore.OpenAsyncSession();
@@ -764,7 +768,11 @@ namespace SlowTests.Authentication
                 {
                     Urls = new[] { Server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
@@ -876,7 +884,11 @@ namespace SlowTests.Authentication
                 {
                     Urls = new[] { Server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
@@ -982,7 +994,11 @@ namespace SlowTests.Authentication
                 {
                     Urls = new[] { Server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
@@ -1085,7 +1101,11 @@ namespace SlowTests.Authentication
                 {
                     Urls = new[] { Server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
@@ -1183,7 +1203,11 @@ namespace SlowTests.Authentication
                 {
                     Urls = new[] { Server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));

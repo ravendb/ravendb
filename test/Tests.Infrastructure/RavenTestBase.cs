@@ -183,7 +183,8 @@ namespace FastTests
                         Certificate = options.ClientCertificate,
                         Conventions =
                         {
-                            DisableTopologyCache = true
+                            DisableTopologyCache = true,
+                            DisposeCertificate = false
                         }
                     };
 
@@ -211,7 +212,11 @@ namespace FastTests
                                 {
                                     Urls = UseFiddler(serverToUse.WebUrl),
                                     Database = name,
-                                    Certificate = options.AdminCertificate
+                                    Certificate = options.AdminCertificate,
+                                    Conventions =
+                                    {
+                                        DisposeCertificate = false
+                                    }
                                 }.Initialize())
                                 {
                                     raftCommand = adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor)).RaftCommandIndex;
@@ -317,8 +322,16 @@ namespace FastTests
             {
                 if (options.AdminCertificate != null)
                 {
-                    using (var adminStore =
-                        new DocumentStore { Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate }.Initialize())
+                    using (var adminStore = new DocumentStore
+                    {
+                        Urls = UseFiddler(serverToUse.WebUrl),
+                        Database = name,
+                        Certificate = options.AdminCertificate,
+                        Conventions =
+                        {
+                            DisposeCertificate = false
+                        }
+                    }.Initialize())
                     {
                         return adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                     }

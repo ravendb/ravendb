@@ -47,8 +47,9 @@ namespace Raven.Client.Documents.Conventions
             SendApplicationIdentifier = false,
             MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes),
 #if NETCOREAPP3_1_OR_GREATER
-            HttpPooledConnectionLifetime = TimeSpan.FromMinutes(19)
+            HttpPooledConnectionLifetime = TimeSpan.FromMinutes(19),
 #endif
+            DisposeCertificate = false
         };
 
         private static readonly bool DefaultDisableTcpCompression = false;
@@ -282,6 +283,8 @@ namespace Raven.Client.Documents.Conventions
 
             _httpClientType = typeof(HttpClient);
             _createHttpClient = handler => new HttpClient(handler);
+
+            _disposeCertificate = true;
         }
 
         private bool _frozen;
@@ -346,6 +349,7 @@ namespace Raven.Client.Documents.Conventions
         private ISerializationConventions _serialization;
         private bool? _disableAtomicDocumentWritesInClusterWideTransaction;
         private bool _disableTcpCompression;
+        private bool _disposeCertificate;
 
         public Func<InMemoryDocumentSessionOperations, object, string, bool> ShouldIgnoreEntityChanges
         {
@@ -992,6 +996,20 @@ namespace Raven.Client.Documents.Conventions
                 }
 
                 _topologyCacheLocation = path;
+            }
+        }
+
+        /// <summary>
+        /// Disposes the 'DocumentStore.Certificate' during DocumentStore disposal
+        /// </summary>
+        public bool DisposeCertificate
+        {
+            get => _disposeCertificate;
+            set
+            {
+                AssertNotFrozen();
+
+                _disposeCertificate = value;
             }
         }
 

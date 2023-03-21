@@ -54,7 +54,11 @@ public partial class RavenTestBase
                 Server = server,
                 ClientCertificate = serverCertificate,
                 AdminCertificate = serverCertificate,
-                ModifyDocumentStore = s => s.Conventions = new DocumentConventions { DisableTopologyUpdates = true }
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true,
+                    DisposeCertificate = false
+                }
             });
             store.Maintenance.Server.Send(new PutClientCertificateOperation(certificateName, clientCertificate, permissions, clearance));
             return clientCertificate;
