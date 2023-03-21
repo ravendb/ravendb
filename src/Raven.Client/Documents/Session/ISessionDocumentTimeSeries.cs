@@ -13,9 +13,9 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Time series synchronous session operations
     /// </summary>
-    public interface ISessionDocumentTimeSeries : 
-        ITimeSeriesStreamingBase<TimeSeriesEntry>, 
-        ISessionDocumentAppendTimeSeriesBase, 
+    public interface ISessionDocumentTimeSeries :
+        ITimeSeriesStreamingBase<TimeSeriesEntry>,
+        ISessionDocumentAppendTimeSeriesBase,
         ISessionDocumentDeleteTimeSeriesBase
     {
         /// <summary>
@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session
         /// Return the time series values for the provided range and includes related documents 
         /// </summary>
 
-        TimeSeriesEntry[] Get(DateTime? from , DateTime? to , Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue);
+        TimeSeriesEntry[] Get(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue);
 
     }
 
@@ -55,9 +55,9 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Time series typed synchronous session operations
     /// </summary>
-    public interface ISessionDocumentTypedTimeSeries<TValues> : 
-        ISessionDocumentTypedAppendTimeSeriesBase<TValues>, 
-        ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>, 
+    public interface ISessionDocumentTypedTimeSeries<TValues> :
+        ISessionDocumentTypedAppendTimeSeriesBase<TValues>,
+        ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>,
         ISessionDocumentDeleteTimeSeriesBase
         where TValues : new()
     {
@@ -70,9 +70,9 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Time series typed synchronous session operations
     /// </summary>
-    public interface ISessionDocumentRollupTypedTimeSeries<TValues> : 
-        ITimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>, 
-        ISessionDocumentRollupTypedAppendTimeSeriesBase<TValues>, 
+    public interface ISessionDocumentRollupTypedTimeSeries<TValues> :
+        ITimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>,
+        ISessionDocumentRollupTypedAppendTimeSeriesBase<TValues>,
         ISessionDocumentDeleteTimeSeriesBase
         where TValues : new()
     {
@@ -88,7 +88,6 @@ namespace Raven.Client.Documents.Session
     public interface ISessionDocumentTypedIncrementalTimeSeries<TValues> :
         ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>,
         ISessionDocumentDeleteTimeSeriesBase,
-        ISessionDocumentIncrementTimeSeriesBase, // TODO: Remove - in 6.0 (breaking change - RavenDB-19447)
         ISessionDocumentTypedIncrementTimeSeriesBase<TValues>
         where TValues : new()
     {
