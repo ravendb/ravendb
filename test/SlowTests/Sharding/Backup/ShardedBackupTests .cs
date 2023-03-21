@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -11,6 +12,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -473,6 +475,54 @@ namespace SlowTests.Sharding.Backup
 
                 Assert.Contains($"Database is not sharded, can't use {nameof(GetShardedPeriodicBackupStatusOperation)}, " +
                                 $"use {nameof(GetPeriodicBackupStatusOperation)} instead", ex.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task ShardedBackupNowShouldUseSameStartTimeForAllShards()
+        {
+            var backupPath = NewDataPath(suffix: "_BackupFolder");
+
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 2 * * 0", incrementalBackupFrequency: "0 2 * * 1");
+
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var backupTaskId = result.TaskId;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        await session.StoreAsync(new User(), $"users/{i}");
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                var op = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                await op.WaitForCompletionAsync(TimeSpan.FromSeconds(10));
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+
+                var dates = new HashSet<DateTime>();
+                foreach (var path in dirs)
+                {
+                    var backupFolderName = Path.GetRelativePath(backupPath, path);
+                    var datePart = backupFolderName[..backupFolderName.IndexOf('.')];
+
+                    Assert.True(DateTime.TryParseExact(datePart, 
+                        BackupTask.DateTimeFormat, 
+                        CultureInfo.InvariantCulture, 
+                        DateTimeStyles.RoundtripKind, 
+                        out var date));
+
+                    dates.Add(date);
+                }
+
+                Assert.Single(dates);
             }
         }
 
