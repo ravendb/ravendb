@@ -316,14 +316,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             return _database.WhoseTaskIsIt(topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
         }
 
-        public long StartBackupTask(long taskId, bool isFullBackup, long? operationId = null)
+        public long StartBackupTask(long taskId, bool isFullBackup, long? operationId = null, DateTime? startTimeUtc = null)
         {
             if (_periodicBackups.TryGetValue(taskId, out var periodicBackup) == false)
             {
                 throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");
             }
 
-            return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow, operationId);
+            return CreateBackupTask(periodicBackup, isFullBackup, startTimeUtc ?? SystemTime.UtcNow, operationId);
         }
 
         public async Task DelayAsync(long taskId, TimeSpan delay, X509Certificate2 clientCert, CancellationToken token)
