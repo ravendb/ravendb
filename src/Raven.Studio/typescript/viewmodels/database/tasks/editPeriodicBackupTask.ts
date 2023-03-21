@@ -104,17 +104,11 @@ class editPeriodicBackupTask extends shardViewModelBase {
     }
 
     private loadPossibleMentors() {
-        if (this.db.isSharded()) {
-            const members = this.db.nodes()
-                .filter(x => x.type === "Member")
-                .map(x => x.tag);
+        const members = this.db.nodes()
+            .filter(x => x.type === "Member")
+            .map(x => x.tag);
 
-            this.possibleMentors(members);
-        } else {
-            shardingTodo("ANY", "for sharded each shard has own mentor");
-
-            this.possibleMentors([]);
-        }
+        this.possibleMentors(members);
     }
 
     isBackupOptionAvailable(option: backupOptions) {
