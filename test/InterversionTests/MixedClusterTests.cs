@@ -481,11 +481,11 @@ namespace InterversionTests
         }
 
         [Fact]
-        public async Task SingleSubscriptionMixedClusterEnsureAcknowledgeFallsBackToV52Behavior_RavenDB_17764()
+        public async Task SingleSubscriptionMixedClusterEnsureDocumentResend54()
         {
-            var proccess526List = await CreateCluster(new string[] { "5.2.6", "5.2.6" });
+            var proccess526List = await CreateCluster(new string[] { "5.4.101", "5.4.101" });
             await UpgradeServerAsync("current", proccess526List[0]);
-
+            
             using (var store53 = await GetStore(proccess526List[0].Url, proccess526List[0].Process, null,
                        new InterversionTestOptions() { ReplicationFactor = 2, CreateDatabase = true }))
             {
@@ -561,7 +561,7 @@ namespace InterversionTests
         [Fact]
         public async Task SingleSubscriptionMixedClusterStartAgainFromSpecificChangeVector()
         {
-            var proccess526List = await CreateCluster(new string[] { "5.2.6", "5.2.6" });
+            var proccess526List = await CreateCluster(new string[] { "5.4.101", "5.4.101" });
             await UpgradeServerAsync("current", proccess526List[0]);
 
             using (var store53 = await GetStore(proccess526List[0].Url, proccess526List[0].Process, null,
