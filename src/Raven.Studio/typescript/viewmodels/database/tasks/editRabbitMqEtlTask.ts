@@ -240,17 +240,11 @@ class editRabbitMqEtlTask extends viewModelBase {
 
     private loadPossibleMentors() {
         const db = this.activeDatabase();
-        if (db.isSharded()) {
-            const members = db.nodes()
-                .filter(x => x.type === "Member")
-                .map(x => x.tag);
+        const members = db.nodes()
+            .filter(x => x.type === "Member")
+            .map(x => x.tag);
 
-            this.possibleMentors(members);
-        } else {
-            shardingTodo("ANY", "for sharded each shard has own mentor");
-
-            this.possibleMentors([]);
-        }
+        this.possibleMentors(members);
     }
     
     compositionComplete() {

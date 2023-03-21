@@ -131,8 +131,6 @@ class editSubscriptionTask extends shardViewModelBase {
     }
 
     private loadPossibleMentors() {
-        shardingTodo("ANY", "check if this works ok with sharded");
-
         const members = this.db.nodes()
             .filter(x => x.type === "Member")
             .map(x => x.tag);
