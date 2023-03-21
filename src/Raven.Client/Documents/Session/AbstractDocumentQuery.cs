@@ -1204,11 +1204,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 ProjectionBehavior = ProjectionBehavior
             };
 
-#pragma warning disable 618
-            indexQuery.Start = Start;
-            if (PageSize != null)
-                indexQuery.PageSize = PageSize.Value;
-#pragma warning restore 618
             return indexQuery;
         }
 

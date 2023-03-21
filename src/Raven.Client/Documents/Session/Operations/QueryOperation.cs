@@ -53,8 +53,6 @@ namespace Raven.Client.Documents.Session.Operations
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
             _isProjectInto = isProjectInto;
-
-            AssertPageSizeSet();
         }
 
         public QueryCommand CreateRequest()
@@ -67,17 +65,6 @@ namespace Raven.Client.Documents.Session.Operations
         public void SetResult(QueryResult queryResult)
         {
             EnsureIsAcceptableAndSaveResult(queryResult);
-        }
-
-        private void AssertPageSizeSet()
-        {
-            if (_session.Conventions.ThrowIfQueryPageSizeIsNotSet == false)
-                return;
-
-            if (_indexQuery.PageSizeSet)
-                return;
-
-            throw new InvalidOperationException("Attempt to query without explicitly specifying a page size. You can use .Take() methods to set maximum number of results. By default the page size is set to int.MaxValue and can cause severe performance degradation.");
         }
 
         private void StartTiming()

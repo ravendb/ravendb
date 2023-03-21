@@ -310,7 +310,6 @@ namespace Raven.Client.Documents.Conventions
         private Func<string, BlittableJsonReaderObject, string> _findClrType;
         private Func<string, Type> _resolveTypeFromClrTypeName;
         private bool _useOptimisticConcurrency;
-        private bool _throwIfQueryPageSizeIsNotSet;
         private bool _addIdFieldToDynamicObjects;
         private int _maxNumberOfRequestsPerSession;
 
@@ -692,22 +691,6 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _maxHttpCacheSize = value;
-            }
-        }
-
-        /// <summary>
-        ///     If set to 'true' then it will throw an exception when any query is performed (in session)
-        ///     without explicit page size set.
-        ///     This can be useful for development purposes to pinpoint all the possible performance bottlenecks
-        ///     since from 4.0 there is no limitation for number of results returned from server.
-        /// </summary>
-        public bool ThrowIfQueryPageSizeIsNotSet
-        {
-            get => _throwIfQueryPageSizeIsNotSet;
-            set
-            {
-                AssertNotFrozen();
-                _throwIfQueryPageSizeIsNotSet = value;
             }
         }
 

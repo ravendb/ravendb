@@ -51,21 +51,9 @@ namespace Raven.Server.Documents.Queries
         public SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator Distances;
 
 
-        public new long Start
-        {
-#pragma warning disable 618
-            get => base.Start;
-            set => base.Start = value;
-#pragma warning restore 618
-        }
+        public long Start;
 
-        public new long PageSize
-        {
-#pragma warning disable 618
-            get => base.PageSize;
-            set => base.PageSize = value;
-#pragma warning restore 618
-        }
+        public long PageSize = int.MaxValue;
 
         /// <summary>
         /// puts the given string in TrafficWatch property of HttpContext.Items
