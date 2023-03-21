@@ -20,9 +20,6 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public Dictionary<string, long> LastProcessedEtagPerDbId { get; set; }
 
-        [Obsolete("Was used in older versions, replaced by 'LastProcessedEtagPerDbId'")]
-        public Dictionary<string, long> LastProcessedEtagPerNode { get; set; }
-
         public string ChangeVector { get; set; }
 
         public string NodeTag { get; set; }
@@ -39,12 +36,6 @@ namespace Raven.Client.Documents.Operations.ETL
             if (LastProcessedEtagPerDbId.TryGetValue(dbId, out var etag))
                 return etag;
 
-#pragma warning disable 618
-            if (LastProcessedEtagPerNode != null && LastProcessedEtagPerNode.TryGetValue(nodeTag, out etag))
-#pragma warning restore 618
-                // legacy EtlProcessState
-                return etag;
-            
             return 0;
         }
 
@@ -55,9 +46,6 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(ConfigurationName)] = ConfigurationName,
                 [nameof(TransformationName)] = TransformationName,
                 [nameof(LastProcessedEtagPerDbId)] = LastProcessedEtagPerDbId.ToJson(),
-#pragma warning disable 618
-                [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode?.ToJson(),
-#pragma warning restore 618
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(SkippedTimeSeriesDocs)] = SkippedTimeSeriesDocs,

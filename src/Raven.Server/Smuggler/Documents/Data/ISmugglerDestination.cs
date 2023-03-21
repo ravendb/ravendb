@@ -40,8 +40,6 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         ICounterActions Counters(SmugglerResult result);
 
-        ICounterActions LegacyCounters(SmugglerResult result);
-
         ISubscriptionActions Subscriptions();
 
         IReplicationHubCertificateActions ReplicationHubCertificates();

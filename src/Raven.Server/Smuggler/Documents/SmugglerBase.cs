@@ -228,11 +228,6 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                     counts = await ProcessCompareExchangeAsync(result, _databaseName);
                     break;
-#pragma warning disable 618
-                case DatabaseItemType.Counters:
-#pragma warning restore 618
-                    counts = await ProcessLegacyCountersAsync(result);
-                    break;
 
                 case DatabaseItemType.CounterGroups:
                     counts = await ProcessCountersAsync(result);
@@ -323,9 +318,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                     counts = result.CompareExchange;
                     break;
-#pragma warning disable 618
-                case DatabaseItemType.Counters:
-#pragma warning restore 618
+
                 case DatabaseItemType.CounterGroups:
                     counts = result.Counters;
                     break;
@@ -821,27 +814,6 @@ namespace Raven.Server.Smuggler.Documents
                     await actions.WriteCounterAsync(counterGroup);
 
                     result.Counters.LastEtag = counterGroup.Etag;
-                }
-            }
-
-            return result.Counters;
-        }
-
-        protected virtual async Task<SmugglerProgressBase.Counts> ProcessLegacyCountersAsync(SmugglerResult result)
-        {
-            await using (var actions = _destination.LegacyCounters(result))
-            {
-                await foreach (var counterDetail in _source.GetLegacyCounterValuesAsync())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Counters.ReadCount++;
-
-                    if (result.Counters.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
-
-                    await actions.WriteLegacyCounterAsync(counterDetail);
-
-                    result.Counters.LastEtag = counterDetail.Etag;
                 }
             }
 

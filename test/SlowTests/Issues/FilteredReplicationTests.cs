@@ -208,16 +208,16 @@ namespace SlowTests.Issues
             var pullCertA = certificates.ClientCertificate2.Value;
             var pullCertB = certificates.ClientCertificate3.Value;
 
-            await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull", new ReplicationHubAccess
             {
-                Name = "pull",
-#pragma warning disable CS0618 // Type or member is obsolete
-                Certificates = new Dictionary<string, string>
-#pragma warning restore CS0618 // Type or member is obsolete
-                {
-                    [pullCertA.Thumbprint] = Convert.ToBase64String(pullCertA.Export(X509ContentType.Cert)),
-                    [pullCertB.Thumbprint] = Convert.ToBase64String(pullCertB.Export(X509ContentType.Cert)),
-                },
+                Name = "pull1",
+                CertificateBase64 = Convert.ToBase64String(pullCertA.Export(X509ContentType.Cert))
+            }));
+
+            await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull", new ReplicationHubAccess
+            {
+                Name = "pull2",
+                CertificateBase64 = Convert.ToBase64String(pullCertB.Export(X509ContentType.Cert))
             }));
 
             await Assert.ThrowsAsync<RavenException>(async () => await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",

@@ -156,9 +156,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             TaskType = OngoingTaskType.PullReplicationAsSink;
         }
 
-        [Obsolete("OngoingTaskPullReplicationAsSink.HubDefinitionName is not supported anymore. Will be removed in next major version of the product. Use HubName instead.")]
-        public string HubDefinitionName { get => HubName; set => HubName = value; }
-
         public string HubName { get; set; }
         public PullReplicationMode Mode { get; set; }
 
@@ -181,9 +178,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(DestinationDatabase)] = DestinationDatabase;
             json[nameof(HubName)] = HubName;
             json[nameof(Mode)] = Mode;
-#pragma warning disable CS0618 // Type or member is obsolete
-            json[nameof(HubDefinitionName)] = HubDefinitionName;
-#pragma warning restore CS0618 // Type or member is obsolete
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(CertificatePublicKey)] = CertificatePublicKey;
             json[nameof(AccessName)] = AccessName;

@@ -192,12 +192,6 @@ namespace Raven.Server.Smuggler.Documents
         {
             return new StreamCounterActions(_writer, _context, this, nameof(DatabaseItemType.CounterGroups));
         }
-        public ICounterActions LegacyCounters(SmugglerResult result)
-        {
-#pragma warning disable CS0618
-            return new StreamCounterActions(_writer, _context, this, nameof(DatabaseItemType.Counters));
-#pragma warning restore CS0618
-        }
 
         public ISubscriptionActions Subscriptions()
         {

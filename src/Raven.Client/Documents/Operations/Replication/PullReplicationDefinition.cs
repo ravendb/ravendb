@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -8,16 +7,13 @@ namespace Raven.Client.Documents.Operations.Replication
 {
     public class PullReplicationDefinition : IDynamicJsonValueConvertible
     {
-        [Obsolete("You cannot use Certificates on the PullReplicationDefinition any more, please use the dedicated commands: RegisterReplicationHubAccessOperation and UnregisterReplicationHubAccessOperation")]
-        public Dictionary<string, string> Certificates; // <thumbprint, base64 cert>
-
         public TimeSpan DelayReplicationFor;
         public bool Disabled;
 
         public string MentorNode;
 
         public bool PinToMentorNode;
-        
+
         public PullReplicationMode Mode = PullReplicationMode.HubToSink;
 
         public string Name;
@@ -42,9 +38,6 @@ namespace Raven.Client.Documents.Operations.Replication
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-#pragma warning disable CS0618 // Type or member is obsolete
-                [nameof(Certificates)] = DynamicJsonValue.Convert(Certificates),
-#pragma warning restore CS0618 // Type or member is obsolete
                 [nameof(TaskId)] = TaskId,
                 [nameof(Disabled)] = Disabled,
                 [nameof(MentorNode)] = MentorNode,
@@ -63,13 +56,6 @@ namespace Raven.Client.Documents.Operations.Replication
 
             if (useSsl == false)
             {
-#pragma warning disable CS0618 // Type or member is obsolete
-                if (Certificates?.Count > 0)
-#pragma warning restore CS0618 // Type or member is obsolete
-                {
-                    throw new InvalidOperationException("Your server is unsecured and therefore you can't define pull replication with a certificate.");
-                }
-
                 if (WithFiltering)
                 {
                     throw new InvalidOperationException($"Server must be secured in order to use filtering in pull replication {Name}.");

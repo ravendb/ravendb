@@ -10,20 +10,13 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public string[] AllowedHubToSinkPaths;
         public string[] AllowedSinkToHubPaths;
-        
+
         public string CertificateWithPrivateKey; // base64
         public string CertificatePassword;
-        
-        public string AccessName;
-        
-        [Obsolete("PullReplicationAsSink.HubDefinitionName is not supported anymore. Will be removed in next major version of the product. Use HubName instead.")]
-        public string HubDefinitionName { get; set; }
 
-        private string _hubName;
- #pragma warning disable 618 // disable use obsolete property
-        public string HubName { get => _hubName ?? HubDefinitionName; set => _hubName = value; }
- #pragma warning restore 618
-        
+        public string AccessName;
+
+        public string HubName;
 
         public PullReplicationAsSink()
         {
@@ -66,9 +59,6 @@ namespace Raven.Client.Documents.Operations.Replication
 
             djv[nameof(Mode)] = Mode;
             djv[nameof(HubName)] = HubName;
-#pragma warning disable CS0618 // Type or member is obsolete
-            djv[nameof(HubDefinitionName)] = HubDefinitionName;
-#pragma warning restore CS0618 // Type or member is obsolete
             djv[nameof(CertificateWithPrivateKey)] = CertificateWithPrivateKey;
             djv[nameof(CertificatePassword)] = CertificatePassword;
             djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;

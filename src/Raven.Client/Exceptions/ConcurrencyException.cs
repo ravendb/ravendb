@@ -38,18 +38,6 @@ namespace Raven.Client.Exceptions
         }
 
         /// <summary>
-        /// Expected Etag.
-        /// </summary>
-        [Obsolete("Not used and will be removed and the next major version")]
-        public long ExpectedETag { get; set; }
-
-        /// <summary>
-        /// Actual Etag.
-        /// </summary>
-        [Obsolete("Not used and will be removed and the next major version")]
-        public long ActualETag { get; set; }
-
-        /// <summary>
         /// Expected Change Vector.
         /// </summary>
         public string ExpectedChangeVector { get; set; }

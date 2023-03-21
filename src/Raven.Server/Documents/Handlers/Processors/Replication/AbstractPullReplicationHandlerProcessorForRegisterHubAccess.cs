@@ -38,15 +38,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                 return null;
             }
 
-#pragma warning disable CS0618 // Type or member is obsolete
-            if (_hubDefinition.Certificates != null && _hubDefinition.Certificates.Count > 0)
-#pragma warning restore CS0618 // Type or member is obsolete
-            {
-                // handle backward compatibility
-                throw new InvalidOperationException("Cannot register hub access to a replication hub that already has inline certificates: " + _hubTaskName +
-                                                    ". Create a new replication hub and try again");
-            }
-
             return await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "register-hub-access");
         }
 

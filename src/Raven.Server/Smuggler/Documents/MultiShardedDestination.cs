@@ -131,9 +131,6 @@ namespace Raven.Server.Smuggler.Documents
         public ICounterActions Counters(SmugglerResult result) =>
             new ShardedCounterActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.Counters(result)), _options);
 
-        public ICounterActions LegacyCounters(SmugglerResult result) =>
-            new ShardedCounterActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyCounters(result)), _options);
-
         public ITimeSeriesActions TimeSeries() =>
             new ShardedTimeSeriesActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.TimeSeries()), _options);
 
