@@ -1116,8 +1116,9 @@ namespace Voron.Data.CompactTrees
             var pageEntries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
             GetEncodedEntry(page, pageEntries[0], out var splitKey, out var splitKeyLengthInBits, out _);
 
-            causeForSplit.Set(splitKeyLengthInBits, splitKey, ((CompactPageHeader*)page.Pointer)->DictionaryId);
-            return causeForSplit;
+            var updateCauseForSplit = new CompactKeyCacheScope(_llt);
+            updateCauseForSplit.Key.Set(splitKeyLengthInBits, splitKey, ((CompactPageHeader*)page.Pointer)->DictionaryId);
+            return updateCauseForSplit.Key;
         }
 
         private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state)
