@@ -233,16 +233,21 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
             }
         }
     }
+    .collections-list {
+        a {
+            padding: $gutter-xxs $gutter-sm;
+        }
+    }
     // Document Collections
     .collection-count {
-        width: 60px;
+        min-width: 40px;
         display: flex;
         flex-shrink: 0;
         justify-content: center;
         border-radius: 2px;
         overflow: hidden;
         .label {
-            padding: 0;
+            padding: 0 $gutter-xxs;
             line-height: $gutter-sm;
             font-size: 11px;
         }
