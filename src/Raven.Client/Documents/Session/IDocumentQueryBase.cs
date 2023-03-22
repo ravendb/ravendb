@@ -2,109 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
-using Raven.Client.Documents.Queries.Timings;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    public interface IQueryBase<T, out TSelf>
-        where TSelf : IQueryBase<T, TSelf>
-    {
-        /// <summary>
-        ///     Gets the document convention from the query session
-        /// </summary>
-        DocumentConventions Conventions { get; }
-
-        /// <summary>
-        ///     Callback to get the results of the query
-        /// </summary>
-        TSelf AfterQueryExecuted(Action<QueryResult> action);
-
-
-        /// <summary>
-        ///     Callback to get the results of the stream
-        /// </summary>
-        TSelf AfterStreamExecuted(Action<BlittableJsonReaderObject> action);
-
-        /// <summary>
-        ///     Allows you to modify the index query before it is sent to the server
-        /// </summary>
-        TSelf BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted);
-
-        /// <summary>
-        ///     Called externally to raise the after query executed callback
-        /// </summary>
-        void InvokeAfterQueryExecuted(QueryResult result);
-
-        /// <summary>
-        ///     Called externally to raise the after query executed callback
-        /// </summary>
-        void InvokeAfterStreamExecuted(BlittableJsonReaderObject result);
-
-        /// <summary>
-        ///     Disables caching for query results.
-        /// </summary>
-        TSelf NoCaching();
-
-        /// <summary>
-        ///     Disables tracking for queried entities by Raven's Unit of Work.
-        ///     Usage of this option will prevent holding query results in memory.
-        /// </summary>
-        TSelf NoTracking();
-
-        /// <summary>
-        ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
-        ///     results). Default: false
-        /// </summary>
-        TSelf Timings(out QueryTimings timings);
-
-        /// <summary>
-        ///     Skips the specified count.
-        /// </summary>
-        /// <param name="count">Number of items to skip.</param>
-        TSelf Skip(long count);
-
-        /// <summary>
-        ///     Provide statistics about the query, such as total count of matching records
-        /// </summary>
-        TSelf Statistics(out QueryStatistics stats);
-
-        /// <summary>
-        ///     Takes the specified count.
-        /// </summary>
-        /// <param name="count">Maximum number of items to take.</param>
-        TSelf Take(long count);
-
-        /// <summary>
-        ///     Select the default operator to use for this query
-        /// </summary>
-        TSelf UsingDefaultOperator(QueryOperator queryOperator);
-
-        /// <summary>
-        ///   Instruct the query to wait for non stale results.
-        ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
-        /// </summary>
-        /// <param name = "waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown. Default: 15 seconds.</param>
-        TSelf WaitForNonStaleResults(TimeSpan? waitTimeout = null);
-
-        /// <summary>
-        ///     Create the index query object for this query
-        /// </summary>
-        IndexQuery GetIndexQuery();
-
-        /// <summary>
-        /// Add a named parameter to the query
-        /// </summary>
-        TSelf AddParameter(string name, object value);
-    }
-
     public interface IFilterDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>
     {
         /// <summary>
@@ -116,7 +22,7 @@ namespace Raven.Client.Documents.Session
         ///     Add an AND to the query
         /// </summary>
         TSelf AndAlso();
-        
+
         /// <summary>
         ///     Wraps previous query with clauses and add an AND operation to the given query
         /// </summary>
@@ -491,7 +397,7 @@ namespace Raven.Client.Documents.Session
         TSelf Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         TSelf MoreLikeThis(MoreLikeThisBase moreLikeThis);
-        
+
     }
 
     public interface IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>
@@ -528,7 +434,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
     /// <summary>
     ///     A query against a Raven index
     /// </summary>
-    public interface IDocumentQueryBase<T, TSelf> : IQueryBase<T, TSelf>, IFilterDocumentQueryBase<T, TSelf>, IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>
+    public interface IDocumentQueryBase<T, TSelf> : IPagingDocumentQueryBase<T, TSelf>, IFilterDocumentQueryBase<T, TSelf>, IGroupByDocumentQueryBase<T, TSelf>, IQueryBase<T, TSelf>
+        where TSelf : IDocumentQueryBase<T, TSelf>
     {
         /// <summary>
         ///     Adds an ordering for a specific field to the query
