@@ -261,7 +261,8 @@ namespace RachisTests.DatabaseCluster
                 Certificate = adminCertificate,
                 Conventions =
                 {
-                    DisableTopologyUpdates = true
+                    DisableTopologyUpdates = true,
+                    DisposeCertificate = false
                 }
             }.Initialize())
             {
@@ -313,7 +314,8 @@ namespace RachisTests.DatabaseCluster
                     Certificate = adminCertificate,
                     Conventions =
                     {
-                        DisableTopologyUpdates = true
+                        DisableTopologyUpdates = true,
+                        DisposeCertificate = false
                     }
                 }.Initialize())
                 {
@@ -678,7 +680,8 @@ namespace RachisTests.DatabaseCluster
                 Certificate = adminCertificate,
                 Conventions =
                 {
-                    DisableTopologyUpdates = true
+                    DisableTopologyUpdates = true,
+                    DisposeCertificate = false
                 }
             }.Initialize())
             {
@@ -766,7 +769,8 @@ namespace RachisTests.DatabaseCluster
                 Certificate = clientCertificate,
                 Conventions =
                 {
-                    DisableTopologyUpdates = true
+                    DisableTopologyUpdates = true,
+                    DisposeCertificate = false
                 }
             }.Initialize())
             {

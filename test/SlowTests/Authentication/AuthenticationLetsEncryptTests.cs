@@ -210,7 +210,7 @@ namespace SlowTests.Authentication
                 Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
             }
         }
-        
+
         [RavenFact(RavenTestCategory.Certificates | RavenTestCategory.Sharding)]
         public async Task CertificateReplaceSharded()
         {
@@ -226,7 +226,8 @@ namespace SlowTests.Authentication
             options.ModifyDatabaseName = _ => databaseName;
             options.RunInMemory = false;
             options.DeleteDatabaseOnDispose = false;
-            
+            options.ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false;
+
             X509Certificate2 newCert;
 
             using (var store = Sharding.GetDocumentStore(options))
@@ -251,9 +252,9 @@ namespace SlowTests.Authentication
 
                 //trigger cert refresh
                 await requestExecutor.HttpClient.PostAsync($"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew", null);
-                
+
                 await Task.WhenAll(replaceTasks.Values.Select(x => x.WaitAsync()).ToArray());
-                
+
                 //make sure all cluster nodes have the new server cert
                 foreach (var node in nodes)
                 {
@@ -262,13 +263,17 @@ namespace SlowTests.Authentication
 
                 newCert = nodes[0].Certificate.Certificate;
             }
-            
+
             using (var store = new DocumentStore()
-                   {
-                       Certificate = newCert, 
-                       Database = databaseName, 
-                       Urls = new string[] {leader.WebUrl}
-                   }.Initialize())
+            {
+                Certificate = newCert,
+                Database = databaseName,
+                Urls = new string[] { leader.WebUrl },
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
+            }.Initialize())
             {
                 //try a request that will not use shard executors
                 await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
