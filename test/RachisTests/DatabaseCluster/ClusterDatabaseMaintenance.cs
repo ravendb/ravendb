@@ -116,7 +116,7 @@ namespace RachisTests.DatabaseCluster
                     session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
-                
+
                 Indexes.WaitForIndexing(store);
 
                 var database = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -228,14 +228,14 @@ namespace RachisTests.DatabaseCluster
 
             var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
             using (var store = GetDocumentStore(new Options
-                   {
-                       ReplicationFactor = 3,
-                       Server = cluster.Leader,
-                       ModifyDocumentStore = s => s.Conventions = new DocumentConventions
-                       {
-                           DisableTopologyUpdates = true
-                       }
-                   }))
+            {
+                ReplicationFactor = 3,
+                Server = cluster.Leader,
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }))
             {
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
                 Assert.Equal(3, val);
@@ -274,7 +274,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     mre.Set();
                 }
-                
+
                 val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
                 Assert.Equal(3, val);
             }
@@ -285,7 +285,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             DebuggerAttachedTimeout.DisableLongTimespan = true;
-            
+
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.MaxChangeVectorDistance)] = "1";
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.SupervisorSamplePeriod)] = "50";
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.OnErrorDelayTime)] = "15";
@@ -293,10 +293,10 @@ namespace RachisTests.DatabaseCluster
 
             var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
             using (var store = GetDocumentStore(new Options
-                   {
-                       ReplicationFactor = 3, 
-                       Server = cluster.Leader,
-                   }))
+            {
+                ReplicationFactor = 3,
+                Server = cluster.Leader,
+            }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -597,12 +597,12 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            
+
             var (_, leader) = await CreateRaftCluster(clusterSize, false, 0, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "4"
             });
-            
+
             options.ModifyDatabaseName = _ => databaseName;
             options.Server = leader;
             options.ReplicationFactor = 3;
@@ -622,7 +622,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize - 1, val);
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
                 Assert.Equal(1, val);
-                
+
                 Servers[1] = GetNewServer(
                     new ServerCreationOptions
                     {
@@ -990,7 +990,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        
+
 
         [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "RavenDB-18803 all cluster nodes should be included in the orchestrator topology by default")]
@@ -1042,6 +1042,10 @@ namespace RachisTests.DatabaseCluster
                 Certificate = adminCert,
                 Urls = new[] { leader.WebUrl },
                 Database = databaseName,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             })
             {
                 leaderStore.Initialize();
@@ -1102,7 +1106,7 @@ namespace RachisTests.DatabaseCluster
                     dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                     return dbToplogy.Rehabs.Count;
                 }, 1, interval: 500);
-                
+
                 Assert.True(1 == rehabs, $"topology: {dbToplogy}");
                 Assert.Equal(groupSize - 1, dbToplogy.Members.Count);
             }

@@ -47,7 +47,11 @@ public class RavenDB_17577 : RavenTestBase
             {
                 Urls = store.Urls,
                 Certificate = adminCert,
-                Database = store.Database
+                Database = store.Database,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             }.Initialize())
             {
                 storeWithAdminCert.ExecuteIndex(index);
