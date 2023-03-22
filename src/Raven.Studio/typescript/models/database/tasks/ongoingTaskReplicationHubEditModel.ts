@@ -93,8 +93,7 @@ class ongoingTaskReplicationHubEditModel {
             Mode: this.replicationMode(),
             Disabled: this.disabled(),
             PreventDeletionsMode: this.preventDeletions() ? "PreventSinkToHubDeletions" : "None",
-            WithFiltering: this.withFiltering(),
-            Certificates: undefined
+            WithFiltering: this.withFiltering()
         };
     }
     

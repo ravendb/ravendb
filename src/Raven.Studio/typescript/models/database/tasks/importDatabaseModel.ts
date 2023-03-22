@@ -10,7 +10,6 @@ class importDatabaseModel {
     includeIdentities = ko.observable(true);
     includeCompareExchange = ko.observable(true);
     includeCounters = ko.observable(true);
-    includeLegacyCounters = ko.observable(false);
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(false);
     includeAttachments = ko.observable(true);
@@ -151,9 +150,6 @@ class importDatabaseModel {
         if (this.includeCounters()) {
             operateOnTypes.push("CounterGroups");
         }
-        if (this.includeLegacyCounters()) {
-            operateOnTypes.push("Counters");
-        }
         if (this.includeAttachments()) {
             operateOnTypes.push("Attachments");
         }
@@ -197,7 +193,6 @@ class importDatabaseModel {
                 || this.includeCompareExchange() 
                 || this.includeLegacyAttachments() 
                 || this.includeCounters() 
-                || this.includeLegacyCounters()
                 || this.includeTimeSeries()
                 || this.includeRevisionDocuments() 
                 || this.includeDocuments()
