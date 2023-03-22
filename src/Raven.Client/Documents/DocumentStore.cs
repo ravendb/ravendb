@@ -529,10 +529,10 @@ namespace Raven.Client.Documents
 
         private void DisposeCertificateIfNeeded()
         {
-            if (Conventions.DisposeCertificate)
+            if (Certificate != null && Conventions.DisposeCertificate)
             {
                 throw new InvalidOperationException("Fix me!");
-                Certificate?.Dispose();
+                Certificate.Dispose();
             }
         }
     }
