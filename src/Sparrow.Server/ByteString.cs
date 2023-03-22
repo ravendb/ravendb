@@ -737,7 +737,7 @@ namespace Sparrow.Server
 
             public override string ToString()
             {
-                return $"{nameof(Start)}: {(long)Start}, {nameof(End)}: {(long)End}, {nameof(Size)}: {Size}";
+                return $"{nameof(Start)}: {(long)Start}, {nameof(End)}: {(long)End}, {nameof(Size)}: {Size}, {nameof(SizeLeft)}: {SizeLeft}";
             }
         }
 

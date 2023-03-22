@@ -12,9 +12,13 @@ namespace Sparrow.Platform.Posix
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(KernelVirtualFileSystemUtils).FullName);
         private static readonly ConcurrentSet<string> IsOldFileAlert = new ConcurrentSet<string>();
+        private static readonly ConcurrentSet<string> MissingCgroupFiles = new ConcurrentSet<string>();
 
         public static long? ReadNumberFromCgroupFile(string fileName)
         {
+            if (MissingCgroupFiles.Contains(fileName))
+                return null;
+            
             try
             {
                 var txt = File.ReadAllText(fileName);
@@ -26,6 +30,9 @@ namespace Sparrow.Platform.Posix
             }
             catch (Exception e)
             {
+                if (e is DirectoryNotFoundException)
+                    MissingCgroupFiles.Add(fileName);
+                
                 if (IsOldFileAlert.TryAdd(fileName) && Logger.IsOperationsEnabled)
                 {
                     Logger.Operations($"Unable to read and parse '{fileName}', will not respect container's limit", e);
