@@ -52,7 +52,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             LocalNodeTag = "A",
             Environment = StudioConfiguration.StudioEnvironment.None,
             License = licenseObj,
-            NodeSetupInfos = new Dictionary<string,NodeInfo>()
+            NodeSetupInfos = new Dictionary<string, NodeInfo>()
             {
                 ["A"] = new() { Port = 443, TcpPort = 38887, Addresses = new List<string> { "127.0.0.1" } },
                 ["B"] = new() { Port = 448, TcpPort = 38888, Addresses = new List<string> { "127.0.0.1" } },
@@ -289,6 +289,10 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         {
             Urls = new[] { url1 },
             Certificate = serverCert,
+            Conventions =
+            {
+                DisposeCertificate = false
+            }
         }.Initialize())
         {
             {
@@ -301,7 +305,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             {
                 Urls = new[] { url1 },
                 Certificate = clientCert,
-                Database = dbName
+                Database = dbName,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             }.Initialize())
 
                 Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
@@ -417,7 +425,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         using (var store = new DocumentStore
         {
             Urls = new[] { url1 },
-            Certificate = serverCert
+            Certificate = serverCert,
+            Conventions =
+            {
+                DisposeCertificate = false
+            }
         }.Initialize())
         {
             DatabaseRecord databaseRecord = new(dbName);
@@ -431,7 +443,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         {
             Urls = new[] { url1 },
             Certificate = clientCert,
-            Database = dbName
+            Database = dbName,
+            Conventions =
+            {
+                DisposeCertificate = false
+            }
         }.Initialize())
 
             Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
@@ -588,7 +604,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         using (var store = new DocumentStore
         {
             Urls = new[] { url1 },
-            Certificate = serverCert
+            Certificate = serverCert,
+            Conventions =
+            {
+                DisposeCertificate = false
+            }
         }.Initialize())
         {
             DatabaseRecord databaseRecord = new(dbName);
@@ -611,19 +631,31 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         {
             Urls = new[] { url1 },
             Certificate = clientCert,
-            Database = dbName
+            Database = dbName,
+            Conventions =
+            {
+                DisposeCertificate = false
+            }
         }.Initialize())
         using (var store2 = new DocumentStore
         {
             Urls = new[] { url2 },
             Certificate = clientCert,
-            Database = dbName
+            Database = dbName,
+            Conventions =
+            {
+                DisposeCertificate = false
+            }
         }.Initialize())
         using (var store3 = new DocumentStore
         {
             Urls = new[] { url3 },
             Certificate = clientCert,
-            Database = dbName
+            Database = dbName,
+            Conventions =
+            {
+                DisposeCertificate = false
+            }
         }.Initialize())
         {
             string userId;
