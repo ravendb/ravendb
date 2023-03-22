@@ -92,7 +92,7 @@ export const parameters = {
     },
   },
   backgrounds: {
-    default: 'twitter',
+    default: 'default-body',
     values: [
       {
         name: 'default-body',

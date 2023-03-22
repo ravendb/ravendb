@@ -30,8 +30,7 @@ import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
-import { FlexGrow } from "../../../../../components/common/FlexGrow";
-import { Badge } from "reactstrap";
+import { Badge, Collapse } from "reactstrap";
 
 type PeriodicBackupPanelProps = BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> & { forceReload: () => void };
 
@@ -248,7 +247,9 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            {detailsVisible && <Details canEdit={canEdit} {...props} />}
+            <Collapse isOpen={detailsVisible}>
+                <Details canEdit={canEdit} {...props} />
+            </Collapse>
         </RichPanel>
     );
 }

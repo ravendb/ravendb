@@ -66,3 +66,10 @@
     width: 100%;
     z-index: $zindex-popover;
 }
+
+//Fix caret margin for dropdowns with no text (no support on firefox)
+.dropdown-toggle:has(.visually-hidden) {
+    &::after {
+        margin-left: 0;
+    }
+}

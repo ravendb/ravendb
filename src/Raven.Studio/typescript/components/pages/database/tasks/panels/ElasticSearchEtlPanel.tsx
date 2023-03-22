@@ -22,6 +22,7 @@ import {
     RichPanelInfo,
 } from "../../../../common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
+import { Collapse } from "reactstrap";
 
 type ElasticSearchEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskElasticSearchEtlInfo>;
 
@@ -87,8 +88,10 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            {detailsVisible && <Details {...props} canEdit={canEdit} />}
-            {detailsVisible && <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />}
+            <Collapse isOpen={detailsVisible}>
+                <Details {...props} canEdit={canEdit} />
+                <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+            </Collapse>
         </RichPanel>
     );
 }

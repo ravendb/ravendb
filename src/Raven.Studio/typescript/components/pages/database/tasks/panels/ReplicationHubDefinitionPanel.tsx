@@ -18,6 +18,7 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { useAccessManager } from "hooks/useAccessManager";
 import { ReplicationHubConnectedSinkPanel } from "./ReplicationHubConnectedSinkPanel";
 import genUtils from "common/generalUtils";
+import { Collapse } from "reactstrap";
 
 interface ReplicationHubPanelProps {
     db: database;
@@ -96,7 +97,9 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            {detailsVisible && <Details {...props} canEdit={canEdit} />}
+            <Collapse isOpen={detailsVisible}>
+                <Details {...props} canEdit={canEdit} />
+            </Collapse>
         </RichPanel>
     );
 }

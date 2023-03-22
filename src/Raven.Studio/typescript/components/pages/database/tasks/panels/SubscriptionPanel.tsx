@@ -21,6 +21,7 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
 import moment from "moment";
+import { Collapse } from "reactstrap";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo>;
 
@@ -81,8 +82,10 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            {detailsVisible && <Details {...props} />}
-            {detailsVisible && <SubscriptionTaskDistribution task={data} />}
+            <Collapse isOpen={detailsVisible}>
+                <Details {...props} />
+                <SubscriptionTaskDistribution task={data} />
+            </Collapse>
         </RichPanel>
     );
 

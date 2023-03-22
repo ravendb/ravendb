@@ -19,6 +19,7 @@ import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../shared";
 import genUtils from "common/generalUtils";
+import { Collapse } from "reactstrap";
 
 type ExternalReplicationPanelProps = BaseOngoingTaskPanelProps<OngoingTaskExternalReplicationInfo>;
 
@@ -97,7 +98,9 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            {detailsVisible && <Details {...props} canEdit={canEdit} />}
+            <Collapse isOpen={detailsVisible}>
+                <Details {...props} canEdit={canEdit} />
+            </Collapse>
         </RichPanel>
     );
 }

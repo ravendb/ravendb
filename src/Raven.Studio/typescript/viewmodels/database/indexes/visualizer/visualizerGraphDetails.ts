@@ -947,7 +947,7 @@ class visualizerGraphDetails {
 
             // page number
             ctx.fillStyle = this.colors.pageNumber;
-            ctx.font = "bold 24px Lato";
+            ctx.font = "bold 24px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             ctx.textAlign = "right";
             ctx.textBaseline = "top";
             ctx.fillText("#" + page.pageNumber, page.width - pageItem.margins.aggragationTextHorizontalPadding, pageItem.margins.pageNumberTopMargin);
@@ -959,7 +959,7 @@ class visualizerGraphDetails {
 
                 ctx.textAlign = "center";
                 ctx.fillStyle = this.colors.nestedSectionFg; 
-                ctx.font = "11px Lato";
+                ctx.font = "11px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
                 ctx.fillText("NESTED", page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width / 2, nestedSectionMargins.topMargin + 3);
                 ctx.fillText("SECTION", page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width / 2, nestedSectionMargins.topMargin + 15);
             }
@@ -983,7 +983,7 @@ class visualizerGraphDetails {
         ctx.translate(page.x, page.y);
         try {
 
-            ctx.font = "11px Lato";
+            ctx.font = "11px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             ctx.fillStyle = this.colors.collapsedLeafsFg;
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
@@ -996,7 +996,7 @@ class visualizerGraphDetails {
 
     private drawEntries(ctx: CanvasRenderingContext2D, leaf: leafPageItem) {
         const entries = leaf.entries;
-        ctx.font = "11px Lato";
+        ctx.font = "11px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
         ctx.fillStyle = this.colors.entriesBg;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
@@ -1008,7 +1008,7 @@ class visualizerGraphDetails {
             ctx.fillRect(entry.x, entry.y, entry.width, entry.height);
 
             ctx.fillStyle = this.colors.entryFg;
-            ctx.font = "12px Lato";
+            ctx.font = "12px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             if (entry instanceof entryPaddingItem) {
                 ctx.textAlign = "center";
                 ctx.fillText(". . .", entry.x + entry.width / 2, entry.y);
@@ -1021,14 +1021,14 @@ class visualizerGraphDetails {
     }
 
     private drawAggregation(ctx: CanvasRenderingContext2D, branch: branchPageItem) {
-        ctx.font = "11px Lato";
+        ctx.font = "11px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
         ctx.fillStyle = this.colors.aggregationLabel;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.fillText("Aggregation:", pageItem.margins.aggragationTextHorizontalPadding, pageItem.margins.pageNumberTopMargin);
 
         ctx.fillStyle = this.colors.aggregationValue;
-        ctx.font = "12px Lato";
+        ctx.font = "12px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
         ctx.textAlign = "left";
 
         let currentY = pageItem.margins.pageNumberTopMargin + pageItem.margins.entriesAndAggregationTextHeight - 5;
@@ -1058,7 +1058,7 @@ class visualizerGraphDetails {
             ctx.fillRect(docItem.x, docItem.y, docItem.width, docItem.height);
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.font = "18px Lato";
+            ctx.font = "18px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             ctx.fillStyle = this.colors.documentText;
             ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
         }

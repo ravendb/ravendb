@@ -77,27 +77,29 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
     });
 
     return (
-        <LocationDistribution>
-            <DistributionLegend>
-                <div className="top"></div>
-                {sharded && (
-                    <div className="node">
-                        <i className="icon-node" /> Node
+        <div className="px-3 pb-2">
+            <LocationDistribution>
+                <DistributionLegend>
+                    <div className="top"></div>
+                    {sharded && (
+                        <div className="node">
+                            <i className="icon-node" /> Node
+                        </div>
+                    )}
+                    <div>
+                        <i className="icon-connected" /> Status
                     </div>
-                )}
-                <div>
-                    <i className="icon-connected" /> Status
-                </div>
-                <div>
-                    <i className="icon-warning" /> Error
-                </div>
-                <div>
-                    <i />
-                    Status
-                </div>
-            </DistributionLegend>
-            {items}
-        </LocationDistribution>
+                    <div>
+                        <i className="icon-warning" /> Error
+                    </div>
+                    <div>
+                        <i />
+                        Status
+                    </div>
+                </DistributionLegend>
+                {items}
+            </LocationDistribution>
+        </div>
     );
 }
 

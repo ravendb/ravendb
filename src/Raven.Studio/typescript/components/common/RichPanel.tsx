@@ -114,7 +114,7 @@ export function RichPanelDetailItem(props: RichPanelDetailItemProps) {
     const panelClass = size ? "rich-panel-detail-item" + "-" + size : "rich-panel-detail-item";
     return (
         <div className={classNames(panelClass, className)} {...rest}>
-            {label && <div className="detail-item-label">{label}</div>}
+            {label && <div className="small-label">{label}</div>}
             <div className="detail-item-content">{children}</div>
         </div>
     );

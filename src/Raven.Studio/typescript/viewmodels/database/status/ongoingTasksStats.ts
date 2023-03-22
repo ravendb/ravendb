@@ -1055,7 +1055,7 @@ class ongoingTasksStats extends shardViewModelBase {
 
             context.textAlign = "left";
             context.textBaseline = "top";
-            context.font = "10px Lato";
+            context.font = "10px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             context.fillStyle = this.colors.axis;
           
             ticks.forEach((x, i) => {
@@ -1488,7 +1488,7 @@ class ongoingTasksStats extends shardViewModelBase {
                     : ongoingTasksStats.closedTrackPadding;
                 
                 etlItem.Stats.forEach((etlStat, idx) => {
-                    context.font = "10px Lato";
+                    context.font = "10px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
                     const openedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.singleOpenedEtlItemHeight;
                     const closedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.trackHeight;
                     const offset = isOpened ? idx * openedTrackItemOffset : (idx + 1) * closedTrackItemOffset;
@@ -1531,7 +1531,7 @@ class ongoingTasksStats extends shardViewModelBase {
     
     private drawText(context: CanvasRenderingContext2D, yStart: number, text: string) {
         const textShift = 12.5;
-        context.font = "bold 12px Lato";
+        context.font = "bold 12px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
         const textWidth = context.measureText(text).width + 8;
 
         const areaWidth = textWidth + ongoingTasksStats.textLeftPadding * 2 + ongoingTasksStats.previewIconWidth;
@@ -1758,7 +1758,7 @@ class ongoingTasksStats extends shardViewModelBase {
         const textStart = 3 + 8 + 4;
 
         this.filteredTrackNames().forEach(trackName => {
-            context.font = "bold 12px Lato";
+            context.font = "bold 12px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             const trackType = this.getTaskType(trackName);
             const trackDescription = this.getTaskTypeDescription(trackType);
 
@@ -2327,7 +2327,7 @@ class ongoingTasksStats extends shardViewModelBase {
         const textWidth = context.measureText(text).width;
         const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
         if (truncatedText) {
-            context.font = "12px Lato";
+            context.font = "12px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             context.fillText(truncatedText, xStart + 2, yStart + 13, dx - 4);
         }
     }
