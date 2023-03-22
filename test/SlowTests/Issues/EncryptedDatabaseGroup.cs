@@ -285,7 +285,8 @@ namespace SlowTests.Issues
                 AdminCertificate = certificates.ServerCertificate.Value,
                 ClientCertificate = userCert,
                 ModifyDatabaseName = _ => databaseName,
-                DeleteDatabaseOnDispose = false
+                DeleteDatabaseOnDispose = false,
+                ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false
             }))
             {
                 await TrySavingDocument(store);
@@ -295,7 +296,11 @@ namespace SlowTests.Issues
             {
                 Database = databaseName,
                 Urls = new string[] { leader.WebUrl },
-                Certificate = adminClusterCert
+                Certificate = adminClusterCert,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             }.Initialize())
             {
                 //check cert is saved with this db as expected
@@ -341,6 +346,10 @@ namespace SlowTests.Issues
                 Urls = new[] { leader.WebUrl },
                 Certificate = userCert,
                 Database = databaseName,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             }.Initialize())
             {
                 var requestExecutor = store.GetRequestExecutor(databaseName);
