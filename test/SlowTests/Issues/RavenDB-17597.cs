@@ -1,38 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
-using FastTests.Client;
-using NuGet.ContentModel;
-using Orders;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions.Database;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server;
-using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 using Raven.Client;
 
 namespace SlowTests.Issues
@@ -60,7 +40,7 @@ namespace SlowTests.Issues
 
             var enumValues = Enum.GetValues<IndexDefinitionCompareDifferences>();
 
-            Assert.Equal(enumValues.Length -2, //Exclude 'None' and 'All'
+            Assert.Equal(enumValues.Length - 2, //Exclude 'None' and 'All'
                 fields.Length + properties.Length - 7
                 //properties contains also 'Name', 'PatternReferencesCollectionName', 'PatternForOutputReduceToCollectionReferences', 'ReduceOutputIndex', 'OutputReduceToCollection', 'Type', 'SourceType'
                 //which aren't contained in enumValues
@@ -82,7 +62,7 @@ namespace SlowTests.Issues
 
 
             var asm1 = AdditionalAssembly.FromNuGet("g", "123", "http://www.google.com", usings: new HashSet<string>() { "xx", "yy" });
-            var asm2 = AdditionalAssembly.FromNuGet("e", "123", "http://www.ebay.com", usings: new HashSet<string>(){"xx","yy"});
+            var asm2 = AdditionalAssembly.FromNuGet("e", "123", "http://www.ebay.com", usings: new HashSet<string>() { "xx", "yy" });
 
             return new IndexDefinition()
             {
@@ -183,15 +163,15 @@ namespace SlowTests.Issues
             using var store = GetDocumentStore(new Options { RunInMemory = false, Server = server });
             {
                 // Prepare Server For Test
-                for(int i = 0; i < 5; i++)
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Item
+                for (int i = 0; i < 5; i++)
+                    using (var session = store.OpenAsyncSession())
                     {
-                        Num = 5
-                    });
-                    await session.SaveChangesAsync();
-                }
+                        await session.StoreAsync(new Item
+                        {
+                            Num = 5
+                        });
+                        await session.SaveChangesAsync();
+                    }
 
                 // Wait for indexing in first node
 
@@ -201,7 +181,7 @@ namespace SlowTests.Issues
                 {
                     store.Maintenance.Send(new StopIndexOperation("Items/ByNum"));
                 }
-   
+
 
                 //Modify index
                 await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -276,7 +256,7 @@ namespace SlowTests.Issues
                 };
             }
         }
-        
+
         private class Index_ItemsByNum2 : AbstractIndexCreationTask
         {
             public override string IndexName => "Items/ByNum";
