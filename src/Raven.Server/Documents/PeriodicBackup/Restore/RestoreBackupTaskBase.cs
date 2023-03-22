@@ -139,11 +139,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // To avoid reading everything to memory, we copy to a local file instead. Note that this also ensure that we
             // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
 
-            var filePath = RavenServerBackupUtils.GetBackupTempPath(configuration, $"{Guid.NewGuid()}.snapshot-restore").FullPath;
-            AssertFreeSpace(stream, filePath);
-            
+            var filePath = RavenServerBackupUtils.GetBackupTempPath(configuration, $"{Guid.NewGuid()}.snapshot-restore", out PathSetting basePath).FullPath;
             var file = SafeFileStream.Create(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
                 32 * 1024, FileOptions.DeleteOnClose);
+
+            AssertFreeSpace(stream, basePath.FullPath);
 
             try
             {
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private static void AssertFreeSpace(Stream stream, string filePath)
+        private static void AssertFreeSpace(Stream stream, string basePath)
         {
             long streamLength;
 
@@ -185,21 +185,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 return;
             }
 
-            var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
-            var driveName = DiskUtils.GetDriveInfo(filePath, drivesInfo, out _)?.DriveName;
-            if (driveName == null)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to get drive name for file '{filePath}'");
-
-                return;
-            }
-
-            var spaceInfo = DiskUtils.GetDiskSpaceInfo(driveName);
+            var spaceInfo = DiskUtils.GetDiskSpaceInfo(basePath);
             if (spaceInfo == null)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to get space info for drive '{driveName}'");
+                    Logger.Info($"Failed to get space info for '{basePath}'");
 
                 return;
             }
@@ -209,7 +199,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var freeSpaceNeeded = new Sparrow.Size(streamLength, SizeUnit.Bytes) + new Sparrow.Size(1, SizeUnit.Gigabytes);
 
             if (freeSpaceNeeded > spaceInfo.TotalFreeSpace)
-                throw new DiskFullException($"There is not enough space on '{driveName}', we need at least {freeSpaceNeeded} in order to successfully restore a snapshot. " +
+                throw new DiskFullException($"There is not enough space on '{basePath}', we need at least {freeSpaceNeeded} in order to successfully copy the snapshot backup file locally. " +
                                             $"Currently available space is {spaceInfo.TotalFreeSpace}.");
         }
 

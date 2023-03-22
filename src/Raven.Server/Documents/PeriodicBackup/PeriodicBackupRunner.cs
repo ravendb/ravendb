@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
             _auditLog = LoggingSource.AuditLog.GetLogger(_database.Name, "Audit");
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-            _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp");
+            _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp", out _);
 
             // we pass wakeup-1 to ensure the backup will run right after DB woke up on wakeup time, and not on the next occurrence.
             // relevant only if it's the first backup after waking up
