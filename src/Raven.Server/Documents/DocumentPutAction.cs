@@ -20,6 +20,7 @@ using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using System.Threading;
 
 namespace Raven.Server.Documents
 {
@@ -198,7 +199,7 @@ namespace Raven.Server.Documents
                             flags |= DocumentFlags.HasTimeSeries;
                         }
 
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false && 
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
                             oldFlags.Contain(DocumentFlags.HasRevisions))
                         {
                             flags |= DocumentFlags.HasRevisions;
@@ -225,20 +226,49 @@ namespace Raven.Server.Documents
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref flags, out var configuration);
-                    
+
+                    bool newDoc = false;
+                    DocumentFlags oldFlags = DocumentFlags.None;
+                    DateTime oldTicks = DateTime.MinValue;
+
+                    try
+                    {
+                        oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
+                        oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // this is a new document
+                        newDoc = true;
+                    }
+
                     if (shouldVersion)
                     {
-                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
+
+                        if (newDoc == false && _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
                         {
-                            var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
-                            var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
-                            
-                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc, oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
+
+                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc,
+                                oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
                                 oldChangeVector, oldTicks.Ticks, configuration, collectionName);
                         }
-                        
+
+
                         flags |= DocumentFlags.HasRevisions;
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks,
+                            configuration, collectionName);
+                    }
+                    else if (newDoc==false &&
+                             nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
+                             oldFlags.Contain(DocumentFlags.HasRevisions) &&
+                             configuration.Disabled)
+                    {
+                        bool moreWork = false;
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.EnforceConfigurationFor(context, id, ref moreWork, stripHasRevisions: false);
+                        if (moreWork==false)
+                        {
+                            flags = flags.Strip(DocumentFlags.HasRevisions);
+                        }
                     }
                 }
 

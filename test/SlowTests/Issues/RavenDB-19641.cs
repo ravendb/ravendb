@@ -9,6 +9,7 @@ using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Xunit;
 using Xunit.Abstractions;
@@ -265,6 +266,163 @@ namespace SlowTests.Issues
                 Assert.Equal(2, doc2RevCount);
             }
         }
+
+        [Fact]
+        public async Task DocRevisionsShouldObeyNewConigWhenChangingTheDoc()
+        {
+            using var store = GetDocumentStore();
+
+            var configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
+                }
+            };
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Old" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "New" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(2, doc1RevCount);
+            }
+
+            configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = true,
+                    MinimumRevisionsToKeep = 100,
+                    MaximumRevisionsToDeleteUponDocumentUpdate = 1
+                }
+            };
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(2, doc1RevCount);
+                var d = await session.LoadAsync<User>("Docs/1");
+                var metadata = session.Advanced.GetMetadataFor(d);
+                Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Raven.Client.Constants.Documents.Metadata.Flags]);
+            }
+            
+            using (var session = store.OpenAsyncSession())
+            {
+                var d = await session.LoadAsync<User>("Docs/1");
+                d.Name = "New2";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(0, doc1RevCount);
+                var d = await session.LoadAsync<User>("Docs/1");
+                var metadata = session.Advanced.GetMetadataFor(d);
+                Assert.False(metadata.ContainsKey(Raven.Client.Constants.Documents.Metadata.Flags));
+            }
+        }
+
+        [Fact]
+        public async Task DocRevisionsShouldBeDeletedAfterRemoveConfigsWhenChangingTheDoc()
+        {
+            using var store = GetDocumentStore();
+
+            var configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
+                }
+            };
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Old" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "New" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(2, doc1RevCount);
+            }
+
+            configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 0,
+                    MaximumRevisionsToDeleteUponDocumentUpdate = 1
+                }
+            };
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(2, doc1RevCount);
+                var d = await session.LoadAsync<User>("Docs/1");
+                var metadata = session.Advanced.GetMetadataFor(d);
+                Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Raven.Client.Constants.Documents.Metadata.Flags]);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var d = await session.LoadAsync<User>("Docs/1");
+                d.Name = "New2";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(1, doc1RevCount);
+                var d = await session.LoadAsync<User>("Docs/1");
+                var metadata = session.Advanced.GetMetadataFor(d);
+                Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Raven.Client.Constants.Documents.Metadata.Flags]);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var d = await session.LoadAsync<User>("Docs/1");
+                d.Name = "New3";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(0, doc1RevCount);
+                var d = await session.LoadAsync<User>("Docs/1");
+                var metadata = session.Advanced.GetMetadataFor(d);
+                Assert.False(metadata.ContainsKey(Raven.Client.Constants.Documents.Metadata.Flags));
+            }
+        }
+
 
         private class User
         {
