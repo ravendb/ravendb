@@ -141,6 +141,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false,
                 Path = NewDataPath()
             }))
             {

@@ -145,6 +145,10 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         {
             Urls = new[] { url1 },
             Certificate = serverCert,
+            Conventions =
+            {
+                DisposeCertificate = false
+            }
         }.Initialize())
         {
             {
@@ -166,19 +170,31 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             {
                 Urls = new[] { url1 },
                 Certificate = clientCert,
-                Database = dbName
+                Database = dbName,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             }.Initialize())
             using (var store2 = new DocumentStore
             {
                 Urls = new[] { url2 },
                 Certificate = clientCert,
-                Database = dbName
+                Database = dbName,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             }.Initialize())
             using (var store3 = new DocumentStore
             {
                 Urls = new[] { url3 },
                 Certificate = clientCert,
-                Database = dbName
+                Database = dbName,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             }.Initialize())
             {
                 string userId;
