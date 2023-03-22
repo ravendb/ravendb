@@ -115,9 +115,8 @@ function BuildUbuntuDockerImage ($version, $arch) {
             $env:OUTPUT_DIR = $(Convert-Path $DockerfileDir)
             $env:TARBALL_DIR = Resolve-Path $ArtifactsDir
              
-            Push-Location $(Get-Location)
             $buildScriptPath = (Resolve-Path "..\scripts\linux\pkg\deb\build-deb.ps1").Path
-            Set-Location $(Split-Path $($buildScriptPath))
+            Push-Location $(Split-Path $($buildScriptPath))
 
             . "./build-deb.ps1"
         
