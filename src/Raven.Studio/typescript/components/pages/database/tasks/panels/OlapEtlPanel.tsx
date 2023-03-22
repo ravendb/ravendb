@@ -22,6 +22,7 @@ import {
     RichPanelInfo,
 } from "../../../../common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
+import { Collapse } from "reactstrap";
 
 type OlapEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskOlapEtlInfo>;
 
@@ -86,8 +87,10 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            {detailsVisible && <Details {...props} canEdit={canEdit} />}
-            {detailsVisible && <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />}
+            <Collapse isOpen={detailsVisible}>
+                <Details {...props} canEdit={canEdit} />
+                <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+            </Collapse>
         </RichPanel>
     );
 }

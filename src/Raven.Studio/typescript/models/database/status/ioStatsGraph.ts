@@ -895,7 +895,7 @@ class ioStatsGraph {
 
             context.textAlign = "left";
             context.textBaseline = "top";
-            context.font = "10px Lato";
+            context.font = "10px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             context.fillStyle = this.colors.axisText;
 
             ticks.forEach((x, i) => {
@@ -1096,7 +1096,7 @@ class ioStatsGraph {
                     if (originalDx > itemSizeText.length * ioStatsGraph.charWidthApproximation) {
                         context.fillStyle = this.colors.text;
                         context.textAlign = "center";
-                        context.font = "bold 10px Lato";
+                        context.font = "bold 10px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
                         context.fillText(itemSizeText, x1 + originalDx / 2, yStartItem + ioStatsGraph.trackHeight / 2 + 4);
                     }
                 }
@@ -1257,7 +1257,7 @@ class ioStatsGraph {
         }
 
         if (!skipDrawing) {
-            context.font = "12px Lato"; // Define font before using measureText()...
+            context.font = "12px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif"; // Define font before using measureText()...
             rectWidth = context.measureText(trackName).width + addedWidth;
             context.fillStyle = this.colors.trackNameBg;
 

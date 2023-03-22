@@ -19,6 +19,7 @@ import {
     RichPanelHeader,
     RichPanelInfo,
 } from "../../../../common/RichPanel";
+import { Collapse } from "reactstrap";
 
 type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicationSinkInfo>;
 
@@ -83,7 +84,9 @@ export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            {detailsVisible && <Details {...props} canEdit={canEdit} />}
+            <Collapse isOpen={detailsVisible}>
+                <Details {...props} canEdit={canEdit} />
+            </Collapse>
         </RichPanel>
     );
 }

@@ -802,7 +802,7 @@ class indexPerformance extends shardViewModelBase {
 
             context.textAlign = "left";
             context.textBaseline = "top";
-            context.font = "10px Lato";
+            context.font = "10px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             context.fillStyle = this.colors.axis;
            
             ticks.forEach((x, i) => {
@@ -1071,7 +1071,7 @@ class indexPerformance extends shardViewModelBase {
                         const textWidth = context.measureText(text).width;
                         const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
                         if (truncatedText) {
-                            context.font = "12px Lato";
+                            context.font = "12px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
                             context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
                         }
                     }
@@ -1108,7 +1108,7 @@ class indexPerformance extends shardViewModelBase {
         const textStart = 3 + 8 + 4;
 
         this.filteredIndexNames().forEach((indexName) => {
-            context.font = "12px Lato";
+            context.font = "12px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             
             const isFaulty = !!this.faultyIndexes().find(x => x === indexName);
             
@@ -1127,7 +1127,7 @@ class indexPerformance extends shardViewModelBase {
             graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !isOpened);
             
             if (isFaulty) {
-                context.font = "12px Lato";
+                context.font = "12px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
                 context.fillStyle = this.colors.faulty;
                 context.fillText("(Faulty)", rectWidth - faultyWidth, yScale(indexName) + textShift);
             }

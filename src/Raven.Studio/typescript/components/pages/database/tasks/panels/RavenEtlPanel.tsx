@@ -21,6 +21,7 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { OngoingTaskRavenEtlInfo } from "../../../../models/tasks";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../shared";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
+import { Collapse } from "reactstrap";
 
 type RavenEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRavenEtlInfo>;
 
@@ -101,8 +102,10 @@ export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformation
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            {detailsVisible && <Details {...props} canEdit={canEdit} />}
-            {detailsVisible && <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />}
+            <Collapse isOpen={detailsVisible}>
+                <Details {...props} canEdit={canEdit} />
+                <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+            </Collapse>
         </RichPanel>
     );
 }

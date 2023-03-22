@@ -22,6 +22,7 @@ import {
     RichPanelInfo,
 } from "../../../../common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
+import { Collapse } from "reactstrap";
 
 type SqlEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSqlEtlInfo>;
 
@@ -88,8 +89,10 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            {detailsVisible && <Details {...props} canEdit={canEdit} />}
-            {detailsVisible && <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />}
+            <Collapse isOpen={detailsVisible}>
+                <Details {...props} canEdit={canEdit} />
+                <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+            </Collapse>
         </RichPanel>
     );
 }

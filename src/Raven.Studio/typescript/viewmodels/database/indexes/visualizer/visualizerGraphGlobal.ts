@@ -903,7 +903,7 @@ class visualizerGraphGlobal {
 
             // text
             ctx.beginPath();
-            ctx.font = "10px Lato";
+            ctx.font = "10px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
             ctx.textAlign = "center";
             ctx.fillStyle = this.colors.treeFill;
             ctx.strokeStyle = this.colors.treeStroke;
@@ -921,7 +921,7 @@ class visualizerGraphGlobal {
                 totalEntiresY += totalEntriesOffset;
                 const items = tree.itemsCountAtDepth[i];
                 ctx.beginPath();
-                ctx.font = "18px Lato";
+                ctx.font = "18px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
                 ctx.textAlign = "right";
                 ctx.fillText(items.toString(),
                     reduceTreeItem.margins.treeMargin + tree.totalLeafsNumberWidth,
@@ -1055,7 +1055,7 @@ class visualizerGraphGlobal {
         ctx.fillRect(docItem.x, docItem.y, docItem.width, docItem.height);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.font = "18px Lato";
+        ctx.font = "18px 'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif";
         ctx.fillStyle = this.colors.documentName;
         ctx.fillText(docItem.name, docItem.x + (docItem.width - documentItem.margins.deleteAreaWidth) / 2 , docItem.y + docItem.height / 2);
         
