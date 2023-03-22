@@ -14,7 +14,6 @@ class migrateRavenDbDatabaseModel {
     includeIdentities = ko.observable(true);
     includeCompareExchange = ko.observable(true);
     includeCounters = ko.observable(true);
-    includeLegacyCounters = ko.observable(true);
     includeAttachments = ko.observable(true);
     includeTimeSeries = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
@@ -50,7 +49,6 @@ class migrateRavenDbDatabaseModel {
     serverMajorVersionNumber: KnockoutComputed<string>;
     isRavenDb: KnockoutComputed<boolean>;
     isLegacy: KnockoutComputed<boolean>;
-    isV41: KnockoutComputed<boolean>;
     isV42orAbove: KnockoutComputed<boolean>;
     isV50orAbove: KnockoutComputed<boolean>;
     hasRavenFs: KnockoutComputed<boolean>;
@@ -123,9 +121,6 @@ class migrateRavenDbDatabaseModel {
             }
             if (this.includeCompareExchange() && !this.isLegacy()) {
                 operateOnTypes.push("CompareExchange");
-            }
-            if (this.includeLegacyCounters() && this.isV41()) {
-                operateOnTypes.push("Counters");
             }
             if (this.includeCounters() && this.isV42orAbove()) {
                 operateOnTypes.push("CounterGroups");
@@ -216,16 +211,7 @@ class migrateRavenDbDatabaseModel {
 
         this.isLegacy = ko.pureComputed(() => {
            const version = this.serverMajorVersion();
-           return version === "V2" || version === "V30" || version === "V35";
-        });
-
-        this.isV41 = ko.pureComputed(() => {
-            if (this.isLegacy()) {
-                return false;
-            }
-
-            const buildVersion = this.buildVersion();
-            return (buildVersion >= 41000 && buildVersion <= 41999) || buildVersion === 41;
+           return version === "V30" || version === "V35";
         });
         
         this.isV42orAbove = ko.pureComputed(() => {

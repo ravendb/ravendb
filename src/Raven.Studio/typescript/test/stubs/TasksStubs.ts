@@ -108,7 +108,7 @@ export class TasksStubs {
                 LastDatabaseChangeVector:
                     "A:8806-9igKNP9Qh0WWnuROUXOVjQ, A:2568-F9I6Egqwm0Kz+K0oFVIR9Q, A:13366-IG4VwBTOnkqoT/uwgm2OQg, A:2568-OSKWIRBEDEGoAxbEIiFJeQ",
                 IsEncrypted: false,
-            }
+            },
         };
     }
 
@@ -286,7 +286,6 @@ export class TasksStubs {
             ResponsibleNode: TasksStubs.getResponsibleNode(),
             TaskState: "Enabled",
             Error: null,
-            HubDefinitionName: "HubName",
             TaskConnectionStatus: "Active",
             ConnectionStringName: "Hub-cs",
             Mode: "SinkToHub",
@@ -326,7 +325,6 @@ export class TasksStubs {
             Disabled: false,
             Mode: "SinkToHub",
             DelayReplicationFor: null,
-            Certificates: null,
             PreventDeletionsMode: "None",
             Name: "hub1",
             WithFiltering: false,
