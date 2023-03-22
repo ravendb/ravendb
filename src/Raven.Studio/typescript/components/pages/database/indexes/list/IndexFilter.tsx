@@ -4,11 +4,24 @@ import { shardingTodo } from "common/developmentHelper";
 import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "components/models/indexes";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import IndexUtils from "../../../../utils/IndexUtils";
-import { Badge, Button, DropdownItem, FormGroup, Input, InputGroup, Label } from "reactstrap";
+import {
+    Badge,
+    Button,
+    Col,
+    DropdownItem,
+    FormGroup,
+    Input,
+    InputGroup,
+    Label,
+    PopoverBody,
+    Row,
+    UncontrolledPopover,
+} from "reactstrap";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { DropdownPanel } from "components/common/DropdownPanel";
 import { Switch } from "components/common/Checkbox";
+import { MultiToggle } from "components/common/MultiToggle";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -112,36 +125,48 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
         ""
     );
 
-    const firstPart = (
-        <>
-            <span className="text-capital me-2">
-                <strong className="text-emphasis">{indexesCount}</strong>{" "}
-                {pluralizeHelpers.pluralize(indexesCount, "index", "indexes", true)}
-                {" found "}
-            </span>
-            {indexingErrorsOnlyPart}
-        </>
-    );
-
     return (
-        <div className="on-base-background mt-2">
-            {firstPart}
-            Status filter:
-            {filter.status.map((x) => IndexUtils.formatStatus(x)).join(", ")}
-            {filter.searchText ? (
-                <span className="ms-2">
-                    Name contains: <em className="text-emphasis">&quot;{filter.searchText}&quot;</em>
-                </span>
-            ) : (
-                ""
-            )}
-            <span className="ms-2">
-                Auto refresh is <strong className="text-emphasis">{filter.autoRefresh ? "on" : "off"}</strong>.
-            </span>
+        <Row className="d-flex align-items-end mb-3">
+            <Col>
+                <div className="small-label ms-1 mb-1">Filter by name</div>
+                <Input
+                    type="text"
+                    accessKey="/"
+                    placeholder="e.g. Orders/ByCompany/*"
+                    title="Filter indexes"
+                    className="filtering-input"
+                />
+            </Col>
+            <Col>
+                <MultiToggle inputList={indexesStatesList} label="Filter by state"></MultiToggle>
+            </Col>
+            <Col sm="auto">
+                <Switch id="autoRefresh" toggleSelection={null} selected={null} color="info" className="mt-1">
+                    <span>Auto refresh is {filter.autoRefresh ? "on" : "off"}</span>
+                </Switch>
+                <UncontrolledPopover target="autoRefresh" trigger="hover" placement="bottom">
+                    <PopoverBody>
+                        Automatically refreshes the list of indexes.
+                        <br />
+                        Might result in list flickering.
+                    </PopoverBody>
+                </UncontrolledPopover>
+            </Col>
             {/* TODO: `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;*/}
-        </div>
+        </Row>
     );
 }
+
+const indexesStatesList = [
+    { value: "all", label: "All", count: 8 },
+    { value: "normal", label: "Normal" },
+    { value: "error", label: "Error/Faulty" },
+    { value: "stale", label: "Stale" },
+    { value: "rollingdeployment", label: "Rolling deployment" },
+    { value: "paused", label: "Paused" },
+    { value: "disabled", label: "Disabled" },
+    { value: "idle", label: "Idle" },
+];
 
 export default function IndexFilter(props: IndexFilterProps) {
     const { filter, setFilter } = props;
@@ -184,7 +209,8 @@ export default function IndexFilter(props: IndexFilterProps) {
     const { value: filterDropdownVisible, toggle: toggleFilterDropdown } = useBoolean(false);
 
     return (
-        <InputGroup data-label="Filter">
+        <InputGroup data-label="Filter" className="d-none">
+            {/*TODO: Remove this component after the MultiToggle is properly connected */}
             <Input
                 type="text"
                 accessKey="/"
@@ -193,7 +219,6 @@ export default function IndexFilter(props: IndexFilterProps) {
                 value={filter.searchText}
                 onChange={onSearchTextChange}
             />
-
             <Button
                 innerRef={setFilterReferenceElement}
                 onClick={toggleFilterDropdown}
@@ -203,7 +228,6 @@ export default function IndexFilter(props: IndexFilterProps) {
             >
                 <span>Index Status</span>
             </Button>
-
             <DropdownPanel
                 visible={filterDropdownVisible}
                 toggle={toggleFilterDropdown}
