@@ -50,13 +50,15 @@ namespace SlowTests.Issues
             {
                 ClientCertificate = sinkCerts.ServerCertificate.Value,
                 Server = hubServer,
-                ModifyDatabaseName = _ => hubDB
+                ModifyDatabaseName = _ => hubDB,
+                ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false
             }))
             using (var sinkStore = GetDocumentStore(new Options
             {
                 ClientCertificate = sinkCerts.ServerCertificate.Value,
                 Server = sinkServer,
-                ModifyDatabaseName = _ => sinkDB
+                ModifyDatabaseName = _ => sinkDB,
+                ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false
             }))
             {
                 await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)));

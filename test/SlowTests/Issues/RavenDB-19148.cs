@@ -28,18 +28,20 @@ public class RavenDB_19148 : ClusterTestBase
             DateTime.UtcNow.Date.AddMonths(3), out var certBytes);
 
         byte[] caBytes = ca.Export(X509ContentType.Cert);
-        var result = await CreateRaftClusterWithSsl(1, true, customSettings:new Dictionary<string, string>
+        var result = await CreateRaftClusterWithSsl(1, true, customSettings: new Dictionary<string, string>
         {
             ["Security.WellKnownIssuers.Admin"] = Convert.ToBase64String(caBytes)
         });
 
-        using (var store = new DocumentStore { 
-           Urls = new[]
-           {
-               result.Leader.WebUrl
-           }, 
-           Certificate = new X509Certificate2(certBytes) 
-       })
+        using (var store = new DocumentStore
+        {
+            Urls = new[] { result.Leader.WebUrl },
+            Certificate = new X509Certificate2(certBytes),
+            Conventions =
+            {
+                DisposeCertificate = false
+            }
+        })
         {
             store.Initialize();
             await store.Maintenance.Server.SendAsync(new GetBuildNumberOperation());

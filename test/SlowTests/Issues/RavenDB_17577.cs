@@ -32,22 +32,23 @@ public class RavenDB_17577 : RavenTestBase
         }, SecurityClearance.ValidUser);
 
         using (var store = GetDocumentStore(new Options
-               {
-                   AdminCertificate = adminCert, 
-                   ClientCertificate = userCert, 
-                   ModifyDatabaseName = s => dbName,
-               }))
+        {
+            AdminCertificate = adminCert,
+            ClientCertificate = userCert,
+            ModifyDatabaseName = s => dbName,
+            ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false
+        }))
         {
             var index = new UsersByName();
 
             Assert.Throws<AuthorizationException>(() => store.ExecuteIndex(index));
 
             using (var storeWithAdminCert = new DocumentStore
-                   {
-                       Urls = store.Urls,
-                       Certificate = adminCert,
-                       Database = store.Database
-                   }.Initialize())
+            {
+                Urls = store.Urls,
+                Certificate = adminCert,
+                Database = store.Database
+            }.Initialize())
             {
                 storeWithAdminCert.ExecuteIndex(index);
             }

@@ -492,7 +492,8 @@ namespace Tests.Infrastructure
                     Certificate = certificate,
                     Conventions =
                     {
-                        DisableTopologyUpdates = disableTopologyUpdates
+                        DisableTopologyUpdates = disableTopologyUpdates,
+                        DisposeCertificate = false
                     }
                 };
                 store.Initialize();
@@ -968,7 +969,11 @@ namespace Tests.Infrastructure
             {
                 Urls = new[] { leadersUrl },
                 Database = record.DatabaseName,
-                Certificate = certificate
+                Certificate = certificate,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             }.Initialize())
             {
                 try
