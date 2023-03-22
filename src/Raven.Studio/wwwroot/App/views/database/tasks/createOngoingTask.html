@@ -1,4 +1,4 @@
-<div class="modal-dialog destinationModal" role="document">
+<div class="modal-dialog destinationModal createOngoingTaskDialog" role="document">
     <div class="modal-content neo-modal">
         <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
@@ -48,9 +48,11 @@
                             </a>
                         </div>
                         <div class="col-sm-4 margin-bottom-xs" title="Create new Kafka ETL task">
-                            <a href="#" class="kafka-etl" data-bind="click: newKafkaEtlTask">
-                                <i class="icon-kafka-etl"></i><h4 class="margin-none margin-top-sm">Kafka ETL</h4>
-                            </a>
+                            <div data-bind="attr: { class: $root.canCreateQueueEtl() ? '' : 'has-disable-reason' }" data-original-title="Not supported in sharded databases">
+                                <a href="#" class="kafka-etl" data-bind="click: newKafkaEtlTask">
+                                    <i class="icon-kafka-etl"></i><h4 class="margin-none margin-top-sm">Kafka ETL</h4>
+                                </a>
+                            </div>
                         </div>
                     </div>
                     <div class="row row-sm flex-row">
@@ -65,9 +67,11 @@
                             </a>
                         </div>
                         <div class="col-sm-4 margin-bottom-xs" title="Create new RabbitMQ ETL task">
-                            <a href="#" class="rabbitmq-etl" data-bind="click: newRabbitMqEtlTask">
-                                <i class="icon-rabbitmq-etl"></i><h4 class="margin-none margin-top-sm">RabbitMQ ETL</h4>
-                            </a>
+                            <div data-bind="attr: { class: $root.canCreateQueueEtl() ? '' : 'has-disable-reason' }" data-original-title="Not supported in sharded databases">
+                                <a href="#" class="rabbitmq-etl" data-bind="click: newRabbitMqEtlTask">
+                                    <i class="icon-rabbitmq-etl"></i><h4 class="margin-none margin-top-sm">RabbitMQ ETL</h4>
+                                </a>
+                            </div>
                         </div>
                     </div>
                     <div class="hr-title">

@@ -26,6 +26,10 @@ class createOngoingTask extends dialogViewModelBase {
     private canCreateReplicationHubAndSink() {
         return !(this.db instanceof shardedDatabase);
     }
+    
+    private canCreateQueueEtl() {
+        return !(this.db instanceof shardedDatabase);
+    }
 
     newReplicationTask() {
         eventsCollector.default.reportEvent("ExternalReplication", "new");
@@ -77,6 +81,9 @@ class createOngoingTask extends dialogViewModelBase {
     }
 
     newKafkaEtlTask() {
+        if (!this.canCreateQueueEtl()) {
+            return;
+        }
         eventsCollector.default.reportEvent("KafkaETL", "new");
         const url = appUrl.forEditKafkaEtl(this.activeDatabase());
         router.navigate(url);
@@ -84,6 +91,9 @@ class createOngoingTask extends dialogViewModelBase {
     }
 
     newRabbitMqEtlTask() {
+        if (!this.canCreateQueueEtl()) {
+            return;
+        }
         eventsCollector.default.reportEvent("RabbitMqETL", "new");
         const url = appUrl.forEditRabbitMqEtl(this.activeDatabase());
         router.navigate(url);
