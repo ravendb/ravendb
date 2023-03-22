@@ -58,28 +58,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Take(long count)
+        IAsyncDocumentQuery<T> IPagingDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Take(long count)
         {
             Take(count);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.Take(long count)
-        {
-            Take(count);
-            return this;
-        }
-
-        /// <inheritdoc />
-        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Skip(long count)
-        {
-            Skip(count);
-            return this;
-        }
-
-        /// <inheritdoc />
-        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.Skip(long count)
+        IAsyncDocumentQuery<T> IPagingDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Skip(long count)
         {
             Skip(count);
             return this;

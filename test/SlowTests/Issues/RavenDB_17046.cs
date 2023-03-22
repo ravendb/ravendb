@@ -72,12 +72,12 @@ namespace SlowTests.Issues
                     long skippedResults = 0;
                     do
                     {
+                        var queryWithPaging = $"{fullStatement} limit {(pageNumber * pageSize) + skippedResults},{pageSize}";
+
                         results = session
                             .Advanced
-                            .RawQuery<T>(fullStatement)
+                            .RawQuery<T>(queryWithPaging)
                             .Statistics(out QueryStatistics stats)
-                            .Skip((pageNumber * pageSize) + skippedResults)
-                            .Take(pageSize)
                             .ToList();
                         wholeCollectionByPaging.AddRange(results);
                         skippedResults += stats.SkippedResults;

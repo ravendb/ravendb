@@ -1,14 +1,7 @@
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using FastTests;
-using Nest;
 using Orders;
 using Raven.Client.Documents.Session;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -47,10 +40,10 @@ public class RavenDB_19076 : RavenTestBase
                 List<Order> results;
                 do
                 {
-                    results = session.Advanced.RawQuery<Orders.Order>(query)
+                    var queryWithPaging = $"{query} limit {(pageNumber * pageSize) + (int)skippedResults},{pageSize}";
+
+                    results = session.Advanced.RawQuery<Orders.Order>(queryWithPaging)
                         .Statistics(out QueryStatistics stats)
-                        .Skip((pageNumber * pageSize) + (int)skippedResults)
-                        .Take(pageSize)
                         .ToList();
 
                     pagging.AddRange(results);
