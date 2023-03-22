@@ -235,14 +235,6 @@ namespace Voron.Data.Tables
             return DirectReadDecompress(id, result, ref size);
         }
 
-        public void ForgetAboutCompressed(long id)
-        {
-            if (_tx.CachedDecompressedBuffersByStorageId.Remove(id, out var t))
-            {
-                _tx.Allocator.Release(ref t);
-            }
-        }
-
         private byte* DirectReadDecompress(long id, byte* directRead, ref int size)
         {
             if (_tx.CachedDecompressedBuffersByStorageId.TryGetValue(id, out var t))
@@ -467,7 +459,7 @@ namespace Voron.Data.Tables
             var ptr = DirectReadRaw(id, out int size, out bool compressed);
 
             if (compressed)
-                _tx.CachedDecompressedBuffersByStorageId?.Remove(id);
+                _tx.ForgetAbout(id);
 
             ByteStringContext<ByteStringMemoryCache>.InternalScope decompressValue = default;
 
