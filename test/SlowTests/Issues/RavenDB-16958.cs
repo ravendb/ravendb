@@ -62,8 +62,8 @@ namespace SlowTests.Issues
             {
                 var database = GetDatabaseName();
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database }.Initialize())
-                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     storeB.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
                     storeA.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
@@ -109,8 +109,8 @@ namespace SlowTests.Issues
             {
                 var database = GetDatabaseName();
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database }.Initialize())
-                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     storeB.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
                     storeA.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
@@ -158,9 +158,9 @@ namespace SlowTests.Issues
                 var databaseB = GetDatabaseName("DB_B");
                 var databaseC = GetDatabaseName("DB_C");
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = databaseB }.Initialize())
-                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = databaseA }.Initialize())
-                using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.Certificate, Database = databaseC }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = databaseB, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = databaseA, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.Certificate, Database = databaseC, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     storeB.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseB)));
                     storeA.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseA)));
@@ -190,9 +190,9 @@ namespace SlowTests.Issues
             {
                 var database = GetDatabaseName();
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database }.Initialize())
-                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database }.Initialize())
-                using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.Certificate, Database = database }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
+                using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     storeB.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
                     storeA.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
@@ -229,12 +229,12 @@ namespace SlowTests.Issues
                 await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(serverB.WebUrl, serverB.ServerStore.NodeTag), ctx);
 
                 using (var leaderStore =
-                    new DocumentStore { Urls = new[] { cluster.Leader.WebUrl }, Certificate = cluster.Leader.Certificate.Certificate, Database = database }.Initialize())
+                    new DocumentStore { Urls = new[] { cluster.Leader.WebUrl }, Certificate = cluster.Leader.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     var res = leaderStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
                 }
 
-                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database }.Initialize())
+                using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database, Conventions = { DisposeCertificate = false } }.Initialize())
                 {
                     var name = await WaitForValueAsync(() =>
                     {
