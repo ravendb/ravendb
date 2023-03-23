@@ -37,8 +37,12 @@ public partial class IndexSearcher
             using var set = _fieldsTree?.FixedTreeFor(numericalField.FieldName, sizeof(long));
             if (set != null)
             {
-                containerId = *(long*)set.ReadPtr((long)(object)term, out var length);
-                Debug.Assert(length == sizeof(long));
+                var ptr = set.ReadPtr((long)(object)term, out var length);
+                if (ptr != null)
+                {
+                    containerId = *(long*)ptr;
+                    Debug.Assert(length == sizeof(long));
+                }
             }
 
         }
@@ -46,9 +50,10 @@ public partial class IndexSearcher
         {
             numericalField = field.GetNumericFieldMetadata<double>(_transaction.Allocator);
             using var set = _fieldsTree?.FixedTreeForDouble(numericalField.FieldName, sizeof(double));
-            if (set != null)
+            var ptr = set.ReadPtr((double)(object)term, out var length);
+            if (ptr != null)
             {
-                containerId = *(long*)set.ReadPtr((double)(object)term, out var length);
+                containerId = *(long*)ptr;
                 Debug.Assert(length == sizeof(long));
             }
         }
@@ -229,6 +234,9 @@ public partial class IndexSearcher
     
     private long NumberOfDocumentsUnderSpecificTerm(long containerId)
     {
+        if (containerId == 0)
+            return 0;
+        
         if ((containerId & (long)TermIdMask.Set) != 0)
         {
             var setId = EntryIdEncodings.GetContainerId(containerId);
