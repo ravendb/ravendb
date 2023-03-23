@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Queries.Results
 
     }
 
-    public ref struct RetrieverInput
+    public struct RetrieverInput
     {
         public IndexFieldsMapping KnownFields;
         

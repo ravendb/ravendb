@@ -8,7 +8,7 @@ using System.Linq;
 using Xunit.Abstractions;
 
 using FastTests;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -21,10 +21,11 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Fact]
-        public void BasicProjections()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void BasicProjections(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

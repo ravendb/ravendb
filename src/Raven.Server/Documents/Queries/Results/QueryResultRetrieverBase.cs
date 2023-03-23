@@ -14,6 +14,7 @@ using Lucene.Net.Store;
 using Microsoft.Extensions.Azure;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
@@ -158,12 +159,12 @@ namespace Raven.Server.Documents.Queries.Results
 
                 Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
 
-                if (SearchEngineType == SearchEngineType.Lucene)
+               
+                if (FieldsToFetch.ExtractAllFromIndex)
                 {
-
-                    if (FieldsToFetch.ExtractAllFromIndex)
+                    if (retrieverInput is not {LuceneDocument: null, State: null})
                     {
-                        fields = retrieverInput.LuceneDocument.GetFields()
+                        fields = retrieverInput.LuceneDocument!.GetFields()
                             .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
                                         && x.Name != Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName
                                         && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
@@ -173,7 +174,19 @@ namespace Raven.Server.Documents.Queries.Results
                             .Distinct(UniqueFieldNames.Instance)
                             .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false, isTimeSeries: false));
                     }
+                    else
+                    {
+                        fields = retrieverInput.KnownFields.Where(i => i.FieldNameAsString.In(
+                                Constants.Documents.Indexing.Fields.DocumentIdFieldName,
+                                Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName,
+                                Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName,
+                                Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName,
+                                Constants.Documents.Indexing.Fields.ValueFieldName) == false)
+                            .ToDictionary(x => x.FieldNameAsString, x => new FieldsToFetch.FieldToFetch(x.FieldNameAsString, null, null, true
+                                , isDocumentId: false, isTimeSeries: false));
+                    }
                 }
+                
 
                 if (fields == null)
                 {
@@ -493,7 +506,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
             else
             {
-            doc.Data = newData;
+                doc.Data = newData;
             }
 
             if (scoreDoc != null)
@@ -607,10 +620,11 @@ namespace Raven.Server.Documents.Queries.Results
             value = null;
             switch (fieldType)
             {
-                
-            case IndexEntryFieldType.Empty:
-            case IndexEntryFieldType.Null:
-                value = fieldType == IndexEntryFieldType.Null ? null : string.Empty;;
+                case IndexEntryFieldType.Empty:
+                case IndexEntryFieldType.Null:
+                value = fieldType == IndexEntryFieldType.Null 
+                    ? null :
+                    string.Empty;;
                 break;
 
             case IndexEntryFieldType.TupleListWithNulls:
@@ -781,7 +795,7 @@ namespace Raven.Server.Documents.Queries.Results
                     TryGetValue(fieldToFetch.FunctionArgs[i], document, ref retrieverInput, indexFields, anyDynamicIndexFields, out _, out args[i], token);
                     if (ReferenceEquals(args[i], document))
                     {
-                        args[i] = Tuple.Create(document, retrieverInput.LuceneDocument, retrieverInput.State, indexFields, anyDynamicIndexFields, FieldsToFetch.Projection);
+                        args[i] = Tuple.Create(document, retrieverInput, indexFields, anyDynamicIndexFields, FieldsToFetch.Projection);
                     }
                 }
                 value = GetFunctionValue(fieldToFetch, document.Id, args, token);
