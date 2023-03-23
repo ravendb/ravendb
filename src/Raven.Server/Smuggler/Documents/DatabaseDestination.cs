@@ -1377,7 +1377,7 @@ namespace Raven.Server.Smuggler.Documents
                     result.DatabaseRecord.QueueEtlsUpdated = true;
                 }
 
-                if (databaseRecord.IndexesHistory.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.IndexesHistory))
+                if (databaseRecord.IndexesHistory?.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.IndexesHistory))
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring Indexes History configuration from smuggler");
