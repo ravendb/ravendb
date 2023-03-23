@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using Corax;
+using Corax.Mappings;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
@@ -10,11 +14,14 @@ using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
+using Microsoft.CodeAnalysis;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Patch
@@ -34,10 +41,9 @@ namespace Raven.Server.Documents.Patch
         public HashSet<string> Deletes;
         public Dictionary<string, BlittableObjectProperty> OwnValues;
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
-        public Lucene.Net.Documents.Document LuceneDocument;
-        public IState LuceneState;
-        public Dictionary<string, IndexField> LuceneIndexFields;
-        public bool LuceneAnyDynamicIndexFields;
+        public RetrieverInput IndexRetriever;
+        public Dictionary<string, IndexField> IndexFields;
+        public bool AnyDynamicIndexFields;
 
         public ProjectionOptions Projection;
 
@@ -98,7 +104,7 @@ namespace Raven.Server.Documents.Patch
                 _parent = parent;
                 _property = property;
 
-                if (TryGetValueFromLucene(_parent, _property, out _value) == false)
+                if (TryGetValueFromIndex(_parent, _property, out _value) == false)
                 {
                     if (_parent.Projection?.MustExtractFromIndex == true)
                     {
@@ -138,410 +144,589 @@ namespace Raven.Server.Documents.Patch
                 return true;
             }
 
-            private bool TryGetValueFromLucene(BlittableObjectInstance parent, string property, out JsValue value)
+            private bool TryGetValueFromIndex(BlittableObjectInstance parent, string property, out JsValue value)
             {
                 value = null;
+                if (parent.Projection?.MustExtractFromDocument == true)
+                    return false;
 
                 if (parent.Projection?.MustExtractFromDocument == true)
                     return false;
 
-                if (parent.LuceneDocument == null || parent.LuceneIndexFields == null)
+                if (parent.IndexFields == null)
                     return false;
 
-                if (parent.LuceneIndexFields.TryGetValue(_property, out var indexField) == false && parent.LuceneAnyDynamicIndexFields == false)
+                if (parent.IndexFields.TryGetValue(_property, out var indexField) == false && parent.AnyDynamicIndexFields == false)
                     return false;
 
-                if (indexField != null && indexField.Storage == FieldStorage.No)
+                bool isLucene = parent.IndexRetriever is not {LuceneDocument: null, State: null};
+
+                return isLucene
+                    ? TryGetValueFromLucene(parent, property, out value)
+                    : TryGetValueFromCorax(parent, property, indexField, out value);
+            }
+
+            private unsafe bool TryGetValueFromCorax(BlittableObjectInstance parent, string property, IndexField indexField, out JsValue value)
+            {
+                value = null;
+                var fieldMapping = parent.IndexRetriever.KnownFields;
+                var isDynamic = indexField == null;
+                IndexFieldBinding binding = null;
+                if (isDynamic == false && fieldMapping.TryGetByFieldId(indexField.Id, out binding) == false)
                     return false;
 
-                var fieldType = QueryResultRetrieverBase.GetFieldType(property, parent.LuceneDocument);
-                if (fieldType.IsArray)
+                ref var reader = ref parent.IndexRetriever.CoraxEntry;
+                var fieldReader = binding is not null
+                    ? reader.GetFieldReaderFor(binding.Metadata)
+                    : reader.GetFieldReaderFor(Encodings.Utf8.GetBytes(property));
+
+                switch (fieldReader.Type)
                 {
-                    // here we need to perform a manipulation in order to generate the object from the data
-                    if (fieldType.IsJson)
+                    case IndexEntryFieldType.Empty:
+                        value = string.Empty;
+                        break;
+                    case IndexEntryFieldType.Null:
+                        value = DynamicJsNull.ExplicitNull;
+                        break;
+                    case IndexEntryFieldType.TupleListWithNulls:
+                    case IndexEntryFieldType.TupleList:
                     {
-                        Lucene.Net.Documents.Field[] propertyFields = parent.LuceneDocument.GetFields(property);
+                        if (fieldReader.TryReadMany(out var iterator) == false)
+                            goto case IndexEntryFieldType.Invalid;
 
-                        JsValue[] arrayItems =
-                            new JsValue[propertyFields.Length];
-
-                        for (int i = 0; i < propertyFields.Length; i++)
+                        var tupleList = new List<string>(iterator.Count);
+                        while (iterator.ReadNext())
                         {
-                            var field = propertyFields[i];
-                            var stringValue = field.StringValue(parent.LuceneState);
-
-                            var itemAsBlittable = parent.Blittable._context.Sync.ReadForMemory(stringValue, field.Name);
-
-                            arrayItems[i] = TranslateToJs(parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
+                            if (iterator.IsNull)
+                            {
+                                tupleList.Add(null);
+                            }
+                            else if (iterator.IsEmptyCollection)
+                            {
+                                throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
+                            }
+                            else
+                            {
+                                tupleList.Add(Encodings.Utf8.GetString(iterator.Sequence));
+                            }
                         }
 
-                        value = FromObject(parent.Engine, arrayItems);
-                        return true;
+                        value = FromObject(parent.Engine, tupleList);
+                    }
+                        break;
+
+                    case IndexEntryFieldType.Tuple:
+                    {
+                        if (fieldReader.TryReadTuple(out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
+                            goto case IndexEntryFieldType.Invalid;
+
+                        if (valueInEntry.Contains((byte)'.'))
+                            value = dVal;
+                        else
+                            value = lVal;
                     }
 
-                    var values = parent.LuceneDocument.GetValues(property, parent.LuceneState);
-                    value = FromObject(parent.Engine, values);
-                    return true;
+                        break;
+
+                    case IndexEntryFieldType.SpatialPointList:
+                    {
+                        if (fieldReader.TryReadManySpatialPoint(out var spatialIterator) == false)
+                            goto case IndexEntryFieldType.Invalid;
+
+                        var geoList = new List<string>(spatialIterator.Count);
+
+                        while (spatialIterator.ReadNext())
+                        {
+                            geoList.Add(Encodings.Utf8.GetString(spatialIterator.Geohash));
+                        }
+
+                        value = FromObject(parent.Engine, geoList);
+                    }
+
+                        break;
+
+                    case IndexEntryFieldType.SpatialPoint:
+                    {
+                        if (fieldReader.Read(out var valueInEntry) == false)
+                            goto case IndexEntryFieldType.Invalid;
+
+                        value = Encodings.Utf8.GetString(valueInEntry);
+                    }
+                        break;
+
+                    case IndexEntryFieldType.ListWithNulls:
+                    case IndexEntryFieldType.List:
+                    {
+                        if (fieldReader.TryReadMany(out var iterator) == false)
+                            goto case IndexEntryFieldType.Invalid;
+
+                        //todo PERF
+                        List<string> array = new(iterator.Count);
+                        while (iterator.ReadNext())
+                        {
+                            if (iterator.IsEmptyString || iterator.IsNull)
+                            {
+                                array.Add(iterator.IsNull ? null : string.Empty);
+                            }
+                            else
+                            {
+                                array.Add(Encodings.Utf8.GetString(iterator.Sequence));
+                            }
+                        }
+
+                        value = FromObject(parent.Engine, array);
+                    }
+                        break;
+                    case IndexEntryFieldType.RawList:
+                    {
+                        if (fieldReader.TryReadMany(out var iterator) == false)
+                            goto case IndexEntryFieldType.Invalid;
+
+                        JsValue[] arrayItems = new JsValue[iterator.Count];
+                        var idX = 0;
+                        while (iterator.ReadNext())
+                        {
+                            fixed (byte* ptr = &iterator.Sequence.GetPinnableReference())
+                            {
+                                var itemAsBlittable = new BlittableJsonReaderObject(ptr, iterator.Sequence.Length, parent.Blittable._context);
+                                arrayItems[idX] = TranslateToJs(parent, indexField.Name, BlittableJsonToken.StartObject, itemAsBlittable);
+                            }
+                        }
+
+
+                        value = value = FromObject(parent.Engine, arrayItems);
+                    }
+                        break;
+                    case IndexEntryFieldType.Raw:
+                    {
+                        if (fieldReader.Read(out Span<byte> blittableBinary) == false)
+                            goto case IndexEntryFieldType.Invalid;
+
+                        fixed (byte* ptr = &blittableBinary.GetPinnableReference())
+                        {
+                            var itemAsBlittable = new BlittableJsonReaderObject(ptr, blittableBinary.Length, parent.Blittable._context);
+                            value = TranslateToJs(parent, indexField.Name, BlittableJsonToken.StartObject, itemAsBlittable);
+                        }
+                    }
+                        break;
+                    case IndexEntryFieldType.Invalid:
+                        value = null;
+                        return false;
+                    default:
+                    {
+                        if (fieldReader.Read(out var valueInEntry) == false)
+                            goto case IndexEntryFieldType.Invalid;
+
+                        value = Encodings.Utf8.GetString(valueInEntry);
+                    }
+                        break;
                 }
+                return true;
+            }
+        
 
-                var fieldable = _parent.LuceneDocument.GetFieldable(property);
-                if (fieldable == null)
-                    return false;
+        private bool TryGetValueFromLucene(BlittableObjectInstance parent, string property, out JsValue value)
+        {
+            value = null;
 
-                var val = fieldable.StringValue(_parent.LuceneState);
+            if (parent.IndexRetriever.LuceneDocument == null || parent.IndexFields == null)
+                return false;
+
+            if (parent.IndexFields.TryGetValue(property, out var indexField) == false && parent.AnyDynamicIndexFields == false)
+                return false;
+
+            if (indexField != null && indexField.Storage == FieldStorage.No)
+                return false;
+
+            var fieldType = QueryResultRetrieverBase.GetFieldType(property, parent.IndexRetriever.LuceneDocument);
+            if (fieldType.IsArray)
+            {
+                // here we need to perform a manipulation in order to generate the object from the data
                 if (fieldType.IsJson)
                 {
-                    BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.Sync.ReadForMemory(val, property);
-                    value = TranslateToJs(parent, property, BlittableJsonToken.StartObject, valueAsBlittable);
+                    Lucene.Net.Documents.Field[] propertyFields = parent.IndexRetriever.LuceneDocument.GetFields(property);
+
+                    JsValue[] arrayItems =
+                        new JsValue[propertyFields.Length];
+
+                    for (int i = 0; i < propertyFields.Length; i++)
+                    {
+                        var field = propertyFields[i];
+                        var stringValue = field.StringValue(parent.IndexRetriever.State);
+
+                        var itemAsBlittable = parent.Blittable._context.Sync.ReadForMemory(stringValue, field.Name);
+
+                        arrayItems[i] = TranslateToJs(parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
+                    }
+
+                    value = FromObject(parent.Engine, arrayItems);
                     return true;
                 }
 
-                if (fieldable.IsTokenized == false)
-                {
-                    // NULL_VALUE and EMPTY_STRING fields aren't tokenized
-                    // this will prevent converting fields with a "NULL_VALUE" string to null
-                    switch (val)
-                    {
-                        case Client.Constants.Documents.Indexing.Fields.NullValue:
-                            value = DynamicJsNull.ExplicitNull;
-                            return true;
+                var values = parent.IndexRetriever.LuceneDocument.GetValues(property, parent.IndexRetriever.State);
+                value = FromObject(parent.Engine, values);
+                return true;
+            }
 
-                        case Client.Constants.Documents.Indexing.Fields.EmptyString:
-                            value = string.Empty;
-                            return true;
-                    }
+            var fieldable = _parent.IndexRetriever.LuceneDocument.GetFieldable(property);
+            if (fieldable == null)
+                return false;
+
+            var val = fieldable.StringValue(_parent.IndexRetriever.State);
+            if (fieldType.IsJson)
+            {
+                BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.Sync.ReadForMemory(val, property);
+                value = TranslateToJs(parent, property, BlittableJsonToken.StartObject, valueAsBlittable);
+                return true;
+            }
+
+            if (fieldable.IsTokenized == false)
+            {
+                // NULL_VALUE and EMPTY_STRING fields aren't tokenized
+                // this will prevent converting fields with a "NULL_VALUE" string to null
+                switch (val)
+                {
+                    case Client.Constants.Documents.Indexing.Fields.NullValue:
+                        value = DynamicJsNull.ExplicitNull;
+                        return true;
+
+                    case Client.Constants.Documents.Indexing.Fields.EmptyString:
+                        value = string.Empty;
+                        return true;
                 }
+            }
 
-                if (fieldType.IsNumeric)
+            if (fieldType.IsNumeric)
+            {
+                if (long.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out var valueAsLong))
                 {
-                    if (long.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out var valueAsLong))
-                    {
-                        value = valueAsLong;
-                    }
-                    else if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueAsDouble))
-                    {
-                        value = valueAsDouble;
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"Recognized field '{property}' as numeric but was unable to parse its value to 'long' or 'double'. " +
-                                                            $"documentId = '{parent.DocumentId}', value = {val}.");
-                    }
+                    value = valueAsLong;
+                }
+                else if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueAsDouble))
+                {
+                    value = valueAsDouble;
                 }
                 else
                 {
-                    value = val;
-                }
-
-                return true;
-            }
-
-            protected override JsValue CustomValue
-            {
-                get => _value;
-                set
-                {
-                    if (Equals(value, _value))
-                        return;
-                    _value = value;
-                    _parent.MarkChanged();
-                    Changed = true;
+                    throw new InvalidOperationException($"Recognized field '{property}' as numeric but was unable to parse its value to 'long' or 'double'. " +
+                                                        $"documentId = '{parent.DocumentId}', value = {val}.");
                 }
             }
-
-            private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
+            else
             {
-                bjra.NoCache = true;
-
-                PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
-                for (var i = 0; i < bjra.Length; i++)
-                {
-                    var json = bjra.GetValueTokenTupleByIndex(i);
-                    BlittableJsonToken itemType = json.Item2 & BlittableJsonReaderBase.TypesMask;
-                    JsValue item;
-                    if (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
-                    {
-                        item = TranslateToJs(null, null, json.Item2, json.Item1);
-                    }
-                    else
-                    {
-                        item = TranslateToJs(parent, null, json.Item2, json.Item1);
-                    }
-                    items[i] = new PropertyDescriptor(item, true, true, true);
-                }
-
-                var jsArray = new ArrayInstance(e, items);
-                jsArray.SetPrototypeOf(e.Array.PrototypeObject);
-
-                return jsArray;
+                value = val;
             }
-
-            private JsValue TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)
-            {
-                switch (type & BlittableJsonReaderBase.TypesMask)
-                {
-                    case BlittableJsonToken.Null:
-                        return DynamicJsNull.ExplicitNull;
-
-                    case BlittableJsonToken.Boolean:
-                        return (bool)value ? JsBoolean.True : JsBoolean.False;
-
-                    case BlittableJsonToken.Integer:
-                        // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
-                        owner?.RecordNumericFieldType(key, BlittableJsonToken.Integer);
-                        return (long)value;
-
-                    case BlittableJsonToken.LazyNumber:
-                        owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
-                        return GetJsValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
-
-                    case BlittableJsonToken.String:
-                        return value.ToString();
-
-                    case BlittableJsonToken.CompressedString:
-                        return value.ToString();
-
-                    case BlittableJsonToken.StartObject:
-                        Changed = true;
-                        _parent.MarkChanged();
-                        BlittableJsonReaderObject blittable = (BlittableJsonReaderObject)value;
-
-                        var obj = Raven.Server.Utils.TypeConverter.TryConvertBlittableJsonReaderObject(blittable);
-                        switch (obj)
-                        {
-                            case BlittableJsonReaderArray blittableArray:
-                                return GetArrayInstanceFromBlittableArray(owner.Engine, blittableArray, owner);
-
-                            case LazyStringValue asLazyStringValue:
-                                return asLazyStringValue.ToString();
-
-                            case LazyCompressedStringValue asLazyCompressedStringValue:
-                                return asLazyCompressedStringValue.ToString();
-
-                            default:
-                                blittable.NoCache = true;
-                                return new BlittableObjectInstance(owner.Engine,
-                                    owner,
-                                    blittable, null, null, null);
-                        }
-
-                    case BlittableJsonToken.StartArray:
-                        Changed = true;
-                        _parent.MarkChanged();
-                        var array = (BlittableJsonReaderArray)value;
-                        return GetArrayInstanceFromBlittableArray(owner.Engine, array, owner);
-
-                    default:
-                        throw new ArgumentOutOfRangeException(type.ToString());
-                }
-            }
-
-            public static JsValue GetJsValueForLazyNumber(Engine engine, LazyNumberValue value)
-            {
-                // First, try and see if the number is withing double boundaries.
-                // We use double's tryParse and it actually may round the number,
-                // But that are Jint's limitations
-                if (value.TryParseDouble(out double doubleVal))
-                {
-                    return doubleVal;
-                }
-
-                // If number is not in double boundaries, we return the LazyNumberValue
-                return new ObjectWrapper(engine, value);
-            }
-        }
-
-        public BlittableObjectInstance(Engine engine,
-            BlittableObjectInstance parent,
-            BlittableJsonReaderObject blittable,
-            string id,
-            DateTime? lastModified,
-            string changeVector) : base(engine)
-        {
-            _parent = parent;
-            blittable.NoCache = true;
-            LastModified = lastModified;
-            ChangeVector = changeVector;
-            Blittable = blittable;
-            DocumentId = id;
-
-            SetPrototypeOf(engine.Object.PrototypeObject);
-        }
-
-        public BlittableObjectInstance(Engine engine,
-            BlittableObjectInstance parent,
-            BlittableJsonReaderObject blittable,
-            Document doc) : this(engine, parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
-        {
-            _doc = doc;
-        }
-
-        public override bool Delete(JsValue property)
-        {
-            if (property.IsString() == false)
-                return false;
-
-            string name = property.AsString();
-
-            if (Deletes == null)
-                Deletes = new HashSet<string>();
-
-            var desc = GetOwnProperty(name);
-
-            if (desc == PropertyDescriptor.Undefined)
-                return true;
-
-            MarkChanged();
-            Deletes.Add(name);
-            return OwnValues?.Remove(name) == true;
-        }
-
-        public override PropertyDescriptor GetOwnProperty(JsValue property)
-        {
-            if (property.IsString() == false)
-                return PropertyDescriptor.Undefined;
-
-            return GetOwnProperty(property.AsString());
-        }
-
-        public PropertyDescriptor GetOwnProperty(string property)
-        {
-            BlittableObjectProperty val = default;
-            if (OwnValues?.TryGetValue(property, out val) == true &&
-                val != null)
-                return val;
-
-            Deletes?.Remove(property);
-
-            val = new BlittableObjectProperty(this, property);
-
-            if (val.Value.IsUndefined() &&
-                DocumentId == null &&
-                _set == false)
-            {
-                return PropertyDescriptor.Undefined;
-            }
-
-            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
-
-            OwnValues[property] = val;
-
-            return val;
-        }
-
-        public override bool Set(JsValue property, JsValue value, JsValue receiver)
-        {
-            if (property.IsString() == false)
-                return false;
-
-            // check fast path for direct write
-            if (ReferenceEquals(receiver, this) && Extensible)
-            {
-                return SetDirect(property.AsString(), value);
-            }
-
-            _set = true;
-            try
-            {
-                return base.Set(property, value, receiver);
-            }
-            finally
-            {
-                _set = false;
-            }
-        }
-
-        public override bool DefineOwnProperty(JsValue property, PropertyDescriptor desc)
-        {
-            if (property.IsString() == false)
-                return false;
-
-            return SetDirect(property.AsString(), desc.Value);
-        }
-
-        private bool SetDirect(string property, JsValue value)
-        {
-            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
-            Deletes?.Remove(property);
-
-            var val = new BlittableObjectProperty(this, property)
-            {
-                Value = value
-            };
-
-            OwnValues[property] = val;
 
             return true;
         }
 
-        public override IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetOwnProperties()
+        protected override JsValue CustomValue
         {
-            if (OwnValues != null)
+            get => _value;
+            set
             {
-                foreach (var value in OwnValues)
+                if (Equals(value, _value))
+                    return;
+                _value = value;
+                _parent.MarkChanged();
+                Changed = true;
+            }
+        }
+
+        private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
+        {
+            bjra.NoCache = true;
+
+            PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
+            for (var i = 0; i < bjra.Length; i++)
+            {
+                var json = bjra.GetValueTokenTupleByIndex(i);
+                BlittableJsonToken itemType = json.Item2 & BlittableJsonReaderBase.TypesMask;
+                JsValue item;
+                if (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
                 {
-                    yield return new KeyValuePair<JsValue, PropertyDescriptor>(value.Key, value.Value);
+                    item = TranslateToJs(null, null, json.Item2, json.Item1);
                 }
+                else
+                {
+                    item = TranslateToJs(parent, null, json.Item2, json.Item1);
+                }
+
+                items[i] = new PropertyDescriptor(item, true, true, true);
             }
 
-            if (Blittable == null)
-                yield break;
+            var jsArray = new ArrayInstance(e, items);
+            jsArray.SetPrototypeOf(e.Array.PrototypeObject);
 
-            foreach (var prop in Blittable.GetPropertyNames())
+            return jsArray;
+        }
+
+        private JsValue TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)
+        {
+            switch (type & BlittableJsonReaderBase.TypesMask)
             {
-                if (Deletes?.Contains(prop) == true)
-                    continue;
-                if (OwnValues?.ContainsKey(prop) == true)
-                    continue;
-                yield return new KeyValuePair<JsValue, PropertyDescriptor>(
-                    prop,
-                    GetOwnProperty(prop)
-                    );
+                case BlittableJsonToken.Null:
+                    return DynamicJsNull.ExplicitNull;
+
+                case BlittableJsonToken.Boolean:
+                    return (bool)value ? JsBoolean.True : JsBoolean.False;
+
+                case BlittableJsonToken.Integer:
+                    // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
+                    owner?.RecordNumericFieldType(key, BlittableJsonToken.Integer);
+                    return (long)value;
+
+                case BlittableJsonToken.LazyNumber:
+                    owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
+                    return GetJsValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
+
+                case BlittableJsonToken.String:
+                    return value.ToString();
+
+                case BlittableJsonToken.CompressedString:
+                    return value.ToString();
+
+                case BlittableJsonToken.StartObject:
+                    Changed = true;
+                    _parent.MarkChanged();
+                    BlittableJsonReaderObject blittable = (BlittableJsonReaderObject)value;
+
+                    var obj = Raven.Server.Utils.TypeConverter.TryConvertBlittableJsonReaderObject(blittable);
+                    switch (obj)
+                    {
+                        case BlittableJsonReaderArray blittableArray:
+                            return GetArrayInstanceFromBlittableArray(owner.Engine, blittableArray, owner);
+
+                        case LazyStringValue asLazyStringValue:
+                            return asLazyStringValue.ToString();
+
+                        case LazyCompressedStringValue asLazyCompressedStringValue:
+                            return asLazyCompressedStringValue.ToString();
+
+                        default:
+                            blittable.NoCache = true;
+                            return new BlittableObjectInstance(owner.Engine,
+                                owner,
+                                blittable, null, null, null);
+                    }
+
+                case BlittableJsonToken.StartArray:
+                    Changed = true;
+                    _parent.MarkChanged();
+                    var array = (BlittableJsonReaderArray)value;
+                    return GetArrayInstanceFromBlittableArray(owner.Engine, array, owner);
+
+                default:
+                    throw new ArgumentOutOfRangeException(type.ToString());
             }
         }
 
-        public override List<JsValue> GetOwnPropertyKeys(Types types)
+        public static JsValue GetJsValueForLazyNumber(Engine engine, LazyNumberValue value)
         {
-            var list = new List<JsValue>(Blittable?.Count ?? OwnValues?.Count ?? 0);
-
-            if (OwnValues != null)
+            // First, try and see if the number is withing double boundaries.
+            // We use double's tryParse and it actually may round the number,
+            // But that are Jint's limitations
+            if (value.TryParseDouble(out double doubleVal))
             {
-                foreach (var value in OwnValues)
-                    list.Add(value.Key);
+                return doubleVal;
             }
 
-            if (Blittable == null)
-                return list;
-
-            foreach (var prop in Blittable.GetPropertyNames())
-            {
-                if (Deletes?.Contains(prop) == true)
-                    continue;
-                if (OwnValues != null && OwnValues.ContainsKey(prop))
-                    continue;
-
-                list.Add(prop);
-            }
-
-            return list;
-        }
-
-        private void RecordNumericFieldType(string key, BlittableJsonToken type)
-        {
-            OriginalPropertiesTypes ??= new Dictionary<string, BlittableJsonToken>();
-            OriginalPropertiesTypes[key] = type;
-        }
-
-        public void Reset()
-        {
-            if (OwnValues == null)
-                return;
-
-            foreach (var val in OwnValues)
-            {
-                if (val.Value.Value is BlittableObjectInstance boi)
-                    boi.Blittable.Dispose();
-            }
+            // If number is not in double boundaries, we return the LazyNumberValue
+            return new ObjectWrapper(engine, value);
         }
     }
+
+    public BlittableObjectInstance(Engine engine,
+        BlittableObjectInstance parent,
+        BlittableJsonReaderObject blittable,
+        string id,
+        DateTime ? lastModified,
+        string changeVector) : base(engine)
+    {
+        _parent = parent;
+        blittable.NoCache = true;
+        LastModified = lastModified;
+        ChangeVector = changeVector;
+        Blittable = blittable;
+        DocumentId = id;
+
+        SetPrototypeOf(engine.Object.PrototypeObject);
+    }
+
+    public BlittableObjectInstance(Engine engine,
+        BlittableObjectInstance parent,
+        BlittableJsonReaderObject blittable,
+        Document doc) :
+
+    this(engine, parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
+    {
+        _doc = doc;
+    }
+
+    public override bool Delete(JsValue property)
+    {
+        if (property.IsString() == false)
+            return false;
+
+        string name = property.AsString();
+
+        if (Deletes == null)
+            Deletes = new HashSet<string>();
+
+        var desc = GetOwnProperty(name);
+
+        if (desc == PropertyDescriptor.Undefined)
+            return true;
+
+        MarkChanged();
+        Deletes.Add(name);
+        return OwnValues?.Remove(name) == true;
+    }
+
+    public override PropertyDescriptor GetOwnProperty(JsValue property)
+    {
+        if (property.IsString() == false)
+            return PropertyDescriptor.Undefined;
+
+        return GetOwnProperty(property.AsString());
+    }
+
+    public PropertyDescriptor GetOwnProperty(string property)
+    {
+        BlittableObjectInstance.BlittableObjectProperty val = default;
+        if (OwnValues?.TryGetValue(property, out val) == true &&
+            val != null)
+            return val;
+
+        Deletes?.Remove(property);
+
+        val = new BlittableObjectInstance.BlittableObjectProperty(this, property);
+
+        if (val.Value.IsUndefined() &&
+            DocumentId == null &&
+            _set == false)
+        {
+            return PropertyDescriptor.Undefined;
+        }
+
+        OwnValues ??= new Dictionary<string, BlittableObjectInstance.BlittableObjectProperty>(Blittable.Count);
+
+        OwnValues[property] = val;
+
+        return val;
+    }
+
+    public override bool Set(JsValue property, JsValue value, JsValue receiver)
+    {
+        if (property.IsString() == false)
+            return false;
+
+        // check fast path for direct write
+        if (ReferenceEquals(receiver, this) && Extensible)
+        {
+            return SetDirect(property.AsString(), value);
+        }
+
+        _set = true;
+        try
+        {
+            return base.Set(property, value, receiver);
+        }
+        finally
+        {
+            _set = false;
+        }
+    }
+
+    public override bool DefineOwnProperty(JsValue property, PropertyDescriptor desc)
+    {
+        if (property.IsString() == false)
+            return false;
+
+        return SetDirect(property.AsString(), desc.Value);
+    }
+
+    private bool SetDirect(string property, JsValue value)
+    {
+        OwnValues ??= new Dictionary<string, BlittableObjectInstance.BlittableObjectProperty>(Blittable.Count);
+        Deletes?.Remove(property);
+
+        var val = new BlittableObjectInstance.BlittableObjectProperty(this, property) {Value = value};
+
+        OwnValues[property] = val;
+
+        return true;
+    }
+
+    public override IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetOwnProperties()
+    {
+        if (OwnValues != null)
+        {
+            foreach (var value in OwnValues)
+            {
+                yield return new KeyValuePair<JsValue, PropertyDescriptor>(value.Key, value.Value);
+            }
+        }
+
+        if (Blittable == null)
+            yield break;
+
+        foreach (var prop in Blittable.GetPropertyNames())
+        {
+            if (Deletes?.Contains(prop) == true)
+                continue;
+            if (OwnValues?.ContainsKey(prop) == true)
+                continue;
+            yield return new KeyValuePair<JsValue, PropertyDescriptor>(
+                prop,
+                GetOwnProperty(prop)
+            );
+        }
+    }
+
+    public override List<JsValue> GetOwnPropertyKeys(Types types)
+    {
+        var list = new List<JsValue>(Blittable?.Count ?? OwnValues?.Count ?? 0);
+
+        if (OwnValues != null)
+        {
+            foreach (var value in OwnValues)
+                list.Add(value.Key);
+        }
+
+        if (Blittable == null)
+            return list;
+
+        foreach (var prop in Blittable.GetPropertyNames())
+        {
+            if (Deletes?.Contains(prop) == true)
+                continue;
+            if (OwnValues != null && OwnValues.ContainsKey(prop))
+                continue;
+
+            list.Add(prop);
+        }
+
+        return list;
+    }
+
+    private void RecordNumericFieldType(string key, BlittableJsonToken type)
+    {
+        OriginalPropertiesTypes ??= new Dictionary<string, BlittableJsonToken>();
+        OriginalPropertiesTypes[key] = type;
+    }
+
+    public void Reset()
+    {
+        if (OwnValues == null)
+            return;
+
+        foreach (var val in OwnValues)
+        {
+            if (val.Value.Value is BlittableObjectInstance boi)
+                boi.Blittable.Dispose();
+        }
+    }
+}
+
 }

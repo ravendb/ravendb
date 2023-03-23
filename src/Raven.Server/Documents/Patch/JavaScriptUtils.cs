@@ -378,16 +378,15 @@ namespace Raven.Server.Documents.Patch
                 };
                 return new BlittableObjectInstance(engine, null, context.ReadObject(djv, "MaterializedStreamResults"), null, null, null);
             }
-            if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
+            if (o is Tuple<Document, RetrieverInput, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
                 return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d)
                 {
-                    LuceneDocument = t.Item2,
-                    LuceneState = t.Item3,
-                    LuceneIndexFields = t.Item4,
-                    LuceneAnyDynamicIndexFields = t.Item5 ?? false,
-                    Projection = t.Item6
+                    IndexRetriever = t.Item2,
+                    IndexFields = t.Item3,
+                    AnyDynamicIndexFields = t.Item4 ?? false,
+                    Projection = t.Item5
                 };
             }
             if (o is Document doc)
