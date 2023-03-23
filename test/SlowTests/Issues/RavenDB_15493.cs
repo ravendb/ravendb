@@ -3,6 +3,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,15 +15,16 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Should_Be_Able_To_Index_Compare_Exchange()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Should_Be_Able_To_Index_Compare_Exchange(Options options)
         {
             const int numberOfCompanies = 256;
             const int numberOfAddresses = 16;
 
             DoNotReuseServer();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Companies_ByCity().Execute(store);
 

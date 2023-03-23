@@ -90,7 +90,7 @@ namespace SlowTests.Tests.DistinctFacets
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanGetDistinctResult(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -113,7 +113,7 @@ namespace SlowTests.Tests.DistinctFacets
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanGetDistinctResult_WithPaging(Options options)
         {
             using (var store = GetDocumentStore(options))

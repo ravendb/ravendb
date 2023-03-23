@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void SearchBooking_ProjectionWithDateTimeToStringAndFormat_ReturnsResult()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SearchBooking_ProjectionWithDateTimeToStringAndFormat_ReturnsResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 // Arrange  
                 store.ExecuteIndex(new BookingIndex());
@@ -59,10 +61,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void DateToStringWithInvariantCulture()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DateToStringWithInvariantCulture(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var start = DateTime.Parse("2018-01-01T11:11:11");
 
@@ -99,10 +102,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void DateToStringWithCurrentCulture()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DateToStringWithCurrentCulture(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var start = DateTime.Parse("2018-01-01T11:11:11");
 
@@ -140,10 +144,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void DateToStringWithFormatAndCurrentCulture()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DateToStringWithFormatAndCurrentCulture(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var start = DateTime.Parse("2018-01-01T11:11:11");
 
@@ -180,10 +185,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void DateToStringWithFormatAndInvariantCulture()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DateToStringWithFormatAndInvariantCulture(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var start = DateTime.Parse("2018-01-01T11:11:11");
 
@@ -219,10 +225,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void NumberToStringWithFormat()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NumberToStringWithFormat(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var num = 12345000;
 
@@ -257,10 +264,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void NumberToStringWithInvariantCulture()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NumberToStringWithInvariantCulture(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var num = 12345000;
 
@@ -296,10 +304,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void NumberToStringWithCurrentCulture()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NumberToStringWithCurrentCulture(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var num = 12345000;
 
@@ -335,10 +344,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void NumberToStringWithFormatAndCulture()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NumberToStringWithFormatAndCulture(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var num = 12345000;
 

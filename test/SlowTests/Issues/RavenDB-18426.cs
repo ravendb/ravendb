@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Static.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ public class RavenDB_18426 : RavenTestBase
     {
     }
 
-    [Fact]
-    public void ProjectionIdTest()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void ProjectionIdTest(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             new DocIndex().Execute(store);
             new DocReduceIndex().Execute(store);

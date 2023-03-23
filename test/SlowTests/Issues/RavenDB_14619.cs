@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task NestedBoostTest()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Different algorithm")]
+        public async Task NestedBoostTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DocsIndex().Execute(store);
                 using (var session = store.OpenAsyncSession())

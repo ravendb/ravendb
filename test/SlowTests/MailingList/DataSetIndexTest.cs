@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ namespace SlowTests.MailingList
 
         private const int MaxNumberOfItemsInDataSet = 50;
 
-        [Fact]
-        public void can_execute_query_default()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void can_execute_query_default(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DataSetIndex().Execute(store);
 
@@ -47,10 +49,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void can_execute_query_lazily()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void can_execute_query_lazily(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DataSetIndex().Execute(store);
 

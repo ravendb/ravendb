@@ -39,6 +39,7 @@ namespace SlowTests.Issues
                 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Complex object")]
         public void CanQueryNestedClass(Options options)
         {             
             using (var store = GetDocumentStore(options))
@@ -58,8 +59,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var allPets = new List<Pet> { fluffy };                    WaitForUserToContinueTheTest(store);
-
+                    var allPets = new List<Pet> { fluffy };                    
                     var query = session.Query<Person>().Where(p => p.Pets.ContainsAny(allPets)).ToList();                    
                     Assert.Equal(1, query.Count);
                 }                                

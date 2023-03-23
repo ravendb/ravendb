@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Static.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void LoadDocumentTest()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LoadDocumentTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new CoursesByCourseLesson());
                 using (var session = store.OpenSession())
