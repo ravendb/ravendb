@@ -133,9 +133,8 @@ order by spatial.distance(spatial.point(a.Lat, a.Lng), spatial.point(35.1, -106.
 order by spatial.distance(
     spatial.point(a.ShipTo.Location.Latitude, a.ShipTo.Location.Longitude),
     spatial.point(35.2, -107.2 )
-)
-limit 1")
-                        .Single();
+)")
+                        .First();
 
                     var metadata = s.Advanced.GetMetadataFor(d);
 
@@ -158,9 +157,8 @@ limit 1")
 order by spatial.distance(
     spatial.point(ShipTo.Location.Latitude, ShipTo.Location.Longitude),
     spatial.point(35.2, -107.2 )
-)
-limit 1")
-                        .Single();
+)")
+                        .First();
 
                     var metadata = s.Advanced.GetMetadataFor(d);
 
@@ -181,8 +179,7 @@ limit 1")
                 {
                     var d = s.Advanced.RawQuery<JObject>(@"from Orders  as a
 where id() ='orders/830-A'
-select id(), spatial.distance(35.2, -107.2 , a.ShipTo.Location.Latitude, a.ShipTo.Location.Longitude, 'kilometers') as Distance
-limit 1")
+select id(), spatial.distance(35.2, -107.2 , a.ShipTo.Location.Latitude, a.ShipTo.Location.Longitude, 'kilometers') as Distance")
                         .Single();
 
                     Assert.Equal(48.99, Math.Round(d.Value<double>("Distance"), 2));
