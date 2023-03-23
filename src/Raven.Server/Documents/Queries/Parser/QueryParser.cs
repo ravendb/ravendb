@@ -187,40 +187,63 @@ namespace Raven.Server.Documents.Queries.Parser
             limit = null;
             filterLimit = null;
 
-            if (Scanner.TryScan("LIMIT"))
-            {
-                if (Value(out var first) == false)
-                    ThrowInvalidQueryException("Limit must contain a value");
-
-                if (Scanner.TryScan(","))
-                {
-                    if (Value(out var second) == false)
-                        ThrowInvalidQueryException("Limit must contain a second value");
-
-                    offset = first;
-                    limit = second;
-                }
-                else
-                {
-                    limit = first;
-                }
-            }
-
-            if (Scanner.TryScan("OFFSET"))
-            {
-                if (offset != null)
-                    ThrowInvalidQueryException("Cannot use 'offset' after 'limit $skip,$take'");
-
-                if (Value(out var second) == false)
-                    ThrowInvalidQueryException("Offset must contain a value");
-
-                offset = second;
-            }
+            var hasLimit = TryScanLimit(ref offset, ref limit);
+            var hasOffset = TryScanOffset(ref offset);
 
             if (Scanner.TryScan("FILTER_LIMIT"))
             {
                 if (Value(out filterLimit) == false)
                     ThrowInvalidQueryException("FILTER_LIMIT must contain a value");
+
+                if (hasLimit == false)
+                    TryScanLimit(ref offset, ref limit);
+
+                if (hasOffset == false)
+                    TryScanOffset(ref offset);
+            }
+
+            bool TryScanLimit(ref ValueExpression offset, ref ValueExpression limit)
+            {
+                if (Scanner.TryScan("LIMIT"))
+                {
+                    if (Value(out var first) == false)
+                        ThrowInvalidQueryException("Limit must contain a value");
+
+                    if (Scanner.TryScan(","))
+                    {
+                        if (Value(out var second) == false)
+                            ThrowInvalidQueryException("Limit must contain a second value");
+
+                        offset = first;
+                        limit = second;
+                    }
+                    else
+                    {
+                        limit = first;
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            bool TryScanOffset(ref ValueExpression offset)
+            {
+                if (Scanner.TryScan("OFFSET"))
+                {
+                    if (offset != null)
+                        ThrowInvalidQueryException("Cannot use 'offset' after 'limit $skip,$take'");
+
+                    if (Value(out var second) == false)
+                        ThrowInvalidQueryException("Offset must contain a value");
+
+                    offset = second;
+
+                    return true;
+                }
+
+                return false;
             }
         }
 
