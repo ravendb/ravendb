@@ -1450,9 +1450,9 @@ namespace Voron.Impl.Journal
                     }
 
                     if (_waj._logger.IsInfoEnabled)
-                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {written / Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
+                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}.");
                     else if (_waj._logger.IsOperationsEnabled && sp.Elapsed > _waj._dataPager.Options.LongRunningFlushingWarning)
-                        _waj._logger.Operations($"Very long data flushing. It took {sp.Elapsed} to flush {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {written / Constants.Size.Kilobyte:#,#} kb");
+                        _waj._logger.Operations($"Very long data flushing. It took {sp.Elapsed} to flush {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
 
                     Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
                 }
@@ -1677,7 +1677,7 @@ namespace Voron.Impl.Journal
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info(
-                            $"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {Math.Round(journalEntry.NumberOf4Kbs * 4d, 1):#,#.#;;0} kb compressed.");
+                            $"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({new Size(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize, SizeUnit.Bytes)}) in {sp.Elapsed} with {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} compressed.");
                     }
 
                     if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
@@ -1702,7 +1702,7 @@ namespace Voron.Impl.Journal
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Writing {journalEntry.NumberOf4Kbs * 4:#,#} kb to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
+                        _logger.Info($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
 
                     journalFilePath = CurrentFile.JournalWriter.FileName.FullPath;
 
