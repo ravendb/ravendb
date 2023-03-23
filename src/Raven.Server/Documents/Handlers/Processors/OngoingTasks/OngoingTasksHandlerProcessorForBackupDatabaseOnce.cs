@@ -24,19 +24,19 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override void ScheduleBackup(BackupConfiguration backupConfiguration, long operationId, string backupName, Stopwatch sw, OperationCancelToken token)
+        protected override void ScheduleBackup(BackupConfiguration backupConfiguration, long operationId, string backupName, Stopwatch sw, DateTime startTime, OperationCancelToken token)
         {
             var backupParameters = new BackupParameters
             {
                 RetentionPolicy = null,
-                StartTimeUtc = SystemTime.UtcNow,
+                StartTimeUtc = startTime,
                 IsOneTimeBackup = true,
                 BackupStatus = new PeriodicBackupStatus { TaskId = -1 },
                 OperationId = operationId,
                 BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
                 IsFullBackup = true,
                 TempBackupPath = BackupUtils.GetBackupTempPath(RequestHandler.Database.Configuration, "OneTimeBackupTemp"),
-                Name = backupName
+                Name = backupName,
             };
 
             var backupTask = new BackupTask(RequestHandler.Database, backupParameters, backupConfiguration, Logger);
