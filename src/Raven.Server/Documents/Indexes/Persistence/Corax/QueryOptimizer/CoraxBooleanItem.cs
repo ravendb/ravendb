@@ -39,13 +39,20 @@ public struct CoraxBooleanItem : IQueryMatch
 
         if (operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals)
         {
-            TermAsString = QueryBuilderHelper.CoraxGetValueAsString(term);
-            Count = searcher.NumberOfDocumentsUnderSpecificTerm(Field, TermAsString);
+            if (term is not (long or double))
+                TermAsString = QueryBuilderHelper.CoraxGetValueAsString(term);
+            
+            Count = Term switch
+            {
+                long l => searcher.NumberOfDocumentsUnderSpecificTerm(Field, l),
+                double d => searcher.NumberOfDocumentsUnderSpecificTerm(Field, d),
+                _ => searcher.NumberOfDocumentsUnderSpecificTerm(Field, TermAsString)
+            };
         }
         else
         {
             Unsafe.SkipInit(out TermAsString);
-            Count = searcher.GetEntriesAmountInField(Field);
+            Count = searcher.GetTermAmountInField(Field);
         }
     }
 
@@ -95,7 +102,13 @@ public struct CoraxBooleanItem : IQueryMatch
     {
         if (Operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals)
         {
-            IQueryMatch match = _indexSearcher.TermQuery(Field, TermAsString);
+            IQueryMatch match = Term switch
+            {
+                long l => _indexSearcher.TermQuery(Field, l),
+                double d => _indexSearcher.TermQuery(Field, d),
+                _ => _indexSearcher.TermQuery(Field, TermAsString)
+            };
+                
             if (Operation is UnaryMatchOperation.NotEquals)
                 match = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(Field), match);
                 

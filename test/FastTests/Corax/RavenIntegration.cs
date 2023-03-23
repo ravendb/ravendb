@@ -347,4 +347,25 @@ public class RavenIntegration : RavenTestBase
     }
 
     private record Person(string Name);
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanQueryWithLongOnDoubleField(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Doc{Name = "Maciej", BoostFactor = 11.5f});
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            //  The `11` on the server side will be long ( and the string made of it is "11") but the index doesn't contain the such term (because we indexed it as `11.5`.)
+            var query = session.Advanced.RawQuery<Doc>("from Docs where BoostFactor == 11").WaitForNonStaleResults().ToList();
+            WaitForUserToContinueTheTest(store);
+            Assert.Equal(1, query.Count);
+        }
+    }
+
 }

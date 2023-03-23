@@ -189,6 +189,30 @@ namespace FastTests.Corax
         }
 
         [Fact]
+        public void CanDoNumericalTermMatch()
+        {
+            _entries = new List<Entry>();
+            _entries.Add(new Entry() {Id = $"entries/0", LongValue = 0, DoubleValue = 0.0, TextualValue = "abc" });
+            IndexEntries();
+            
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            var match0 = searcher.TermQuery(_doubleItemFieldMetadata, 0.0D);
+            var ids = new long[16];
+            Assert.Equal(1, match0.Fill(ids)); //match one doc
+
+            var match1 = searcher.TermQuery(_doubleItemFieldMetadata, 0L);
+            Assert.Equal(1, match1.Fill(ids)); //match one doc
+            
+            //Lets assert also longs:
+            var match2 = searcher.TermQuery(_longItemFieldMetadata, 0.0D);
+            Assert.Equal(1, match2.Fill(ids)); //match one doc
+
+            var match3 = searcher.TermQuery(_longItemFieldMetadata, 0L);
+            Assert.Equal(1, match3.Fill(ids)); //match one doc
+        }
+        
+        [Fact]
         public void MultiTermMatchWithTermMatch()
         {
             PrepareData();
