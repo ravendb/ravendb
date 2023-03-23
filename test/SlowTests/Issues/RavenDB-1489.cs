@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,12 +15,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Querying_index_with_condtional_count_should_work()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Querying_index_with_condtional_count_should_work(Options options)
         {
             var dataEntries = GenerateDataEntries();
 
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 new MapReduceIndexWithCountAndCondition().Execute(documentStore);
 

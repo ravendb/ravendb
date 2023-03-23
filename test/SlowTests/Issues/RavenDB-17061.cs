@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Can_project_when_the_document_is_missing()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_project_when_the_document_is_missing(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string name = "Grisha";
                 string userId;
@@ -78,10 +80,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_project_when_the_document_is_missing_with_index()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_project_when_the_document_is_missing_with_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new UserIndex();
                 await index.ExecuteAsync(store);
@@ -171,10 +174,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_project_when_mixed_stored_options_in_index()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public async Task Can_project_when_mixed_stored_options_in_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new UserIndexPartialStore();
                 await index.ExecuteAsync(store);
@@ -224,7 +228,7 @@ namespace SlowTests.Issues
                     session.Delete(userId);
                     await session.SaveChangesAsync();
                 }
-
+WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.Query<User, UserIndexPartialStore>()

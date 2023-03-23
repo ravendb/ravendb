@@ -35,6 +35,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Different algorithm.")]
         public void SortNullsWithAlphaNumerics(Options options)
         {
             using var store = GetDocumentStore(options);

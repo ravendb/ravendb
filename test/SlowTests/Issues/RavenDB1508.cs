@@ -4,6 +4,7 @@ using System.Threading;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Sdk;
 using Xunit.Abstractions;
@@ -45,19 +46,21 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void RangeQuerySucceedsWithEmbeddableStore()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RangeQuerySucceedsWithEmbeddableStore(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 VerifyRangeQueryWithStore(store);
             }
         }
 
-        [Fact]
-        public void RangeQueryFailsAgainstServer()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RangeQueryFailsAgainstServer(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 VerifyRangeQueryWithStore(store);
             }
