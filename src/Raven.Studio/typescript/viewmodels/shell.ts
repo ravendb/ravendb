@@ -506,7 +506,10 @@ class shell extends viewModelBase {
                         // using location.hash instead of shell activation data - which is not available in shell activate method
                         const suppressTraceUsage = window.location.hash ? window.location.hash.includes("disableAnalytics=true") : false; 
                         
-                        if (!suppressTraceUsage) {
+                        if (suppressTraceUsage) {
+                            // persist forced option
+                            settings.sendUsageStats.setValue(false);
+                        } else {
                             // ask user about GA
                             this.displayUsageStatsInfo(true);
 

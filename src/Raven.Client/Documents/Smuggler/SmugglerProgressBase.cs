@@ -331,7 +331,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
         internal void Start()
         {
-            StartTime = SystemTime.UtcNow;
+            StartTime ??= SystemTime.UtcNow;
         }
     }
 

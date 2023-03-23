@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
-using NuGet.Protocol;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -38,7 +37,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
-using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -334,7 +332,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WritePropertyName(nameof(databaseRecord.IndexesHistory));
                     WriteIndexesHistory(databaseRecord.IndexesHistory);
                 }
-                
+
                 if (databaseRecord.IsSharded)
                 {
                     _writer.WriteComma();
@@ -462,7 +460,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                         break;
                 }
-                
+
                 await _writer.MaybeFlushAsync();
             }
 
@@ -559,40 +557,40 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteNull();
                     return;
                 }
-                
+
                 _writer.WriteStartObject();
-                
+
                 var first = true;
                 foreach (var historyOfIndex in indexesHistory)
                 {
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
-                    
+
                     _writer.WritePropertyName(historyOfIndex.Key);
                     bool isFirstChangeOfIndex = true;
-                    
+
                     _writer.WriteStartArray();
                     foreach (var changeOfIndex in historyOfIndex.Value)
                     {
                         if (isFirstChangeOfIndex == false)
                             _writer.WriteComma();
                         isFirstChangeOfIndex = false;
-                        
+
                         _writer.WriteStartObject();
-                        
+
                         _writer.WritePropertyName(nameof(changeOfIndex.Source));
                         _writer.WriteString(changeOfIndex.Source);
                         _writer.WriteComma();
-                        
+
                         _writer.WritePropertyName(nameof(changeOfIndex.CreatedAt));
                         _writer.WriteDateTime(changeOfIndex.CreatedAt, true);
                         _writer.WriteComma();
-                        
+
                         _writer.WritePropertyName(nameof(changeOfIndex.RollingDeployment));
                         _writer.WriteStartObject();
                         bool isFirstRolling = true;
-                        foreach (var (rollingName,rollingIndexDeployment) in changeOfIndex?.RollingDeployment)
+                        foreach (var (rollingName, rollingIndexDeployment) in changeOfIndex?.RollingDeployment)
                         {
                             if (isFirstRolling == false)
                                 _writer.WriteComma();
@@ -602,15 +600,15 @@ namespace Raven.Server.Smuggler.Documents
                         }
                         _writer.WriteEndObject();
                         _writer.WriteComma();
-                        
+
                         _writer.WritePropertyName(nameof(changeOfIndex.Definition));
                         _context.Write(_writer, changeOfIndex.Definition.ToJson());
-                        
+
                         _writer.WriteEndObject();
                     }
                     _writer.WriteEndArray();
                 }
-                
+
                 _writer.WriteEndObject();
             }
 
@@ -1266,34 +1264,39 @@ namespace Raven.Server.Smuggler.Documents
                 _filterMetadataProperty = filterMetadataProperty;
             }
 
-            public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
+            public ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlush)
             {
-                var document = item.Document;
-                using (document)
+                return new ValueTask(AsyncWork());
+
+                async Task AsyncWork()
                 {
-                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                    var document = item.Document;
+                    using (document)
                     {
-                        if (item.Attachments != null)
+                        if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
                         {
-                            foreach (var attachment in item.Attachments)
+                            if (item.Attachments != null)
                             {
-                                attachment.Stream.Position = 0;
-                                await WriteAttachmentStreamAsync(attachment.Base64Hash.Content.ToString(), attachment.Stream, attachment.Tag.ToString());
+                                foreach (var attachment in item.Attachments)
+                                {
+                                    attachment.Stream.Position = 0;
+                                    await WriteAttachmentStreamAsync(attachment.Base64Hash.Content.ToString(), attachment.Stream, attachment.Tag.ToString());
+                                }
+                            }
+                            else
+                            {
+                                await WriteUniqueAttachmentStreamsAsync(document, progress);
                             }
                         }
-                        else
-                        {
-                            await WriteUniqueAttachmentStreamsAsync(document, progress);
-                        }
+
+                        if (First == false)
+                            Writer.WriteComma();
+                        First = false;
+
+                        Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
+
+                        await Writer.MaybeFlushAsync();
                     }
-
-                    if (First == false)
-                        Writer.WriteComma();
-                    First = false;
-
-                    Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
-
-                    await Writer.MaybeFlushAsync();
                 }
             }
 
@@ -1451,7 +1454,7 @@ namespace Raven.Server.Smuggler.Documents
                 await base.DisposeAsync();
                 await using (_attachmentStreamsTempFile)
                 {
-                    
+
                 }
             }
         }
@@ -1527,6 +1530,12 @@ namespace Raven.Server.Smuggler.Documents
             public JsonOperationContext GetContextForNewCompareExchangeValue()
             {
                 return _context;
+            }
+
+
+            public ValueTask FlushAsync()
+            {
+                return ValueTask.CompletedTask;
             }
         }
 

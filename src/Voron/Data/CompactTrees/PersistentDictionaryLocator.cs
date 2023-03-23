@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Sparrow.Binary;
 using Sparrow.Server;
@@ -15,15 +16,7 @@ namespace Voron.Data.CompactTrees
 {
     public unsafe class PersistentDictionaryLocator
     {
-        private struct DictionaryData
-        {
-            public long PageNumber;
-            public PersistentDictionary Dictionary;
-        }
-
-        private const long Invalid = -1;
-
-        private readonly DictionaryData[] _cache;
+        private readonly object[] _cache;
         private readonly int _andMask;
 
         public PersistentDictionaryLocator(int cacheSize)
@@ -37,23 +30,22 @@ namespace Voron.Data.CompactTrees
             int shiftRight = Bits.CeilLog2(cacheSize);
             _andMask = (int)(0xFFFFFFFF >> (sizeof(uint) * 8 - shiftRight));
 
-            _cache = new DictionaryData[cacheSize];
+            _cache = new object[cacheSize];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGet(long pageNumber, out PersistentDictionary dictionary)
+        public bool TryGet(long dictionaryId, out PersistentDictionary dictionary)
         {
-            var position = pageNumber & _andMask;
+            var position = dictionaryId & _andMask;
 
-            ref var item = ref _cache[position];
-            if (item.PageNumber == pageNumber)
+            switch (_cache[position])
             {
-                // We will copy the reference and ensure again we have the right dictionary because there may be
-                // multiple threads accessing the same locator at any time. 
-                dictionary = item.Dictionary;
-                return dictionary.PageNumber == pageNumber;
+                case PersistentDictionary dic:
+                    dictionary = dic;
+                    return dic.DictionaryId == dictionaryId;
+                case Dictionary<long, PersistentDictionary> dictionaries:
+                    return dictionaries.TryGetValue(dictionaryId, out dictionary);
             }
-
             dictionary = default;
             return false;
         }
@@ -63,11 +55,33 @@ namespace Voron.Data.CompactTrees
         {
             var position = pageNumber & _andMask;
 
+            // This is intentionally racy because we are trying to optimize the TryGet method
+            // as much as possible, we are fine with "losing" cached instances, they will make themselves
+            // up over time and fix themselves
+
             // No check need to be done at this level because at the read side we will
             // make sure to get the proper dictionary. 
-            ref var item = ref _cache[position];
-            item.Dictionary = dictionary;
-            item.PageNumber = pageNumber;
+            switch (_cache[position])
+            {
+                case null:
+                    _cache[position] = dictionary;
+                    break;
+                case PersistentDictionary existing:
+                    if (existing.DictionaryId == dictionary.DictionaryId)
+                        return; // should never happen
+                    _cache[position] = new Dictionary<long, PersistentDictionary>
+                    {
+                        [existing.DictionaryId] = existing,
+                        [dictionary.DictionaryId] = dictionary
+                    };
+                    break;
+                case Dictionary<long, PersistentDictionary> dictionaries:
+                    _cache[position] = new Dictionary<long, PersistentDictionary>(dictionaries)
+                    {
+                        [dictionary.DictionaryId] = dictionary
+                    };
+                    break;
+            }
         }
     }
 }

@@ -954,26 +954,13 @@ namespace Voron.Impl
             }
         }
 
-        // We don't really know how many compact keys we are gonna need, therefore the safe bet is to
-        // provide a full blown object pool to handle them. 
-        private ObjectPool<CompactKey> _compactKeyPool;
-
         public CompactKey AcquireCompactKey()
         {
-            // Since Compact keys are tied to the underlying low level transaction, it makes
-            // sense to create the object pool upon needing it to avoid wasteful allocations.
-
-            // PERF: If proper profiling indicates a high traffic pathway that could benefit
-            // from it, we should consider changing the behavior to reset the compact key's
-            // underlying owner. This would improve reuse, even though it adds complexity.
-            _compactKeyPool ??= new ObjectPool<CompactKey>(() => new CompactKey(this));
-
-            return _compactKeyPool.Allocate();
-        }
-
-        public void ReleaseCompactKey(CompactKey key)
-        {
-            _compactKeyPool.Free(key);
+            // Originally the low level transaction would allow to handle the reuse of compact keys.
+            // However, the implementation of reuse has been creating issues when indexing. The ability
+            // to reuse keys will be disable until we are able to resolve the underlying cause for it.
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-20143
+            return new CompactKey(this);
         }
 
         private class PagerStateCacheItem

@@ -252,7 +252,7 @@ namespace Raven.Server.Smuggler.Documents
                     _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
             }
 
-            public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
+            public ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlushing)
             {
                 if (item.Attachments != null)
                 {
@@ -263,7 +263,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _command.Add(item);
-                await HandleBatchOfDocumentsIfNecessaryAsync();
+                return HandleBatchOfDocumentsIfNecessaryAsync(beforeFlushing);
             }
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -272,7 +272,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Tombstone = tombstone
                 });
-                await HandleBatchOfDocumentsIfNecessaryAsync();
+                await HandleBatchOfDocumentsIfNecessaryAsync(null);
             }
 
             public async ValueTask WriteConflictAsync(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -281,7 +281,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Conflict = conflict
                 });
-                await HandleBatchOfDocumentsIfNecessaryAsync();
+                await HandleBatchOfDocumentsIfNecessaryAsync(null);
             }
 
             public async ValueTask DeleteDocumentAsync(string id)
@@ -465,43 +465,50 @@ namespace Raven.Server.Smuggler.Documents
                 _revisionDeleteCommand = null;
             }
 
-            private async ValueTask HandleBatchOfDocumentsIfNecessaryAsync()
+            private ValueTask HandleBatchOfDocumentsIfNecessaryAsync(Func<ValueTask> beforeFlush)
             {
                 var commandSize = _command.GetCommandAllocationSize();
                 var prevDoneAndHasEnough = commandSize > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
                 var currentReachedLimit = commandSize > _enqueueThreshold.GetValue(SizeUnit.Bytes);
 
                 if (currentReachedLimit == false && prevDoneAndHasEnough == false)
-                    return;
-
-                var prevCommand = _prevCommand;
-                var prevCommandTask = _prevCommandTask;
-
-                var commandTask = _database.TxMerger.Enqueue(_command);
-                // we ensure that we first enqueue the command to if we
-                // fail to do that, we won't be waiting on the previous
-                // one
-                _prevCommand = _command;
-                _prevCommandTask = commandTask;
-
-                if (prevCommand != null)
                 {
-                    using (prevCommand)
-                    {
-                        await prevCommandTask;
-                        Debug.Assert(prevCommand.IsDisposed == false,
-                            "we rely on reusing this context on the next batch, so it has to be disposed here");
-                    }
+                    return ValueTask.CompletedTask;
                 }
 
-                _command = new MergedBatchPutCommand(_database, _buildType, _log,
-                    _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
-                {
-                    IsRevision = _isRevision,
-                };
+                return new ValueTask(SubmitNextBatch());
 
-                if (_throwOnCollectionMismatchError == false)
-                    _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
+                async Task SubmitNextBatch()
+                {
+                    if (beforeFlush != null)
+                        await beforeFlush();
+                    var prevCommand = _prevCommand;
+                    var prevCommandTask = _prevCommandTask;
+
+                    var commandTask = _database.TxMerger.Enqueue(_command);
+                    // we ensure that we first enqueue the command to if we
+                    // fail to do that, we won't be waiting on the previous
+                    // one
+                    _prevCommand = _command;
+                    _prevCommandTask = commandTask;
+
+                    if (prevCommand != null)
+                    {
+                        using (prevCommand)
+                        {
+                            await prevCommandTask;
+                            Debug.Assert(prevCommand.IsDisposed == false,
+                                "we rely on reusing this context on the next batch, so it has to be disposed here");
+                        }
+                    }
+
+                    _command = new MergedBatchPutCommand(_database, _buildType, _log,
+                            _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
+                    { IsRevision = _isRevision, };
+
+                    if (_throwOnCollectionMismatchError == false)
+                        _command.DocumentCollectionMismatchHandler = item => _duplicateDocsHandler.AddDocument(item);
+                }
             }
 
             private async ValueTask FinishBatchOfDocumentsAsync()
@@ -1341,7 +1348,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _cmd.AddToReturn(data);
             }
-            
+
             private async ValueTask HandleBatchOfTimeSeriesIfNecessaryAsync()
             {
                 if (_segmentsSize < _maxBatchSize)

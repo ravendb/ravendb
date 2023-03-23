@@ -1949,6 +1949,21 @@ namespace SlowTests.Smuggler
         }
 
         [Fact]
+        public async Task CanImportLegacyDatabaseRecordWithoutErrors()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await using (var stream = GetDump("RavenDB_11664.1.ravendbdump"))
+                {
+                    var operation = await store.Smuggler.ForDatabase(store.Database).ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                    var importResult = (SmugglerResult)await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    Assert.DoesNotContain(importResult.Messages, m => m.Contains("ERROR"));
+                }
+            }
+        }
+
+        [Fact]
         public async Task Keep_The_Same_Document_Id_After_Counters_Import()
         {
             var file = GetTempFileName();

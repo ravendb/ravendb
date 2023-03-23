@@ -95,6 +95,11 @@ namespace Raven.Server.Smuggler.Documents.Actions
             await SendRemoveCommandsAsync(_context);
         }
 
+        public async ValueTask FlushAsync()
+        {
+            await SendClusterTransactionsAsync();
+        }
+
         protected abstract ValueTask WaitForIndexNotificationAsync(long? lastAddOrUpdateOrRemoveResultIndex, long? lastClusterTransactionIndex);
 
         public virtual async ValueTask DisposeAsync()
@@ -116,36 +121,43 @@ namespace Raven.Server.Smuggler.Documents.Actions
             return new ClusterTransactionCommand(_databaseName, _identityPartsSeparator, topology, parsedCommands, options, raftRequestId);
         }
 
-        protected virtual async ValueTask<bool> SendClusterTransactionsAsync()
+        protected virtual ValueTask<bool> SendClusterTransactionsAsync()
         {
             if (_clusterTransactionCommands.Length == 0)
-                return false;
+                return ValueTask.FromResult(false);
 
-            var parsedCommands = _clusterTransactionCommands.GetArraySegment();
+            return new ValueTask<bool>(AsyncWork());
 
-            var raftRequestId = RaftIdGenerator.NewId();
-            var options = new ClusterTransactionCommand.ClusterTransactionOptions(string.Empty, disableAtomicDocumentWrites: false, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
-
-            var clusterTransactionCommand = CreateClusterTransactionCommand(_databaseName, _identityPartsSeparator, parsedCommands, options, raftRequestId);
-            clusterTransactionCommand.FromBackup = true;
-
-            var clusterTransactionResult = await _serverStore.SendToLeaderAsync(clusterTransactionCommand);
-            for (int i = 0; i < _clusterTransactionCommands.Length; i++)
+            async Task<bool> AsyncWork()
             {
-                _clusterTransactionCommands[i].Document.Dispose();
-            }
+                var parsedCommands = _clusterTransactionCommands.GetArraySegment();
 
-            _clusterTransactionCommands.Clear();
+                var raftRequestId = RaftIdGenerator.NewId();
+                var options = new ClusterTransactionCommand.ClusterTransactionOptions(string.Empty, disableAtomicDocumentWrites: false,
+                    ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
 
-            if (clusterTransactionResult.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
-                throw new ClusterTransactionConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
+                var clusterTransactionCommand = CreateClusterTransactionCommand(_databaseName, _identityPartsSeparator, parsedCommands, options, raftRequestId);
+                clusterTransactionCommand.FromBackup = true;
+
+                var clusterTransactionResult = await _serverStore.SendToLeaderAsync(clusterTransactionCommand);
+                for (int i = 0; i < _clusterTransactionCommands.Length; i++)
                 {
-                    ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
-                };
+                    _clusterTransactionCommands[i].Document.Dispose();
+                }
 
-            _lastClusterTransactionIndex = clusterTransactionResult.Index;
+                _clusterTransactionCommands.Clear();
 
-            return true;
+                if (clusterTransactionResult.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
+                    throw new ClusterTransactionConcurrencyException(
+                        $"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
+                    {
+                        ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
+                    };
+
+                _lastClusterTransactionIndex = clusterTransactionResult.Index;
+
+                return true;
+            }
         }
 
         private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)
