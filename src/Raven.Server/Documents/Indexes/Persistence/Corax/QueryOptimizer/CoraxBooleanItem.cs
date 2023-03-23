@@ -30,6 +30,12 @@ public struct CoraxBooleanItem : IQueryMatch
         
         _isTime = term is not null && index.IndexFieldsPersistence.HasTimeValues(Field.FieldName.ToString()) && QueryBuilderHelper.TryGetTime(index, term, out ticks);
         Term = _isTime ? ticks : term;
+
+        // in case of query "Field != null" or `Field != ""`
+        if (Term is null || Term is string s)
+            Term = QueryBuilderHelper.CoraxGetValueAsString(Term);
+        
+        
         Operation = operation;
         _indexSearcher = searcher;
 
