@@ -519,9 +519,12 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     private Dictionary<int, BlittableJsonReaderObject> GenerateLoadByIdQueries(IEnumerable<Slice> ids)
     {
-        const string listParameterName = "p0";
+        const string listParameterName = "__p0";
 
-        var documentQuery = new DocumentQuery<dynamic>(null, null, Query.Metadata.CollectionName, isGroupBy: false, fromAlias: Query.Metadata.Query.From.Alias?.ToString());
+        var documentQuery = new DocumentQuery<dynamic>(null, null, Query.Metadata.CollectionName, isGroupBy: false, fromAlias: Query.Metadata.Query.From.Alias?.ToString())
+        {
+            ParameterPrefix = "__p"
+        };
         documentQuery.WhereIn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, Enumerable.Empty<object>());
 
         IncludeBuilder includeBuilder = null;
