@@ -1538,6 +1538,9 @@ namespace Raven.Server.Documents.Revisions
         {
             result.ScannedRevisions++;
 
+            if (result.ScannedRevisions % 1024 == 0)
+                parameters.OnProgress?.Invoke(result);
+
             id = TableValueToId(context, (int)RevisionsTable.Id, ref reader);
             var etag = TableValueToEtag((int)RevisionsTable.Etag, ref reader);
             parameters.LastScannedEtag = etag;

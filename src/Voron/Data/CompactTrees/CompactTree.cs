@@ -510,10 +510,8 @@ namespace Voron.Data.CompactTrees
 
         public bool TryRemove(ReadOnlySpan<byte> key, out long oldValue)
         {
-            using var scope = new CompactKeyCacheScope(this._llt);
-            var encodedKey = scope.Key;
-            encodedKey.Set(key);
-            FindPageFor(encodedKey, ref _internalCursor, tryRecompress: true);
+            using var scope = new CompactKeyCacheScope(this._llt, key);
+            FindPageFor(scope.Key, ref _internalCursor, tryRecompress: true);
 
             return RemoveFromPage(allowRecurse: true, out oldValue);
         }
@@ -670,18 +668,17 @@ namespace Voron.Data.CompactTrees
             Memory.Set(sourcePage.Pointer + sourceHeader->Lower, 0, (oldLower - sourceHeader->Lower));
 
             // now re-wire the new splitted page key
-            using var scope = new CompactKeyCacheScope(this._llt);
-            var newKey = scope.Key;
-
+            
             var encodedKey = GetEncodedKey(sourcePage, sourceState.EntriesOffsets[0], out int encodedKeyLengthInBits);
-            newKey.Set(encodedKeyLengthInBits, encodedKey, sourceHeader->DictionaryId);
 
+            using var scope = new CompactKeyCacheScope(this._llt, encodedKeyLengthInBits, encodedKey, sourceHeader->DictionaryId);
             PopPage(ref _internalCursor);
             
             // we aren't _really_ removing, so preventing merging of parents
             RemoveFromPage(allowRecurse: false, parent.LastSearchPosition + 1);
 
             // Ensure that we got the right key to search. 
+            var newKey = scope.Key;
             newKey.ChangeDictionary(_internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
 
             SearchInCurrentPage(newKey, ref _internalCursor._stk[_internalCursor._pos]); // positions changed, re-search
@@ -1116,8 +1113,8 @@ namespace Voron.Data.CompactTrees
             var pageEntries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
             GetEncodedEntry(page, pageEntries[0], out var splitKey, out var splitKeyLengthInBits, out _);
 
-            causeForSplit.Set(splitKeyLengthInBits, splitKey, ((CompactPageHeader*)page.Pointer)->DictionaryId);
-            return causeForSplit;
+            var updateCauseForSplit = new CompactKeyCacheScope(_llt, splitKeyLengthInBits, splitKey, ((CompactPageHeader*)page.Pointer)->DictionaryId);
+            return updateCauseForSplit.Key;
         }
 
         private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state)
@@ -1234,7 +1231,7 @@ namespace Voron.Data.CompactTrees
 
             Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
 
-            state.Header->DictionaryId = newDictionary.PageNumber;
+            state.Header->DictionaryId = newDictionary.DictionaryId;
 
             return true;
 
@@ -1541,8 +1538,7 @@ namespace Voron.Data.CompactTrees
                 return false;
             }
 
-            key = new CompactKeyCacheScope(tree._llt);
-            key.Key.Set(encodedKeyLengthInBits, encodedKeyStream, ((CompactPageHeader*)page.Pointer)->DictionaryId);
+            key = new CompactKeyCacheScope(tree._llt, encodedKeyLengthInBits, encodedKeyStream, ((CompactPageHeader*)page.Pointer)->DictionaryId);
 
             return true;
         }
@@ -1734,10 +1730,9 @@ namespace Voron.Data.CompactTrees
 
             ref var state = ref cstate._stk[cstate._pos];
 
-            using var scope = new CompactKeyCacheScope(this._llt);
+            using var scope = new CompactKeyCacheScope(this._llt, key);
             
             var encodedKey = scope.Key;
-            encodedKey.Set(key);
             encodedKey.ChangeDictionary(state.Header->DictionaryId);
 
             while (state.Header->IsBranch)

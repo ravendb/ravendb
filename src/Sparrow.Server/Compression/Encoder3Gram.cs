@@ -4,9 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
+using System.Security.Cryptography;
 using Sparrow.Collections;
 using Sparrow.Server.Binary;
 using Sparrow.Server.Collections.Persistent;
@@ -43,7 +45,7 @@ namespace Sparrow.Server.Compression
     public unsafe struct Encoder3Gram<TEncoderState> : IEncoderAlgorithm
         where TEncoderState : struct, IEncoderState
     {
-        private readonly TEncoderState _state;
+        private TEncoderState _state;
         private int _entries;
 
         public Encoder3Gram(TEncoderState state)
@@ -96,87 +98,87 @@ namespace Sparrow.Server.Compression
             where TSampleEnumerator : struct, IReadOnlySpanIndexer
             where TOutputEnumerator : struct, ISpanIndexer
         {
-            fixed (Interval3Gram* table = EncodingTable)
+            ref var tablePtr = ref EncodingTable[0];
+
+            var numberOfEntries = _entries;
+
+            int length = data.Length;
+            for (int i = 0; i < length; i++)
             {
-                var numberOfEntries = _entries;
+                var intBuf = MemoryMarshal.Cast<byte, long>(outputBuffers[i]);
 
-                int length = data.Length;
-                for (int i = 0; i < length; i++)
+                int idx = 0;
+                intBuf[0] = 0;
+                int intBufLen = 0;
+
+                var bitWriterBuffer = intBuf[idx];
+
+                var key = data[i];
+
+                fixed (byte* fixedKey = key)
                 {
-                    var intBuf = MemoryMarshal.Cast<byte, long>(outputBuffers[i]);
+                    int keyLength = key.Length;
+                    byte* keyPtr = fixedKey;
 
-                    int idx = 0;
-                    intBuf[0] = 0;
-                    int intBufLen = 0;
-
-                    var bitWriterBuffer = intBuf[idx];
-
-                    var key = data[i];
-
-                    fixed (byte* fixedKey = key)
+                    while (keyLength > 0)
                     {
-                        int keyLength = key.Length;
-                        byte* keyPtr = fixedKey;
-
-                        while (keyLength > 0)
+                        // Initialize the important variables.
+                        uint symbolValue = 0;
+                        if (keyLength >= 4)
                         {
-                            // Initialize the important variables.
-                            uint symbolValue = 0;
-                            if (keyLength >= 4)
-                            {
-                                // PERF: This is the usual case, this is the branch that gets executed for most of the
-                                // key, at least until we hit the tail.
-                                symbolValue = BinaryPrimitives.ReverseEndianness(*(uint*)keyPtr) >> 8;
-                            }
-                            else
-                            {
-                                // PERF: we are performing masked copy with reverse endianness using tables, with
-                                // the objective of diminishing the amount of instructions necessary for execution.
-                                // The switch implementation requires over 40 instructions including several branches,
-                                // this version is much more succinct and do not need any jump. 
+                            // PERF: This is the usual case, this is the branch that gets executed for most of the
+                            // key, at least until we hit the tail.
+                            symbolValue = BinaryPrimitives.ReverseEndianness(*(uint*)keyPtr) >> 8;
+                        }
+                        else
+                        {
+                            // PERF: we are performing masked copy with reverse endianness using tables, with
+                            // the objective of diminishing the amount of instructions necessary for execution.
+                            // The switch implementation requires over 40 instructions including several branches,
+                            // this version is much more succinct and do not need any jump. 
 
-                                // We copy to the symbols buffer the part of the key we will be consuming.
-                                int tableIndex = keyLength * 4;
+                            // We copy to the symbols buffer the part of the key we will be consuming.
+                            int tableIndex = keyLength * 4;
 
-                                symbolValue = (uint)(keyPtr[EncodingTailTable[tableIndex]] << 16 |
-                                                     keyPtr[EncodingTailTable[tableIndex + 1]] << 8 |
-                                                     keyPtr[EncodingTailTable[tableIndex + 2]]);
+                            symbolValue = (uint)(keyPtr[EncodingTailTable[tableIndex]] << 16 |
+                                                 keyPtr[EncodingTailTable[tableIndex + 1]] << 8 |
+                                                 keyPtr[EncodingTailTable[tableIndex + 2]]);
 
-                                symbolValue &= 0xFFFFFFFF << EncodingTailMaskTable[keyLength];
-                            }
-
-                            int prefixLen = Lookup(symbolValue, table, numberOfEntries, out Code code);
-
-                            // PERF: While naturally this would happen at the end of the loop, as they are not used anymore
-                            // we can do the work here instead and allow the JIT to reschedule the registers to be used on
-                            // the next block and fore-go on keep tracking of them. 
-                            keyLength -= prefixLen;
-                            keyPtr += prefixLen;
-
-                            // Perform the actual encoding in a bitwise fashion. 
-                            long sBuf = code.Value;
-                            int sLen = code.Length;
-                            if (intBufLen + sLen > 63)
-                            {
-                                int numBitsLeft = 64 - intBufLen;
-                                intBufLen = sLen - numBitsLeft;
-
-                                intBuf[idx] = BinaryPrimitives.ReverseEndianness((bitWriterBuffer << numBitsLeft) | (sBuf >> intBufLen));
-                                idx++;
-                                bitWriterBuffer = sBuf;
-                            }
-                            else
-                            {
-                                bitWriterBuffer = (bitWriterBuffer << sLen) | sBuf;
-                                intBufLen += sLen;
-                            }
+                            symbolValue &= 0xFFFFFFFF << EncodingTailMaskTable[keyLength];
                         }
 
-                        intBuf[idx] = BinaryPrimitives.ReverseEndianness(bitWriterBuffer << (64 - intBufLen));
-                        outputSizes[i] = ((idx << 6) + intBufLen);
+                        int prefixLen = Lookup(symbolValue, ref tablePtr, numberOfEntries, out Code code);
+
+                        // PERF: While naturally this would happen at the end of the loop, as they are not used anymore
+                        // we can do the work here instead and allow the JIT to reschedule the registers to be used on
+                        // the next block and fore-go on keep tracking of them. 
+                        keyLength -= prefixLen;
+                        keyPtr += prefixLen;
+
+                        // Perform the actual encoding in a bitwise fashion. 
+                        long sBuf = code.Value;
+                        int sLen = code.Length;
+                        if (intBufLen + sLen > 63)
+                        {
+                            int numBitsLeft = 64 - intBufLen;
+                            intBufLen = sLen - numBitsLeft;
+
+                            intBuf[idx] = BinaryPrimitives.ReverseEndianness((bitWriterBuffer << numBitsLeft) | (sBuf >> intBufLen));
+                            idx++;
+                            bitWriterBuffer = sBuf;
+                        }
+                        else
+                        {
+                            bitWriterBuffer = (bitWriterBuffer << sLen) | sBuf;
+                            intBufLen += sLen;
+                        }
                     }
+
+                    intBuf[idx] = BinaryPrimitives.ReverseEndianness(bitWriterBuffer << (64 - intBufLen));
+                    outputSizes[i] = ((idx << 6) + intBufLen);
                 }
             }
+            
         }
 
         public void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
@@ -251,83 +253,87 @@ namespace Sparrow.Server.Compression
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public int Encode(ReadOnlySpan<byte> key, Span<byte> outputBuffer)
         {
             Debug.Assert(outputBuffer.Length >= sizeof(long)); // Ensure we can safely cast to int 64
 
-            var intBuf = MemoryMarshal.Cast<byte, long>(outputBuffer);
+            ref var tablePtr = ref GetEncodingTablePtr();
+            ref var keyStartPtr = ref MemoryMarshal.GetReference(key);
+            ref long intBufPtr = ref MemoryMarshal.Cast<byte, long>(outputBuffer)[0];
+            ref long intBufStartPtr = ref intBufPtr;
 
-            int idx = 0;
-            intBuf[0] = 0;
+            intBufPtr = 0;
+
+            var numberOfEntries = _entries;
+
+            int keyPtr = 0;
+            var keyLength = key.Length;
+            
             int intBufLen = 0;
-
-            fixed(Interval3Gram* table = EncodingTable)
-            fixed(byte* fixedKey = key)
+            long bitWriterBuffer = 0;
+            while (keyLength > 0)
             {
-                var numberOfEntries = _entries;
+                ref var currentKeyPtr = ref Unsafe.AddByteOffset(ref keyStartPtr, keyPtr);
 
-                var keyPtr = fixedKey;
-                var keyLength = key.Length;
-                var bitWriterBuffer = intBuf[idx];
-
-                while (keyLength > 0)
+                // Initialize the important variables.
+                uint symbolValue;
+                if (keyLength >= 4)
                 {
-                    // Initialize the important variables.
-                    uint symbolValue = 0;
-                    if (keyLength >= 4)
-                    {
-                        // PERF: This is the usual case, this is the branch that gets executed for most of the
-                        // key, at least until we hit the tail.
-                        symbolValue = BinaryPrimitives.ReverseEndianness(*(uint*)keyPtr) >> 8;
-                    }
-                    else
-                    {
-                        // PERF: we are performing masked copy with reverse endianness using tables, with
-                        // the objective of diminishing the amount of instructions necessary for execution.
-                        // The switch implementation requires over 40 instructions including several branches,
-                        // this version is much more succinct and do not need any jump. 
+                    // PERF: This is the usual case, this is the branch that gets executed for most of the
+                    // key, at least until we hit the tail.
+                    
+                    symbolValue = BinaryPrimitives.ReverseEndianness(Unsafe.ReadUnaligned<uint>(ref currentKeyPtr)) >> 8;
+                }
+                else
+                {
+                    // PERF: we are performing masked copy with reverse endianness using tables, with
+                    // the objective of diminishing the amount of instructions necessary for execution.
+                    // The switch implementation requires over 40 instructions including several branches,
+                    // this version is much more succinct and do not need any jump. 
 
-                        // We copy to the symbols buffer the part of the key we will be consuming.
-                        int tableIndex = keyLength * 4;
+                    // We copy to the symbols buffer the part of the key we will be consuming.
+                    int tableIndex = keyLength * 4;
 
-                        symbolValue = (uint)(keyPtr[EncodingTailTable[tableIndex]] << 16 |
-                                             keyPtr[EncodingTailTable[tableIndex + 1]] << 8 |
-                                             keyPtr[EncodingTailTable[tableIndex + 2]]);
+                    symbolValue = (uint)(Unsafe.ReadUnaligned<byte>(ref Unsafe.AddByteOffset(ref currentKeyPtr, EncodingTailTable[tableIndex])) << 16 |
+                                         Unsafe.ReadUnaligned<byte>(ref Unsafe.AddByteOffset(ref currentKeyPtr, EncodingTailTable[tableIndex + 1])) << 8 |
+                                         Unsafe.ReadUnaligned<byte>(ref Unsafe.AddByteOffset(ref currentKeyPtr, EncodingTailTable[tableIndex + 2])));
 
-                        symbolValue &= 0xFFFFFFFF << EncodingTailMaskTable[keyLength];
-                    }
-
-                    int prefixLen = Lookup(symbolValue, table, numberOfEntries, out Code code);
-
-                    // PERF: While naturally this would happen at the end of the loop, as they are not used anymore
-                    // we can do the work here instead and allow the JIT to reschedule the registers to be used on
-                    // the next block and fore-go on keep tracking of them. 
-                    keyLength -= prefixLen;
-                    keyPtr += prefixLen;
-
-                    // Perform the actual encoding in a bitwise fashion. 
-                    long sBuf = code.Value;
-                    int sLen = code.Length;
-                    if (intBufLen + sLen > 63)
-                    {
-                        int numBitsLeft = 64 - intBufLen;
-                        intBufLen = sLen - numBitsLeft;
-
-                        intBuf[idx] = BinaryPrimitives.ReverseEndianness((bitWriterBuffer << numBitsLeft) | (sBuf >> intBufLen));
-                        idx++;
-                        bitWriterBuffer = sBuf;
-                    }
-                    else
-                    {
-                        bitWriterBuffer = (bitWriterBuffer << sLen) | sBuf;
-                        intBufLen += sLen;
-                    }
+                    symbolValue &= 0xFFFFFFFF << EncodingTailMaskTable[keyLength];
                 }
 
-                intBuf[idx] = BinaryPrimitives.ReverseEndianness(bitWriterBuffer << (64 - intBufLen));
-                return (idx << 6) + intBufLen;
+                int prefixLen = Lookup(symbolValue, ref tablePtr, numberOfEntries, out Code code);
+
+                // PERF: While naturally this would happen at the end of the loop, as they are not used anymore
+                // we can do the work here instead and allow the JIT to reschedule the registers to be used on
+                // the next block and fore-go on keep tracking of them. 
+                keyLength -= prefixLen;
+                keyPtr += prefixLen;
+
+                // Perform the actual encoding in a bitwise fashion. 
+                long sBuf = code.Value;
+                int sLen = code.Length;
+                if (intBufLen + sLen > 63)
+                {
+                    int numBitsLeft = 64 - intBufLen;
+                    intBufLen = sLen - numBitsLeft;
+
+                    intBufPtr = BinaryPrimitives.ReverseEndianness((bitWriterBuffer << numBitsLeft) | (sBuf >> intBufLen));
+                    intBufPtr = ref Unsafe.Add(ref intBufPtr, 1);
+                    bitWriterBuffer = sBuf;
+                }
+                else
+                {
+                    bitWriterBuffer = (bitWriterBuffer << sLen) | sBuf;
+                    intBufLen += sLen;
+                }
             }
+
+            intBufPtr = BinaryPrimitives.ReverseEndianness(bitWriterBuffer << (64 - intBufLen));
+
+            var idx = Unsafe.ByteOffset(ref intBufStartPtr, ref intBufPtr) / sizeof(long);
+            return (int)(idx << 6) + intBufLen;
+            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -421,6 +427,13 @@ namespace Sparrow.Server.Compression
 
         private Span<Interval3Gram> EncodingTable => MemoryMarshal.Cast<byte, Interval3Gram>(_state.EncodingTable.Slice(8));
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ref Interval3Gram GetEncodingTablePtr()
+        {
+            ref byte ptr = ref Unsafe.Add(ref MemoryMarshal.GetReference(_state.EncodingTable), 8);
+            return ref Unsafe.As<byte, Interval3Gram>(ref ptr);
+        }
+
         private unsafe void BuildDictionary(in FastList<SymbolCode> symbolCodeList)
         {
             EncodingTable.Clear(); // Zero out the memory we are going to be using. 
@@ -506,7 +519,7 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int Lookup(uint symbolValue, Interval3Gram* table, int numberOfEntries, out Code code)
+        private static int Lookup(uint symbolValue, ref Interval3Gram tablePtr, int numberOfEntries, out Code code)
         {
             // PERF: this is an optimized version of the CompareDictionaryEntry routine. Given that we
             // can actually perform the operation in parallel. The usual case will be to call the parallel
@@ -518,10 +531,10 @@ namespace Sparrow.Server.Compression
             while (top > 1)
             {
                 uint mid = top / 2;
-                uint codeValue = BinaryPrimitives.ReverseEndianness(table[bot + mid].BufferAndLength) >> 8;
 
-                if (Sse.IsSupported)
-                    Sse.Prefetch1(table + bot + mid);
+                // PERF: This is table[bot+mid].
+                ref var tableItem = ref Unsafe.Add(ref tablePtr, bot + mid);
+                uint codeValue = BinaryPrimitives.ReverseEndianness(tableItem.BufferAndLength) >> 8;
 
                 if (symbolValue >= codeValue)
                     bot += mid;
@@ -530,8 +543,9 @@ namespace Sparrow.Server.Compression
 
             // To guarantee that encoding always makes progress, we must ensure that every dictionary lookup is successful.
             // https://db.cs.cmu.edu/papers/2020/zhang-sigmod2020.pdf [Page 1603]
-            code = table[bot].Code;
-            return table[bot].PrefixLength;
+            ref var botItem = ref Unsafe.Add(ref tablePtr, bot);
+            code = botItem.Code;
+            return botItem.PrefixLength;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

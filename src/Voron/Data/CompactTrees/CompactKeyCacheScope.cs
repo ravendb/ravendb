@@ -26,9 +26,13 @@ public readonly struct CompactKeyCacheScope : IDisposable
         Key.Set(key);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CompactKeyCacheScope(LowLevelTransaction tx, int keyLengthInBits, ReadOnlySpan<byte> encodedKey, long dictionaryId)
+    {
+        Key = tx.AcquireCompactKey();
+        Key.Set(keyLengthInBits, encodedKey, dictionaryId);
+    }
+
     public void Dispose()
     {
-        Key?.Owner.ReleaseCompactKey(Key);
     }
 }

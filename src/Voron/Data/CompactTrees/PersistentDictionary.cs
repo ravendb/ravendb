@@ -47,11 +47,10 @@ namespace Voron.Data.CompactTrees
 
     public unsafe partial class PersistentDictionary 
     {
-        private readonly Page _page;
 
-        public long PageNumber => _page.PageNumber;
+        public readonly long DictionaryId;
         
-        private readonly HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>> _encoder;
+        private readonly HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>> _encoder;
 
         public static long CreateDefault(LowLevelTransaction llt)
         {
@@ -145,7 +144,7 @@ namespace Voron.Data.CompactTrees
 
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
             header->CurrentId = p.PageNumber;
-            header->PreviousId = previousDictionary != null ? previousDictionary.PageNumber : 0;
+            header->PreviousId = previousDictionary?.DictionaryId ?? 0;
 
             byte* encodingTablesPtr = p.DataPointer + PersistentDictionaryHeader.SizeOf;
             encoderState.EncodingTable.Slice(0, requiredSize / 2).CopyTo(new Span<byte>(encodingTablesPtr, requiredSize / 2));
@@ -177,25 +176,21 @@ namespace Voron.Data.CompactTrees
 
         public PersistentDictionary(Page page)
         {
-            _page = page;
+            DictionaryId = page.PageNumber;
 
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)page.DataPointer;
 
-            _encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
-                new Encoder3Gram<NativeMemoryEncoderState>(
-                    new NativeMemoryEncoderState(page.DataPointer + PersistentDictionaryHeader.SizeOf, header->TableSize)));
-        }
+            byte* startPtr = page.DataPointer + PersistentDictionaryHeader.SizeOf;
+            int tableSize = header->TableSize;
 
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateFrozen(ByteStringContext context, Page page, out PersistentDictionary dictionary)
-        {
-            PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)page.DataPointer;
+            var nativeState = new NativeMemoryEncoderState(startPtr, tableSize);
+            var managedState = new AdaptiveMemoryEncoderState(tableSize);
 
-            var content = page.AsSpan();
-            var scope = context.Allocate(content.Length, out var output);
-            content.CopyTo(output.ToSpan());
+            nativeState.EncodingTable.CopyTo(managedState.EncodingTable);
+            nativeState.DecodingTable.CopyTo(managedState.DecodingTable);
 
-            dictionary = new PersistentDictionary(new Page(output.Ptr));
-            return scope;
+            _encoder = new HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>>(
+                new Encoder3Gram<AdaptiveMemoryEncoderState>(managedState));
         }
 
         public void Decode(int keyLengthInBits, ReadOnlySpan<byte> key, ref Span<byte> decodedKey)

@@ -55,7 +55,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IDocumentActions : INewDocumentActions
     {
-        ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress);
+        ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlushing = null);
 
         ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress);
 
@@ -116,6 +116,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument);
 
         ValueTask WriteTombstoneKeyAsync(string key);
+
+        ValueTask FlushAsync();
     }
 
     public interface IDatabaseRecordActions : IAsyncDisposable
