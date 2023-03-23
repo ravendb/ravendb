@@ -178,6 +178,36 @@
                         </div>
                     </div>
                 </div>
+                <div class="panel panel-info certificate-item" data-bind="visible: wellKnownIssuersVisible">
+                    <div class="padding flex-horizontal">
+                        <div class="certificate-name">
+                            <div class="flex-horizontal">
+                                <div>
+                                    <i class="icon-certificate"></i>
+                                </div>
+                                <div>
+                                    <h3 class="no-margin">Well known issuer certificates defined by system administrator</h3>
+                                </div>
+                            </div>
+                            <div class="thumbprint" title="Certificates thumbprints" data-bind="foreach: wellKnownIssuers">
+                                <span data-bind="text: $data"></span> <br />
+                            </div>
+                        </div>
+                        <div class="flex-grow"></div>
+                    </div>
+                    <div class="panel-addon">
+                        <div class="padding flex-horizontal">
+                            <div class="clearance">
+                                <h5><i class="icon-clearance"></i> SECURITY CLEARANCE</h5>
+                                <strong data-bind="text: $root.clearanceLabelFor('ClusterAdmin')"></strong>
+                            </div>
+                            <div class="permissions">
+                                <h5><i class="icon-database"></i> DATABASE PERMISSIONS</h5>
+                                <strong>All</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <!-- ko foreach: certificates -->
                     <div class="panel certificate-item" data-bind="visible: Visible">
                         <div class="padding flex-horizontal">
