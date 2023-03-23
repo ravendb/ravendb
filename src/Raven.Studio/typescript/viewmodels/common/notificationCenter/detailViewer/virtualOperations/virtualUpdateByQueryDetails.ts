@@ -30,12 +30,15 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
         const grid = this.gridController();
         grid.headerVisible(true);
 
+        const dateHeader = "Date";
+        const durationHeader = "Duration (ms)";
+        
         grid.init(() => this.fetcher(), () => {
             return [
-                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
+                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), dateHeader, "25%", {
                     sortable: x => x.date
                 }),
-                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.duration, "Duration (ms)", "15%", {
+                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.duration, durationHeader, "15%", {
                     sortable: "number",
                     defaultSortOrder: "desc"
                 }),
@@ -54,10 +57,12 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
         this.columnPreview.install(".virtualUpdateByQueryDetails", ".js-virtual-update-by-query-details-tooltip",
             (details: queryBasedVirtualBulkOperationItem,
              column: textColumn<queryBasedVirtualBulkOperationItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string | number) => void) => {
                 if (!(column instanceof actionColumn)) {
-                    if (column.header === "Date") {
+                    if (column.header === dateHeader) {
                         onValue(moment.utc(details.date), details.date);
+                    } else if (column.header === durationHeader) {
+                        onValue(generalUtils.formatMillis(details.duration), details.duration);
                     } else {
                         const value = column.getCellValue(details);
                         if (value) {
