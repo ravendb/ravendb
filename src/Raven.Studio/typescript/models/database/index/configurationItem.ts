@@ -35,6 +35,8 @@ class configurationItem {
     key = ko.observable<string>();
     value = ko.observable<string>();
 
+    unknownKey: KnockoutComputed<boolean>;
+
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
 
@@ -42,6 +44,14 @@ class configurationItem {
         this.key(key);
         this.value(value);
 
+        this.unknownKey = ko.pureComputed(() => {
+            const key = this.key();
+            if (!key) {
+                return false;
+            }
+            return configurationItem.PerDatabaseIndexingConfigurationOptions.indexOf(key) === -1;
+        });
+        
         this.initValidation();
 
         this.dirtyFlag = new ko.DirtyFlag([
