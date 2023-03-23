@@ -40,10 +40,10 @@ public class RavenDB_19076 : RavenTestBase
                 List<Order> results;
                 do
                 {
-                    var queryWithPaging = $"{query} limit {(pageNumber * pageSize) + (int)skippedResults},{pageSize}";
-
-                    results = session.Advanced.RawQuery<Orders.Order>(queryWithPaging)
+                    results = session.Advanced.RawQuery<Orders.Order>(query)
                         .Statistics(out QueryStatistics stats)
+                        .Skip((pageNumber * pageSize) + (int)skippedResults)
+                        .Take(pageSize)
                         .ToList();
 
                     pagging.AddRange(results);
