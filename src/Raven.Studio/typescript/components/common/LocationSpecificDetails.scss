@@ -2,8 +2,8 @@
 @use "Content/scss/sizes";
 
 .location-specific-details-tooltip {
-    color: colors.$text-color;
-    background-color: colors.$panel-bg-1;
+    color: colors.$text-color-var;
+    background-color: colors.$panel-bg-1-var;
     border-radius: sizes.$gutter-xs;
     display: grid;
     grid-template-columns: auto auto;
@@ -15,7 +15,7 @@
         align-items: center;
         padding: sizes.$gutter-xs sizes.$gutter-xs;
         margin-right: 1px;
-        background-color: colors.$panel-header-bg;
+        background-color: colors.$panel-header-bg-var;
         border-top-left-radius: sizes.$gutter-xs;
         width: 135px;
 
@@ -28,7 +28,7 @@
         .node-id {
             font-size: 26px;
             font-weight: bold;
-            color: colors.$text-emphasis-color;
+            color: colors.$text-emphasis-var;
             text-align: center;
             line-height: 1.3em;
 
@@ -45,7 +45,7 @@
     .details {
         line-height: 1em;
         border-top-right-radius: sizes.$gutter-xs;
-        background-color: colors.$panel-header-bg;
+        background-color: colors.$panel-header-bg-var;
         display: flex;
         flex-direction: column;
 
@@ -57,7 +57,7 @@
             align-items: center;
 
             & + .details-item {
-                border-top: 1px solid colors.$border-color-light;
+                border-top: 1px solid colors.$border-color-light-var;
             }
 
             i {
@@ -65,7 +65,7 @@
             }
 
             &.status.updating {
-                color: colors.$progress-color;
+                color: colors.$progress-var;
             }
         }
     }

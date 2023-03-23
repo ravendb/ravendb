@@ -29,7 +29,7 @@
             align-items: center;
 
             & + div {
-                border-top: sizes.$border-width solid colors.$border-color-light;
+                border-top: sizes.$border-width solid colors.$border-color-light-var;
             }
 
             &:first-of-type {
@@ -59,7 +59,7 @@
     }
 
     .distribution-item {
-        background-color: colors.$panel-bg-2;
+        background-color: colors.$panel-bg-2-var;
         border-radius: sizes.$gutter-xs;
         border: sizes.$border-width solid transparent;
         transition: background-color 0.2s;
@@ -82,7 +82,7 @@
         }
 
         .top {
-            color: colors.$text-emphasis-color;
+            color: colors.$text-emphasis-var;
 
             i {
                 color: var(--icon-color);

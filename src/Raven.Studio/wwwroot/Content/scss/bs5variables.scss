@@ -492,11 +492,11 @@ $table-variants: (
 // Shared variables that are reassigned to `$input-` and `$btn-` specific variables.
 
 // scss-docs-start input-btn-variables
-$input-btn-padding-y: 0.375rem !default;
-$input-btn-padding-x: 0.75rem !default;
+$input-btn-padding-y: 0.2rem !default;
+$input-btn-padding-x: 0.6rem !default;
 $input-btn-font-family: null !default;
-$input-btn-font-size: $font-size-base !default;
-$input-btn-line-height: $line-height-base !default;
+$input-btn-font-size: $font-size-base * 0.95 !default;
+$input-btn-line-height: $line-height-base * 0.9 !default;
 
 $input-btn-focus-width: 0.25rem !default;
 $input-btn-focus-color-opacity: 0.25 !default;
@@ -504,16 +504,16 @@ $input-btn-focus-color: rgba($component-active-bg, $input-btn-focus-color-opacit
 $input-btn-focus-blur: 0 !default;
 $input-btn-focus-box-shadow: 0 0 $input-btn-focus-blur $input-btn-focus-width $input-btn-focus-color !default;
 
-$input-btn-padding-y-sm: 0.25rem !default;
+$input-btn-padding-y-sm: 0.1rem !default;
 $input-btn-padding-x-sm: 0.5rem !default;
 $input-btn-font-size-sm: $font-size-sm !default;
 
-$input-btn-padding-y-lg: 0.5rem !default;
+$input-btn-padding-y-lg: 0.2rem !default;
 $input-btn-padding-x-lg: 1rem !default;
 $input-btn-font-size-lg: $font-size-lg !default;
 
-$input-btn-padding-y-xs: math.div($gutter-xxs, 2) !default;
-$input-btn-padding-x-xs: $gutter-xs !default;
+$input-btn-padding-y-xs: 0.1rem !default;
+$input-btn-padding-x-xs: 0.5rem !default;
 $input-btn-font-size-xs: $font-size-xs !default;
 
 $input-btn-border-width: $border-width !default;
@@ -546,7 +546,7 @@ $btn-font-size-xs: $input-btn-font-size-xs !default;
 $btn-border-width: $input-btn-border-width !default;
 
 $btn-font-weight: $font-weight-normal !default;
-$btn-box-shadow: none !default;
+$btn-box-shadow: 0px 1px 0px 0px rgba($well-bg, 0.5) !default;
 $btn-focus-width: $input-btn-focus-width !default;
 $btn-focus-box-shadow: $input-btn-focus-box-shadow !default;
 $btn-disabled-opacity: 0.65 !default;

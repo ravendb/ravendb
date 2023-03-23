@@ -184,17 +184,17 @@ $link-color: #c072ee;
     $text-muted-color: $gray-700;
     $text-emphasis-color: $gray-900;
 
-    $base-text-color: $gray-800;
-    $base-text-muted-color: $gray-700;
-    $base-text-emphasis-color: $gray-900;
+    $base-text-color: $gray-900;
+    $base-text-muted-color: $gray-800;
+    $base-text-emphasis-color: $black;
 
     $panel-header-bg: $gray-100;
     $panel-bg-1: $gray-200;
-    $panel-bg-2: $gray-100;
-    $panel-bg-3: $white;
+    $panel-bg-2: $gray-300;
+    $panel-bg-3: $gray-400;
     $base-panel-header-bg: $panel-header-bg;
-    $base-panel-bg-1: $panel-bg-1;
-    $base-panel-bg-2: $panel-bg-2;
+    $base-panel-bg-1: $gray-100;
+    $base-panel-bg-2: $gray-200;
     $base-panel-bg-3: $panel-bg-3;
 
     $well-bg: $gray-400;
@@ -376,9 +376,17 @@ $node-var: var(--bs-node);
 $shard-var: var(--bs-shard);
 $orchestrator-var: var(--bs-orchestrator);
 $progress-var: var(--bs-progress);
+
 $body-bg-var: var(--bs-body-bg-rgb);
+
 $text-color-var: var(--text-color);
 $text-muted-var: var(--text-muted);
 $text-emphasis-var: var(--text-emphasis);
+
 $border-color-var: var(--bs-border-color);
 $border-color-light-var: var(--border-color-light);
+
+$panel-header-bg-var: var(--panel-header-bg);
+$panel-bg-1-var: var(--panel-bg-1);
+$panel-bg-2-var: var(--panel-bg-2);
+$panel-bg-3-var: var(--panel-bg-3);

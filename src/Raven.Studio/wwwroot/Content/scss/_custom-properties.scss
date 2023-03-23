@@ -1,6 +1,29 @@
+// CSS custom properties for font color (outside .bs5 to fix regressions)
 :root {
     --text-color: #{$base-text-color};
     --text-muted: #{$base-text-muted-color};
     --text-emphasis: #{$base-text-emphasis-color};
     --border-color-light: #{$border-color-light};
+
+    --panel-header-bg: #{$base-panel-header-bg};
+    --panel-bg-1: #{$base-panel-bg-1};
+    --panel-bg-2: #{$base-panel-bg-2};
+    --panel-bg-3: #{$base-panel-bg-3};
+}
+
+.modal-content,
+.panel,
+.dropdown-menu,
+.card,
+.popup {
+    --text-color: #{$text-color};
+    --text-muted: #{$text-muted-color};
+    --text-emphasis: #{$text-emphasis-color};
+
+    --panel-header-bg: #{$panel-header-bg};
+    --panel-bg-1: #{$panel-bg-1};
+    --panel-bg-2: #{$panel-bg-2};
+    --panel-bg-3: #{$panel-bg-3};
+
+    color: var(--text-color);
 }
