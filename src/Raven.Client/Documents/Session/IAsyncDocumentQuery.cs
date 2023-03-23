@@ -74,6 +74,7 @@ namespace Raven.Client.Documents.Session
     }
 
     public interface IAsyncRawDocumentQuery<T> :
+        IPagingDocumentQueryBase<T, IAsyncRawDocumentQuery<T>>,
         IQueryBase<T, IAsyncRawDocumentQuery<T>>,
         IAsyncDocumentQueryBase<T>
     {

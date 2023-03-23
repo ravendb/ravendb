@@ -1227,7 +1227,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         private string ToString(bool compatibilityMode)
         {
             if (QueryRaw != null)
-                return QueryRaw;
+            {
+                if (compatibilityMode)
+                    return QueryRaw;
+
+                var rawQueryText = new StringBuilder(QueryRaw);
+                BuildPagination(rawQueryText);
+
+                return rawQueryText.ToString();
+            }
 
             if (_currentClauseDepth != 0)
                 throw new InvalidOperationException(string.Format("A clause was not closed correctly within this query, current clause depth = {0}", _currentClauseDepth));
