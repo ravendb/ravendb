@@ -2585,6 +2585,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     AddToFieldsToFetch(ToJs(call), "cmpxchg");
                     return;
                 }
+
+                if (IsRawCall(call))
+                {
+                    HandleSelectRaw(call, lambdaExpression);
+                    return;
+                }
             }
 
             var expressionInfo = GetMember(body);
@@ -2769,6 +2775,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     fieldToFetch.Alias = null;
                 }
             }
+
             if (_declareBuilder != null)
                 AddReturnStatementToOutputFunction(body);
         }
@@ -2826,6 +2833,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
             AddToFieldsToFetch(path, alias);
         }
 
+        private void HandleSelectRaw(MethodCallExpression callExpression, LambdaExpression lambdaExpression)
+        {
+            AddFromAlias(lambdaExpression.Parameters[0].Name);
+            _declareBuilder ??= new StringBuilder();
+            AddReturnStatementToOutputFunction(callExpression);
+        }
 
         private string GetSelectPathOrConstantValue(MemberExpression member)
         {
@@ -3170,11 +3183,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private string TranslateSelectBodyToJs(Expression expression)
         {
             var sb = new StringBuilder();
-
-            sb.Append("{ ");
-
+          
             if (expression is NewExpression newExpression)
             {
+                sb.Append("{ ");
+
                 for (int index = 0; index < newExpression.Arguments.Count; index++)
                 {
                     var name = GetSelectPath(newExpression.Members[index]);
@@ -3183,7 +3196,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         if (index > 0)
                             sb.Append(", ");
-                        
+
                         _jsProjectionNames.Add(name);
                         sb.Append(name).Append(" : ").Append(TranslateSelectBodyToJs(newExpression.Arguments[index]));
                     }
@@ -3196,6 +3209,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (expression is MemberInitExpression mie)
             {
+                sb.Append("{ ");
+
                 for (int index = 0; index < mie.Bindings.Count; index++)
                 {
                     var field = mie.Bindings[index] as MemberAssignment;
@@ -3207,22 +3222,26 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         if (index > 0)
                             sb.Append(", ");
-                        
+
                         _jsProjectionNames.Add(name);
                         sb.Append(name).Append(" : ").Append(TranslateSelectBodyToJs(field.Expression));
                         continue;
                     }
-                   
+
                     AddJsProjection(name, field.Expression, sb, index != 0);
-                    
+
                 }
             }
-            
-            if (expression is MemberExpression memberExpression)
-                AddJsProjection(memberExpression.Member.Name, memberExpression, sb, false);
 
+            if (expression is MemberExpression or MethodCallExpression)
+            { 
+                if (IsRawOrTimeSeriesCall(expression, out string script) == false)
+                    script = ToJs(expression);
+                
+                sb.Append(script);
+                return sb.ToString();
+            }
             sb.Append(" }");
-
             return sb.ToString();
         }
 
@@ -3303,12 +3322,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private bool IsRawOrTimeSeriesCall(Expression expression, out string script)
         {
             script = null;
-
             if (!(expression is MethodCallExpression mce))
                 return false;
-
+            
             if (IsRawCall(mce))
             {
+
+                if (typeof(T).IsPrimitive || typeof(T) == typeof(string))
+                    throw new NotSupportedException($"Unsupported parameter type {expression.Type.Name}. Primitive types/string types are not allowed in Raw<T>() method.");
+
                 if (mce.Arguments.Count == 1)
                 {
                     script = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
