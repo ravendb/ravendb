@@ -851,6 +851,12 @@ namespace Raven.Server.ServerWide
                     if (IsPassive())
                         await Engine.WaitForLeaveState(RachisState.Passive, ServerShutdown);
 
+                    if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < 60_000)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(15), ServerShutdown);
+                        continue;
+                    }
+
                     publicUrl ??= GetNodeHttpServerUrl();
                     privateUrl ??= Configuration.Core.ClusterServerUrl?.ToString() ?? publicUrl;
 
@@ -867,7 +873,7 @@ namespace Raven.Server.ServerWide
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Failed to update my private url to {privateUrl ?? "N/A"}", e);
 
-                    await Task.Delay(1000, ServerShutdown);
+                    await Task.Delay(TimeSpan.FromSeconds(1), ServerShutdown);
                 }
             }
         }
