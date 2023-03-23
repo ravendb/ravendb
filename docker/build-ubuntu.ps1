@@ -11,8 +11,7 @@ $ErrorActionPreference = "Stop"
 
 . ".\common.ps1"
 
-function GetPackageFileName($arch)
-{
+function GetPackageFileName ($version, $arch) {
     switch ($arch) {
         "arm32v7" { 
             return "RavenDB-$version-raspberry-pi.tar.bz2"
@@ -31,7 +30,7 @@ function GetPackageFileName($arch)
 
 function GetUbuntuVersionFromDockerfile($DockerfileDir, $DockerfileName) {
     $dockerfilePath = Join-Path $DockerfileDir "Dockerfile.$arch"
-    $ubuntuVersion = Get-Content $dockerfilePath | Select-String -Pattern "(?<=FROM\s+mcr\.microsoft\.com\/dotnet\/runtime-deps:)(\d+\.\d+)-(.*)"
+    $ubuntuVersion = Get-Content $dockerfilePath | Select-String -Pattern "(?<=FROM\s+mcr\.microsoft\.com\/dotnet\/runtime-deps:)(\d+\.\d+)-([a-zA-Z]+)(.*)"
     return $ubuntuVersion.Matches.Groups[2].Value
 }
 
@@ -71,7 +70,7 @@ function SetupDebBuildEnvironment($arch, $ubuntuVersion){
 
 
 function BuildUbuntuDockerImage ($version, $arch) {
-    $packageFileName = GetPackageFileName $arch
+    $packageFileName = GetPackageFileName $version $arch
     $artifactsPackagePath = Join-Path -Path $ArtifactsDir -ChildPath $packageFileName
 
     if ([string]::IsNullOrEmpty($artifactsPackagePath)) {
