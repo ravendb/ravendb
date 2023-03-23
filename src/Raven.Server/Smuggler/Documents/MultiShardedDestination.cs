@@ -226,6 +226,11 @@ namespace Raven.Server.Smuggler.Documents
 
                 await _last.WriteTombstoneKeyAsync(key);
             }
+
+            public ValueTask FlushAsync()
+            {
+                return ValueTask.CompletedTask;
+            }
         }
 
 
@@ -238,10 +243,10 @@ namespace Raven.Server.Smuggler.Documents
                 _allocator = allocator;
             }
 
-            public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
+            public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlushing = null)
             {
                 var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, item.Document.Id);
-                await _actions[shardNumber].WriteDocumentAsync(item, progress);
+                await _actions[shardNumber].WriteDocumentAsync(item, progress, beforeFlushing);
             }
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)

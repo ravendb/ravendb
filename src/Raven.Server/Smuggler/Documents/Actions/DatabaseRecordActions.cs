@@ -54,7 +54,7 @@ public class DatabaseRecordActions : IDatabaseRecordActions
         if (databaseRecord == null)
             return;
 
-        var configuration =  DatabasesLandlord.CreateDatabaseConfiguration(_server, _name, databaseRecord.Settings);
+        var configuration = DatabasesLandlord.CreateDatabaseConfiguration(_server, _name, databaseRecord.Settings);
 
         if (databaseRecord.ConflictSolverConfig != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ConflictSolverConfig))
         {
@@ -150,9 +150,9 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 pullReplication.TaskId = 0;
                 pullReplication.Disabled = true;
                 tasks.Add(_server.SendToLeaderAsync(new UpdatePullReplicationAsHubCommand(_name, RaftIdGenerator.DontCareId)
-                    {
-                        Definition = pullReplication
-                    }
+                {
+                    Definition = pullReplication
+                }
                 ));
             }
 
@@ -523,7 +523,7 @@ public class DatabaseRecordActions : IDatabaseRecordActions
             result.DatabaseRecord.QueueEtlsUpdated = true;
         }
 
-        if (databaseRecord.IndexesHistory.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.IndexesHistory))
+        if (databaseRecord.IndexesHistory?.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.IndexesHistory))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring Indexes History configuration from smuggler");

@@ -398,6 +398,7 @@ namespace Raven.Server.Smuggler.Documents
             await using (var compareExchangeActions = _destination.CompareExchange(_databaseName, _context, BackupKind, withDocuments: true))
             {
                 List<LazyStringValue> legacyIdsToDelete = null;
+                Func<ValueTask> beforeFlush = compareExchangeActions == null ? null : compareExchangeActions.FlushAsync;
 
                 await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections, documentActions))
                 {
@@ -477,7 +478,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    await documentActions.WriteDocumentAsync(item, result.Documents);
+                    await documentActions.WriteDocumentAsync(item, result.Documents, beforeFlush);
                 }
 
                 await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, documentActions, result);
@@ -548,8 +549,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (tombstone.LowerId == null)
                         ThrowInvalidData();
 
-                    if (_options.IncludeArtificial == false && 
-                        tombstone.Flags.Contain(DocumentFlags.Artificial) && 
+                    if (_options.IncludeArtificial == false &&
+                        tombstone.Flags.Contain(DocumentFlags.Artificial) &&
                         tombstone.Flags.Contain(DocumentFlags.FromResharding) == false)
                     {
                         continue;
