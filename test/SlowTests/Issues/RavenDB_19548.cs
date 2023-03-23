@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -16,85 +18,159 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task TestCase()
+        public async Task RawRavenQueryProjectionWithoutNewKeyword()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new TestObj { Name = "Omer", Prop1 = "123456", Prop2 = "12", Birthday = new DateTime(1994, 3, 22) });
+                    await session.StoreAsync(new User { Name = "Omer", Id = "123456", Age = "28", Birthday = new DateTime(1994, 3, 22) });
                     await session.SaveChangesAsync();
                 }
 
+                /* should work:
+                * simple linq select
+                */
                 using (var session = store.OpenAsyncSession())
                 {
-                    var asyncDocumentQuery = from result in session.Query<TestObj>() select result.Prop1.Length;
-                    Assert.Equal(6, await asyncDocumentQuery.SingleAsync());
-                    Assert.Equal("from 'TestObjs' select Prop1.Length"
+                    var asyncDocumentQuery = from result in session.Query<User>() select result.Id.Length;
+
+                    Assert.Equal("from 'Users' select Id.Length"
                         , asyncDocumentQuery.ToString());
                 }
 
-
+                /* should work:
+                 * primitive type with 'select new'
+                 */
                 using (var session = store.OpenAsyncSession())
                 {
-                    var asyncDocumentQuery = from result in session.Query<TestObj>()
-                                             let ret = RavenQuery.Raw<int>("result.Prop1.length")
-                                             select ret;
+                    var asyncDocumentQuery = from result in session.Query<User>()
+                        let ret = RavenQuery.Raw<int>("result.Id.length")
+                        select new { userIdLength = ret };
 
-                    var i = await asyncDocumentQuery.SingleAsync();
-                    Assert.Equal(6, i);
-                    Assert.Equal("declare function output(result) {\r\n\tvar ret = result.Prop1.length;\r\n\treturn { ret : ret };\r\n}\r\nfrom 'TestObjs' as result select output(result)"
-                        , asyncDocumentQuery.ToString());
-
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var asyncDocumentQuery = from result in session.Query<TestObj>()
-                                             let ret = RavenQuery.Raw<int>("result.Prop1.length")
-                                             let ret2 = RavenQuery.Raw<int>("result.Prop2.length")
-                                             let x = ret + ret2
-                                             select x;
-
-                    var i = await asyncDocumentQuery.SingleAsync();
-                    Assert.Equal(8, i);
-                    Assert.Equal("declare function output(result) {\r\n\tvar ret = result.Prop1.length;\r\n\tvar ret2 = result.Prop2.length;\r\n\tvar x = ret+ret2;\r\n\treturn { x : x };\r\n}\r\nfrom 'TestObjs' as result select output(result)"
+                    Assert.Equal(
+                        "declare function output(result) {\r\n\tvar ret = result.Id.length;\r\n\treturn { userIdLength : ret };\r\n}\r\nfrom 'Users' as result select output(result)"
                         , asyncDocumentQuery.ToString());
                 }
 
+                /*
+                 * shouldn't work:
+                 * primitive type without 'select new' (just 'select').
+                 * client throws nested exception InvalidOperationException(NotSupportedException)
+                 */
                 using (var session = store.OpenAsyncSession())
                 {
-                    var asyncDocumentQuery = from result in session.Query<TestObj>()
-                                             let ret = RavenQuery.Raw<string>("result.Name.substr(0,3)")
-                                             select ret;
-
-                    var queryResult = await asyncDocumentQuery.ToListAsync();
-                    Assert.Equal("Ome", queryResult[0]);
-                    Assert.Equal("declare function output(result) {\r\n\tvar ret = result.Name.substr(0,3);\r\n\treturn { ret : ret };\r\n}\r\nfrom 'TestObjs' as result select output(result)"
-                        , asyncDocumentQuery.ToString());
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var asyncDocumentQuery = from result in session.Query<TestObj>()
-                        let ret = RavenQuery.Raw<DateTime>("new Date(Date.parse(result.Birthday))")
+                    var asyncDocumentQuery = from result in session.Query<User>()
+                        let ret = RavenQuery.Raw<int>("result.Id.length")
                         select ret;
 
-                    var queryResult = await asyncDocumentQuery.ToListAsync();
-                    Assert.Equal(new DateTime(1994, 3, 22), queryResult[0].Date);
-                    Assert.Equal(
-                        "declare function output(result) {\r\n\tvar ret = new Date(Date.parse(result.Birthday));\r\n\treturn { ret : ret };\r\n}\r\nfrom 'TestObjs' as result select output(result)",
-                        asyncDocumentQuery.ToString());
+                    Action act = () => asyncDocumentQuery.ToString();
+                    var exception = Assert.Throws<NotSupportedException>(act);
+                    Assert.Equal("Unsupported parameter type Int32. Primitive types/string types are not allowed in Raw<T>() method without wrapping them as an object.",
+                        exception.InnerException.Message);
                 }
+
+                /* should work:
+                 * object type X 'select new'
+                 */
+                using (var session = store.OpenAsyncSession())
+                {
+                    var asyncDocumentQuery = from result in session.Query<User>()
+                        let ret = RavenQuery.Raw<object>("result.Id.length")
+                        select new { myval = ret };
+
+                    Assert.Equal(
+                        "declare function output(result) {\r\n\tvar ret = result.Id.length;\r\n\treturn { myval : ret };\r\n}\r\nfrom 'Users' as result select output(result)"
+                        , asyncDocumentQuery.ToString());
+                }
+
+                /* should work:
+                 * object type X 'select' with JS object inside Raw() function
+                 */
+                using (var session = store.OpenAsyncSession())
+                {
+                    var asyncDocumentQuery = from result in session.Query<User>()
+                        let ret = RavenQuery.Raw<object>("{ retval : result.Id.length}")
+                        select ret;
+
+                    Assert.Equal(
+                        "declare function output(result) {\r\n\tvar ret = { retval : result.Id.length};\r\n\treturn ret;\r\n}\r\nfrom 'Users' as result select output(result)"
+                        , asyncDocumentQuery.ToString());
+                }
+
+                /* shouldn't work:
+                 * object type X 'select'  
+                 * server throws InvalidOperationException: "Query returning a single function call result must return an object"
+                 */
+                using (var session = store.OpenAsyncSession())
+                {
+                    var asyncDocumentQuery = from result in session.Query<User>()
+                        let ret = RavenQuery.Raw<object>("result.Id.length")
+                        select ret;
+
+                    Assert.Equal(
+                        "declare function output(result) {\r\n\tvar ret = result.Id.length;\r\n\treturn ret;\r\n}\r\nfrom 'Users' as result select output(result)"
+                        , asyncDocumentQuery.ToString());
+
+                }
+
+                /* should work:
+                 * object type X 'select function' with JS object inside
+                 */
+                using (var session = store.OpenAsyncSession())
+                {
+                    var asyncDocumentQuery = from result in session.Query<User>()
+                        select RavenQuery.Raw<object>("{ retval : result.Id.length }");
+
+                    Assert.Equal(
+                        "declare function output(result) {\r\n\treturn { retval : result.Id.length };\r\n}\r\nfrom 'Users' as result select output(result)"
+                        , asyncDocumentQuery.ToString());
+                }
+
+                /* shouldn't work:
+                 * object type X 'select function'
+                 * server throws InvalidOperationException: "Query returning a single function call result must return an object"
+                 */
+                using (var session = store.OpenAsyncSession())
+                {
+                    var asyncDocumentQuery = from result in session.Query<User>()
+                        select RavenQuery.Raw<object>("result.Id.length");
+
+                    Assert.Equal(
+                        "declare function output(result) {\r\n\treturn result.Id.length;\r\n}\r\nfrom 'Users' as result select output(result)"
+                        , asyncDocumentQuery.ToString());
+                }
+
+                /* shouldn't work:
+                * primitive type X 'select function'
+                * client throws nested exception InvalidOperationException(NotSupportedException)
+                */
+                using (var session = store.OpenAsyncSession())
+                {
+                    var asyncDocumentQuery = from result in session.Query<User>()
+                        select RavenQuery.Raw<int>("result.Id.length");
+
+                    Action act = () => asyncDocumentQuery.ToString();
+                    var exception = Assert.Throws<NotSupportedException>(act);
+                    Assert.Equal("Unsupported parameter type Int32. Primitive types/string types are not allowed in Raw<T>() method without wrapping them as an object.",
+                        exception.InnerException.Message);
+                }
+
+
             }
+
+        }
+
+        private class User
+        {
+            public string Id { get; set; }
+            public string Age { get; set; }
+            public DateTime Birthday { get; set; }
+            public string Name { get; set; }
         }
     }
-    class TestObj
-    {
-        public string Id { get; set; }
-        public string Prop1 { get; set; }
-        public string Prop2 { get; set; }
-        public DateTime Birthday { get; set; }
-        public string Name { get; set; }
-    }
+
+
 }
+
+
