@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Jint;
 using Jint.Native;
 using Jint.Runtime.Interop;
@@ -46,7 +47,7 @@ namespace Raven.Server.Documents.ETL
         {
             if (_behaviorFunctions != null)
             {
-                _behaviorFunctionsRun = Database.Scripts.GetScriptRunner(_behaviorFunctions, true, out BehaviorsScript);
+                _behaviorFunctionsRun = Database.Scripts.GetScriptRunner(_behaviorFunctions, readOnly: true, ignoreValidationErrors: true, out BehaviorsScript);
 
                 if (debugMode)
                     BehaviorsScript.DebugMode = true;

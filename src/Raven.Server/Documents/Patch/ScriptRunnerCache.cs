@@ -71,13 +71,18 @@ namespace Raven.Server.Documents.Patch
 
         public ScriptRunner.ReturnRun GetScriptRunner(Key key, bool readOnly, out ScriptRunner.SingleRun patchRun)
         {
+            return GetScriptRunner(key, readOnly, ignoreValidationErrors: false, out patchRun);
+        }
+
+        public ScriptRunner.ReturnRun GetScriptRunner(Key key, bool readOnly, bool ignoreValidationErrors, out ScriptRunner.SingleRun patchRun)
+        {
             if (key == null)
             {
                 patchRun = null;
                 return new ScriptRunner.ReturnRun();
             }
             var scriptRunner = GetScriptRunner(key);
-            var returnRun = scriptRunner.GetRunner(out patchRun);
+            var returnRun = scriptRunner.GetRunner(ignoreValidationErrors, out patchRun);
             patchRun.ReadOnly = readOnly;
             return returnRun;
         }
