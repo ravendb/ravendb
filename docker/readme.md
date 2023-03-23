@@ -7,6 +7,11 @@
 
     - based on Windows Nanoserver image (run using Windows containers). 
 
+### What's new
+RavenDB `v6.0` docker image includes **switching to a non-root user**, providing far better security.
+Containers are now using RavenDB *.deb package*. More information about how to deal with the breaking changes in the **migration from 5.4 image** section.
+
+
 ### Image tags
 
 The following tags are available:
@@ -77,13 +82,13 @@ Each of the images above makes use of 2 volumes:
 
 - settings volume - holding RavenDB configuration,
 
-    Ubuntu container: `/opt/RavenDB/config`
+    Ubuntu container: `/etc/ravendb/`
 
     Windows container: `C:\RavenDB\Config`
 
 - databases volume - used for persistence of RavenDB data,
 
-    Ubuntu container: `/opt/RavenDB/Server/RavenData`
+    Ubuntu container: `/var/lib/ravendb/data`
 
     Windows container: `C:/RavenDB/Server/RavenData`
 
@@ -149,3 +154,20 @@ RAVEN_ARGS='--log-to-console'
 ##### How to set a custom config file?
 
 Mount it as a docker volume and use `--config-path PATH_TO_CONFIG` command line argument in order to use settings file from outside of server directory.
+
+##### What migration process from 5.4 image looks like?
+
+Data is stored in a different directory, and needs to be migrated or linked on the update. The container is now using the .deb package, which is well documented [here](https://github.com/ravendb/ravendb/blob/v5.4/scripts/linux/pkg/linux-packaging.md). The link describes new filesystem locations and permissions. 
+
+We highly recommend migrating your data from legacy data directory to the new one `/var/lib/ravendb/data/`.
+
+However, running the server using `run-server.sh`, which is an entrypoint for the container, causes to run `link-legacy-datadir.sh` script. It checks whether there is data stored in the legacy data directory. If so, it tries to create symlink with the new data directory. If the permissions are insufficent for the 'ravendb' user (which is running the container) it'll fail with appropriate error message.
+
+##### How to run as different UID?
+To run with different UID or GID, you need to build the appropriate ubuntu image with these build args (both are optional):
+
+` --build-arg "RAVEN_USER_ID=999" --build-arg "RAVEN_GROUP_ID=999"`
+
+The `ravendb` user will use the following UID/GID, it's being set in the .deb package post-installation process.
+
+
