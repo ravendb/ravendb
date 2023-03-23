@@ -76,7 +76,7 @@ class searchBox {
                 return false; // prevent default
             } else if (e.key === "Enter") {
                 this.searchQueryHasFocus(false);
-                this.dispatchGoToItem();
+                this.dispatchGoToItem(e.ctrlKey);
                 return false;
             }
             
@@ -199,29 +199,33 @@ class searchBox {
         })
     }
     
-    private dispatchGoToItem() {
+    private dispatchGoToItem(newTab: boolean) {
         const highlight = this.highlightedItem();
         if (highlight) {
             switch (highlight.listing) {
                 case "recentDocument":
-                    this.goToDocument(this.recentDocumentsList()[highlight.index]);
+                    this.goToDocument(this.recentDocumentsList()[highlight.index], newTab);
                     break;
                 case "matchedDocument":
-                    this.goToDocument(this.matchedDocumentIds()[highlight.index]);
+                    this.goToDocument(this.matchedDocumentIds()[highlight.index], newTab);
                     break;
             }
         } else if (this.searchQuery()) {
             // user hit enter but values still loading
             // try to load document by name
-            this.goToDocument(this.searchQuery());
+            this.goToDocument(this.searchQuery(), newTab);
         }
     }
     
-    goToDocument(documentName: string) {
+    goToDocument(documentName: string, newTab: boolean) {
         const url = appUrl.forEditDoc(documentName, activeDatabaseTracker.default.database());
         this.hide();
         this.searchQuery("");
-        router.navigate(url);
+        if (newTab) {
+            window.open(url, "_blank").focus();
+        } else {
+            router.navigate(url);
+        }
     }
 
     private show() {
