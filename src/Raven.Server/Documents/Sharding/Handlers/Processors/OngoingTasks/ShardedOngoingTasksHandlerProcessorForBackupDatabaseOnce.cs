@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -17,14 +18,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override void ScheduleBackup(BackupConfiguration backupConfiguration, long operationId, string backupName, Stopwatch sw, OperationCancelToken token)
+        protected override void ScheduleBackup(BackupConfiguration backupConfiguration, long operationId, string backupName, Stopwatch sw, DateTime startTime, OperationCancelToken token)
         {
             var t = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartBackupOperationResult>, ShardedBackupResult, ShardedBackupProgress>(
                 operationId,
                 OperationType.DatabaseBackup,
                 $"Manual backup for database: {RequestHandler.DatabaseName}",
                 detailedDescription: null,
-                commandFactory: (context, shardNumber) => new BackupOperation.BackupCommand(RequestHandler.ShardExecutor.Conventions, backupConfiguration, operationId),
+                commandFactory: (context, shardNumber) => new BackupOperation.
+                    BackupCommand(RequestHandler.ShardExecutor.Conventions, backupConfiguration, startTime, operationId),
                 token);
 
             var _ = t.ContinueWith(_ =>

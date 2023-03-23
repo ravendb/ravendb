@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         private static int _oneTimeBackupCounter;
 
-        protected abstract void ScheduleBackup(BackupConfiguration backupConfiguration, long operationId, string backupName, Stopwatch sw, OperationCancelToken token);
+        protected abstract void ScheduleBackup(BackupConfiguration backupConfiguration, long operationId, string backupName, Stopwatch sw, DateTime startTime, OperationCancelToken token);
 
         protected abstract long GetNextOperationId();
 
@@ -45,6 +45,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 var backupConfiguration = JsonDeserializationServer.BackupConfiguration(json);
                 var backupName = $"One Time Backup #{Interlocked.Increment(ref _oneTimeBackupCounter)}";
                 var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
+                var startTime = RequestHandler.GetDateTimeQueryString("startTime", required: false) ?? DateTime.UtcNow;
 
                 BackupUtils.CheckServerHealthBeforeBackup(ServerStore, backupName);
 
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 {
                     var cancelToken = RequestHandler.CreateOperationToken();
 
-                    ScheduleBackup(backupConfiguration, operationId, backupName, sw, cancelToken);
+                    ScheduleBackup(backupConfiguration, operationId, backupName, sw, startTime, cancelToken);
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
