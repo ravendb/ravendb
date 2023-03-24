@@ -58,16 +58,10 @@ if (-not (Test-Path $distroOutputDir)) {
     mkdir $distroOutputDir
 }
 
-$packageFileDir = "$PSScriptRoot/temp"
-if ($env:PACKAGE_FILE_DIR)
-{
-    $packageFileDir = $($env:PACKAGE_FILE_DIR)
-}
-
 docker run --rm -it `
     --platform $env:DOCKER_BUILDPLATFORM `
     -v "$($env:OUTPUT_DIR):/dist" `
-    -v "$($packageFileDir):/cache" `
+    -v "$PSScriptRoot/temp:/cache" `
     -e RAVENDB_VERSION=$ravenVersion  `
     -e "DOTNET_RUNTIME_VERSION=$env:DOTNET_RUNTIME_VERSION" `
     -e "DOTNET_DEPS_VERSION=$env:DOTNET_DEPS_VERSION" `
