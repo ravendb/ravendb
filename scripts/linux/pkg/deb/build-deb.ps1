@@ -59,9 +59,9 @@ if (-not (Test-Path $distroOutputDir)) {
 }
 
 $packageFileDir = "$PSScriptRoot/temp"
-if ($env:TARBALL_DIR)
+if ($env:PACKAGE_FILE_DIR)
 {
-    $packageFileDir = $($env:TARBALL_DIR)
+    $packageFileDir = $($env:PACKAGE_FILE_DIR)
 }
 
 docker run --rm -it `
