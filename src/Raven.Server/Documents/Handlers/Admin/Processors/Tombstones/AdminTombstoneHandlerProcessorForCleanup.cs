@@ -34,8 +34,5 @@ internal class AdminTombstoneHandlerProcessorForCleanup : AbstractAdminTombstone
         }
     }
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<CleanupTombstonesCommand.Response> command, OperationCancelToken token)
-    {
-        return RequestHandler.ExecuteRemoteAsync(command, token.Token);
-    }
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<CleanupTombstonesCommand.Response> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 }
