@@ -5,6 +5,7 @@ using Corax;
 using Corax.Mappings;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -32,6 +33,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         public ScoreDoc Score;
 
+        public IndexFieldsPersistence IndexFieldsPersistence;
+
         public RetrieverInput(Lucene.Net.Documents.Document luceneDocument, ScoreDoc score, IState state)
         {
             LuceneDocument = luceneDocument;
@@ -41,14 +44,16 @@ namespace Raven.Server.Documents.Queries.Results
 
             CoraxEntry = default;
             Unsafe.SkipInit(out DocumentId);
+            Unsafe.SkipInit(out IndexFieldsPersistence);
         }
 
-        public RetrieverInput(IndexFieldsMapping knownFields, IndexEntryReader coraxEntry, string id)
+        public RetrieverInput(IndexFieldsMapping knownFields, IndexEntryReader coraxEntry, string id, IndexFieldsPersistence indexFieldsPersistence)
         {
             CoraxEntry = coraxEntry;
             KnownFields = knownFields;
             DocumentId = id;
-
+            IndexFieldsPersistence = indexFieldsPersistence;
+            
             Unsafe.SkipInit(out LuceneDocument);
             Unsafe.SkipInit(out State);
             Unsafe.SkipInit(out Score);

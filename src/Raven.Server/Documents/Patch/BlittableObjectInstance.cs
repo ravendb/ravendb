@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Patch
                             }
                         }
 
-                        value = FromObject(parent.Engine, tupleList);
+                        value = FromObject(parent.Engine, tupleList.ToArray());
                     }
                         break;
 
@@ -219,8 +219,10 @@ namespace Raven.Server.Documents.Patch
                     {
                         if (fieldReader.TryReadTuple(out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
                             goto case IndexEntryFieldType.Invalid;
-
-                        if (valueInEntry.Contains((byte)'.'))
+                        var hasTime = parent.IndexRetriever.IndexFieldsPersistence.HasTimeValues(binding?.FieldNameAsString ?? property);
+                        if (hasTime)
+                            value = Encodings.Utf8.GetString(valueInEntry);
+                        else if (valueInEntry.Contains((byte)'.'))
                             value = dVal;
                         else
                             value = lVal;
@@ -240,7 +242,7 @@ namespace Raven.Server.Documents.Patch
                             geoList.Add(Encodings.Utf8.GetString(spatialIterator.Geohash));
                         }
 
-                        value = FromObject(parent.Engine, geoList);
+                        value = FromObject(parent.Engine, geoList.ToArray());
                     }
 
                         break;
@@ -254,6 +256,7 @@ namespace Raven.Server.Documents.Patch
                     }
                         break;
 
+                    case IndexEntryFieldType.ListWithEmpty:
                     case IndexEntryFieldType.ListWithNulls:
                     case IndexEntryFieldType.List:
                     {
@@ -274,7 +277,7 @@ namespace Raven.Server.Documents.Patch
                             }
                         }
 
-                        value = FromObject(parent.Engine, array);
+                        value = FromObject(parent.Engine, array.ToArray());
                     }
                         break;
                     case IndexEntryFieldType.RawList:
@@ -294,7 +297,7 @@ namespace Raven.Server.Documents.Patch
                         }
 
 
-                        value = value = FromObject(parent.Engine, arrayItems);
+                        value = FromObject(parent.Engine, arrayItems);
                     }
                         break;
                     case IndexEntryFieldType.Raw:
