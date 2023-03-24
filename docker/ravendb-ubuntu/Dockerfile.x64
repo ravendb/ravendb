@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/runtime-deps:7.0-jammy
 
-ARG PATH_TO_DEB RAVEN_USER_ID RAVEN_GROUP_ID
+ARG path_to_deb
 
 RUN apt-get update \
     && apt-get install \
@@ -21,7 +21,7 @@ ENV RAVEN_ARGS='' \
 
 EXPOSE 8080 38888 161
 
-COPY "${PATH_TO_DEB}" /opt/ravendb.deb
+COPY "${path_to_deb}" /opt/ravendb.deb
 
 RUN apt install /opt/ravendb.deb -y \
     && apt-get autoremove -y \
