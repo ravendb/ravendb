@@ -288,6 +288,8 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, CleanupTombstonesCommand.Response> CleanupTombstonesResponse = GenerateJsonDeserializationRoutine<CleanupTombstonesCommand.Response>();
 
+        internal static readonly Func<BlittableJsonReaderObject, GetTombstonesStateCommand.Response> GetTombstonesStateResponse = GenerateJsonDeserializationRoutine<GetTombstonesStateCommand.Response>();
+
         public class Parameters
         {
             private Parameters()
