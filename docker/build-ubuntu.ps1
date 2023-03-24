@@ -115,13 +115,13 @@ function BuildUbuntuDockerImage ($version, $arch) {
             $env:OUTPUT_DIR = $(Convert-Path $DockerfileDir)
             $env:TARBALL_DIR = Resolve-Path $ArtifactsDir
              
-            Push-Location $(Get-Location)
+            $currentScriptWorkingDirectory = $(Get-Location)
             $buildScriptPath = (Resolve-Path "..\scripts\linux\pkg\deb\build-deb.ps1").Path
-            Set-Location $(Split-Path $($buildScriptPath))
+            Set-Location $(Split-Path $buildScriptPath)
 
             . "./build-deb.ps1"
         
-            Pop-Location
+            Set-Location $currentScriptWorkingDirectory
             CheckLastExitCode
 
             $matchingDebFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$version*$archNameToMatch*.deb" }
@@ -141,7 +141,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
     }
 
     Write-Host "Providing deb path '$($pathToDeb)' to Dockerfile.."
-    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "PATH_TO_DEB=./$matchingDebFile" --build-arg "RAVEN_USER_ID=999" --build-arg "RAVEN_GROUP_ID=999"
+    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "PATH_TO_DEB=./$matchingDebFile" --build-arg "RAVEN_USER_ID=999"
     CheckLastExitCode
     
     foreach ($tag in $tags[1..$tags.Length]) {
