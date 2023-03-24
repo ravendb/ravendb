@@ -4,8 +4,7 @@ param(
     $RavenDockerSettingsPath = "..\src\Raven.Server\Properties\Settings\settings.docker.posix.json",
     $Arch = "x64",
     $DockerfileDir = "./ravendb-ubuntu",
-    $DebPackagePath="",
-    [switch]$NoCache)
+    $DebPackagePath="")
 
 $ErrorActionPreference = "Stop"
 
@@ -36,55 +35,55 @@ function GetUbuntuVersionFromDockerfile($DockerfileDir, $DockerfileName) {
     return $ubuntuVersion.Matches.Groups[1].Value
 }
 
-function GetBuildScriptNameMatchingArchOSVer($arch, $ubuntuVersion){
+function GetBuildScriptNameMatchingArchOSVer($arch, $ubuntu_version){
     switch ($arch) {
         "x64" {
-            switch ($ubuntuVersion) {
+            switch ($ubuntu_version) {
                 "bionic" {
-                    $buildScriptFileName = "build-deb_ubuntu-bionic_amd64.ps1"
+                    $build_script = "build-deb_ubuntu-bionic_amd64.ps1"
                 }
                 "focal" {
-                    $buildScriptFileName = "build-deb_ubuntu-focal_amd64.ps1"
+                    $build_script = "build-deb_ubuntu-focal_amd64.ps1"
                 }
                 "jammy" {
-                    $buildScriptFileName = "build-deb_ubuntu-jammy_amd64.ps1"
+                    $build_script = "build-deb_ubuntu-jammy_amd64.ps1"
                 }
                 Default {
-                    Write-Error "ERROR: Unexpected Ubuntu version $($ubuntuVersion). Supported versions: bionic, focal, jammy."
+                    Write-Error "ERROR: Unexpected Ubuntu version $($ubuntu_version). Supported versions: bionic, focal, jammy."
                     exit 1
                 }
             }
         }
         "arm64v8" {
-            switch ($ubuntuVersion) {
+            switch ($ubuntu_version) {
                 "bionic" {
-                    $buildScriptFileName = "build-deb_ubuntu-bionic_arm64.ps1"
+                    $build_script = "build-deb_ubuntu-bionic_arm64.ps1"
                 }
                 "focal" {
-                    $buildScriptFileName = "build-deb_ubuntu-focal_arm64.ps1"
+                    $build_script = "build-deb_ubuntu-focal_arm64.ps1"
                 }
                 "jammy" {
-                    $buildScriptFileName = "build-deb_ubuntu-jammy_arm64.ps1"
+                    $build_script = "build-deb_ubuntu-jammy_arm64.ps1"
                 }
                 Default {
-                    Write-Error "ERROR: Unsupported Ubuntu version $($ubuntuVersion) for ARM64v8 architecture. Supported version: bionic, focal, jammy."
+                    Write-Error "ERROR: Unsupported Ubuntu version $($ubuntu_version) for ARM64v8 architecture. Supported version: bionic, focal, jammy."
                     exit 1
                 }
             }
         }
         "arm32v7" {
-            switch ($ubuntuVersion) {
+            switch ($ubuntu_version) {
                 "bionic" {
-                    $buildScriptFileName = "build-deb_ubuntu-bionic_armhf.sh"
+                    $build_script = "build-deb_ubuntu-bionic_armhf.sh"
                 }
                 "focal" {
-                    $buildScriptFileName = "build-deb_ubuntu-focal_armhf.sh"
+                    $build_script = "build-deb_ubuntu-focal_armhf.sh"
                 }
                 "jammy" {
-                    $buildScriptFileName = "build-deb_ubuntu-jammy_armhf.sh"
+                    $build_script = "build-deb_ubuntu-jammy_armhf.sh"
                 }
                 Default {
-                    Write-Error "ERROR: Unsupported Ubuntu version $($ubuntuVersion) for ARM32v7 architecture. Supported version: bionic, focal, jammy."
+                    Write-Error "ERROR: Unsupported Ubuntu version $($ubuntu_version) for ARM32v7 architecture. Supported version: bionic, focal, jammy."
                     exit 1
                 }
             }
@@ -94,7 +93,6 @@ function GetBuildScriptNameMatchingArchOSVer($arch, $ubuntuVersion){
             exit 1
         }
     }
-    return $buildScriptFileName
 }
 
 
@@ -120,56 +118,19 @@ function BuildUbuntuDockerImage ($version, $arch) {
     $fullNameTag = $tags[0]
 
     if ([string]::IsNullOrEmpty($DebPackagePath)) {
-        $ubuntuVersion = GetUbuntuVersionFromDockerfile $DockerfileDir "Dockerfile.$arch"
-        $buildScriptFileName = GetBuildScriptNameMatchingArchOSVer $arch $ubuntuVersion
-        $buildScriptPath = (Resolve-Path $(Join-Path "..\scripts\linux\pkg\deb\" $buildScriptFileName)).Path
-        
-        $archNameToMatch = switch ($arch) {
-            "x64" { "amd64"; break }
-            "arm32v7" { "arm32"; break }
-            "arm64v8" { "arm64"; break }
-            Default {
-                Write-Error "ERROR: Unsupported architecture $($arch)"
-                exit 1
-            }
-        }
-        
+        $ubuntu_version = GetUbuntuVersionFromDockerfile $DockerfileDir "Dockerfile.$($arch)"
+        $build_script_name = GetBuildScriptNameMatchingArchOSVer $arch $ubuntu_version
+        $build_script_full_path = Join-Path "..\scripts\linux\pkg\deb\" $build_script_name
 
-        if (!$NoCache) {
-            $matchingFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$archNameToMatch*.deb" }
-        }
-
-        if(!$matchingFile) {
-            $env:RAVENDB_VERSION = "5.4.100"
-            $env:OUTPUT_DIR = $(Convert-Path $DockerfileDir)
-        
-            $currentScriptWorkingDirectory = $(Get-Location)
-            Set-Location $(Split-Path $buildScriptPath)
-    
-            Write-Host $buildScriptFileName
-            . "./$buildScriptFileName"
-        
-            Set-Location $currentScriptWorkingDirectory
-            CheckLastExitCode
-
-            $matchingFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$archNameToMatch*.deb" }
-            if ($matchingFile) {
-                $pathToDeb = $matchingFile.FullName
-            } else {
-                Write-Host "FATAL: No ravendb .deb file for '$($arch)' architecture found after running script building .deb package." 
-                exit 1
-            }
-        }
-        else {
-            $pathToDeb = $matchingFile.FullName
-        }
+        $path_to_deb = Join-Path $DockerfileDir "ravendb-$($arch)-$($ubuntu_version).deb"
+        $env:OUTPUT_DIR = $path_to_deb
+        $build_script_full_path 
     }
     else {
-        $pathToDeb = $DebPackagePath
+        $path_to_deb="$DebPackagePath"
     }
 
-    Write-Host "Providing deb path '$($pathToDeb)' to Dockerfile.."
-    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "path_to_deb=./$matchingFile"
+    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg path_to_deb="$path_to_deb"
     CheckLastExitCode
     
     foreach ($tag in $tags[1..$tags.Length]) {
