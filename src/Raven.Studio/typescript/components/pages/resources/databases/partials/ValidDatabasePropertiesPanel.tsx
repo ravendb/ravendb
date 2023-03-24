@@ -167,11 +167,11 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                 href="#"
                                 onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
                             >
-                                <i className="icon-warning me-1" /> {alerts} Alerts
+                                <i className="icon-warning me-1" /> {alerts.toLocaleString()} Alerts
                             </a>
                         ) : (
                             <>
-                                <i className="icon-warning me-1" /> {alerts} Alerts
+                                <i className="icon-warning me-1" /> {alerts.toLocaleString()} Alerts
                             </>
                         )}
                     </RichPanelDetailItem>
@@ -187,11 +187,11 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                 href="#"
                                 onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
                             >
-                                <i className="icon-rocket me-1" /> {performanceHints} Performance hints
+                                <i className="icon-rocket me-1" /> {performanceHints.toLocaleString()} Performance hints
                             </a>
                         ) : (
                             <>
-                                <i className="icon-rocket me-1" /> {performanceHints} Performance hints
+                                <i className="icon-rocket me-1" /> {performanceHints.toLocaleString()} Performance hints
                             </>
                         )}
                     </RichPanelDetailItem>

@@ -56,8 +56,8 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
 
                     {nodeInfo.location.nodeTag}
                 </div>
-                <div className="entries">{entriesCount}</div>
-                <div className="errors">{nodeInfo.details?.errorCount ?? ""}</div>
+                <div className="entries">{entriesCount.toLocaleString()}</div>
+                <div className="errors">{nodeInfo.details?.errorCount.toLocaleString() ?? ""}</div>
 
                 <IndexProgress nodeInfo={nodeInfo} />
 
