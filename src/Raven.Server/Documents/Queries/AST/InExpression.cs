@@ -27,6 +27,11 @@ namespace Raven.Server.Documents.Queries.AST
             return $"{Source} in ({string.Join(", ", Values.Select(x => x.GetText(parent)))})";
         }
 
+        public override string GetTextWithAlias(IndexQueryServerSide parent)
+        {
+            return $"{Source} in ({string.Join(", ", Values.Select(x => x.GetTextWithAlias(parent)))})";
+        }
+
         public override bool Equals(QueryExpression other)
         {
             if (!(other is InExpression ie))

@@ -20,6 +20,11 @@ namespace Raven.Server.Documents.Queries.AST
             return $"not {Expression.GetText(parent)}";
         }
 
+        public override string GetTextWithAlias(IndexQueryServerSide parent)
+        {
+            return $"not {Expression.GetTextWithAlias(parent)}";
+        }
+
         public override bool Equals(QueryExpression other)
         {
             if (!(other is NegatedExpression ne))

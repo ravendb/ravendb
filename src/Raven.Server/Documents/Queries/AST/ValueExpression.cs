@@ -32,6 +32,11 @@ namespace Raven.Server.Documents.Queries.AST
             return Token.Value;
         }
 
+        public override string GetTextWithAlias(IndexQueryServerSide parent)
+        {
+            return GetText(parent);
+        }
+
         public override bool Equals(QueryExpression other)
         {
             if (!(other is ValueExpression ve))
