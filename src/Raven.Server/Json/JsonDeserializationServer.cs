@@ -31,6 +31,7 @@ using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Commands.Revisions;
+using Raven.Server.Documents.Commands.Tombstones;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
@@ -124,7 +125,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TestOlapEtlScript> TestOlapEtlScript = GenerateJsonDeserializationRoutine<TestOlapEtlScript>();
 
         public static readonly Func<BlittableJsonReaderObject, TestElasticSearchEtlScript> TestElasticSearchEtlScript = GenerateJsonDeserializationRoutine<TestElasticSearchEtlScript>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, TestQueueEtlScript> TestQueueEtlScript = GenerateJsonDeserializationRoutine<TestQueueEtlScript>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
@@ -284,6 +285,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, BucketsResults> BucketsResults = GenerateJsonDeserializationRoutine<BucketsResults>();
 
         internal static readonly Func<BlittableJsonReaderObject, BucketInfo> BucketInfo = GenerateJsonDeserializationRoutine<BucketInfo>();
+
+        internal static readonly Func<BlittableJsonReaderObject, CleanupTombstonesCommand.Response> CleanupTombstonesResponse = GenerateJsonDeserializationRoutine<CleanupTombstonesCommand.Response>();
 
         public class Parameters
         {
