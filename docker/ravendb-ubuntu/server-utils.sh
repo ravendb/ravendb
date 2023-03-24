@@ -2,7 +2,7 @@
 
 function get-server-var() {
 # This script takes path to server variable as first arg (pass the path without . at the start)
-/usr/lib/ravendb/server/rvn admin-channel <<EOF | grep -o '{"Result":[^}]*}' | jq .Result | sed 's-"--g'
+./rvn admin-channel <<EOF | grep -o '{"Result":[^}]*}' | jq .Result | sed 's-"--g'
 script server
 return server.$1
 EXEC
@@ -11,7 +11,7 @@ EOF
 
 function get-database-var() {
 # This script takes database name as first arg and path to variable as second arg (pass the path without . at the start)
-/usr/lib/ravendb/server/rvn admin-channel <<EOF | grep -o '{"Result":[^}]*}' | jq .Result | sed 's-"--g'
+./rvn admin-channel <<EOF | grep -o '{"Result":[^}]*}' | jq .Result | sed 's-"--g'
 script database $1
 return database.$2
 EXEC
