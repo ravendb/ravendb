@@ -47,7 +47,7 @@ function SetupDebBuildEnvironment($arch, $ubuntuVersion){
             . "..\scripts\linux\pkg\deb\set-raven-platform-armhf.ps1"
         }
         Default {
-            throw "ERROR: Unsupported architecture $($arch)"
+            Write-Error "ERROR: Unsupported architecture $($arch)"
             exit 1
         }
     }
@@ -63,7 +63,7 @@ function SetupDebBuildEnvironment($arch, $ubuntuVersion){
             . "..\scripts\linux\pkg\deb\set-ubuntu-jammy.ps1"
         }
         Default {
-            throw "ERROR: Unsupported Ubuntu version $($ubuntuVersion). Supported version: bionic, focal, jammy."
+            Write-Error "ERROR: Unsupported Ubuntu version $($ubuntuVersion). Supported version: bionic, focal, jammy."
             exit 1
         }
     }
@@ -100,7 +100,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
             "arm32v7" { "arm32"; break }
             "arm64v8" { "arm64"; break }
             Default {
-                throw "ERROR: Unsupported architecture $($arch)"
+                Write-Error "ERROR: Unsupported architecture $($arch)"
                 exit 1
             }
         }
