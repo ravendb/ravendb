@@ -17,6 +17,11 @@ namespace Raven.Server.Documents.Queries.AST
             return ToString();
         }
 
+        public override string GetTextWithAlias(IndexQueryServerSide parent)
+        {
+            return GetText(parent);
+        }
+
         public override bool Equals(QueryExpression other)
         {
             return other is TrueExpression;

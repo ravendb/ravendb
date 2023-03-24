@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries.AST
         {
             if (Compound.Count == 1)
                 return Compound[0].Value;
-            return _field ?? (_field = JoinCompoundFragments(0));
+            return _field ??= JoinCompoundFragments(0);
         }
 
 
@@ -59,8 +59,7 @@ namespace Raven.Server.Documents.Queries.AST
             return sb.ToString();
         }
 
-        public string FieldValueWithoutAlias => 
-            _fieldWithoutAlias ?? (_fieldWithoutAlias = JoinCompoundFragments(1));
+        public string FieldValueWithoutAlias => _fieldWithoutAlias ??= JoinCompoundFragments(1);
 
         public override string ToString()
         {
@@ -72,6 +71,11 @@ namespace Raven.Server.Documents.Queries.AST
             return string.IsNullOrEmpty(FieldValueWithoutAlias) 
                 ? FieldValue 
                 : FieldValueWithoutAlias;
+        }
+
+        public override string GetTextWithAlias(IndexQueryServerSide parent)
+        {
+            return FieldValue;
         }
 
         public override bool Equals(QueryExpression other)

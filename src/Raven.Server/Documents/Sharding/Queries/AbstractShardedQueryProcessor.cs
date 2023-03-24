@@ -141,10 +141,10 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         // - For collection queries that specify startsWith by id(), we need to send to all shards
         // - For collection queries without any where clause, we need to send to all shards
         // - For indexes, we sent to all shards
-        
+
         BlittableJsonReaderObject queryTemplate;
 
-        if (Query.SourceQueryJson is {Modifications: null} && Query.QueryParameters == null)
+        if (Query.SourceQueryJson is { Modifications: null } && Query.QueryParameters == null)
             queryTemplate = Query.SourceQueryJson;
         else
             queryTemplate = Query.ToJson(Context);
@@ -370,7 +370,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 if (Query.Metadata.OrderBy != null && Query.Metadata.OrderByFieldNames.Contains(groupByField))
                     continue;
 
-                clone.OrderBy.Add((new FieldExpression(new List<StringSegment> {groupByField}), OrderByFieldType.Implicit, Ascending: true));
+                clone.OrderBy.Add((new FieldExpression(new List<StringSegment> { groupByField }), OrderByFieldType.Implicit, Ascending: true));
                 orderByFields.Add(new OrderByField(new QueryFieldName(groupByField, isQuoted: false), OrderByFieldType.Implicit, ascending: true));
             }
 
@@ -439,11 +439,11 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                         missingGroupByFieldsFromProjection.Remove(fe.FieldValue);
                         break;
                     case MethodExpression me:
-                    {
-                        if (me.ToString() == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
-                            hasKeyField = true;
-                        break;
-                    }
+                        {
+                            if (me.ToString() == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+                                hasKeyField = true;
+                            break;
+                        }
                 }
 
                 if (clone.Select[i].Alias is null)
@@ -575,15 +575,10 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         if (includeBuilder != null)
             documentQuery.Include(includeBuilder);
 
-        var queryText = documentQuery.ToString();
-
         if (Query.Metadata.Query.Select is { Count: > 0 })
         {
-            var selectStartPosition = Query.Metadata.QueryText.IndexOf("select", StringComparison.OrdinalIgnoreCase);
-
-            var selectClause = Query.Metadata.QueryText.Substring(selectStartPosition);
-
-            queryText += $" {selectClause}";
+            var queryData = GetQueryData(Query);
+            documentQuery.SelectFields<dynamic>(queryData);
         }
 
         Dictionary<int, BlittableJsonReaderObject> queryTemplates = new();
@@ -600,7 +595,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 {
                     [listParameterName] = GetIds()
                 },
-                [nameof(IndexQuery.Query)] = queryText
+                [nameof(IndexQuery.Query)] = documentQuery.ToString()
             };
 
             queryTemplates[shardId] = Context.ReadObject(q, "query");
@@ -615,6 +610,20 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
 
         return queryTemplates;
+
+        static QueryData GetQueryData(IndexQueryServerSide query)
+        {
+            string[] fields = new string[query.Metadata.Query.Select.Count];
+            string[] projections = new string[query.Metadata.Query.Select.Count];
+
+            for (var i = 0; i < query.Metadata.Query.Select.Count; i++)
+            {
+                fields[i] = query.Metadata.Query.Select[i].Expression.GetTextWithAlias(query);
+                projections[i] = query.Metadata.Query.Select[i].Alias.HasValue ? query.Metadata.Query.Select[i].Alias.ToString() : null;
+            }
+            
+            return new QueryData(fields, projections, fromAlias: query.Metadata.Query.From.Alias?.Value);
+        }
     }
 
     protected async ValueTask HandleMissingDocumentIncludesAsync<T, TIncludes>(TransactionOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext, HashSet<string> missingIncludes,

@@ -7,6 +7,7 @@ namespace Raven.Server.Documents.Queries.AST
     public class MethodExpression : QueryExpression
     {
         private string _text;
+        private string _textWithAlias;
 
         public StringSegment Name;
         public StringSegment Alias;
@@ -25,9 +26,13 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string GetText(IndexQueryServerSide parent)
         {
-            return _text ?? (_text = $"{Name}({string.Join(", ", Arguments.Select(x => x.GetText(parent)))})");
+            return _text ??= $"{Name}({string.Join(", ", Arguments.Select(x => x.GetText(parent)))})";
         }
 
+        public override string GetTextWithAlias(IndexQueryServerSide parent)
+        {
+            return _textWithAlias ??= $"{Name}({string.Join(", ", Arguments.Select(x => x.GetTextWithAlias(parent)))})";
+        }
 
         public override bool Equals(QueryExpression other)
         {

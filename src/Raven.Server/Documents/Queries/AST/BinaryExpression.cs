@@ -49,8 +49,30 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string GetText(IndexQueryServerSide parent)
         {
+            string op = GetOperatorText(Operator);
+
+            return Left.GetText(parent) + " " + op + " " + Right.GetText(parent);
+        }
+
+        public override string GetTextWithAlias(IndexQueryServerSide parent)
+        {
+            string op = GetOperatorText(Operator);
+
+            return Left.GetTextWithAlias(parent) + " " + op + " " + Right.GetTextWithAlias(parent);
+        }
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is BinaryExpression be))
+                return false;
+
+            return Operator == be.Operator && Left.Equals(be.Left) && Right.Equals(be.Right);
+        }
+
+        private static string GetOperatorText(OperatorType operatorType)
+        {
             string op;
-            switch (Operator)
+            switch (operatorType)
             {
                 case OperatorType.Equal:
                     op = "=";
@@ -80,15 +102,7 @@ namespace Raven.Server.Documents.Queries.AST
                     throw new ArgumentOutOfRangeException();
             }
 
-            return Left.GetText(parent) + " " + op + " " + Right.GetText(parent);
-        }
-
-        public override bool Equals(QueryExpression other)
-        {
-            if (!(other is BinaryExpression be))
-                return false;
-
-            return Operator == be.Operator && Left.Equals(be.Left) && Right.Equals(be.Right);
+            return op;
         }
     }
 }

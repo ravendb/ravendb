@@ -26,6 +26,11 @@ namespace Raven.Server.Documents.Queries.AST
             return Source.GetText(parent) + " between " + Min.GetText(parent) + " and " + Max.GetText(parent);
         }
 
+        public override string GetTextWithAlias(IndexQueryServerSide parent)
+        {
+            return Source.GetTextWithAlias(parent) + " between " + Min.GetTextWithAlias(parent) + " and " + Max.GetTextWithAlias(parent);
+        }
+
         public override bool Equals(QueryExpression other)
         {
             if (!(other is BetweenExpression be))
