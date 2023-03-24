@@ -150,7 +150,7 @@ internal class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerP
                 HasRefreshConfiguration = record.RefreshConfiguration != null,
                 HasRevisionsConfiguration = record.RevisionsConfiguration != null,
                 DeletionInProgress = record.DeletionInProgress,
-                IndexesCount = record.Indexes?.Count
+                IndexesCount = record.CountOfIndexes
             };
 
             if (record.IsSharded)
