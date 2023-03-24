@@ -34,13 +34,13 @@ namespace SlowTests.MailingList
                     CreateDataSet(session, "stations/energy", "EX");
                 }
 
-                // WaitForUserToContinueTheTest(store);
+                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
                         .WaitForNonStaleResults()
-                        .AddOrder("Split_N1_D_Range", true)
+                        .AddOrder("Split_N1", true, OrderingType.Double)
                         .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
                         .Take(1024);
                     var result = query.ToList();
@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
                         .WaitForNonStaleResults()
-                        .AddOrder("Split_N1_D_Range", true)
+                        .AddOrder("Split_N1", true, OrderingType.Double)
                         .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
                         .Take(1024);
                     var result = query.ToList();
