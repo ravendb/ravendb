@@ -2,42 +2,28 @@ FROM mcr.microsoft.com/dotnet/runtime-deps:7.0-jammy
 
 RUN apt-get update \
     && apt-get install -y \
-    && apt-get install --no-install-recommends openssl unzip jq curl libc6-dev -y
+    && apt-get install --no-install-recommends openssl bzip2 jq curl -y
 
-ENV RAVEN_ARGS='' \
-    RAVEN_SETTINGS='' \
-    RAVEN_IN_DOCKER='true' \
-    RAVEN_Setup_Mode='Initial' \
-    RAVEN_ServerUrl_Tcp='38888' \
-    RAVEN_AUTO_INSTALL_CA='true' \
-    RAVEN_DataDir='/var/lib/ravendb/data' \
-    RAVEN_Indexing_NugetPackagesPath='/var/lib/ravendb/nuget' \
-    RAVEN_Logs_Path='/var/log/ravendb/logs' \
-    RAVEN_Security_AuditLog_FolderPath='/var/log/ravendb/audit' \
-    RAVEN_Security_MasterKey_Path='/etc/ravendb/security/master.key' \
-    RAVEN_Setup_Certificate_Path='/etc/ravendb/security/server.pfx'
+ENV RAVEN_ARGS='' RAVEN_SETTINGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
 
 EXPOSE 8080 38888 161
 
-COPY package-22.04.zip /opt/ravendb-deb.zip
+COPY RavenDB.tar.bz2 /opt/RavenDB.tar.bz2
 
 RUN cd /opt \
-    && unzip ravendb-deb.zip \
-    && rm ravendb-deb.zip \
-    && apt-get remove unzip -y \
+    && tar xjvf RavenDB.tar.bz2 \
+    && rm RavenDB.tar.bz2 \
+    && apt-get remove bzip2 -y \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-RUN dpkg -i /opt/ravendb_5.4-0_amd64.deb
-USER ravendb:ravendb
-
-COPY run-raven.sh healthcheck.sh link-legacy-datadir.sh /usr/lib/ravendb/
-COPY settings.json server-utils.sh cert-utils.sh /usr/lib/ravendb/server/
-
-RUN /usr/lib/ravendb/link-legacy-datadir.sh
+COPY run-raven.sh healthcheck.sh /opt/RavenDB/
+COPY settings.json server-utils.sh cert-utils.sh /opt/RavenDB/Server/
 
 HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
-VOLUME /var/lib/ravendb/data /etc/ravendb/
-WORKDIR /usr/lib/ravendb
+
+WORKDIR /opt/RavenDB/Server
+
+VOLUME /opt/RavenDB/Server/RavenData /opt/RavenDB/config
 
 CMD [ "/bin/bash", "/opt/RavenDB/run-raven.sh" ]
