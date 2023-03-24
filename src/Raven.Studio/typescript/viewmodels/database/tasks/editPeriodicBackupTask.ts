@@ -134,6 +134,10 @@ class editPeriodicBackupTask extends shardViewModelBase {
         if (this.configuration() instanceof periodicBackupConfiguration) {
             document.getElementById("taskName").focus();
         }
+
+        if (this.db.isSharded()) {
+            this.configuration().backupType("Backup");
+        }
     }
 
     attached() {

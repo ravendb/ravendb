@@ -33,7 +33,7 @@
                 <label class="control-label col-sm-4 col-lg-2">Backup Type <i class="required"></i> <small><i class="backup-info icon-info text-info"></i></small></label>
                 <div class="col-sm-4" data-bind="validationOptions: { insertMessages: false }">
                     <div class="dropdown btn-block">
-                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="disable: $root.db.isSharded()">
                             <span data-bind="text: backupType() || 'Select backup type..'"></span>
                             <span class="caret"></span>
                         </button>

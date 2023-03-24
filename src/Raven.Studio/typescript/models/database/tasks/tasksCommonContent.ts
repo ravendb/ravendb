@@ -32,6 +32,7 @@
         <div>Notes:</div>
         <ul>
             <li><small>An incremental Snapshot is the same as an incremental Backup</small></li>
+            <li><small>An incremental Snapshot is not supported in sharded databases</small></li>
         </ul>`;
     
     static readonly backupAgeInfo = 

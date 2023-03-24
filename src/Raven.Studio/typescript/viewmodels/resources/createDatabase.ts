@@ -433,6 +433,7 @@ class createDatabase extends dialogViewModelBase {
             case "newDatabase":
                 return _.without(sections, restoreSection);
             case "restore":
+                sections.find(x => x.id === "replicationAndSharding").name = "Replication";
                 return _.without(sections);
         }
     }
