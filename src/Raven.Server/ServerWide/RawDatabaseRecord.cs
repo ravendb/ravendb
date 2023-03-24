@@ -907,12 +907,27 @@ namespace Raven.Server.ServerWide
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.Indexes?.Count ?? 0;
+                    return (_materializedRecord.Indexes?.Count ?? 0) + (_materializedRecord.AutoIndexes?.Count ?? 0);
 
                 if (_countOfIndexes == null)
                 {
                     _countOfIndexes = 0;
                     if (_record.TryGet(nameof(DatabaseRecord.Indexes), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject)
+                                _countOfIndexes++;
+                        }
+                    }
+
+                    if (_record.TryGet(nameof(DatabaseRecord.AutoIndexes), out obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                         for (var i = 0; i < obj.Count; i++)
