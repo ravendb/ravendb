@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.ETL
         {
             Etag = tombstone.Etag;
 
-            Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Document || tombstone.Type == Tombstone.TombstoneType.Attachment);
+            Debug.Assert(tombstone.Type is Tombstone.TombstoneType.Document or Tombstone.TombstoneType.Attachment or Tombstone.TombstoneType.Revision or Tombstone.TombstoneType.Counter);
             DocumentId = tombstone.LowerId;
             Collection = collection;
 
