@@ -31,7 +31,8 @@ function GetPackageFileName($arch)
 
 function GetUbuntuVersionFromDockerfile($DockerfileDir, $DockerfileName) {
     $dockerfilePath = Join-Path $DockerfileDir "Dockerfile.$arch"
-    $ubuntuVersion = Get-Content $dockerfilePath | Select-String -Pattern "(?<=FROM\s+mcr\.microsoft\.com\/dotnet\/runtime-deps:7\.0-)(.*)"
+    $dockerfileContents = Get-Content $dockerfilePath
+    $ubuntuVersion = $dockerfileContents | Select-String -Pattern "(?<=FROM\s+mcr\.microsoft\.com\/dotnet\/runtime-deps:7\.0-)(.*)"
     return $ubuntuVersion.Matches.Groups[1].Value
 }
 
