@@ -107,33 +107,33 @@ function BuildUbuntuDockerImage ($version, $arch) {
         
 
         if (!$NoCache) {
-            $matchingDebFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$archNameToMatch*.deb" }
+            $matchingFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$archNameToMatch*.deb" }
         }
 
-        if(!$matchingDebFile) {
+        if(!$matchingFile) {
             $env:RAVENDB_VERSION = $version
             $env:OUTPUT_DIR = $(Convert-Path $DockerfileDir)
-            $env:TARBALL_DIR = Resolve-Path $ArtifactsDir
-             
+            $env:PACKAGE_FILE_DIR = Resolve-Path $ArtifactsDir
+        
             $currentScriptWorkingDirectory = $(Get-Location)
             $buildScriptPath = (Resolve-Path "..\scripts\linux\pkg\deb\build-deb.ps1").Path
             Set-Location $(Split-Path $buildScriptPath)
-
+    
             . "./build-deb.ps1"
         
             Set-Location $currentScriptWorkingDirectory
             CheckLastExitCode
 
-            $matchingDebFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$version*$archNameToMatch*.deb" }
-            if ($matchingDebFile) {
-                $pathToDeb = $matchingDebFile.FullName
+            $matchingFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$version*$archNameToMatch*.deb" }
+            if ($matchingFile) {
+                $pathToDeb = $matchingFile.FullName
             } else {
                 Write-Host "FATAL: No ravendb .deb file for '$($arch)' architecture found after running script building .deb package." 
                 exit 1
             }
         }
         else {
-            $pathToDeb = $matchingDebFile.FullName
+            $pathToDeb = $matchingFile.FullName
         }
     }
     else {
@@ -141,7 +141,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
     }
 
     Write-Host "Providing deb path '$($pathToDeb)' to Dockerfile.."
-    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "PATH_TO_DEB=./$matchingDebFile" --build-arg "RAVEN_USER_ID=999"
+    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "PATH_TO_DEB=./$matchingFile" --build-arg "RAVEN_USER_ID=999"
     CheckLastExitCode
     
     foreach ($tag in $tags[1..$tags.Length]) {
