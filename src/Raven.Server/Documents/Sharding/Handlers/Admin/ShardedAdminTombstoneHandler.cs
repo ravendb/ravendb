@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Tombstones;
 using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Routing;
 
@@ -9,7 +10,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         [RavenShardedAction("/databases/*/admin/tombstones/cleanup", "POST")]
         public async Task Cleanup()
         {
-            using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support Tombstone cleanup."))
+            using (var processor = new ShardedAdminTombstoneHandlerProcessorForCleanup(this))
                 await processor.ExecuteAsync();
         }
 

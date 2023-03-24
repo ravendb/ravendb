@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Server.Documents.Handlers.Admin.Processors.Tombstones;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -10,20 +11,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/tombstones/cleanup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task Cleanup()
         {
-            var count = await Database.TombstoneCleaner.ExecuteCleanup();
-
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName("Value");
-                    writer.WriteInteger(count);
-
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new AdminTombstoneHandlerProcessorForCleanup(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/tombstones/state", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
