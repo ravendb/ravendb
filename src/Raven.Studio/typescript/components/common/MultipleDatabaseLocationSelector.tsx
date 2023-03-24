@@ -1,7 +1,6 @@
 ﻿import React, { useState } from "react";
-import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetListCard, NodeSetList } from "./NodeSet";
+import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetList } from "./NodeSet";
 import { Checkbox } from "./Checkbox";
-import { CheckboxTriple } from "components/common/CheckboxTriple";
 import { Card, Label } from "reactstrap";
 import { Icon } from "./Icon";
 import classNames from "classnames";
@@ -19,6 +18,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
     const [uniqId] = useState(() => _.uniqueId("location-selector-"));
 
     const isAllNodesSelected: boolean = locations.length === selectedLocations.length;
+    const isSomeNodesSelected: boolean = locations.length > selectedLocations.length && selectedLocations.length > 0;
 
     const isShardSelected = (location: databaseLocationSpecifier): boolean => selectedLocations.includes(location);
 
@@ -29,8 +29,16 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
         );
     };
 
+    const isNodeIndeterminate = (nodeTag: string): boolean => {
+        return (
+            selectedLocations.filter((x) => x.nodeTag === nodeTag).length > 0 &&
+            selectedLocations.filter((x) => x.nodeTag === nodeTag).length <
+                locations.filter((x) => x.nodeTag === nodeTag).length
+        );
+    };
+
     const toggleAllNodes = () => {
-        if (isAllNodesSelected) {
+        if (isAllNodesSelected || selectedLocations.length !== 0) {
             setSelectedLocations([]);
         } else {
             setSelectedLocations(locations);
@@ -49,23 +57,12 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
         setSelectedLocations((prev) => {
             const filtered = prev.filter((x) => x.nodeTag !== nodeTag);
 
-            if (isNodeSelected(nodeTag)) {
+            if (isNodeSelected(nodeTag) || isNodeIndeterminate(nodeTag)) {
                 return filtered;
             } else {
                 return [...filtered, ...locations.filter((x) => x.nodeTag === nodeTag)];
             }
         });
-    };
-
-    const nodesSelectionState = (): checkbox => {
-        if (isAllNodesSelected) {
-            return "checked";
-        }
-        if (selectedLocations.length === 0) {
-            return "unchecked";
-        }
-
-        return "some_checked";
     };
 
     const uniqueNodeTags = [...new Set(locations.map((x) => x.nodeTag))];
@@ -76,9 +73,11 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                 <>
                     <NodeSet className={classNames(className)}>
                         <NodeSetLabel>
-                            <CheckboxTriple
-                                onChanged={toggleAllNodes}
-                                state={nodesSelectionState()}
+                            <Checkbox
+                                size="lg"
+                                toggleSelection={toggleAllNodes}
+                                indeterminate={isSomeNodesSelected}
+                                selected={isAllNodesSelected}
                                 title="Select all or none"
                             />
                         </NodeSetLabel>
@@ -106,9 +105,11 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                 </>
             ) : (
                 <>
-                    <CheckboxTriple
-                        onChanged={toggleAllNodes}
-                        state={nodesSelectionState()}
+                    <Checkbox
+                        size="lg"
+                        toggleSelection={toggleAllNodes}
+                        indeterminate={isSomeNodesSelected}
+                        selected={isAllNodesSelected}
                         title="Select all or none"
                     />
 
@@ -125,6 +126,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                                                 <div className="d-flex justify-content-center">
                                                     <Checkbox
                                                         id={nodeId}
+                                                        indeterminate={isNodeIndeterminate(nodeTag)}
                                                         toggleSelection={() => toggleNode(nodeTag)}
                                                         selected={isNodeSelected(nodeTag)}
                                                     />
