@@ -8,19 +8,19 @@
 $toggle-label-fontsize: 0.75em !default;
 
 $toggle-baseheight: 35px !default;
-$toggle-bg: colors.$well-bg !default;
-$toggle-color: colors.$text-color !default;
-$toggle-hover-color: colors.$text-emphasis-color !default;
+$toggle-bg: colors.$well-bg-var !default;
+$toggle-color: colors.$text-color-var !default;
+$toggle-hover-color: colors.$text-emphasis-var !default;
 $toggle-icon-size: 21px !default;
 $toggle-width-scale: 2.1 !default;
 
-$toggle-knob-highlight-color: colors.$text-emphasis-color !default;
-$toggle-knob-muted-color: colors.$text-muted-color !default;
+$toggle-knob-highlight-color: colors.$text-emphasis-var !default;
+$toggle-knob-muted-color: colors.$text-muted-var !default;
 
-$toggle-knob-bg: colors.$primary !default;
+$toggle-knob-bg: colors.$primary-var !default;
 $toggle-knob-scale: 0.8 !default;
 
-$toggle-knob-hover-bg: colors.$primary !default;
+$toggle-knob-hover-bg: colors.$primary-var !default;
 $toggle-knob-hover-scale: 0.9 !default;
 
 .radio-toggle {
@@ -178,7 +178,7 @@ $multi-toggle-bg: $toggle-bg !default;
 $multi-toggle-color: $toggle-color !default;
 $multi-toggle-hover-color: $toggle-hover-color !default;
 
-$multi-toggle-knob-highlight-color: $toggle-knob-highlight-color !default;
+$multi-toggle-knob-highlight-color: var(--bs-white) !default;
 $multi-toggle-knob-muted-color: $toggle-knob-muted-color !default;
 
 $multi-toggle-knob-bg: $toggle-knob-bg !default;
@@ -271,12 +271,12 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
 
             input[type="checkbox"] {
                 &:hover + label::after {
-                    background-color: rgba($multi-toggle-knob-hover-bg, 0.75) !important;
+                    opacity: 0.75;
                 }
                 &:checked {
                     & + label {
                         &:after {
-                            background-color: rgba($multi-toggle-knob-hover-bg, 1) !important;
+                            opacity: 1;
                         }
                     }
                 }

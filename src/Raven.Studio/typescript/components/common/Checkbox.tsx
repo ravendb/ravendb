@@ -1,4 +1,4 @@
-﻿import React, { HTMLAttributes, ReactNode } from "react";
+﻿import React, { HTMLAttributes, ReactNode, useEffect, useLayoutEffect, useRef } from "react";
 import { Input, Label } from "reactstrap";
 import useId from "hooks/useId";
 import classNames from "classnames";
@@ -7,6 +7,7 @@ import "./Checkbox.scss";
 
 interface CheckboxProps extends Omit<HTMLAttributes<HTMLDivElement>, "className" | "children"> {
     selected: boolean;
+    indeterminate?: boolean;
     toggleSelection: () => void;
     children?: ReactNode | ReactNode[];
     color?: string;
@@ -18,15 +19,40 @@ interface CheckboxProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"
 }
 
 export function Checkbox(props: CheckboxProps) {
-    const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
+    const {
+        selected,
+        indeterminate,
+        toggleSelection,
+        children,
+        color,
+        size,
+        reverse,
+        className,
+        disabled,
+        id,
+        ...rest
+    } = props;
     const inputId = id ?? useId("checkbox");
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
     const colorClass = `form-check-${color ?? "secondary"}`;
     const sizeClass = size ? `form-check-${size}` : undefined;
 
+    const inputEl = useRef<HTMLInputElement>();
+
+    useLayoutEffect(() => {
+        inputEl.current.indeterminate = indeterminate;
+    });
+
     return (
         <div className={classNames(checkboxClass, colorClass, sizeClass, className)} {...rest}>
-            <Input type="checkbox" id={inputId} checked={selected} onChange={toggleSelection} disabled={disabled} />
+            <Input
+                type="checkbox"
+                innerRef={inputEl}
+                id={inputId}
+                checked={indeterminate ? undefined : selected}
+                onChange={toggleSelection}
+                disabled={disabled}
+            />
             {children && (
                 <Label check htmlFor={inputId}>
                     {children}
