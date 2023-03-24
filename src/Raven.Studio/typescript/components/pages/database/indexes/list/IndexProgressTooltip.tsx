@@ -58,14 +58,14 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                         </StatePill>
                     </LocationSpecificDetailsItem>
                     <LocationSpecificDetailsItem>
-                        <i className="icon-list" /> {nodeInfo.details.entriesCount} entries
+                        <i className="icon-list" /> {nodeInfo.details.entriesCount.toLocaleString()} entries
                     </LocationSpecificDetailsItem>
                     <LocationSpecificDetailsItem
                         className={classNames("errors", {
                             "text-danger": nodeInfo.details.errorCount > 0,
                         })}
                     >
-                        <i className="icon-warning" /> {nodeInfo.details.errorCount} errors
+                        <i className="icon-warning" /> {nodeInfo.details.errorCount.toLocaleString()} errors
                     </LocationSpecificDetailsItem>
                     {nodeInfo.details.stale ? (
                         <LocationSpecificDetailsItem className="status updating">

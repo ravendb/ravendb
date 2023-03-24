@@ -83,13 +83,13 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                             {localState.data?.loadError ? (
                                 <DatabaseLoadError error={localState.data.loadError} />
                             ) : (
-                                localState.data?.documentsCount
+                                localState.data?.documentsCount.toLocaleString()
                             )}
                         </div>
-                        <div className="entries">{localState.data?.indexingErrors}</div>
+                        <div className="entries">{localState.data?.indexingErrors?.toLocaleString()}</div>
                         <div className="entries">{localState.data?.indexingStatus}</div>
-                        <div className="entries">{localState.data?.alerts}</div>
-                        <div className="entries">{localState.data?.performanceHints}</div>
+                        <div className="entries">{localState.data?.alerts?.toLocaleString()}</div>
+                        <div className="entries">{localState.data?.performanceHints?.toLocaleString()}</div>
                         <div className="entries">
                             <SizeOnDisk info={localState.data} />
                         </div>
