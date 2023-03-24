@@ -11,6 +11,10 @@ import licenseModel = require("models/auth/licenseModel");
 import getCloudBackupCredentialsFromLinkCommand = require("commands/resources/getCloudBackupCredentialsFromLinkCommand");
 import backupCredentials = require("models/resources/creation/backupCredentials");
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import RestoreBackupConfigurationBase = Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
+import ShardedRestoreSettings = Raven.Client.Documents.Operations.Backups.Sharding.ShardedRestoreSettings;
+import RestoreBackupConfiguration = Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
+import shardingRestoreBackupDirectory from "models/resources/creation/shardingRestoreBackupDirectory";
 
 type shardTopologyItem = {
     replicas: KnockoutObservableArray<clusterNode>;
@@ -107,7 +111,38 @@ class databaseCreationModel {
                 const text: string = `${restorePoint.dateTime}, ${restorePoint.backupType()} Backup`;
                 return text;
             }
-        })
+        }),
+        
+        // sharding
+        
+        enableSharding: ko.observable<boolean>(false),
+        shardingBackupDirectories: ko.observableArray<shardingRestoreBackupDirectory>([new shardingRestoreBackupDirectory()]),
+
+        setShardingDirectoryNodeTag: (idx: number, nodeTag: string) => {
+            this.restore.shardingBackupDirectories()[idx].nodeTag(nodeTag);
+        },
+
+        setShardingDirectoryPath: (idx: number, directoryPath: string) => {
+            this.restore.shardingBackupDirectories()[idx].directoryPath(directoryPath);
+            
+            this.restoreSourceObject().getShardingFolderPathOptions(directoryPath)
+                .done((optionsList: string[]) => {
+                    this.restore.shardingBackupDirectories()[idx].directoryPathOptions(optionsList);
+                })
+        },
+        
+        addShardingDirectoryPath: () => {
+            this.restore.shardingBackupDirectories.push(new shardingRestoreBackupDirectory());
+            
+            this.restoreSourceObject().getShardingFolderPathOptions("")
+                .done((optionsList: string[]) => {
+                    this.restore.shardingBackupDirectories()[this.restore.shardingBackupDirectories().length - 1].directoryPathOptions(optionsList);
+                })
+        },
+        
+        removeShardingDirectoryPath: (idx: number) => {
+            this.restore.shardingBackupDirectories.splice(idx, 1);
+        }
     };
 
     restoreSourceObject: KnockoutComputed<backupCredentials.restoreSettings>; 
@@ -213,7 +248,7 @@ class databaseCreationModel {
             this.restore.restorePointError(null);
             this.fetchRestorePoints();
         });
-        
+
         // Raven Cloud - Backup Link 
         this.restore.ravenCloudCredentials().onCredentialsChange((backupLinkNewValue) => {
             if (_.trim(backupLinkNewValue)) {
@@ -263,6 +298,11 @@ class databaseCreationModel {
                 this.lockActiveTab(false);
             }
         });
+
+        this.restoreSourceObject().getShardingFolderPathOptions("")
+            .done((optionsList: string[]) => {
+                this.restore.shardingBackupDirectories()[0].directoryPathOptions(optionsList);
+            })
         
         const methods: Array<keyof this & string>  = ["useRestorePoint", "dataPathHasChanged", "backupDirectoryHasChanged",
             "remoteFolderAzureChanged", "remoteFolderAmazonChanged", "remoteFolderGoogleCloudChanged"];
@@ -578,11 +618,11 @@ class databaseCreationModel {
         this.restore.selectedRestorePoint.extend({
             validation: [
                 {
-                    validator: () => this.restoreSourceObject().isValid(),
+                    validator: () => this.restore.enableSharding() || this.restoreSourceObject().isValid(),
                     message: "Please enter valid source data"
                 },
                 {
-                    validator: () => !this.restore.restorePointError(),
+                    validator: () => this.restore.enableSharding() || !this.restore.restorePointError(),
                     message: `Couldn't fetch restore points, {0}`,
                     params: this.restore.restorePointError
                 },
@@ -590,14 +630,14 @@ class databaseCreationModel {
                     validator: (restorePoint: restorePoint) => {
                         if (restorePoint && restorePoint.isEncrypted && restorePoint.isSnapshotRestore) {
                             // check if license supports that
-                            return licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption;
+                            return this.restore.enableSharding() || (licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
                         }
                         return true;
                     },
                     message: "License doesn't support storage encryption"
                 },
                 {
-                    validator: (value: string) => !!value,
+                    validator: (value: string) => this.restore.enableSharding() || !!value,
                     message: "This field is required"
                 }
             ]
@@ -676,11 +716,39 @@ class databaseCreationModel {
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
 
-    toRestoreDatabaseDto(): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase {
+    toRestoreDatabaseDto(): RestoreBackupConfiguration {
         const dataDirectory = _.trim(this.path.dataPath()) || null;
-
-        const restorePoint = this.restore.selectedRestorePoint();
         const encryptDb = this.getEncryptionConfigSection().enabled();
+        
+        if (this.restore.enableSharding()) {
+
+            const shardRestoreSettings: ShardedRestoreSettings = {
+                Shards: Object.fromEntries(
+                    this.restore.shardingBackupDirectories().map((x, idx) => [
+                        idx,
+                        {
+                            ShardNumber: idx,
+                            FolderName: x.directoryPath(),
+                            NodeTag: x.nodeTag()
+                        }
+                    ])
+                )
+            };
+            
+            return {
+                DatabaseName: this.name(),
+                DisableOngoingTasks: this.restore.disableOngoingTasks(),
+                SkipIndexes: this.restore.skipIndexes(),
+                LastFileNameToRestore: null,
+                DataDirectory: dataDirectory,
+                EncryptionKey: encryptDb ? this.encryption.key() : null,
+                BackupEncryptionSettings: null,
+                ShardRestoreSettings: shardRestoreSettings,
+                BackupLocation: null
+            };
+        }
+        
+        const restorePoint = this.restore.selectedRestorePoint();
         
         let encryptionSettings = null as Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings;
         let databaseEncryptionKey = null;
@@ -709,18 +777,19 @@ class databaseCreationModel {
                 databaseEncryptionKey = this.encryption.key();
             }
         }
-        
-        const baseConfiguration = {
+
+        const baseConfiguration: RestoreBackupConfigurationBase = {
             DatabaseName: this.name(),
             DisableOngoingTasks: this.restore.disableOngoingTasks(),
             SkipIndexes: this.restore.skipIndexes(),
             LastFileNameToRestore: restorePoint.fileName,
             DataDirectory: dataDirectory,
             EncryptionKey: databaseEncryptionKey,
-            BackupEncryptionSettings: encryptionSettings
-        } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
+            BackupEncryptionSettings: encryptionSettings,
+            ShardRestoreSettings: null
+        };
         
-        return this.restoreSourceObject().getConfigurationForRestoreDatabase(baseConfiguration, restorePoint.location);
+        return this.restoreSourceObject().getConfigurationForRestoreDatabase(baseConfiguration, restorePoint.location) as RestoreBackupConfiguration;
     }
 }
 

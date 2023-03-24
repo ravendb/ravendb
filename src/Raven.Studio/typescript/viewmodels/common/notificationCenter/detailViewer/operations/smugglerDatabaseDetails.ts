@@ -91,7 +91,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return false;
         }
         
-        return type.includes("ShardedSmugglerResult") || type.includes("ShardedBackupResult");
+        return type.includes("ShardedSmugglerResult") || type.includes("ShardedBackupResult") || type.includes("ShardedRestoreResult");
     }
     
     private static isShardedProgress(value: object): value is ShardedSmugglerProgress {
@@ -101,7 +101,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return false;
         }
         
-        return type.includes("ShardedSmugglerProgress") || type.includes("ShardedBackupProgress");
+        return type.includes("ShardedSmugglerProgress") || type.includes("ShardedBackupProgress") || type.includes("ShardedRestoreResult");
     }
     
     private static isShardedBackupResult(value: object): value is ShardedBackupResult {
@@ -206,7 +206,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 const backupCount = (status as BackupProgress).SnapshotBackup;
 
                 // skip it this case means it is not backup progress object or it is backup of non-binary data
-                if (!backupCount.Skipped) {
+                if (backupCount && backupCount.Skipped) {
                     result.push(this.mapToExportListItem("Backed up files", backupCount));
                 }
             }
@@ -215,7 +215,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 const restoreCounts = (status as RestoreProgress).SnapshotRestore;
                 
                 // skip it this case means it is not restore progress object or it is restore of non-binary data 
-                if (!restoreCounts.Skipped) {
+                if (restoreCounts && restoreCounts.Skipped) {
                     result.push(this.mapToExportListItem("Preparing restore", restoreCounts));
                 }
             }
@@ -381,7 +381,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     }
 
     private static mapUploadItem(backupType: string, backupStatus: CloudUploadStatus): uploadListItem | null {
-        if (backupStatus.Skipped) {
+        if (!backupStatus || backupStatus.Skipped) {
             return null;
         }
 
@@ -470,6 +470,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     }
 
     private mapToExportListItem(name: string, item: Counts, isNested = false): smugglerListItem {
+        if (!item) {
+            return null;
+        }
+        
         let stage: smugglerListItemStatus = "processing";
         
         if (item.Skipped) {

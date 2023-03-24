@@ -73,9 +73,9 @@
         <h3>Backup Source Configuration</h3>
         <div class="form-group row" data-bind="validationElement: source">
             <div class="col-md-4">
-                <label class="control-label">Source</label>
+                <label class="control-label" data-bind="text: enableSharding() ? localServerCredentials().backupStorageTypeText : 'Source'"></label>
             </div>
-            <div class="col-md-8">
+            <div class="col-md-8" data-bind="visible: !enableSharding()">
                 <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
                     <span data-bind="text: $root.findRestoreSourceLabel(source())"></span>
                     <span class="caret"></span>
@@ -101,9 +101,52 @@
             </div>
         </div>
 
+        <!-- Sharding -->
+        
+        <div class="toggle">
+            <input class="styled" type="checkbox" id="restore_sharded_db" data-bind="checked: enableSharding">
+            <label for="restore_sharded_db">Enable sharding</label>
+        </div>
+        
+        <div data-bind="visible: enableSharding, foreach: shardingBackupDirectories">
+            <div class="form-group flex-horizontal margin-top-xs">
+                <span>Shard #<span data-bind="text: $index()"></span></span>
+                <div class="dropdown btn-block" style="width: 150px;">
+                    <input type="text" class="form-control dropdown-toggle"
+                           data-bind="textInput: $parent.shardingBackupDirectories()[$index()].nodeTag()"
+                           data-toggle="dropdown" placeholder="Node tag" />
+                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                    <ul class="dropdown-menu" data-bind="foreach: $root.clusterNodes">
+                        <li data-bind="click: $parents[1].setShardingDirectoryNodeTag.bind($parent, $parentContext.$index(), $data.tag())">
+                            <a href="#" data-bind="text: $data.tag"></a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="dropdown btn-block">
+                    <input type="text" class="form-control dropdown-toggle"
+                           data-bind="textInput: $parent.shardingBackupDirectories()[$index()].directoryPath()"
+                           data-toggle="dropdown" placeholder="Enter backup directory path" />
+                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                    <ul class="dropdown-menu" data-bind="foreach: $data.directoryPathOptions">
+                        <li data-bind="click: $parents[1].setShardingDirectoryPath.bind($parent, $parentContext.$index(), $data)">
+                            <a href="#" data-bind="text: $data"></a>
+                        </li>
+                    </ul>
+                </div>
+                <button type="button" class="btn btn-danger" data-bind="click: $parent.removeShardingDirectoryPath.bind($parent, $index())">
+                    Remove
+                </button>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-info margin-bottom-xs margin-top-xs" data-bind="visible: enableSharding,click: addShardingDirectoryPath">
+            <i class="icon-backup" /> Add shard backup folder
+        </button>
+        
         <!-- Local Directory -->
 
-        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: localServerCredentials().backupDirectory, visible: source() === localServerCredentials().backupStorageType">
+        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: localServerCredentials().backupDirectory, visible: source() === localServerCredentials().backupStorageType && !enableSharding()">
             <div class="col-md-4">
                 <label class="control-label">Backup Directory<i class="required"></i></label>
             </div>
@@ -424,7 +467,7 @@
             <input class="styled" type="checkbox" id="skip-indexes-import" data-bind="checked: skipIndexes">
             <label for="skip-indexes-import">Skip indexes</label>
         </div>
-        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
+        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint, visible: !enableSharding()">
             <div class="col-md-4">
                 <label class="control-label">Restore Point</label>
             </div>
