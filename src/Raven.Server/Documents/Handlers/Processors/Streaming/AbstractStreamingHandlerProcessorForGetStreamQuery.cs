@@ -1,12 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
@@ -103,7 +101,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
-                fileNamePrefix = $"{RequestHandler.DatabaseName}_{fileNamePrefix}";
+                fileNamePrefix = $"{RequestHandler.DatabaseName}_{ServerStore.NodeTag}_{fileNamePrefix}";
 
                 var fromSharded = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
 
