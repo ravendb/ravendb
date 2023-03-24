@@ -46,7 +46,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const maxSizes = genUtils.maxByShard(
         nonEmptyDbState,
         (x) => x.location.shardNumber,
-        (x) => x.totalSize.SizeInBytes + x.tempBuffersSize.SizeInBytes
+        (x) => (x.totalSize?.SizeInBytes ?? 0) + (x.tempBuffersSize?.SizeInBytes ?? 0)
     );
     const totalSize = sumBy(maxSizes);
 
