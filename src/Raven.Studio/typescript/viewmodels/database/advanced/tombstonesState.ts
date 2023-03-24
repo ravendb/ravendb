@@ -6,9 +6,6 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import SubscriptionInfo = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfo;
 import forceTombstonesCleanup = require("commands/database/debug/forceTombstonesCleanupCommand");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
-import database from "models/resources/database";
-import shardedDatabase from "models/resources/shardedDatabase";
-import shard from "models/resources/shard";
 
 class tombstonesState extends shardViewModelBase {
 
@@ -17,8 +14,6 @@ class tombstonesState extends shardViewModelBase {
     private collectionsStateController = ko.observable<virtualGridController<TombstoneItem>>();
     private subscriptionsStateController = ko.observable<virtualGridController<SubscriptionInfo>>();
 
-    canUseView: boolean;
-    
     isForbidden = ko.observable<boolean>(false);
     
     state = ko.observable<TombstonesStateOnWire>();
@@ -31,17 +26,7 @@ class tombstonesState extends shardViewModelBase {
     private readonly maxValue = 9223372036854776000;
     // in general Long.MAX_Value is 9223372036854775807 but we loose precision here
 
-    constructor(db: database) {
-        super(db);
-
-        this.canUseView = !(db instanceof shardedDatabase) && !(db instanceof shard);
-    }
-    
     canActivate(args: any) {
-        if (!this.canUseView) {
-            return true;
-        }
-        
         return $.when<any>(super.canActivate(args))
             .then(() => {
                 const deferred = $.Deferred<canActivateResultDto>();
@@ -62,11 +47,6 @@ class tombstonesState extends shardViewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
-
-        if (!this.canUseView) {
-            return;
-        }
-        
 
         const collectionsGrid = this.collectionsStateController();
         collectionsGrid.headerVisible(true);
@@ -139,7 +119,7 @@ class tombstonesState extends shardViewModelBase {
     }
 
     private fetchState(): JQueryPromise<TombstonesStateOnWire> {
-        return new getTombstonesStateCommand(this.db)
+        return new getTombstonesStateCommand(this.db, this.location)
             .execute()
             .done(state => {
                 this.state(state);
@@ -180,7 +160,7 @@ class tombstonesState extends shardViewModelBase {
     }
     
     private forceCleanup(): JQueryPromise<number> {
-        return new forceTombstonesCleanup(this.db)
+        return new forceTombstonesCleanup(this.db, this.location)
             .execute();
     }
     

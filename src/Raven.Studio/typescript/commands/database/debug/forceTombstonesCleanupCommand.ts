@@ -5,12 +5,12 @@ import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
 class forceTombstonesCleanup extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database, private location: databaseLocationSpecifier) {
         super();
     }
 
     execute(): JQueryPromise<number> {
-        const url = endpoints.databases.adminTombstone.adminTombstonesCleanup;
+        const url = endpoints.databases.adminTombstone.adminTombstonesCleanup + this.urlEncodeArgs(this.location)
         return this.post(url, null, this.db)
             .done((result: { Value: number }) => {
                 if (result.Value === 0) {
