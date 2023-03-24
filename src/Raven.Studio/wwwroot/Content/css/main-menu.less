@@ -214,7 +214,9 @@
 
                 & > a {
                     padding: 15px 10px;
-                    height: 60px;
+                    @media (min-height: 750px) {
+                        height: 60px;
+                    }
 
                     span {
                         transition: opacity 0.1s linear;
