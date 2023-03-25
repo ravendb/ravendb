@@ -1,10 +1,10 @@
-import { IndexCollectionProgress, IndexNodeInfo, IndexProgressInfo, IndexSharedInfo } from "../../../../models/indexes";
+import { IndexCollectionProgress, IndexNodeInfo, IndexProgressInfo, IndexSharedInfo } from "components/models/indexes";
 import { Reducer } from "react";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { produce } from "immer";
-import { databaseLocationComparator } from "../../../../utils/common";
+import { databaseLocationComparator } from "components/utils/common";
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 import { WritableDraft } from "immer/dist/types/types-external";
 
@@ -43,6 +43,12 @@ interface ActionDeleteIndexes {
     type: "DeleteIndexes";
 }
 
+interface ActionResetIndex {
+    type: "ResetIndex";
+    location: databaseLocationSpecifier;
+    indexName: string;
+}
+
 interface ActionDisableIndexing {
     indexName: string;
     location: databaseLocationSpecifier;
@@ -76,12 +82,15 @@ type IndexesStatsReducerAction =
     | ActionSetIndexLockMode
     | ActionPauseIndexing
     | ActionResumeIndexing
+    | ActionResetIndex
     | ActionDisableIndexing
     | ActionEnableIndexing;
 
 interface IndexesStatsState {
     indexes: IndexSharedInfo[];
     locations: databaseLocationSpecifier[];
+
+    resetInProgress: string[];
 }
 
 function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
@@ -227,7 +236,13 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
             return produce(state, (draft) => {
                 const localIndexes: string[] = draft.indexes.map((x) => x.name);
                 const incomingIndexes = incomingStats.map((x) => x.Name);
-                const toDelete = localIndexes.filter((x) => !incomingIndexes.includes(x));
+                const toDelete = localIndexes.filter(
+                    (x) => !incomingIndexes.includes(x) && !draft.resetInProgress.includes(x)
+                );
+
+                if (draft.resetInProgress.length > 0) {
+                    draft.resetInProgress = draft.resetInProgress.filter((x) => !incomingIndexes.includes(x));
+                }
 
                 incomingStats.forEach((stat) => {
                     const existingShardedInfo = draft.indexes.find((x) => x.name === stat.Name);
@@ -239,6 +254,7 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                         );
                         if (findIdx !== -1) {
                             const nodeInfo = mapToIndexNodeInfo(stat, incomingLocation);
+                            nodeInfo.progress = existingShardedInfo.nodesInfo[findIdx].progress;
                             existingShardedInfo.nodesInfo.splice(findIdx, 1, nodeInfo);
                         }
                     } else {
@@ -308,6 +324,24 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                     nodeInfo.details.status = "Running";
                 }
             });
+        case "ResetIndex":
+            return produce(state, (draft) => {
+                if (!draft.resetInProgress.includes(action.indexName)) {
+                    draft.resetInProgress.push(action.indexName);
+                }
+                const index = draft.indexes.find((x) => x.name === action.indexName);
+                if (index) {
+                    const nodeInfo = index.nodesInfo.find((x) =>
+                        databaseLocationComparator(x.location, action.location)
+                    );
+                    if (nodeInfo) {
+                        nodeInfo.details.stale = true;
+                        if (nodeInfo.progress) {
+                            nodeInfo.progress.global.processed = 0;
+                        }
+                    }
+                }
+            });
         default:
             console.warn("Unhandled action: ", action);
             return state;
@@ -318,5 +352,6 @@ export const indexesStatsReducerInitializer = (locations: databaseLocationSpecif
     return {
         indexes: [],
         locations,
+        resetInProgress: [],
     };
 };

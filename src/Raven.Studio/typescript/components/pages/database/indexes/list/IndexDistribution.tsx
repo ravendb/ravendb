@@ -237,7 +237,7 @@ export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
         );
     }
 
-    if (index.nodesInfo.some((x) => x.progress)) {
+    if (index.nodesInfo.some((x) => x.details?.stale)) {
         const overallProgress = calculateOverallProgress(index);
 
         return (
@@ -287,22 +287,22 @@ export function IndexProgress(props: IndexProgressProps) {
 
     const icon = iconForState(nodeInfo.details.status);
 
-    if (nodeInfo.progress) {
-        const progress = nodeInfo.progress.global.total
-            ? nodeInfo.progress.global.processed / nodeInfo.progress.global.total
-            : 1;
+    if (nodeInfo.details.stale) {
+        const progress = nodeInfo.progress
+            ? nodeInfo.progress.global.total
+                ? nodeInfo.progress.global.processed / nodeInfo.progress.global.total
+                : 1
+            : null;
 
-        if (nodeInfo.details.stale) {
-            return (
-                <ProgressCircle
-                    state="running"
-                    icon={nodeInfo.details.status === "Running" ? null : icon}
-                    progress={progress}
-                >
-                    {nodeInfo.details.status}
-                </ProgressCircle>
-            );
-        }
+        return (
+            <ProgressCircle
+                state="running"
+                icon={nodeInfo.details.status === "Running" ? null : icon}
+                progress={progress}
+            >
+                {nodeInfo.details.status}
+            </ProgressCircle>
+        );
     }
 
     if (

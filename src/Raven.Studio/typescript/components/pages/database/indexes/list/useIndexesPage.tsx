@@ -30,6 +30,7 @@ import collection from "models/database/documents/collection";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { useAsync } from "react-async-hook";
+import IndexChange = Raven.Client.Documents.Changes.IndexChange;
 
 export function useIndexesPage(database: database, stale: boolean) {
     //TODO: use DatabaseSharedInfo?
@@ -119,7 +120,7 @@ export function useIndexesPage(database: database, stale: boolean) {
     const throttledRefresh = useRef(
         _.throttle(() => {
             database.getLocations().forEach(fetchStats);
-        }, 5_000)
+        }, 3_000)
     );
 
     const throttledProgressRefresh = useRef(
@@ -153,31 +154,32 @@ export function useIndexesPage(database: database, stale: boolean) {
         Promise.all(tasks).finally(() => throttledProgressRefresh.current());
     }, []);
 
-    const processIndexEvent = useCallback(
-        (e: Raven.Client.Documents.Changes.IndexChange) => {
+    const currentProcessor = useRef<(e: IndexChange) => void>();
+
+    useEffect(() => {
+        currentProcessor.current = (e: Raven.Client.Documents.Changes.IndexChange) => {
             if (!filter.autoRefresh || resettingIndex) {
                 return;
             }
 
             if (e.Type === "BatchCompleted") {
                 throttledProgressRefresh.current();
+                throttledRefresh.current();
             }
 
             throttledRefresh.current();
-        },
-        [filter.autoRefresh, resettingIndex]
-    );
+        };
+    }, [filter.autoRefresh, resettingIndex]);
 
     useEffect(() => {
         if (databaseChangesApi) {
-            const watch = databaseChangesApi.watchAllIndexes(processIndexEvent);
+            const watch = databaseChangesApi.watchAllIndexes((e) => currentProcessor.current(e));
 
             return () => {
-                console.log("stop watching all indexes!");
                 watch.off();
             };
         }
-    }, [databaseChangesApi, processIndexEvent]);
+    }, [databaseChangesApi]);
 
     const highlightUsed = useRef<boolean>(false);
 
@@ -417,14 +419,22 @@ export function useIndexesPage(database: database, stale: boolean) {
 
         try {
             const locations = database.getLocations();
+
             while (locations.length) {
-                await indexesService.resetIndex(index, database, locations.pop());
+                const location = locations.pop();
+
+                dispatch({
+                    type: "ResetIndex",
+                    indexName: index.name,
+                    location,
+                });
+                await indexesService.resetIndex(index, database, location);
             }
 
             messagePublisher.reportSuccess("Index " + index.name + " successfully reset");
         } finally {
             // wait a bit and trigger refresh
-            await delay(3_000);
+            await delay(1_000);
 
             throttledRefresh.current();
             setResettingIndex(false);
