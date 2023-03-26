@@ -1496,12 +1496,10 @@ namespace Raven.Server.Rachis
             {
                 var newGuid = $"DontCare/{term}-{lastIndex}";
                 cmd.Modifications = new DynamicJsonValue { [nameof(CommandBase.UniqueRequestId)] = newGuid };
-                BlittableJsonReaderObject newCmd;
-                using (cmd)
+                using (var old = cmd)
                 {
-                    newCmd = context.ReadObject(cmd, newGuid);
+                    cmd = context.ReadObject(cmd, newGuid);
                 }
-                cmd = newCmd;
             }
             
             using (table.Allocate(out TableValueBuilder tvb))
