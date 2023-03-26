@@ -33,7 +33,6 @@ public class RavenDB_15330 : ClusterTestBase
     [Fact]
     public async Task Command_With_DontCareId_Should_Be_Committed()
     {
-        DoNotReuseServer();
         var typeProp = nameof(RachisLogHistory.LogHistoryColumn.Type);
         var stateProp = nameof(RachisLogHistory.LogHistoryColumn.State);
         var indexProp = nameof(RachisLogHistory.LogHistoryColumn.Index);
