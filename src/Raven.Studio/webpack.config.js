@@ -60,7 +60,6 @@ module.exports = (env, args) => {
         }),
         new webpack.DefinePlugin({
             "window.ravenStudioRelease": isProductionMode,
-            'process.env.NODE_ENV': JSON.stringify('development'),
             'process.env.NODE_DEBUG': false
         }),
         new webpack.ProvidePlugin({
