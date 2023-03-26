@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -43,6 +44,14 @@ public class PutShardedSubscriptionCommand : PutSubscriptionCommand
     protected override void AssertValidChangeVector()
     {
         // the CVs were validated in handler
+    }
+
+    protected override void AssertCanPutSubscription(RawDatabaseRecord record)
+    {
+        if (record.IsSharded == false)
+        {
+            throw new PutSubscriptionException($"'{nameof(PutShardedSubscriptionCommand)}' is not supported for regular database.");
+        }
     }
 
     protected override DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId)

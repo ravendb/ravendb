@@ -350,7 +350,11 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutSubscriptionBatchCommand):
-                        ExecutePutSubscriptionBatch(context, cmd, index, type);
+                        ExecutePutSubscriptionBatch<PutSubscriptionCommand>(context, cmd, index, type);
+                        break;
+
+                    case nameof(PutShardedSubscriptionBatchCommand):
+                        ExecutePutSubscriptionBatch<PutShardedSubscriptionCommand>(context, cmd, index, type);
                         break;
 
                     case nameof(AddOrUpdateCompareExchangeBatchCommand):
@@ -737,14 +741,15 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ExecutePutSubscriptionBatch(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string type)
+        private void ExecutePutSubscriptionBatch<T>(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string type)
+            where T : PutSubscriptionCommand
         {
             if (cmd.TryGet(nameof(PutSubscriptionBatchCommand.Commands), out BlittableJsonReaderArray subscriptionCommands) == false)
             {
-                throw new RachisApplyException($"'{nameof(PutSubscriptionBatchCommand.Commands)}' is missing in '{nameof(PutSubscriptionBatchCommand)}'.");
+                throw new RachisApplyException($"'{nameof(PutSubscriptionBatchCommand.Commands)}' is missing in '{type}'.");
             }
 
-            PutSubscriptionCommand updateCommand = null;
+            T updateCommand = null;
             Exception exception = null;
             var actionsByDatabase = new Dictionary<string, List<Func<Task>>>();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -752,12 +757,12 @@ namespace Raven.Server.ServerWide
             {
                 foreach (BlittableJsonReaderObject command in subscriptionCommands)
                 {
-                    if (command.TryGet("Type", out string putSubscriptionType) == false && putSubscriptionType != nameof(PutSubscriptionCommand))
+                    if (command.TryGet("Type", out string putSubscriptionType) == false && putSubscriptionType != nameof(T))
                     {
                         throw new RachisApplyException($"Cannot execute {type} command, wrong format");
                     }
 
-                    updateCommand = (PutSubscriptionCommand)JsonDeserializationCluster.Commands[nameof(PutSubscriptionCommand)](command);
+                    updateCommand = (T)JsonDeserializationCluster.Commands[typeof(T).Name](command);
 
                     var database = updateCommand.DatabaseName;
                     if (DatabaseExists(context, database) == false)
@@ -775,7 +780,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     actionsByDatabase[database].Add(() =>
-                        Changes.OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null));
+                        Changes.OnDatabaseChanges(database, index, nameof(T), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, changeState: null));
                 }
 
                 foreach (var action in actionsByDatabase)

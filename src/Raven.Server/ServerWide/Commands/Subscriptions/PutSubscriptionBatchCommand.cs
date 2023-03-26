@@ -1,18 +1,20 @@
 ﻿using System.Collections.Generic;
+using Raven.Server.ServerWide.Commands.Sharding;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class PutSubscriptionBatchCommand : CommandBase
+    public abstract class PutSubscriptionBatchCommandBase<T> : CommandBase
+    where T : PutSubscriptionCommand
     {
-        public List<PutSubscriptionCommand> Commands;
+        public List<T> Commands;
 
-        public PutSubscriptionBatchCommand()
+        public PutSubscriptionBatchCommandBase()
         {
         }
 
-        public PutSubscriptionBatchCommand(List<PutSubscriptionCommand> commands, string uniqueRequestId) : base(uniqueRequestId)
+        protected PutSubscriptionBatchCommandBase(List<T> commands, string uniqueRequestId) : base(uniqueRequestId)
         {
             Commands = commands;
         }
@@ -28,6 +30,30 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             djv[nameof(Commands)] = dja;
 
             return djv;
+        }
+    }
+
+    public class PutSubscriptionBatchCommand : PutSubscriptionBatchCommandBase<PutSubscriptionCommand>
+    {
+
+        public PutSubscriptionBatchCommand()
+        {
+        }
+
+        public PutSubscriptionBatchCommand(List<PutSubscriptionCommand> commands, string uniqueRequestId) : base(commands, uniqueRequestId)
+        {
+        }
+    }
+
+    public class PutShardedSubscriptionBatchCommand : PutSubscriptionBatchCommandBase<PutShardedSubscriptionCommand>
+    {
+        public PutShardedSubscriptionBatchCommand()
+        {
+        }
+
+        public PutShardedSubscriptionBatchCommand(List<PutShardedSubscriptionCommand> commands, string uniqueRequestId) : base(commands, uniqueRequestId)
+        {
+            Commands = commands;
         }
     }
 }
