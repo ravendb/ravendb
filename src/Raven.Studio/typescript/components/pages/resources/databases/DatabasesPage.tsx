@@ -9,17 +9,15 @@ import { Col, Row } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
     compactDatabase,
-    loadDatabaseDetails,
+    loadDatabasesDetails,
     openCreateDatabaseFromRestoreDialog,
     selectAllDatabases,
     selectDatabaseSearchCriteria,
     selectFilteredDatabases,
-    throttledReloadDatabaseDetails,
 } from "components/common/shell/databasesSlice";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
-import useInterval from "hooks/useInterval";
 import { shallowEqual } from "react-redux";
 
 interface DatabasesPageProps {
@@ -38,7 +36,6 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const dispatch = useAppDispatch();
 
-    useInterval(() => dispatch(throttledReloadDatabaseDetails), 5000);
 
     const { nodeTags } = useClusterTopologyManager();
 
@@ -47,7 +44,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
     const filteredDatabases = useAppSelector(selectFilteredDatabases);
 
     useEffect(() => {
-        dispatch(loadDatabaseDetails(nodeTags));
+        dispatch(loadDatabasesDetails(nodeTags));
     }, [dispatch, nodeTags]);
 
     useEffect(() => {

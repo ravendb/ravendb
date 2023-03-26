@@ -61,11 +61,11 @@ export default class DatabaseUtils {
         if (localInfo.some((x) => x.status === "success" && x.data.loadError)) {
             return "Error";
         }
-        if (localInfo.every((x) => x.status === "success" && !x.data.upTime)) {
-            return "Offline";
-        }
         if (db.disabled) {
             return "Disabled";
+        }
+        if (localInfo.every((x) => x.status === "success" && !x.data.upTime)) {
+            return "Offline";
         }
 
         return "Online";

@@ -2,6 +2,7 @@
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
 import d3 = require("d3");
+import { SyntheticEvent } from "react";
 
 class genUtils {
     
@@ -612,9 +613,11 @@ class genUtils {
         return code;
     }
     
-    static canConsumeDelegatedEvent(event: JQueryEventObject) {
-        const target = event.target;
-        const currentTarget = event.currentTarget;
+    static canConsumeDelegatedEvent(event: JQueryEventObject | Event | SyntheticEvent) {
+        const rawEvent: Event | SyntheticEvent = ("originalEvent" in event) ? event.originalEvent : event;
+        
+        const target = rawEvent.target as HTMLElement;
+        const currentTarget = rawEvent.currentTarget as HTMLElement;
         
         let element = target;
         

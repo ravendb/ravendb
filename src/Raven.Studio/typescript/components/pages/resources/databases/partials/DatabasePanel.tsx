@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React, { useState, MouseEvent } from "react";
 import { DatabaseLocalInfo, DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -34,6 +34,7 @@ import {
     confirmToggleIndexing,
     confirmTogglePauseIndexing,
     deleteDatabases,
+    reloadDatabaseDetails,
     selectActiveDatabase,
     selectDatabaseState,
     toggleDatabases,
@@ -50,6 +51,8 @@ import { useAccessManager } from "hooks/useAccessManager";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { selectEffectiveDatabaseAccessLevel } from "components/common/shell/accessManagerSlice";
+import genUtils from "common/generalUtils";
+import databasesManager from "common/shell/databasesManager";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -298,6 +301,27 @@ export function DatabasePanel(props: DatabasePanelProps) {
         }
     };
 
+    const onHeaderClicked = async (db: DatabaseSharedInfo, e: MouseEvent<HTMLElement>) => {
+        if (genUtils.canConsumeDelegatedEvent(e)) {
+            if (!db || db.disabled || !db.currentNode.relevant) {
+                return true;
+            }
+
+            const manager = databasesManager.default;
+
+            const databaseToActivate = manager.getDatabaseByName(db.name);
+
+            if (databaseToActivate) {
+                manager.activate(databaseToActivate);
+                manager.updateDatabaseInfo(databaseToActivate, db.name);
+
+                await dispatch(reloadDatabaseDetails(db.name));
+            }
+        }
+    };
+
+    //TODO: add hover on RichPanelHeader
+
     return (
         <RichPanel
             className={classNames("flex-row", "with-status", {
@@ -308,7 +332,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
             <RichPanelStatus color={getStatusColor(db, dbState)}>{badgeText(db, dbState)}</RichPanelStatus>
             <div className="flex-grow-1">
                 <div className="flex-grow-1">
-                    <RichPanelHeader>
+                    <RichPanelHeader onClick={(e) => onHeaderClicked(db, e)}>
                         <RichPanelInfo>
                             <RichPanelSelect>
                                 <Input type="checkbox" checked={selected} onChange={toggleSelection} />

@@ -24,6 +24,7 @@ import disableIndexingToggleConfirm from "viewmodels/resources/disableIndexingTo
 import notificationCenter from "common/notifications/notificationCenter";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import assertUnreachable from "components/utils/assertUnreachable";
+import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 
 interface DatabasesState {
     /**
@@ -291,29 +292,27 @@ export const databasesSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
+        builder.addCase(fetchDatabase.fulfilled, (state, action) => {
+            const { nodeTag } = action.meta.arg;
+
+            const newEntity = toLocalInfo(action.payload, nodeTag);
+
+            const existingInfo = localDatabaseDetailedInfoSelectors.selectById(
+                state.localDatabaseDetailedInfo,
+                localDatabaseInfoAdapter.selectId(newEntity)
+            );
+            if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
+                localDatabaseInfoAdapter.setOne(state.localDatabaseDetailedInfo, newEntity);
+            }
+        });
+
         builder.addCase(fetchDatabases.fulfilled, (state, action) => {
             const nodeTag = action.meta.arg;
 
             state.localDatabaseDetailedLoadStatus.entities[nodeTag].status = "success";
 
             action.payload.Databases.forEach((db) => {
-                const newEntity: DatabaseLocalInfo = {
-                    name: DatabaseUtils.shardGroupKey(db.Name),
-                    location: {
-                        nodeTag,
-                        shardNumber: DatabaseUtils.shardNumber(db.Name),
-                    },
-                    alerts: db.Alerts,
-                    loadError: db.LoadError,
-                    documentsCount: db.DocumentsCount,
-                    indexingStatus: db.IndexingStatus,
-                    indexingErrors: db.IndexingErrors,
-                    performanceHints: db.PerformanceHints,
-                    upTime: db.UpTime ? genUtils.timeSpanAsAgo(db.UpTime, false) : null, // we format here to avoid constant updates of UI
-                    backupInfo: db.BackupInfo,
-                    totalSize: db.TotalSize,
-                    tempBuffersSize: db.TempBuffersSize,
-                };
+                const newEntity = toLocalInfo(db, nodeTag);
 
                 const existingInfo = localDatabaseDetailedInfoSelectors.selectById(
                     state.localDatabaseDetailedInfo,
@@ -334,9 +333,36 @@ export const databasesSlice = createSlice({
     },
 });
 
-export const { databasesLoaded, activeDatabaseChanged, initDetails, filterTextSet } = databasesSlice.actions;
+function toLocalInfo(db: StudioDatabaseState, nodeTag: string): DatabaseLocalInfo {
+    return {
+        name: DatabaseUtils.shardGroupKey(db.Name),
+        location: {
+            nodeTag,
+            shardNumber: DatabaseUtils.shardNumber(db.Name),
+        },
+        alerts: db.Alerts,
+        loadError: db.LoadError,
+        documentsCount: db.DocumentsCount,
+        indexingStatus: db.IndexingStatus,
+        indexingErrors: db.IndexingErrors,
+        performanceHints: db.PerformanceHints,
+        upTime: db.UpTime ? genUtils.timeSpanAsAgo(db.UpTime, false) : null, // we format here to avoid constant updates of UI
+        backupInfo: db.BackupInfo,
+        totalSize: db.TotalSize,
+        tempBuffersSize: db.TempBuffersSize,
+    };
+}
 
-export const loadDatabaseDetails = (nodeTags: string[]) => async (dispatch: AppDispatch, getState: () => RootState) => {
+export const { activeDatabaseChanged, initDetails, filterTextSet } = databasesSlice.actions;
+
+export const databasesLoaded =
+    (shardedInfo: DatabaseSharedInfo[]): AppAsyncThunk =>
+    async (dispatch: AppDispatch, getState) => {
+        dispatch(databasesSlice.actions.databasesLoaded(shardedInfo));
+        await dispatch(throttledReloadDatabaseDetails);
+    };
+
+export const loadDatabasesDetails = (nodeTags: string[]) => async (dispatch: AppDispatch) => {
     dispatch(initDetails(nodeTags));
 
     const tasks = nodeTags.map((nodeTag) => dispatch(fetchDatabases(nodeTag)));
@@ -344,7 +370,20 @@ export const loadDatabaseDetails = (nodeTags: string[]) => async (dispatch: AppD
     await Promise.all(tasks);
 };
 
-export const reloadDatabaseDetails = async (dispatch: AppDispatch, getState: () => RootState) => {
+export const reloadDatabaseDetails = (databaseName: string) => async (dispatch: AppDispatch) => {
+    //TODO: read from redux!
+    const nodeTags =
+        clusterTopologyManager.default
+            .topology()
+            ?.nodes()
+            ?.map((x) => x.tag()) ?? [];
+
+    const tasks = nodeTags.map((nodeTag) => dispatch(fetchDatabase({ nodeTag, databaseName })));
+
+    await Promise.all(tasks);
+};
+
+export const reloadDatabasesDetails = async (dispatch: AppDispatch) => {
     //TODO: read from redux!
     const nodeTags =
         clusterTopologyManager.default
@@ -357,11 +396,18 @@ export const reloadDatabaseDetails = async (dispatch: AppDispatch, getState: () 
     await Promise.all(tasks);
 };
 
-export const throttledReloadDatabaseDetails = _.throttle(reloadDatabaseDetails, 8000);
+const throttledReloadDatabaseDetails = _.throttle(reloadDatabasesDetails, 100);
 
 const fetchDatabases = createAsyncThunk(sliceName + "/fetchDatabases", async (nodeTag: string) => {
     return await services.databasesService.getDatabasesState(nodeTag);
 });
+
+const fetchDatabase = createAsyncThunk(
+    sliceName + "/fetchDatabase",
+    async (payload: { nodeTag: string; databaseName: string }) => {
+        return await services.databasesService.getDatabaseState(payload.nodeTag, payload.databaseName);
+    }
+);
 
 export const openCreateDatabaseDialog = () => () => {
     const createDbView = new createDatabase("newDatabase");

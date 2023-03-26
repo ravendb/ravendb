@@ -16,6 +16,8 @@ import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
 import toggleDatabaseCommand from "commands/resources/toggleDatabaseCommand";
 import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState;
 import getDatabasesStateForStudioCommand from "commands/resources/getDatabasesStateForStudioCommand";
+import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
+import getDatabaseStateForStudioCommand from "commands/resources/getDatabaseStateForStudioCommand";
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -36,6 +38,10 @@ export default class DatabasesService {
 
     async getDatabasesState(targetNodeTag: string): Promise<StudioDatabasesState> {
         return new getDatabasesStateForStudioCommand(targetNodeTag).execute();
+    }
+
+    async getDatabaseState(targetNodeTag: string, databaseName: string): Promise<StudioDatabaseState> {
+        return new getDatabaseStateForStudioCommand(targetNodeTag, databaseName).execute();
     }
 
     async getDetailedStats(
