@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Sharding.Background
                 int bucket = -1;
                 int moveToShard = -1;
                 bool found = false;
+                bool monitorTaken = false;
                 try
                 {
                     _cts.Token.ThrowIfCancellationRequested();
@@ -34,6 +35,7 @@ namespace Raven.Server.Documents.Sharding.Background
                     if (Monitor.TryEnter(this, 250) == false)
                         return;
 
+                    monitorTaken = true;
                     if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
                         return;
 
@@ -72,7 +74,8 @@ namespace Raven.Server.Documents.Sharding.Background
                 }
                 finally
                 {
-                    Monitor.Exit(this);
+                    if (monitorTaken)
+                        Monitor.Exit(this);
                 }
 
                 if (found)
