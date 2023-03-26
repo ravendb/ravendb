@@ -373,6 +373,11 @@ namespace Raven.Server.Utils
 
         public static (int ShardNumber, int Bucket) GetShardNumberAndBucketForIdentity(ShardingConfiguration configuration, TransactionOperationContext context, string id, char identityPartsSeparator)
         {
+            return GetShardNumberAndBucketForIdentity(configuration, context.Allocator, id, identityPartsSeparator);
+        }
+
+        public static (int ShardNumber, int Bucket) GetShardNumberAndBucketForIdentity(ShardingConfiguration configuration, ByteStringContext allocator, string id, char identityPartsSeparator)
+        {
             // the expected id format here is users/$BASE26$/
             // so we cut the '$/' from the end to detect shard number based on BASE26 part
             Debug.Assert(id[^1] == identityPartsSeparator, $"id[^1] != {identityPartsSeparator} for {id}");
@@ -380,7 +385,7 @@ namespace Raven.Server.Utils
             var actualId = id.AsSpan(0, id.Length - 2);
             var actualIdAsString = actualId.ToString();
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 Optimize this");
-            return GetShardNumberAndBucketFor(configuration, context.Allocator, actualIdAsString);
+            return GetShardNumberAndBucketFor(configuration, allocator, actualIdAsString);
         }
 
         public static int GetShardNumberFor(ShardingConfiguration configuration, TransactionOperationContext context, string id, char identityPartsSeparator)

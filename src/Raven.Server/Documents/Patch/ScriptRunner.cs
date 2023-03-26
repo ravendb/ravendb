@@ -12,8 +12,6 @@ using Esprima.Ast;
 using JetBrains.Annotations;
 using Jint;
 using Jint.Native;
-using Jint.Native.Array;
-using Jint.Native.Date;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -32,6 +30,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
@@ -1087,6 +1086,20 @@ namespace Raven.Server.Documents.Patch
                 try
                 {
                     reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    if (_database is ShardedDocumentDatabase shardedDatabase)
+                    {
+                        if (id?[^1] == _database.IdentityPartsSeparator)
+                        {
+                            while (true)
+                            {
+                                id = ShardHelper.GenerateStickyId(id, _database.IdentityPartsSeparator);
+                                var shard = ShardHelper.GetShardNumberAndBucketForIdentity(shardedDatabase.ShardingConfiguration,  _docsCtx.Allocator, id, _database.IdentityPartsSeparator).ShardNumber;
+                                if (shard == shardedDatabase.ShardNumber)
+                                    break;
+                            }
+                        }
+                    }
 
                     var put = _database.DocumentsStorage.Put(
                         _docsCtx,
