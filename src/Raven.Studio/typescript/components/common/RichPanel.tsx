@@ -1,4 +1,4 @@
-﻿import React, { ReactNode } from "react";
+﻿import React, { HTMLAttributes, HTMLProps, ReactNode } from "react";
 import "./RichPanel.scss";
 import classNames from "classnames";
 import { Badge, Card, CardHeader } from "reactstrap";
@@ -34,7 +34,7 @@ export function RichPanelStatus(props: RichPanelStatusProps) {
     );
 }
 
-interface RichPanelHeaderProps {
+interface RichPanelHeaderProps extends HTMLAttributes<HTMLDivElement> {
     className?: string;
     children: ReactNode | ReactNode[];
     id?: string;

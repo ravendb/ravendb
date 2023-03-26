@@ -249,7 +249,7 @@ class databasesManager {
         }
     }
 
-    private updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<StudioDatabaseInfo> {
+    updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<StudioDatabaseInfo> {
         const rootDatabaseName = DatabaseUtils.shardGroupKey(databaseName);
         
         return new getDatabaseForStudioCommand(rootDatabaseName)
