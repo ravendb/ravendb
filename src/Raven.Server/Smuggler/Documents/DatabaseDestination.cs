@@ -136,7 +136,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public ISubscriptionActions Subscriptions()
         {
-            return new DatabaseSubscriptionActions(_database);
+            return new DatabaseSubscriptionActions(_database.ServerStore, _database.Name);
         }
 
         public IReplicationHubCertificateActions ReplicationHubCertificates()

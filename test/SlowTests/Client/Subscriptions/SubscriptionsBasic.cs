@@ -159,17 +159,31 @@ namespace SlowTests.Client.Subscriptions
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store,
+                           new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = databaseName }))
                 {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
-                    DatabaseName = databaseName
-                }))
-                {
-                    subscriptionStataList = store.Subscriptions.GetSubscriptions(0, 10, databaseName);
+                    using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => databaseName, CreateDatabase = false }))
+                    {
+                        subscriptionStataList = store2.Subscriptions.GetSubscriptions(0, 10, databaseName);
 
-                    Assert.Equal(3, subscriptionStataList.Count);
-                    Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub1")));
-                    Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub2")));
+                        Assert.Equal(3, subscriptionStataList.Count);
+                        Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub1")));
+                        Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub2")));
+
+                        var mre = new AsyncManualResetEvent();
+                        using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
+                               {
+                                   MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+                               }))
+                        {
+                            var t = worker.Run(_ =>
+                            {
+                                mre.Set();
+                            });
+
+                            Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                        }
+                    }
                 }
             }
         }
@@ -208,6 +222,26 @@ namespace SlowTests.Client.Subscriptions
                     Assert.Equal(3, subscriptionStataList.Count);
                     Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub1")));
                     Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub2")));
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "oren" }, "users/1");
+                        await session.SaveChangesAsync();
+                    }
+
+                    var mre = new AsyncManualResetEvent();
+                    using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
+                           {
+                               MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+                           }))
+                    {
+                        var t = worker.Run(_ =>
+                        {
+                            mre.Set();
+                        });
+
+                        Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    }
                 }
             }
             finally

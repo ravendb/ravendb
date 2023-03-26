@@ -2,13 +2,16 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -1050,6 +1053,167 @@ namespace SlowTests.Sharding.Subscriptions
                 });
                 await Assert.ThrowsAsync<SubscriptionClosedException>(() => st2.WaitWithoutExceptionAsync(_reasonableWaitTime));
                 Assert.False(gotBatch);
+            }
+        }
+
+
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding | RavenTestCategory.BackupExportImport)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanExportImportAndRunSubscriptionsShardedAndNonSharded(bool fromSharded)
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                DocumentStore store1;
+                DocumentStore store2;
+
+                if (fromSharded)
+                {
+                    store1 = Sharding.GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_1" });
+                    store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" });
+                }
+                else
+                {
+                    store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_1" });
+                    store2 = Sharding.GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" });
+                }
+
+                using (store1)
+                using (store2)
+                {
+                    await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User> { Name = "sub1" });
+                    await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User> { Name = "sub2" });
+                    await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
+
+                    var states = store1.Subscriptions.GetSubscriptions(0, 10);
+
+                    Assert.Equal(3, states.Count);
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    states = store2.Subscriptions.GetSubscriptions(0, 10, store2.Database);
+
+                    Assert.Equal(3, states.Count);
+                    Assert.True(states.Any(x => x.SubscriptionName.Equals("sub1")));
+                    Assert.True(states.Any(x => x.SubscriptionName.Equals("sub2")));
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                        await session.SaveChangesAsync();
+                    }
+
+                    var mre = new AsyncManualResetEvent();
+                    using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
+                           {
+                               MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+                           }))
+                    {
+                        var t = worker.Run(_ =>
+                        {
+                            mre.Set();
+                        });
+
+                        Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding | RavenTestCategory.BackupExportImport)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanBackupRestoreAndRunSubscriptionsShardedAndNonSharded(bool fromSharded)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            DocumentStore store1;
+
+            if (fromSharded)
+            {
+                store1 = Sharding.GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_1" });
+            }
+            else
+            {
+                store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" });
+            }
+
+            using (store1)
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub1" });
+                store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub2" });
+                store1.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+
+                var states = store1.Subscriptions.GetSubscriptions(0, 10);
+
+                Assert.Equal(3, states.Count);
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var result = await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var backupTaskId = result.TaskId;
+                var op = await store1.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                await op.WaitForCompletionAsync(_reasonableWaitTime);
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                DocumentStore store2;
+                string[] dirs = null;
+                if (fromSharded)
+                {
+                    store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => databaseName });
+                    dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(3, dirs.Length);
+                }
+                else
+                {
+                    store2 = Sharding.GetDocumentStore(new Options { ModifyDatabaseName = s => databaseName });
+                    dirs = Directory.GetDirectories(backupPath);
+                    Assert.Equal(1, dirs.Length);
+                }
+
+                var importOptions = new DatabaseSmugglerImportOptions();
+                foreach (var dir in dirs)
+                {
+                    await store2.Smuggler.ImportIncrementalAsync(importOptions, dir);
+                    if (fromSharded)
+                    {
+                        importOptions.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnFirstShardOnly;
+                    }
+                }
+
+                states = await store2.Subscriptions.GetSubscriptionsAsync(0, 10, databaseName);
+
+                Assert.Equal(3, states.Count);
+                Assert.True(states.Any(x => x.SubscriptionName.Equals("sub1")));
+                Assert.True(states.Any(x => x.SubscriptionName.Equals("sub2")));
+
+                var mre = new AsyncManualResetEvent();
+                using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
+                       {
+                           MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+                       }))
+                {
+                    var t = worker.Run(_ =>
+                    {
+                        mre.Set();
+                    });
+
+                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                }
             }
         }
 
