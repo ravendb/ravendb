@@ -310,6 +310,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
         public long ReadCount { get; set; }
         public bool Skipped { get; set; }
         public long ErroredCount { get; set; }
+        public long Size { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -319,14 +320,21 @@ public abstract class SmugglerProgressBase : IOperationProgress
                 [nameof(Processed)] = Processed,
                 [nameof(ReadCount)] = ReadCount,
                 [nameof(Skipped)] = Skipped,
-                [nameof(ErroredCount)] = ErroredCount
+                [nameof(ErroredCount)] = ErroredCount,
+                [nameof(Size)] = Size
             };
         }
 
         public override string ToString()
         {
-            return $"Read: {ReadCount:#,#;;0}. " +
-                   $"Errored: {ErroredCount:#,#;;0}.";
+            var sb = new StringBuilder();
+            sb.Append($"Read: {ReadCount:#,#;;0}.");
+            if (ErroredCount > 0) 
+                sb.Append($" Errored: {ErroredCount:#,#;;0}.");
+            if (Size > 0)
+                sb.Append($" Size: {new Size(Size).HumaneSize}.");
+
+            return sb.ToString();
         }
 
         internal void Start()
@@ -360,7 +368,13 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
         public override string ToString()
         {
-            return $"{base.ToString()} Attachments: {Attachments}";
+            if (Attachments is { ReadCount: > 0 })
+            {
+                return $"{base.ToString()}" +
+                       $"{Environment.NewLine}Attachments: {Attachments}";
+            }
+
+            return base.ToString();
         }
     }
 
@@ -377,7 +391,10 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
         public override string ToString()
         {
-            return $"Skipped: {SkippedCount}. {base.ToString()}";
+            if (SkippedCount > 0)
+                return $"Skipped: {SkippedCount}. {base.ToString()}";
+
+            return base.ToString();
         }
     }
 }

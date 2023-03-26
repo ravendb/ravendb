@@ -120,7 +120,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 ErroredCount: items.reduce((p, c) => p + c.ErroredCount, 0),
                 Skipped: items.every(x => x.Skipped),
                 Processed: items.some(x => x.Processed),
-                StartTime: null
+                Size: items.reduce((p, c) => p + c.Size, 0),
+                StartTime: null,
             }
         }
         
