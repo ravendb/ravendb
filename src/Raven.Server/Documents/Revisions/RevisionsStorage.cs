@@ -359,26 +359,26 @@ namespace Raven.Server.Documents.Revisions
             if (configuration.Disabled)
                 return false;
 
-            if (configuration.MinimumRevisionsToKeep == 0)
-            {
-                if (DeleteRevisionsFor(context, id))
-                {
-                    documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
-                    return false;
-                }
-            }
-
-            if (configuration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue)
-            {
-                if (_database.Time.GetUtcNow().Ticks - lastModifiedTicks.Value > configuration.MinimumRevisionAgeToKeep.Value.Ticks)
-                {
-                    if (DeleteRevisionsFor(context, id))
-                    {
-                        documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
-                        return false;
-                    }
-                }
-            }
+            // if (configuration.MinimumRevisionsToKeep == 0)
+            // {
+            //     if (DeleteRevisionsFor(context, id))
+            //     {
+            //         documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
+            //         return false;
+            //     }
+            // }
+            //
+            // if (configuration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue)
+            // {
+            //     if (_database.Time.GetUtcNow().Ticks - lastModifiedTicks.Value > configuration.MinimumRevisionAgeToKeep.Value.Ticks)
+            //     {
+            //         if (DeleteRevisionsFor(context, id))
+            //         {
+            //             documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
+            //             return false;
+            //         }
+            //     }
+            // }
 
             if (existingDocument == null)
             {
@@ -703,6 +703,7 @@ namespace Raven.Server.Documents.Revisions
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return false;
 
+            deletedDoc = deletedDoc || nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromDeleteDocument);
             var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, changeVector, lastModifiedTicks, out bool moreToDelete, 
                 deletedDoc: deletedDoc, docConfiguration: configuration);
 
@@ -1556,9 +1557,13 @@ namespace Raven.Server.Documents.Revisions
                     configuration = GetRevisionsConfiguration(collectionName.Name, local.Tombstone.Flags);
                 }
 
-                var needToDeleteMore = DeleteOldRevisions(context, table, prefixSlice, 
-                    NonPersistentDocumentFlags.None,
-                    changeVector, lastModifiedTicks, revisionsCount: prevRevisionsCount, deletedDoc: deletedDoc, configuration: configuration);
+                var needToDeleteMore = false;
+                if (prevRevisionsCount > 0)
+                {
+                    needToDeleteMore = DeleteOldRevisions(context, table, prefixSlice,
+                        NonPersistentDocumentFlags.None,
+                        changeVector, lastModifiedTicks, revisionsCount: prevRevisionsCount, deletedDoc: deletedDoc, configuration: configuration);
+                }
 
                 var currentRevisionsCount = GetRevisionsCount(context, id);
 

@@ -400,7 +400,7 @@ namespace SlowTests.Issues
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(1, doc1RevCount);
+                Assert.Equal(2, doc1RevCount);  // Old, New => New, New2
                 var d = await session.LoadAsync<User>("Docs/1");
                 var metadata = session.Advanced.GetMetadataFor(d);
                 Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Raven.Client.Constants.Documents.Metadata.Flags]);
@@ -416,10 +416,10 @@ namespace SlowTests.Issues
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(0, doc1RevCount);
+                Assert.Equal(2, doc1RevCount); // New, New2 => New2, New3
                 var d = await session.LoadAsync<User>("Docs/1");
                 var metadata = session.Advanced.GetMetadataFor(d);
-                Assert.False(metadata.ContainsKey(Raven.Client.Constants.Documents.Metadata.Flags));
+                Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Raven.Client.Constants.Documents.Metadata.Flags]);
             }
         }
 

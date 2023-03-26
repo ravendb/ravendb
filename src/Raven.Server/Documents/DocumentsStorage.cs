@@ -1775,15 +1775,20 @@ namespace Raven.Server.Documents
 
                         flags |= DocumentFlags.HasRevisions;
                         revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                            modifiedTicks, nonPersistentFlags, documentFlags);
+                            modifiedTicks, nonPersistentFlags | NonPersistentDocumentFlags.FromDeleteDocument, flags);
                     }
+                    // else
+                    // {
+                        // revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone?.ChangeVector,
+                        //     modifiedTicks, nonPersistentFlags | NonPersistentDocumentFlags.FromDeleteDocument, flags);
+                    // }
                 }
 
-                if (flags.Contain(DocumentFlags.HasRevisions))
-                {
-                    revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone?.ChangeVector,
-                        modifiedTicks, nonPersistentFlags | NonPersistentDocumentFlags.FromDeleteDocument, flags);
-                }
+                // if (flags.Contain(DocumentFlags.HasRevisions))
+                // {
+                //     revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone?.ChangeVector,
+                //         modifiedTicks, nonPersistentFlags | NonPersistentDocumentFlags.FromDeleteDocument, flags);
+                // }
 
                 if (flags.Contain(DocumentFlags.HasRevisions) 
                     && revisionsStorage.Configuration == null &&
