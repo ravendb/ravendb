@@ -407,11 +407,24 @@ namespace Raven.Server.Smuggler.Documents
                         result.Documents.ReadCount++;
                     }
 
+                    if (item.Document != null) 
+                        result.Documents.Size += item.Document.Data.Size;
+
+                    if (item.Attachments != null)
+                    {
+                        foreach (var attachment in item.Attachments)
+                        {
+                            if (attachment.Stream != null)
+                            {
+                                result.Documents.Attachments.ReadCount++;
+                                result.Documents.Attachments.Size += attachment.Stream.Length;
+                            }
+                        }
+                    }
+
                     if (result.Documents.ReadCount % 1000 == 0)
                     {
-                        var message = $"Read {result.Documents.ReadCount:#,#;;0} documents.";
-                        if (result.Documents.Attachments.ReadCount > 0)
-                            message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
+                        var message = $"Documents: {result.Documents}"; 
                         AddInfoToSmugglerResult(result, message);
                     }
 
@@ -497,8 +510,23 @@ namespace Raven.Server.Smuggler.Documents
                     _token.ThrowIfCancellationRequested();
                     result.RevisionDocuments.ReadCount++;
 
+                    if (item.Document != null)
+                        result.RevisionDocuments.Size += item.Document.Data.Size;
+
+                    if (item.Attachments != null)
+                    {
+                        foreach (var attachment in item.Attachments)
+                        {
+                            if (attachment.Stream != null)
+                            {
+                                result.Documents.Attachments.ReadCount++;
+                                result.Documents.Attachments.Size += attachment.Stream.Length;
+                            }
+                        }
+                    }
+
                     if (result.RevisionDocuments.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.RevisionDocuments.ReadCount:#,#;;0} revision documents.");
+                        AddInfoToSmugglerResult(result, $"Revisions {result.RevisionDocuments}");
 
                     if (item.Document == null)
                     {
@@ -837,9 +865,10 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _token.ThrowIfCancellationRequested();
                     result.TimeSeries.ReadCount += ts.Segment.NumberOfEntries;
+                    result.TimeSeries.Size += ts.Segment.NumberOfBytes;
 
                     if (result.TimeSeries.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.TimeSeries.ReadCount:#,#;;0} time series.");
+                        AddInfoToSmugglerResult(result, $"Time series entries {result.TimeSeries}");
 
                     result.TimeSeries.LastEtag = ts.Etag;
 

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -257,7 +258,11 @@ namespace Raven.Server.Smuggler.Documents
                 if (item.Attachments != null)
                 {
                     if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                    {
                         progress.Attachments.ReadCount += item.Attachments.Count;
+                        progress.Attachments.Size += item.Attachments.Sum(x => x.Stream.Length);
+
+                    }
                     else
                         progress.Attachments.Skipped = true;
                 }

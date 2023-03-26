@@ -61,13 +61,19 @@ namespace Raven.Client.Documents.Smuggler
             smugglerResult.Documents.SkippedCount += Documents.SkippedCount;
             smugglerResult.Documents.ReadCount += Documents.ReadCount;
             smugglerResult.Documents.ErroredCount += Documents.ErroredCount;
+            smugglerResult.Documents.Size += Documents.Size;
+
             smugglerResult.Documents.LastEtag = Math.Max(smugglerResult.Documents.LastEtag, Documents.LastEtag);
-            smugglerResult.Documents.Attachments = Documents.Attachments;
+            smugglerResult.Documents.Attachments.ReadCount += Documents.Attachments.ReadCount;
+            smugglerResult.Documents.Attachments.Size += Documents.Attachments.Size;
 
             smugglerResult.RevisionDocuments.ReadCount += RevisionDocuments.ReadCount;
             smugglerResult.RevisionDocuments.ErroredCount += RevisionDocuments.ErroredCount;
+            smugglerResult.RevisionDocuments.Size += RevisionDocuments.Size;
             smugglerResult.RevisionDocuments.LastEtag = Math.Max(smugglerResult.RevisionDocuments.LastEtag, RevisionDocuments.LastEtag);
             smugglerResult.RevisionDocuments.Attachments = RevisionDocuments.Attachments;
+            smugglerResult.RevisionDocuments.Attachments.ReadCount += RevisionDocuments.Attachments.ReadCount;
+            smugglerResult.RevisionDocuments.Attachments.Size += RevisionDocuments.Attachments.Size;
 
             smugglerResult.Counters.ReadCount += Counters.ReadCount;
             smugglerResult.Counters.ErroredCount += Counters.ErroredCount;
@@ -75,6 +81,8 @@ namespace Raven.Client.Documents.Smuggler
 
             smugglerResult.TimeSeries.ReadCount += TimeSeries.ReadCount;
             smugglerResult.TimeSeries.ErroredCount += TimeSeries.ErroredCount;
+            smugglerResult.TimeSeries.Size += TimeSeries.Size;
+
             smugglerResult.TimeSeries.LastEtag = Math.Max(smugglerResult.TimeSeries.LastEtag, TimeSeries.LastEtag);
 
             smugglerResult.Identities.ReadCount += Identities.ReadCount;
