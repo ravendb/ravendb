@@ -56,6 +56,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task DatabaseHealthCheck()
         {
+            Database.ForTestingPurposes?.HealthCheckHold?.WaitOne();
+
             NoContentStatus();
             return Task.CompletedTask;
         }
