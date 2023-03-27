@@ -772,6 +772,10 @@ class appUrl {
 
     static urlEncodeArgs(args: any): string {
         const propNameAndValues: Array<string> = [];
+
+        if (!args) {
+            return "";
+        }
         
         for (const prop of Object.keys(args)) {
             const value = args[prop];
