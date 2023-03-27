@@ -1529,7 +1529,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        internal long EnforceConfigurationFor(DocumentsOperationContext context, string id, ref bool moreWork, bool stripHasRevisions = true)
+        internal long EnforceConfigurationFor(DocumentsOperationContext context, string id, ref bool moreWork)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var prefixSlice))
@@ -1570,7 +1570,7 @@ namespace Raven.Server.Documents.Revisions
                 if (needToDeleteMore && currentRevisionsCount > 0)
                     moreWork = true;
 
-                if (stripHasRevisions==true && currentRevisionsCount == 0)
+                if (currentRevisionsCount == 0)
                 {
                     var res = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
                     // need to strip the HasRevisions flag from the document/tombstone

@@ -244,7 +244,6 @@ namespace Raven.Server.Documents
 
                     if (shouldVersion)
                     {
-
                         if (newDoc == false && _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
                         {
 
@@ -257,15 +256,29 @@ namespace Raven.Server.Documents
                         flags |= DocumentFlags.HasRevisions;
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks,
                             configuration, collectionName);
+
+                        var prevRevisionsCount = _documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, id);
+                        if (prevRevisionsCount == 0)
+                        {
+                            flags = flags.Strip(DocumentFlags.HasRevisions);
+                        }
                     }
-                    else if (newDoc==false &&
-                             nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
-                             oldFlags.Contain(DocumentFlags.HasRevisions) &&
-                             configuration.Disabled)
+                    // else if (newDoc==false &&
+                    //          nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
+                    //          oldFlags.Contain(DocumentFlags.HasRevisions) &&
+                    //          (configuration.Disabled ||  (configuration.MinimumRevisionsToKeep.HasValue && configuration.MinimumRevisionsToKeep==0) ))
+                    else if(newDoc == false &&
+                            nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
+                            oldFlags.Contain(DocumentFlags.HasRevisions))
                     {
-                        bool moreWork = false;
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.EnforceConfigurationFor(context, id, ref moreWork, stripHasRevisions: false);
-                        if (moreWork==false)
+                        // bool moreWork = false;
+                        // _documentDatabase.DocumentsStorage.RevisionsStorage.EnforceConfigurationFor(context, id, ref moreWork, stripHasRevisions: false);
+                        // if (moreWork == false)
+                        // {
+                        //     flags = flags.Strip(DocumentFlags.HasRevisions);
+                        // }
+                        var finished = _documentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id);
+                        if (finished)
                         {
                             flags = flags.Strip(DocumentFlags.HasRevisions);
                         }

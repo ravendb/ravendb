@@ -1776,6 +1776,11 @@ namespace Raven.Server.Documents
                         flags |= DocumentFlags.HasRevisions;
                         revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
                             modifiedTicks, nonPersistentFlags | NonPersistentDocumentFlags.FromDeleteDocument, flags);
+                        var prevRevisionsCount = revisionsStorage.GetRevisionsCount(context, id);
+                        if (prevRevisionsCount == 0)
+                        {
+                            flags = flags.Strip(DocumentFlags.HasRevisions);
+                        }
                     }
                     // else
                     // {
