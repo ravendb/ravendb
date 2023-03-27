@@ -301,7 +301,7 @@ select sum(""Count"") as Sum, key() as Name")
                             @"
 from Users
 group by Name
-select sum(""Count"") as Sum, key() as Name
+select sum(Count) as Sum, key() as Name
 limit 1")
                         .ToList();
 
@@ -313,7 +313,7 @@ limit 1")
                             @"
 from Users
 group by Name
-select sum(""Count"") as Sum, key() as Name
+select sum(Count) as Sum, key() as Name
 limit 1, 1")
                         .ToList();
 
@@ -325,7 +325,7 @@ limit 1, 1")
                             @"
 from Users
 group by Name
-select sum(""Count"") as Sum, Name, LastName
+select sum(Count) as Sum, Name, LastName
 limit 1")
                         .ToList();
 
@@ -337,7 +337,7 @@ limit 1")
                             @"
 from Users
 group by Name
-select sum(""Count"") as Sum, Name, LastName
+select sum(Count) as Sum, Name, LastName
 limit 1, 1")
                         .ToList();
 
@@ -349,12 +349,12 @@ limit 1, 1")
                             @"
 from Users
 group by Name, LastName
-select sum(""Count"") as Sum, key() as Name
+select sum(Count) as Sum, key() as Name
 limit 1")
+                        
                         .ToList();
 
                     Assert.Equal(1, queryResult3.Count);
-
                     var properties = (IDictionary<string, object>)queryResult3[0].Name;
                     Assert.Equal("Grisha", properties[nameof(UserMapReduceWithTwoReduceKeys.Result.Name)]);
                     Assert.Equal("Kotler", properties[nameof(UserMapReduceWithTwoReduceKeys.Result.LastName)]);
@@ -364,16 +364,59 @@ limit 1")
                             @"
 from Users
 group by Name, LastName
-select sum(""Count"") as Sum, key() as Name
+select sum(Count) as Sum, key() as Name
 limit 1, 1")
                         .ToList();
 
                     Assert.Equal(1, queryResult3.Count);
-
                     properties = (IDictionary<string, object>)queryResult3[0].Name;
                     Assert.Equal("Jane", properties[nameof(UserMapReduceWithTwoReduceKeys.Result.Name)]);
                     Assert.Equal("Doe", properties[nameof(UserMapReduceWithTwoReduceKeys.Result.LastName)]);
                     Assert.Equal(30, queryResult3[0].Sum);
+
+                    var autoLinqQueryResult = session.Query<User>()
+                        .Statistics(out var stats)
+                        .GroupBy(x => new { x.Name, x.LastName }).Select(x => new
+                        {
+                            Name = x.Key.Name,
+                            LastName = x.Key.LastName,
+                            Sum = x.Sum(u => u.Count)
+                        })
+                        .Take(1)
+                        .ToList();
+
+                    Assert.Equal(1, autoLinqQueryResult.Count);
+                    Assert.Equal("Grisha", autoLinqQueryResult[0].Name);
+                    Assert.Equal(21, autoLinqQueryResult[0].Sum);
+
+                    var autoIndexResult = session.Query<User>(stats.IndexName)
+                        .Take(1)
+                        .As<AutoMapReduceResult3>()
+                        .ToList();
+
+                    Assert.Equal(1, autoIndexResult.Count);
+                    Assert.Equal("Grisha", autoIndexResult[0].Name);
+                    Assert.Equal(21, autoIndexResult[0].Count);
+
+                    autoIndexResult = session.Query<User>(stats.IndexName)
+                        .OrderBy(x => x.Name)
+                        .Take(1)
+                        .As<AutoMapReduceResult3>()
+                        .ToList();
+
+                    Assert.Equal(1, autoIndexResult.Count);
+                    Assert.Equal("Grisha", autoIndexResult[0].Name);
+                    Assert.Equal(21, autoIndexResult[0].Count);
+
+                    autoIndexResult = session.Query<User>(stats.IndexName)
+                        .OrderByDescending(x => x.Name)
+                        .Take(1)
+                        .As<AutoMapReduceResult3>()
+                        .ToList();
+
+                    Assert.Equal(1, autoIndexResult.Count);
+                    Assert.Equal("Jane", autoIndexResult[0].Name);
+                    Assert.Equal(30, autoIndexResult[0].Count);
                 }
             }
         }
@@ -1152,6 +1195,15 @@ select project(o)")
             public string NewCompanyName { get; set; }
 
             public int NewCount { get; set; }
+        }
+
+        private class AutoMapReduceResult3
+        {
+            public string Name { get; set; }
+
+            public string LastName { get; set; }
+
+            public int Count { get; set; }
         }
     }
 }

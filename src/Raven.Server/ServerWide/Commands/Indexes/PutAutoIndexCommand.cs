@@ -82,6 +82,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 Collection = definition.Collections.First(),
                 MapFields = CreateFields(definition.MapFields.ToDictionary(x => x.Key, x => x.Value.As<AutoIndexField>())),
                 GroupByFields = indexType == IndexType.AutoMap ? null : CreateFields(((AutoMapReduceIndexDefinition)definition).GroupByFields),
+                GroupByFieldNames = indexType == IndexType.AutoMap ? null : ((AutoMapReduceIndexDefinition)definition).GroupByFieldNames,
                 Priority = definition.Priority,
                 Name = definition.Name,
                 Type = indexType,

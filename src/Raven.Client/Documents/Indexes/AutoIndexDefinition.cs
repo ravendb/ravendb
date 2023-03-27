@@ -20,6 +20,8 @@ namespace Raven.Client.Documents.Indexes
 
         public Dictionary<string, AutoIndexFieldOptions> GroupByFields { get; set; }
 
+        public List<string> GroupByFieldNames { get; set; }
+
         public IndexDefinitionCompareDifferences Compare(AutoIndexDefinition other)
         {
             if (other == null)
