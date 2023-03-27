@@ -379,7 +379,7 @@ public class RavenIntegration : RavenTestBase
         DtoForDynamics docToModify;
         using (var session = store.OpenSession())
         {
-            docToModify = new DtoForDynamics() {Tag = dataGenerator(100)};
+            docToModify = new DtoForDynamics() {Tag = dataGenerator(17)};
             session.Store(docToModify);
             session.SaveChanges();
         }
@@ -390,20 +390,12 @@ public class RavenIntegration : RavenTestBase
         using (var session = store.OpenSession())
         {
             var doc = session.Load<DtoForDynamics>(docToModify.Id);
-            doc.Tag = dataGenerator(99);
+            doc.Tag = dataGenerator(1);
             session.SaveChanges();
         }
 
-        using (var session = store.OpenSession())
-        {
-            var doc = session.Load<DtoForDynamics>(docToModify.Id);
-            doc.Tag = dataGenerator(98);
-            session.SaveChanges();
-        }
-
-        Indexes.WaitForIndexing(store, allowErrors: true);
+        Indexes.WaitForIndexing(store);
         WaitForUserToContinueTheTest(store);
-        IndexErrors[] errors = Indexes.WaitForIndexingErrors(store, new[] {index.IndexName});
     }
 
 
