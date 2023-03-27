@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         // For Legacy test
         public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, long? indexVersion = null)
-            : this(collection, mapFields, groupByFields, groupByFieldNames: null, deploymentMode: null, clusterState: null, indexVersion)
+            : this(collection, mapFields, groupByFields, groupByFieldNames: groupByFields.Select(x => x.Name).ToList(), deploymentMode: null, clusterState: null, indexVersion)
         {
 
         }
@@ -130,6 +130,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 
                 writer.WriteEndObject();
 
+                first = false;
+            }
+            writer.WriteEndArray();
+
+            writer.WritePropertyName((nameof(GroupByFieldNames)));
+            writer.WriteStartArray();
+            first = true;
+            foreach (var field in GroupByFieldNames)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                writer.WriteString(field);
                 first = false;
             }
             writer.WriteEndArray();
@@ -264,8 +277,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             {
                 field.Id = fieldId++;
             }
-            
-            return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, groupByFieldNames: null, deploymentMode: null, clusterState: null, version)
+
+            if (reader.TryGet(nameof(GroupByFieldNames), out jsonArray) == false)
+                throw new InvalidOperationException("No persisted group by field names");
+
+            var groupByFieldNames = new List<string>();
+
+            foreach (var groupByField in jsonArray)
+            {
+                groupByFieldNames.Add(groupByField.ToString());
+            }
+
+            return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, groupByFieldNames, deploymentMode: null, clusterState: null, version)
             {
                 LockMode = lockMode,
                 Priority = priority,
