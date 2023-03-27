@@ -80,7 +80,7 @@ namespace SlowTests.MailingList
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
                                 .WaitForNonStaleResults()
-                                .AddOrder("Split_N1_D_Range", true)
+                                .AddOrder("Split_N1", true, OrderingType.Double)
                                 .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
                                 .Take(1024);
                     var result = query.Lazily().Value.ToList();
