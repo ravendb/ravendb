@@ -48,7 +48,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             if (record.IsSharded)
             {
-                throw new PutSubscriptionException($"'{nameof(PutSubscriptionCommand)}' is not supported for sharded database.");
+                throw new SubscriptionCreationException($"'{nameof(PutSubscriptionCommand)}' is not supported for sharded database.");
             }
         }
 

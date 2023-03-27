@@ -50,7 +50,7 @@ public class PutShardedSubscriptionCommand : PutSubscriptionCommand
     {
         if (record.IsSharded == false)
         {
-            throw new PutSubscriptionException($"'{nameof(PutShardedSubscriptionCommand)}' is not supported for regular database.");
+            throw new SubscriptionCreationException($"'{nameof(PutShardedSubscriptionCommand)}' is not supported for regular database.");
         }
     }
 
