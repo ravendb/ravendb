@@ -113,7 +113,10 @@
             <div class="form-group flex-horizontal">
                 <div class="position-relative">
                     <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                        <span><i class="icon-node text-success"></i><span data-bind="textInput: $parent.shardingBackupDirectories()[$index()].nodeTag()"><span>Node tag</span></span></span>
+                        <span>
+                            <i class="icon-node text-success"></i>
+                            <span>Node <span data-bind="text: $parent.shardingBackupDirectories()[$index()].nodeTag()"></span></span>
+                        </span>
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" data-bind="foreach: $root.clusterNodes">
