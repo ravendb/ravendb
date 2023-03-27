@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -43,6 +44,17 @@ public abstract class AbstractIndexDeleteController
         await WaitForIndexNotificationAsync(index);
 
         return true;
+    }
+
+    public async ValueTask DeleteIndexAsync(string name, string raftRequestId)
+    {
+        var indexDefinition = GetIndexDefinition(name);
+        if (indexDefinition == null)
+            IndexDoesNotExistException.ThrowFor(name);
+
+        var (index, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(indexDefinition.Name, GetDatabaseName(), raftRequestId));
+
+        await WaitForIndexNotificationAsync(index);
     }
 
     private async ValueTask HandleSideBySideIndexDeleteAsync(string name, string raftRequestId)

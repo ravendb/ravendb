@@ -34,7 +34,6 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -1137,13 +1136,7 @@ namespace Raven.Server.Documents.Indexes
 
         public async Task DeleteIndex(string name, string raftRequestId)
         {
-            var index = GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, raftRequestId));
-
-            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
+            await Delete.DeleteIndexAsync(name, raftRequestId);
         }
 
         internal void DeleteIndexInternal(Index index, bool raiseNotification = true)
