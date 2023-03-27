@@ -1734,12 +1734,13 @@ namespace Raven.Client.Http
 
         private async Task CheckNodeStatusCallback(NodeStatus nodeStatus)
         {
+            // In some cases, race conditions may occur with a recently changed topology and a failed node.
+            // We still should check the node's health, and if healthy, remove its timer and restore its index.
             var copy = TopologyNodes;
-            if (nodeStatus.NodeIndex >= copy.Count)
-                return; // topology index changed / removed
-            var serverNode = copy[nodeStatus.NodeIndex];
-            if (ReferenceEquals(serverNode, nodeStatus.Node) == false)
-                return; // topology changed, nothing to check
+            var nodeIndex = _nodeSelector.GetRequestedNode(nodeStatus.Node.ClusterTag).Index;
+            var serverNode = copy.FirstOrDefault(x => x.ClusterTag.Equals(nodeStatus.Node.ClusterTag));
+            if (serverNode == null)
+                return;
 
             try
             {
@@ -2304,6 +2305,31 @@ namespace Raven.Client.Http
             {
                 return HashCode.Combine(_certificateThumbprint, _useCompression, _pooledConnectionLifetime, _pooledConnectionIdleTimeout);
             }
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff(this);
+        }
+
+        internal class TestingStuff
+        {
+            private readonly RequestExecutor _requestExecutor;
+
+            internal TestingStuff() { }
+            internal TestingStuff(RequestExecutor requestExecutor)
+            {
+                _requestExecutor = requestExecutor;
+            }
+
+            internal int[] GetNodeSelectorFailures => _requestExecutor._nodeSelector.GetNodeSelectorFailures;
+            internal ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> GetFailedNodesTimers => _requestExecutor._failedNodesTimers;
+            internal (int Index, ServerNode Node) GetPreferredNode => _requestExecutor._nodeSelector.GetPreferredNode();
         }
     }
 }
