@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Microsoft.VisualBasic;
 using Sparrow;
 using Voron.Exceptions;
 
@@ -45,7 +46,9 @@ unsafe partial class CompactTree
     {
         var it = Iterate();
         it.Reset();
-        ReadOnlySpan<byte> prevKey = ReadOnlySpan<byte>.Empty;
+
+        var prevKeyStorage = new byte[4096];
+        Span<byte> prevKey = prevKeyStorage.AsSpan();
         while (it.MoveNext(out var scope, out var v))
         {
             var key = scope.Key.Decoded();
@@ -53,7 +56,13 @@ unsafe partial class CompactTree
             {
                 throw new InvalidDataException("The items in the compact tree are not sorted!");
             }
-            prevKey = key;
+
+            // We copy the current key to the storage and update.
+            prevKey = prevKeyStorage.AsSpan();
+            key.CopyTo(prevKey);
+            prevKey = prevKey.Slice(0, key.Length);
+
+            scope.Dispose();
         }
     }
     
