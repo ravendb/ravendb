@@ -368,4 +368,51 @@ public class RavenIntegration : RavenTestBase
         }
     }
 
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void UpdatingField(Options options)
+    {
+        string initial = "12345";
+        string dataGenerator(int i) => string.Join(" ", Enumerable.Range(0, i).Select(i => initial));
+
+        using var store = GetDocumentStore(options);
+        DtoForDynamics docToModify;
+        using (var session = store.OpenSession())
+        {
+            docToModify = new DtoForDynamics() {Tag = dataGenerator(100)};
+            session.Store(docToModify);
+            session.SaveChanges();
+        }
+
+        var index = new SearchIndex();
+        index.Execute(store);
+        Indexes.WaitForIndexing(store);
+        using (var session = store.OpenSession())
+        {
+            var doc = session.Load<DtoForDynamics>(docToModify.Id);
+            doc.Tag = dataGenerator(99);
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var doc = session.Load<DtoForDynamics>(docToModify.Id);
+            doc.Tag = dataGenerator(98);
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store, allowErrors: true);
+        WaitForUserToContinueTheTest(store);
+        IndexErrors[] errors = Indexes.WaitForIndexingErrors(store, new[] {index.IndexName});
+    }
+
+
+    private class SearchIndex : AbstractIndexCreationTask<DtoForDynamics>
+    {
+        public SearchIndex()
+        {
+            Map = enumerable => enumerable.Select(i => new {i.Tag});
+            Index(i => i.Tag, FieldIndexing.Search);
+        }
+    }
 }
