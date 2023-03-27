@@ -32,10 +32,10 @@ namespace Raven.Server.Documents.Sharding.Background
                 {
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    if (Monitor.TryEnter(this, 250) == false)
+                    Monitor.TryEnter(this, 250, ref monitorTaken);
+                    if (monitorTaken == false)
                         return;
 
-                    monitorTaken = true;
                     if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
                         return;
 
