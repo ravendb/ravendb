@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto;
 
 public class AutoMapReduceIndexResultsAggregator
 {
+    protected Action<DynamicJsonValue> ModifyOutputToStore;
+
     internal AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, TransactionOperationContext indexContext, IndexingStatsScope stats, ref BlittableJsonReaderObject currentlyProcessedResult, CancellationToken token)
     {
         var aggregatedResultsByReduceKey = new Dictionary<BlittableJsonReaderObject, Dictionary<string, PropertyResult>>(ReduceKeyComparer.Instance);
@@ -67,6 +69,8 @@ public class AutoMapReduceIndexResultsAggregator
 
         foreach (var aggregate in aggregationResult.Value)
             djv[aggregate.Key] = aggregate.Value.ResultValue;
+
+        ModifyOutputToStore?.Invoke(djv);
 
         return djv;
     }
