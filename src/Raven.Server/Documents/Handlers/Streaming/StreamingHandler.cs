@@ -28,6 +28,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         {
             var start = GetStart();
             var pageSize = GetPageSize();
+            var format = GetStringQueryString("format", false);
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -65,14 +66,16 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     initialState);
 
                 using (var token = CreateOperationToken())
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = GetLoadDocumentsResultsWriter(format, context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
+                    writer.StartResponse();
+                    writer.StartResults();
 
-                    await writer.WriteDocumentsAsync(context, documentsEnumerator, metadataOnly: false, token.Token);
-
-                    writer.WriteEndObject();
+                    foreach (var document in documentsEnumerator)
+                        await writer.AddResultAsync(document, token.Token);
+                    
+                    writer.EndResults();
+                    writer.EndResponse();
                 }
             }
         }
@@ -323,6 +326,13 @@ namespace Raven.Server.Documents.Handlers.Streaming
             return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
         }
 
+        private IStreamResultsWriter<Document> GetLoadDocumentsResultsWriter(string format, DocumentsOperationContext context, Stream responseBodyStream)
+        {
+            if (string.IsNullOrEmpty(format) == false && string.Equals(format, "jsonl", StringComparison.OrdinalIgnoreCase))
+                return new StreamJsonlResultsWriter(responseBodyStream, context);
+            return new StreamResultsWriter(responseBodyStream, context);
+        }
+        
         private void ThrowUnsupportedException(string message)
         {
             throw new NotSupportedException(message);
