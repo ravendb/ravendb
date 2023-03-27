@@ -278,14 +278,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 field.Id = fieldId++;
             }
 
+            List<string> groupByFieldNames;
+
             if (reader.TryGet(nameof(GroupByFieldNames), out jsonArray) == false)
-                throw new InvalidOperationException("No persisted group by field names");
-
-            var groupByFieldNames = new List<string>();
-
-            foreach (var groupByField in jsonArray)
             {
-                groupByFieldNames.Add(groupByField.ToString());
+                // the fields don't exist for indexes that were imported from a dump prior to 6.0
+                groupByFieldNames = groupByFields.Select(x => x.Name).ToList();
+            }
+            else
+            {
+                groupByFieldNames = new List<string>();
+
+                foreach (var groupByField in jsonArray)
+                {
+                    groupByFieldNames.Add(groupByField.ToString());
+                }
             }
 
             return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, groupByFieldNames, deploymentMode: null, clusterState: null, version)
