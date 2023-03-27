@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
@@ -16,8 +17,23 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void CanSetFieldStorageNoAndFieldIndexingNoInMapReduce(Options options)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void CanSetFieldStorageNoAndFieldIndexingNoInMapReduceCorax(Options options) => CanSetFieldStorageNoAndFieldIndexingNoInMapReduce(options, simpleMapReduceErrors =>
+        {
+            Assert.Equal(1, simpleMapReduceErrors.Errors.Length);
+            Assert.True(simpleMapReduceErrors.Errors.All(x => x.Error.Contains("that is neither indexed nor stored is useless because it cannot be searched or retrieved.")));
+        });
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanSetFieldStorageNoAndFieldIndexingNoInMapReduceLucene(Options options) =>
+            CanSetFieldStorageNoAndFieldIndexingNoInMapReduce(options, simpleMapReduceErrors =>
+            {
+                Assert.Equal(25, simpleMapReduceErrors.Errors.Length);
+                Assert.True(simpleMapReduceErrors.Errors.All(x => x.Error.Contains("it doesn't make sense to have a field that is neither indexed nor stored")));
+            });
+
+        private void CanSetFieldStorageNoAndFieldIndexingNoInMapReduce(Options options, Action<IndexErrors> simpleMapAssertion)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -38,8 +54,7 @@ namespace SlowTests.Issues
                 Assert.Equal(2, errors.Length);
 
                 var simpleMapErrors = errors.Single(x => x.Name == new SimpleMapIndex().IndexName);
-                Assert.Equal(25, simpleMapErrors.Errors.Length);
-                Assert.True(simpleMapErrors.Errors.All(x => x.Error.Contains("it doesn't make sense to have a field that is neither indexed nor stored")));
+                simpleMapAssertion(simpleMapErrors);
 
                 var simpleMapReduceErrors = errors.Single(x => x.Name == new SimpleMapReduceIndex().IndexName);
                 Assert.Equal(0, simpleMapReduceErrors.Errors.Length);
