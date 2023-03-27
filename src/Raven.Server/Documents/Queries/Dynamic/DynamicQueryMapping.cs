@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public Dictionary<string, DynamicQueryMappingItem> GroupByFields { get; private set; }
 
+        public GroupByField[] GroupBy { get; set; }
+
         public bool IsGroupBy { get; private set; }
 
         public List<Index> SupersededIndexes;
@@ -120,7 +122,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     indexField.HasSuggestions = field.HasSuggestions;
 
                     return indexField;
-                }).ToArray(), deploymentMode: null, clusterState: null);
+                }).ToArray(),
+                groupByFieldNames: GroupBy.Select(x => x.Name.Value).ToList(),
+                deploymentMode: null, clusterState: null);
         }
 
         internal void ExtendMappingBasedOn(AutoIndexDefinitionBaseServerSide definitionOfExistingIndex)
@@ -232,6 +236,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (query.Metadata.IsGroupBy)
             {
                 result.IsGroupBy = true;
+                result.GroupBy = query.Metadata.GroupBy;
                 result.GroupByFields = CreateGroupByFields(query, mapFields);
 
                 foreach (var field in mapFields)

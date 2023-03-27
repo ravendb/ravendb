@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
-using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Auto; 
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
@@ -21,14 +21,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public List<string> GroupByFieldNames { get; }
 
-        public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
+        public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, List<string> groupByFieldNames, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
             : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, deploymentMode, clusterState, indexVersion)
         {
             OrderedGroupByFields = groupByFields.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
 
             GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
 
-            GroupByFieldNames = groupByFields.Select(x => x.Name).ToList();
+            GroupByFieldNames = groupByFieldNames;
 
             MapAndGroupByFields = new Dictionary<string, AutoIndexField>(MapFields.Count + GroupByFields.Count);
 
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         // For Legacy test
         public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, long? indexVersion = null)
-            : this(collection, mapFields, groupByFields, deploymentMode: null, clusterState: null, indexVersion)
+            : this(collection, mapFields, groupByFields, groupByFieldNames: null, deploymentMode: null, clusterState: null, indexVersion)
         {
 
         }
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 field.Id = fieldId++;
             }
             
-            return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, deploymentMode: null, clusterState: null, version)
+            return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, groupByFieldNames: null, deploymentMode: null, clusterState: null, version)
             {
                 LockMode = lockMode,
                 Priority = priority,
