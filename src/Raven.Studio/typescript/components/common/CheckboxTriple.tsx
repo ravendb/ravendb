@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { FormGroup, Input } from "reactstrap";
 
 interface CheckboxTripleProps {
@@ -14,9 +14,9 @@ export function CheckboxTriple(props: CheckboxTripleProps) {
 
     const inputEl = useRef<HTMLInputElement>();
 
-    useLayoutEffect(() => {
+    useEffect(() => {
         inputEl.current.indeterminate = state === "some_checked";
-    });
+    }, [state]);
 
     return (
         <FormGroup check className={colorClass + " form-check-lg"}>

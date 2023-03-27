@@ -31,7 +31,7 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
 
     const isNodeIndeterminate = (nodeTag: string): boolean => {
         return (
-            selectedLocations.filter((x) => x.nodeTag === nodeTag).length > 0 &&
+            selectedLocations.some((x) => x.nodeTag === nodeTag) &&
             selectedLocations.filter((x) => x.nodeTag === nodeTag).length <
                 locations.filter((x) => x.nodeTag === nodeTag).length
         );

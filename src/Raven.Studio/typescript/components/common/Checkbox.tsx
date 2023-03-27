@@ -1,4 +1,4 @@
-﻿import React, { HTMLAttributes, ReactNode, useEffect, useLayoutEffect, useRef } from "react";
+﻿import React, { HTMLAttributes, ReactNode, useEffect, useRef } from "react";
 import { Input, Label } from "reactstrap";
 import useId from "hooks/useId";
 import classNames from "classnames";
@@ -39,9 +39,9 @@ export function Checkbox(props: CheckboxProps) {
 
     const inputEl = useRef<HTMLInputElement>();
 
-    useLayoutEffect(() => {
+    useEffect(() => {
         inputEl.current.indeterminate = indeterminate;
-    });
+    }, [indeterminate]);
 
     return (
         <div className={classNames(checkboxClass, colorClass, sizeClass, className)} {...rest}>
