@@ -1,4 +1,11 @@
-﻿import { createAsyncThunk, createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
+﻿import {
+    createAsyncThunk,
+    createEntityAdapter,
+    createSlice,
+    EntityState,
+    PayloadAction,
+    UnsubscribeListener,
+} from "@reduxjs/toolkit";
 import {
     DatabaseFilterCriteria,
     DatabaseLocalInfo,
@@ -25,6 +32,7 @@ import notificationCenter from "common/notifications/notificationCenter";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import assertUnreachable from "components/utils/assertUnreachable";
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
+import { addAppListener } from "components/storeUtils";
 
 interface DatabasesState {
     /**
@@ -295,21 +303,32 @@ export const databasesSlice = createSlice({
         builder.addCase(fetchDatabase.fulfilled, (state, action) => {
             const { nodeTag } = action.meta.arg;
 
-            const newEntity = toLocalInfo(action.payload, nodeTag);
+            action.payload.Databases.forEach((db) => {
+                const newEntity = toLocalInfo(db, nodeTag);
 
-            const existingInfo = localDatabaseDetailedInfoSelectors.selectById(
-                state.localDatabaseDetailedInfo,
-                localDatabaseInfoAdapter.selectId(newEntity)
-            );
-            if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
-                localDatabaseInfoAdapter.setOne(state.localDatabaseDetailedInfo, newEntity);
-            }
+                const existingInfo = localDatabaseDetailedInfoSelectors.selectById(
+                    state.localDatabaseDetailedInfo,
+                    localDatabaseInfoAdapter.selectId(newEntity)
+                );
+                if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
+                    localDatabaseInfoAdapter.setOne(state.localDatabaseDetailedInfo, newEntity);
+                }
+            });
         });
 
         builder.addCase(fetchDatabases.fulfilled, (state, action) => {
             const nodeTag = action.meta.arg;
 
-            state.localDatabaseDetailedLoadStatus.entities[nodeTag].status = "success";
+            const loadStatusEntities = state.localDatabaseDetailedLoadStatus.entities;
+
+            if (loadStatusEntities[nodeTag]) {
+                loadStatusEntities[nodeTag].status = "success";
+            } else {
+                loadStatusEntities[nodeTag] = {
+                    nodeTag,
+                    status: "success",
+                };
+            }
 
             action.payload.Databases.forEach((db) => {
                 const newEntity = toLocalInfo(db, nodeTag);
@@ -353,14 +372,7 @@ function toLocalInfo(db: StudioDatabaseState, nodeTag: string): DatabaseLocalInf
     };
 }
 
-export const { activeDatabaseChanged, initDetails, filterTextSet } = databasesSlice.actions;
-
-export const databasesLoaded =
-    (shardedInfo: DatabaseSharedInfo[]): AppAsyncThunk =>
-    async (dispatch: AppDispatch, getState) => {
-        dispatch(databasesSlice.actions.databasesLoaded(shardedInfo));
-        await dispatch(throttledReloadDatabaseDetails);
-    };
+export const { activeDatabaseChanged, databasesLoaded, initDetails, filterTextSet } = databasesSlice.actions;
 
 export const loadDatabasesDetails = (nodeTags: string[]) => async (dispatch: AppDispatch) => {
     dispatch(initDetails(nodeTags));
@@ -396,7 +408,7 @@ export const reloadDatabasesDetails = async (dispatch: AppDispatch) => {
     await Promise.all(tasks);
 };
 
-const throttledReloadDatabaseDetails = _.throttle(reloadDatabasesDetails, 100);
+export const throttledReloadDatabaseDetails = _.throttle(reloadDatabasesDetails, 100);
 
 const fetchDatabases = createAsyncThunk(sliceName + "/fetchDatabases", async (nodeTag: string) => {
     return await services.databasesService.getDatabasesState(nodeTag);
@@ -586,4 +598,26 @@ export const confirmSetLockMode = (): AppAsyncThunk<boolean> => async () => {
     const result = await viewHelpers.confirmationMessage("Are you sure?", `Do you want to change lock mode?`);
 
     return result.can;
+};
+
+export const syncDatabaseDetails = (): AppThunk<UnsubscribeListener> => (dispatch) => {
+    return dispatch(
+        addAppListener({
+            actionCreator: databasesSlice.actions.databasesLoaded,
+            effect: (action, api) => {
+                const state = api.getState();
+                const existingData = state.databases.localDatabaseDetailedInfo.ids;
+
+                const needsRefresh = action.payload.some((db) => {
+                    const locations = DatabaseUtils.getLocations(db);
+                    const ids = locations.map((l) => selectDatabaseInfoId(db.name, l));
+                    return ids.some((id) => !existingData.includes(id));
+                });
+
+                if (needsRefresh) {
+                    api.dispatch(throttledReloadDatabaseDetails);
+                }
+            },
+        })
+    );
 };

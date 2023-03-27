@@ -40,7 +40,7 @@ export default class DatabasesService {
         return new getDatabasesStateForStudioCommand(targetNodeTag).execute();
     }
 
-    async getDatabaseState(targetNodeTag: string, databaseName: string): Promise<StudioDatabaseState> {
+    async getDatabaseState(targetNodeTag: string, databaseName: string): Promise<StudioDatabasesState> {
         return new getDatabaseStateForStudioCommand(targetNodeTag, databaseName).execute();
     }
 
