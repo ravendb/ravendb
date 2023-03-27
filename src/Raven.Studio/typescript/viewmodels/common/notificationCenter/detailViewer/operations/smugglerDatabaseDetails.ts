@@ -253,7 +253,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         })
             .done(result => {
                 if (result.can) {
-                    new delayBackupCommand(this.op.database, this.op.operationId(), "01:00:00")
+                    new delayBackupCommand(this.op.database, this.op.operationId(), duration)
                         .execute();
                 } else {
                     this.openDetails();
