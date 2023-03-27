@@ -44,6 +44,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public async ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
+            options.OperateOnDatabaseRecordTypes &= ~(DatabaseRecordItemType.HubPullReplications | DatabaseRecordItemType.SinkPullReplications);
             _options = options;
 
             // we will send decrypted data to the shards
