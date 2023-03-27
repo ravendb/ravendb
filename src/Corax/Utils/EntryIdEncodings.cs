@@ -159,6 +159,11 @@ public static class EntryIdEncodings
 
     private static readonly short[] FrequencyTable = Enumerable.Range(0, byte.MaxValue).Select(i => FrequencyReconstructionFromQuantizationFromFunction(i)).ToArray();
 
+    internal static long QuantizeAndDequantize(short frequency)
+    {
+        return FrequencyReconstructionFromQuantization(FrequencyQuantization(frequency));
+    }
+    
     internal static long FrequencyQuantization(short frequency)
     {
         if (Lzcnt.IsSupported)
