@@ -14,6 +14,7 @@ import {
     selectAllDatabases,
     selectDatabaseSearchCriteria,
     selectFilteredDatabases,
+    syncDatabaseDetails,
 } from "components/common/shell/databasesSlice";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import router from "plugins/router";
@@ -36,7 +37,6 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const dispatch = useAppDispatch();
 
-
     const { nodeTags } = useClusterTopologyManager();
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
@@ -46,6 +46,10 @@ export function DatabasesPage(props: DatabasesPageProps) {
     useEffect(() => {
         dispatch(loadDatabasesDetails(nodeTags));
     }, [dispatch, nodeTags]);
+
+    useEffect(() => {
+        return dispatch(syncDatabaseDetails());
+    }, [dispatch]);
 
     useEffect(() => {
         const visibleNames = filteredDatabases.map((x) => x.name);

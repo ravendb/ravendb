@@ -1,10 +1,14 @@
-﻿import { configureStore } from "@reduxjs/toolkit";
+﻿import { addListener, configureStore, createListenerMiddleware, TypedAddListener } from "@reduxjs/toolkit";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
 import { statisticsSlice } from "components/pages/database/status/statistics/logic/statisticsSlice";
 import { BaseThunkAPI } from "@reduxjs/toolkit/dist/createAsyncThunk";
 import { databasesSlice } from "components/common/shell/databasesSlice";
 import { services } from "hooks/useServices";
 import { accessManagerSlice } from "components/common/shell/accessManagerSlice";
+
+const listenerMiddleware = createListenerMiddleware({
+    extra: () => services,
+});
 
 export function createStoreConfiguration() {
     return configureStore({
@@ -18,7 +22,7 @@ export function createStoreConfiguration() {
                 thunk: {
                     extraArgument: () => services,
                 },
-            }),
+            }).prepend(listenerMiddleware.middleware),
     });
 }
 

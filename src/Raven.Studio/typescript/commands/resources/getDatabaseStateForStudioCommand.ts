@@ -1,6 +1,6 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
+import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState;
 
 class getDatabaseStateForStudioCommand extends commandBase {
 
@@ -13,14 +13,14 @@ class getDatabaseStateForStudioCommand extends commandBase {
         this.databaseName = databaseName;
     }
     
-    execute(): JQueryPromise<StudioDatabaseState> {
+    execute(): JQueryPromise<StudioDatabasesState> {
         const url = endpoints.global.studioDatabases.studioTasksDatabasesState;
         const args = {
             nodeTag: this.nodeTag,
             name: this.databaseName
         }
 
-        return this.query<StudioDatabaseState>(url, args, undefined, x => x.Databases[0])
+        return this.query<StudioDatabasesState>(url, args, undefined)
             .fail((response: JQueryXHR) => this.reportError("Failed to load database state", response.responseText, response.statusText));
     }
 }
