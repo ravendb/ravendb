@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public Dictionary<string, DynamicQueryMappingItem> GroupByFields { get; private set; }
 
-        public GroupByField[] GroupBy { get; set; }
+        public List<string> GroupByFieldNames { get; private set; }
 
         public bool IsGroupBy { get; private set; }
 
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     return indexField;
                 }).ToArray(),
-                groupByFieldNames: GroupBy.Select(x => x.Name.Value).ToList(),
+                GroupByFieldNames,
                 deploymentMode: null, clusterState: null);
         }
 
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (query.Metadata.IsGroupBy)
             {
                 result.IsGroupBy = true;
-                result.GroupBy = query.Metadata.GroupBy;
+                result.GroupByFieldNames = query.Metadata.GroupBy.Select(x => x.Name.Value).ToList();
                 result.GroupByFields = CreateGroupByFields(query, mapFields);
 
                 foreach (var field in mapFields)
@@ -310,8 +310,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 mapping.IsGroupBy = true;
 
                 var mapReduceDefinition = (AutoMapReduceIndexDefinition)definition;
-
                 mapping.GroupByFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.Ordinal);
+                mapping.GroupByFieldNames = new List<string>();
 
                 foreach (var field in mapReduceDefinition.GroupByFields)
                 {
@@ -322,6 +322,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         isSpecifiedInWhere: true,
                         isFullTextSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Search),
                         isExactSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Exact));
+
+                    mapping.GroupByFieldNames.Add(field.Key);
                 }
             }
 
