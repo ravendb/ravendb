@@ -97,7 +97,7 @@ export class lineChart {
             .attr("y2", this.height)
             .style("stroke-opacity", 0);
         
-        this.tooltip = d3.select(".tooltip");
+        this.tooltip = d3.select(".cluster-dashboard-tooltip");
         
         if (this.opts.tooltipProvider || this.opts.onMouseMove) {
             this.setupValuesPreview();

@@ -14,6 +14,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Extensions;
@@ -37,6 +38,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow.Collections;
 using Sparrow.Threading;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Rachis
 {
@@ -1490,6 +1492,17 @@ namespace Raven.Server.Rachis
                 GetLastTruncated(context, out lastIndex, out long _);
             }
             lastIndex += 1;
+            var guid = LogHistory.GetGuidFromCommand(cmd);
+            if (guid == RaftIdGenerator.DontCareId)
+            {
+                var newGuid = $"DontCare/{term}-{lastIndex}";
+                cmd.Modifications = new DynamicJsonValue { [nameof(CommandBase.UniqueRequestId)] = newGuid };
+                using (var old = cmd)
+                {
+                    cmd = context.ReadObject(cmd, newGuid);
+                }
+            }
+            
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(Bits.SwapBytes(lastIndex));

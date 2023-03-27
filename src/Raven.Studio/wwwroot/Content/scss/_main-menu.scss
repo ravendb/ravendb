@@ -190,8 +190,10 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
                 & > a {
                     padding: $gutter-sm calc($gutter-xs - 1px);
                     @media (min-height: 750px) {
+                    @media (min-height: 750px) {
                         height: 60px;
                     }
+
                     span {
                         transition: opacity 0.1s linear;
                         margin-left: $gutter-xs;

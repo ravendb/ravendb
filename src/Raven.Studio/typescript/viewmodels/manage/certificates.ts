@@ -65,6 +65,9 @@ class certificates extends viewModelBase {
     wellKnownAdminCerts = ko.observableArray<string>([]);
     wellKnownAdminCertsVisible = ko.observable<boolean>(false);
     
+    wellKnownIssuers = ko.observableArray<string>([]);
+    wellKnownIssuersVisible = ko.observable<boolean>(false);
+    
     domainsForServerCertificate = ko.observableArray<string>([]);
     
     isSecureServer = accessManager.default.secureServer();
@@ -178,13 +181,23 @@ class certificates extends viewModelBase {
         });
         
         const wellKnownAdminCerts = this.wellKnownAdminCerts();
+        const nameLower = this.nameFilter().toLocaleLowerCase();
         
         if (wellKnownAdminCerts.length && this.showAdminCertificates()) {
-            const thumbprintMatch = _.some(wellKnownAdminCerts, x => x.toLocaleLowerCase().includes(this.nameFilter().toLocaleLowerCase()));
+            const thumbprintMatch = _.some(wellKnownAdminCerts, x => x.toLocaleLowerCase().includes(nameLower));
             this.wellKnownAdminCertsVisible(thumbprintMatch);
         } else {
             this.wellKnownAdminCertsVisible(false);
         }
+
+        const wellKnownIssues = this.wellKnownIssuers();
+
+        if (wellKnownIssues.length && this.showAdminCertificates()) {
+            const thumbprintMatch = _.some(wellKnownIssues, x => x.toLocaleLowerCase().includes(nameLower));
+            this.wellKnownIssuersVisible(thumbprintMatch);
+        } else {
+            this.wellKnownIssuersVisible(false);
+    }
     }
     
     private isMatchingTextFilter(certificate: unifiedCertificateDefinitionWithCache): boolean {
@@ -593,6 +606,7 @@ class certificates extends viewModelBase {
                 this.certificates(orderedCertificates);
                 
                 this.wellKnownAdminCerts(certificatesInfo.WellKnownAdminCerts || []);
+                this.wellKnownIssuers(certificatesInfo.WellKnownIssuers || []);
                 this.filterCertificates();
                 this.sortCertificates(this.currentSortMode());
             });

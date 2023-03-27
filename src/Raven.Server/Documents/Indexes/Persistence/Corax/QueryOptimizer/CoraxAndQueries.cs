@@ -61,7 +61,12 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
                 break;
 
             //We're always do TermMatch (true and NOT (X))
-            IQueryMatch second = IndexSearcher.TermQuery(query.Field, query.TermAsString);
+            IQueryMatch second = query.Term switch
+            {
+                long l => IndexSearcher.TermQuery(query.Field, l),
+                double d => IndexSearcher.TermQuery(query.Field, d),
+                _ => IndexSearcher.TermQuery(query.Field, query.TermAsString),
+            };
 
             if (query.Operation is UnaryMatchOperation.NotEquals)
             {

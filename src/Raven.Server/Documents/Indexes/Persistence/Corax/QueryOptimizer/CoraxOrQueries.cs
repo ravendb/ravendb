@@ -96,7 +96,7 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
             _unaryMatchesList ??= new();
             _unaryMatchesList.Add(itemToAdd);
         }
-        else
+        else if (itemToAdd.Operation is UnaryMatchOperation.Equals && itemToAdd.TermAsString != null)
         {
             _termMatchesList ??= new();
 
@@ -104,6 +104,11 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
                 _termMatchesList.Add(itemToAdd.Field, new List<string>() {itemToAdd.TermAsString});
             else
                 list.Add(itemToAdd.TermAsString);
+        }
+        else
+        {
+            _complexMatches ??= new();
+            _complexMatches.Add(itemToAdd.Materialize());
         }
 
         return true;
@@ -125,7 +130,16 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
         if (_termMatchesList != null)
         {
             foreach (var (field, terms) in _termMatchesList)
-                AddToQueryTree(IndexSearcher.InQuery(field, terms));
+            {
+                if (terms.Count == 1)
+                {
+                   AddToQueryTree(IndexSearcher.TermQuery(field, terms[0])); 
+                }
+                else
+                {
+                    AddToQueryTree(IndexSearcher.InQuery(field, terms));
+                }
+            }
         }
         
         if (_complexMatches != null)

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 #if DEBUG
@@ -11,6 +12,7 @@ using Sparrow.Compression;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
+using Voron.Data.Fixed;
 using Voron.Data.PostingLists;
 
 namespace Corax;
@@ -24,7 +26,54 @@ public partial class IndexSearcher
     public TermMatch TermQuery(string field, Slice term, bool hasBoost = false) => TermQuery(FieldMetadataBuilder(field, hasBoost: hasBoost), term);
     public TermMatch TermQuery(Slice field, Slice term, bool hasBoost = false) => TermQuery(FieldMetadata.Build(field, default, default, default, default, hasBoost: hasBoost), term);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private unsafe long GetContainerIdOfNumericalTerm<TNumeric>(in FieldMetadata field, out FieldMetadata numericalField, TNumeric term)
+    {
+        long containerId = default;
+        numericalField = default;
+        if (typeof(TNumeric) == typeof(long))
+        {
+            numericalField = field.GetNumericFieldMetadata<long>(_transaction.Allocator);
+            using var set = _fieldsTree?.FixedTreeFor(numericalField.FieldName, sizeof(long));
+            if (set != null)
+            {
+                var ptr = set.ReadPtr((long)(object)term, out var length);
+                if (ptr != null)
+                {
+                    containerId = *(long*)ptr;
+                    Debug.Assert(length == sizeof(long));
+                }
+            }
+
+        }
+        else if (typeof(TNumeric) == typeof(double))
+        {
+            numericalField = field.GetNumericFieldMetadata<double>(_transaction.Allocator);
+            using var set = _fieldsTree?.FixedTreeForDouble(numericalField.FieldName, sizeof(double));
+            var ptr = set.ReadPtr((double)(object)term, out var length);
+            if (ptr != null)
+            {
+                containerId = *(long*)ptr;
+                Debug.Assert(length == sizeof(long));
+            }
+        }
+
+        return containerId;
+    }
     
+    //Numerical TermMatch.
+    public unsafe TermMatch TermQuery<TNumeric>(in FieldMetadata field, TNumeric term, CompactTree termsTree = null)
+    {
+        var containerId = GetContainerIdOfNumericalTerm(field, out var numericalField, term);
+
+        if (containerId == 0)
+        {
+            return TermMatch.CreateEmpty(this, Allocator);
+        }
+
+        return TermQuery(numericalField, containerId, 1);
+    }
+
     public TermMatch TermQuery(FieldMetadata field, string term, CompactTree termsTree = null)
     {
         var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -109,7 +158,7 @@ public partial class IndexSearcher
         #endif
         return matches;
     }
-
+    
     internal TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection)
     {
         TermMatch matches;
@@ -136,7 +185,23 @@ public partial class IndexSearcher
         return matches;
     }
 
-    public long NumberOfDocumentsUnderSpecificTerm(FieldMetadata binding, string term)
+    public long NumberOfDocumentsUnderSpecificTerm<TData>(FieldMetadata binding, TData term)
+    {
+        if (typeof(TData) == typeof(long))
+        {
+            var containerId = GetContainerIdOfNumericalTerm(binding, out var numericalField, (long)(object)term);
+            return NumberOfDocumentsUnderSpecificTerm(containerId);
+        }
+        if (typeof(TData) == typeof(double))
+        {
+            var containerId = GetContainerIdOfNumericalTerm(binding, out var numericalField, (double)(object)term);
+            return NumberOfDocumentsUnderSpecificTerm(containerId);
+        }
+            
+        return NumberOfDocumentsUnderSpecificTerm(binding, (string)(object)term);
+    }
+    
+    private long NumberOfDocumentsUnderSpecificTerm(FieldMetadata binding, string term)
     {
         var terms = _fieldsTree?.CompactTreeFor(binding.FieldName);
         if (terms == null)
@@ -158,23 +223,31 @@ public partial class IndexSearcher
         return NumberOfDocumentsUnderSpecificTerm(tree, term.AsReadOnlySpan());
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private long NumberOfDocumentsUnderSpecificTerm(CompactTree tree, ReadOnlySpan<byte> term)
     {
         if (tree.TryGetValue(term, out var value) == false)
             return 0;
 
+        return NumberOfDocumentsUnderSpecificTerm(value);
+    }
+    
+    private long NumberOfDocumentsUnderSpecificTerm(long containerId)
+    {
+        if (containerId == 0)
+            return 0;
         
-        if ((value & (long)TermIdMask.Set) != 0)
+        if ((containerId & (long)TermIdMask.Set) != 0)
         {
-            var setId = EntryIdEncodings.GetContainerId(value);
+            var setId = EntryIdEncodings.GetContainerId(containerId);
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
             ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             return setState.NumberOfEntries;
         }
         
-        if ((value & (long)TermIdMask.Small) != 0)
+        if ((containerId & (long)TermIdMask.Small) != 0)
         {
-            var smallSetId = EntryIdEncodings.GetContainerId(value);
+            var smallSetId = EntryIdEncodings.GetContainerId(containerId);
             var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
             var itemsCount = ZigZagEncoding.Decode<int>(small.ToSpan(), out var len);
 
