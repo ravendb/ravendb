@@ -43,7 +43,10 @@ namespace Corax.Queries
             {
                 var termSlice = termScope.Key.Decoded();
                 if (termSlice.EndsWith(suffix))
+                {
+                    termScope.Dispose();
                     continue;
+                }
 
                 term = _searcher.TermQuery(_field, termScope.Key, _tree);
                 return true;
