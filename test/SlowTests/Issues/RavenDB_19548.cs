@@ -66,7 +66,7 @@ namespace SlowTests.Issues
 
                     Action act = () => asyncDocumentQuery.ToString();
                     var exception = Assert.Throws<NotSupportedException>(act);
-                    Assert.Equal("Unsupported parameter type Int32. Primitive types/string types are not allowed in Raw<T>() method without wrapping them as an object.",
+                    Assert.Equal("Unsupported parameter type Int32. Primitive types/string types are not allowed in Raw<T>() method.",
                         exception.InnerException.Message);
                 }
 
@@ -112,6 +112,9 @@ namespace SlowTests.Issues
                         "declare function output(result) {\r\n\tvar ret = result.Id.length;\r\n\treturn ret;\r\n}\r\nfrom 'Users' as result select output(result)"
                         , asyncDocumentQuery.ToString());
 
+                    var exception = Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
+                    Assert.StartsWith("System.InvalidOperationException: Query returning a single function call result must return an object",
+                        exception.Result.Message);
                 }
 
                 /* should work:
@@ -139,6 +142,10 @@ namespace SlowTests.Issues
                     Assert.Equal(
                         "declare function output(result) {\r\n\treturn result.Id.length;\r\n}\r\nfrom 'Users' as result select output(result)"
                         , asyncDocumentQuery.ToString());
+
+                    var exception = Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
+                    Assert.StartsWith("System.InvalidOperationException: Query returning a single function call result must return an object",
+                        exception.Result.Message);
                 }
 
                 /* shouldn't work:
@@ -152,7 +159,7 @@ namespace SlowTests.Issues
 
                     Action act = () => asyncDocumentQuery.ToString();
                     var exception = Assert.Throws<NotSupportedException>(act);
-                    Assert.Equal("Unsupported parameter type Int32. Primitive types/string types are not allowed in Raw<T>() method without wrapping them as an object.",
+                    Assert.Equal("Unsupported parameter type Int32. Primitive types/string types are not allowed in Raw<T>() method.",
                         exception.InnerException.Message);
                 }
 

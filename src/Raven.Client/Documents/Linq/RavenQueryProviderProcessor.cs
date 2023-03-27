@@ -2999,6 +2999,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         AddJsProjection(name, newExpression.Arguments[index], sb, index != 0);
                     }
                 }
+                sb.Append(" }");
             }
 
             if (expression is MemberInitExpression mie)
@@ -3025,6 +3026,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     AddJsProjection(name, field.Expression, sb, index != 0);
 
                 }
+                sb.Append(" }");
             }
 
             if (expression is MemberExpression or MethodCallExpression)
@@ -3033,9 +3035,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     script = ToJs(expression);
                 
                 sb.Append(script);
-                return sb.ToString();
             }
-            sb.Append(" }");
+
             return sb.ToString();
         }
 
