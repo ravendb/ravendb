@@ -129,10 +129,10 @@ namespace SlowTests.Sharding.BucketMigration
                 session.SaveChanges();
             }
 
-            await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
-
-            Assert.True(WaitForValue(() =>
+            await AssertWaitForValueAsync(async () =>
             {
+                await db.DocumentsMigrator.ExecuteMoveDocumentsAsync();
+
                 using (var session = store.OpenSession(ShardHelper.ToShardName(store.Database, wrongShard)))
                 {
                     var u2 = session.Load<User>("users/2");
@@ -145,7 +145,7 @@ namespace SlowTests.Sharding.BucketMigration
 
                     return true;
                 }
-            }, true, 30_000, 333));
+            }, true, 30_000, 333);
         }
 
         [Fact]
