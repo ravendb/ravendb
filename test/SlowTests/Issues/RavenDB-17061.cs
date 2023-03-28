@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,8 +19,8 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_project_when_the_document_is_missing(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -57,7 +58,8 @@ namespace SlowTests.Issues
                     Assert.Equal(userId, users[0]);
                 }
 
-                await store.Maintenance.SendAsync(new StopIndexOperation(stats.IndexName));
+                store.Maintenance.ForTesting(() => new StopIndexOperation(stats.IndexName))
+                    .ExecuteOnAll();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -74,14 +76,16 @@ namespace SlowTests.Issues
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(1, stats.SkippedResults);
+
+                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+
                     Assert.Equal(0, users.Count);
                 }
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_project_when_the_document_is_missing_with_index(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -120,7 +124,8 @@ namespace SlowTests.Issues
                     Assert.Equal(userId, users[0]);
                 }
 
-                await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
+                store.Maintenance.ForTesting(() => new StopIndexOperation(index.IndexName))
+                    .ExecuteOnAll();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -151,7 +156,7 @@ namespace SlowTests.Issues
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(1, stats.SkippedResults);
+                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
                     Assert.Equal(0, users.Count);
                 }
 
@@ -168,14 +173,14 @@ namespace SlowTests.Issues
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(1, stats.SkippedResults);
+                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
                     Assert.Equal(0, users.Count);
                 }
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_project_when_mixed_stored_options_in_index(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -221,7 +226,8 @@ namespace SlowTests.Issues
                     Assert.Equal(lastName, users[0].LastName);
                 }
 
-                await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
+                store.Maintenance.ForTesting(() => new StopIndexOperation(index.IndexName))
+                    .ExecuteOnAll();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -242,7 +248,7 @@ WaitForUserToContinueTheTest(store);
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(1, stats.SkippedResults);
+                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
                     Assert.Equal(0, users.Count);
                 }
 
