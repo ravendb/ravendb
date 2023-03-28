@@ -1507,16 +1507,14 @@ namespace Corax
                     switch (AddEntriesToTerm(tmpBuf, existingIdInTree, ref entries, out termId))
                     {
                         case AddEntriesToTermResult.UpdateTermId:
-                            dumper.WriteAddition(term, termId);
+#if ENABLE_TERMDUMPER
                             if (termId != existingIdInTree)
                             {
                                 dumper.WriteRemoval(term, existingIdInTree);
-                                if (fieldTree.TryRemove(termsSpan, out var previousIdUnderTheTerm) == false)
-                                    ThrowTriedToDeleteTermThatDoesNotExists();
-
-                                Debug.Assert(previousIdUnderTheTerm == existingIdInTree);
                             }
-                            
+#endif
+     
+                            dumper.WriteAddition(term, termId);
                             fieldTree.Add(scope.Key, termId);
                             break;
                         case AddEntriesToTermResult.RemoveTermId:
@@ -1675,7 +1673,14 @@ namespace Corax
             
             if (entries.TotalAdditions == 0 && entries.TotalRemovals > 0) 
             {
-                Debug.Assert(entries.TotalRemovals == 1, "We're trying to remove more than a single value from a single, which is impossible.");
+                if (entries.TotalRemovals > 1) 
+                    throw new InvalidOperationException($"More than one removal found for a single item, which is impossible. " +
+                                                        $"{Environment.NewLine}Current tree id: {idInTree}" +
+                                                        $"{Environment.NewLine}Current entry id {existingEntryId}" +
+                                                        $"{Environment.NewLine}Current term frequency: {existingFrequency}" +
+                                                        $"{Environment.NewLine}Items we wanted to delete (entryId|Frequency): " +
+                                                        $"{string.Join(", ", entries.Removals.ToArray().Zip(entries.RemovalsFrequency.ToArray()).Select(i => $"({i.First}|{i.Second})"))}");
+                
                 Debug.Assert(EntryIdEncodings.QuantizeAndDequantize(entries.RemovalsFrequency[0]) == existingFrequency, "The item stored and the item we're trying to delete are different, which is impossible.");
                 
                 termId = -1;

@@ -370,16 +370,15 @@ public class RavenIntegration : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void UpdatingField(Options options)
+    public void CanUpdateSingleWhenFrequencyIsChangingLevel(Options options)
     {
-        string initial = "12345";
-        string dataGenerator(int i) => string.Join(" ", Enumerable.Range(0, i).Select(i => initial));
-
+        const string initial = "12345";
+        string DataGenerator(int i) => string.Join(" ", Enumerable.Range(0, i).Select(i => initial));
         using var store = GetDocumentStore(options);
         DtoForDynamics docToModify;
         using (var session = store.OpenSession())
         {
-            docToModify = new DtoForDynamics() {Tag = dataGenerator(17)};
+            docToModify = new DtoForDynamics() {Tag = DataGenerator(17)};
             session.Store(docToModify);
             session.SaveChanges();
         }
@@ -390,15 +389,14 @@ public class RavenIntegration : RavenTestBase
         using (var session = store.OpenSession())
         {
             var doc = session.Load<DtoForDynamics>(docToModify.Id);
-            doc.Tag = dataGenerator(1);
+            doc.Tag = DataGenerator(1);
             session.SaveChanges();
         }
 
         Indexes.WaitForIndexing(store);
         WaitForUserToContinueTheTest(store);
     }
-
-
+    
     private class SearchIndex : AbstractIndexCreationTask<DtoForDynamics>
     {
         public SearchIndex()
