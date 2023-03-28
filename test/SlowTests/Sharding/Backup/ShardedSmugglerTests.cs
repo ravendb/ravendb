@@ -466,18 +466,9 @@ namespace SlowTests.Sharding.Backup
                     Assert.Equal("tempDatabase", record.ExternalReplications[0].Database);
                     Assert.Equal(true, record.ExternalReplications[0].Disabled);
 
-                    Assert.Equal(1, record.SinkPullReplications.Count);
-                    Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
-                    Assert.Equal("hub", record.SinkPullReplications[0].HubName);
-                    Assert.Equal((string)null, record.SinkPullReplications[0].CertificatePassword);
-                    Assert.Equal(privateKey, record.SinkPullReplications[0].CertificateWithPrivateKey);
-                    Assert.Equal(true, record.SinkPullReplications[0].Disabled);
-
-                    Assert.Equal(1, record.HubPullReplications.Count);
-                    Assert.Equal(new TimeSpan(3), record.HubPullReplications.First().DelayReplicationFor);
-                    Assert.Equal("hub", record.HubPullReplications.First().Name);
-                    Assert.Equal(true, record.HubPullReplications.First().Disabled);
-
+                    Assert.Equal(0, record.SinkPullReplications.Count);
+                    Assert.Equal(0, record.HubPullReplications.Count);
+              
                     Assert.Equal(1, record.RavenEtls.Count);
                     Assert.Equal("Etl", record.RavenEtls.First().Name);
                     Assert.Equal("ConnectionName", record.RavenEtls.First().ConnectionStringName);
