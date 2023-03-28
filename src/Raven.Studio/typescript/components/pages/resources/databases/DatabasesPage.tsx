@@ -113,6 +113,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     return (
         <div className="content-margin">
+            <div id="dropdownContainer"></div> {/*fixes rendering order bug on hover animation */}
             <Row className="mb-4">
                 <Col sm="auto">
                     <DatabasesFilter

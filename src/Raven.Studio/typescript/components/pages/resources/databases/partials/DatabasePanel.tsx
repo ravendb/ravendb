@@ -324,6 +324,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     return (
         <RichPanel
+            hover
             className={classNames("flex-row", "with-status", {
                 active: activeDatabase === db.name,
                 relevant: true,
@@ -381,7 +382,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 href={manageGroupUrl}
                                 title="Manage the Database Group"
                                 target={db.currentNode.relevant ? undefined : "_blank"}
-                                className="me-1"
+                                className="ms-1"
                                 disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
                             >
                                 <i className="icon-dbgroup icon-addon-settings me-2" />
@@ -389,7 +390,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             </Button>
 
                             {isAdminAccessOrAbove(db) && (
-                                <UncontrolledDropdown className="me-1">
+                                <UncontrolledDropdown className="ms-1">
                                     <ButtonGroup>
                                         {isOperatorOrAbove() && (
                                             <Button onClick={onToggleDatabase}>
@@ -409,7 +410,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         <DropdownToggle caret></DropdownToggle>
                                     </ButtonGroup>
 
-                                    <DropdownMenu end>
+                                    <DropdownMenu end container="dropdownContainer">
                                         {canPauseAnyIndexing && (
                                             <DropdownItem onClick={() => onTogglePauseIndexing(true)}>
                                                 <i className="icon-pause me-1" /> Pause indexing
@@ -442,8 +443,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </UncontrolledDropdown>
                             )}
 
-                            <UncontrolledDropdown>
-                                {isOperatorOrAbove() && (
+                            {isOperatorOrAbove() && (
+                                <UncontrolledDropdown className="ms-1">
                                     <ButtonGroup>
                                         <Button
                                             onClick={() => onDelete()}
@@ -469,30 +470,32 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                             color={db.lockMode === "Unlock" && "danger"}
                                         ></DropdownToggle>
                                     </ButtonGroup>
-                                )}
 
-                                <DropdownMenu>
-                                    <DropdownItem
-                                        onClick={() => onChangeLockMode("Unlock")}
-                                        title="Allow to delete database"
-                                    >
-                                        <i className="icon-trash-cutout icon-addon-check" /> Allow database delete
-                                    </DropdownItem>
-                                    <DropdownItem
-                                        onClick={() => onChangeLockMode("PreventDeletesIgnore")}
-                                        title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database."
-                                    >
-                                        <i className="icon-trash-cutout icon-addon-cancel" /> Prevent database delete
-                                    </DropdownItem>
-                                    <DropdownItem
-                                        onClick={() => onChangeLockMode("PreventDeletesError")}
-                                        title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database."
-                                    >
-                                        <i className="icon-trash-cutout icon-addon-exclamation" /> Prevent database
-                                        delete (Error)
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
+                                    <DropdownMenu container="dropdownContainer">
+                                        <DropdownItem
+                                            onClick={() => onChangeLockMode("Unlock")}
+                                            title="Allow to delete database"
+                                        >
+                                            <i className="icon-trash-cutout icon-addon-check" /> Allow database delete
+                                        </DropdownItem>
+                                        <DropdownItem
+                                            onClick={() => onChangeLockMode("PreventDeletesIgnore")}
+                                            title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database."
+                                        >
+                                            <i className="icon-trash-cutout icon-addon-cancel" /> Prevent database
+                                            delete
+                                        </DropdownItem>
+                                        <DropdownItem
+                                            onClick={() => onChangeLockMode("PreventDeletesError")}
+                                            title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database."
+                                        >
+                                            <i className="icon-trash-cutout icon-addon-exclamation" /> Prevent database
+                                            delete (Error)
+                                        </DropdownItem>
+                                    </DropdownMenu>
+                                </UncontrolledDropdown>
+                            )}
+
                             <Button
                                 color="secondary"
                                 onClick={togglePanelCollapsed}
