@@ -151,7 +151,7 @@ namespace SlowTests.Bugs.Caching
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CachedMultiFacetsRequest(Options options)
         {
             using (var store = GetTestStore(options))

@@ -304,7 +304,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task GetTerms(Options options)
         {
             using (var store = GetDocumentStore(options))

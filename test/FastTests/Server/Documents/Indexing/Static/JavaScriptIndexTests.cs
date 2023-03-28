@@ -21,7 +21,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanUseIdMethodInJavascriptIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -37,9 +37,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                             Name = $"{i}",
                             Fax = i
                         });
+                        await s.SaveChangesAsync();
+
                     }
 
-                    await s.SaveChangesAsync();
                 }
 
 
@@ -61,7 +62,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]        
         public async Task CanUseGetMetadataMethodInJavascriptIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

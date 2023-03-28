@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task FilteredEntryIsReturnedInQuery(Options options)
         {
             using var store = GetDocumentStore(options);
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanExcludeOver128ItemsFromMapReduce(Options options)
         {
             using var store = GetDocumentStore(options);
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryInAndNotInUsingDynamicQuery(Options options)
         {
             using var store = GetDocumentStore(options);

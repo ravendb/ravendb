@@ -74,7 +74,7 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryWithToStreamAsync(Options options)
         {
             using (var store = GetDocumentStore(options))

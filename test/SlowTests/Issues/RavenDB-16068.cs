@@ -20,8 +20,8 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Patching)]
-        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task PatchByIdQuery(Options options, string baseQuery)
         {
             using (var store = GetDocumentStore(options))
@@ -60,12 +60,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task PatchByIdQueryWithUpdatedDocument(string baseQuery)
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task PatchByIdQueryWithUpdatedDocument(Options options, string baseQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var idsList = new List<string>();
                 using (var bulkInsert = store.BulkInsert())
@@ -104,8 +104,8 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Patching)]
-        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task DeleteByIdQuery(Options options, string baseQuery)
         {
             using (var store = GetDocumentStore(options))
@@ -144,12 +144,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task DeleteByIdQueryWithUpdatedDocument(string baseQuery)
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task DeleteByIdQueryWithUpdatedDocument(Options options, string baseQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var idsList = new List<string>();
                 using (var bulkInsert = store.BulkInsert())
@@ -187,12 +187,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task DeleteByIdQueryWithDeletedDocument(string baseQuery)
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task DeleteByIdQueryWithDeletedDocument(Options options, string baseQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var idsList = new List<string>();
                 using (var bulkInsert = store.BulkInsert())
@@ -230,12 +230,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task PatchByStartsWithQuery(string baseQuery)
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task PatchByStartsWithQuery(Options options, string baseQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const int totalDocs = 1024 * 2;
                 using (var bulkInsert = store.BulkInsert())
@@ -259,12 +259,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task PatchByStartsWithQueryWithNewDocument(string baseQuery)
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task PatchByStartsWithQueryWithNewDocument(Options options, string baseQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const int totalDocs = 1024 * 2;
                 using (var bulkInsert = store.BulkInsert())
@@ -290,12 +290,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task DeleteByStartsWithQuery(string baseQuery)
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task DeleteByStartsWithQuery(Options options, string baseQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -316,12 +316,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task DeleteByStartsWithQueryWithNewDocument(string baseQuery)
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task DeleteByStartsWithQueryWithNewDocument(Options options, string baseQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {

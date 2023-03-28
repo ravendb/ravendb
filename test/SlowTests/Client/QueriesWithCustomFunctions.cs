@@ -30,8 +30,8 @@ namespace SlowTests.Client
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Define_Custom_Functions_Inside_Select(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -60,8 +60,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_Define_Custom_Functions_Inside_Select_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -69,6 +69,8 @@ namespace SlowTests.Client
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    await session.SaveChangesAsync();
+
                     await session.StoreAsync(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     await session.SaveChangesAsync();
                 }
@@ -90,8 +92,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_Timespan(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -121,8 +123,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Custom_Functions_With_Timespan_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -152,8 +154,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_DateTime_Properties(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -186,8 +188,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Custom_Functions_With_DateTime_Properties_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -220,8 +222,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_Numbers_And_Booleans(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -257,8 +259,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Custom_Functions_With_Numbers_And_Booleans_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -294,8 +296,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_Inside_Select_Nested(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -326,8 +328,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Custom_Functions_Inside_Select_Nested_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -358,8 +360,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_Simple_Let(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -393,8 +395,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Custom_Functions_With_Simple_Let_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -402,6 +404,8 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    await session.SaveChangesAsync();
+
                     await session.StoreAsync(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     await session.SaveChangesAsync();
                 }
@@ -428,8 +432,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_Let(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -437,6 +441,8 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.SaveChanges();
+
                     session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     session.SaveChanges();
                 }
@@ -463,8 +469,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Custom_Functions_With_Let_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -492,14 +498,14 @@ from 'Users' as u select output(u)", query.ToString());
                     var queryResult = await query.ToListAsync();
 
                     Assert.Equal(2, queryResult.Count);
-                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
-                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FullName == "Jerry Garcia"));
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FullName == "Bob Weir"));
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_Multiple_Lets(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -507,6 +513,8 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.SaveChanges();
+
                     session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     session.SaveChanges();
                 }
@@ -531,14 +539,14 @@ from 'Users' as u select output(u)", query.ToString());
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
-                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
-                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FullName == "Jerry Garcia"));
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FullName == "Bob Weir"));
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Custom_Functions_With_Multiple_Lets_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -546,6 +554,8 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    await session.SaveChangesAsync();
+
                     await session.StoreAsync(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     await session.SaveChangesAsync();
                 }
@@ -570,14 +580,14 @@ from 'Users' as u select output(u)", query.ToString());
                     var queryResult = await query.ToListAsync();
 
                     Assert.Equal(2, queryResult.Count);
-                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
-                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FullName == "Jerry Garcia"));
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FullName == "Bob Weir"));
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Should_Throw_When_Let_Is_Before_Where(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -600,8 +610,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Should_Throw_When_Let_Is_Before_Where_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -624,19 +634,19 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_With_Where_and_Load(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Detail { Number = 12345 }, "detail/1");
-                    session.Store(new Detail { Number = 67890 }, "detail/2");
+                    session.Store(new Detail { Number = 12345 }, "detail/1$users/1");
+                    session.Store(new Detail { Number = 67890 }, "detail/2$users/2");
 
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailId = "detail/1" }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailId = "detail/2" }, "users/2");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailId = "detail/1$users/1" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailId = "detail/2$users/2" }, "users/2");
                     session.SaveChanges();
                 }
 
@@ -658,14 +668,17 @@ from 'Users' as u select output(u)", query.ToString());
                     Assert.Equal("Jerry Garcia", queryResult[0].FullName);
                     Assert.Equal(12345, queryResult[0].Detail);
 
-                    Assert.True(timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Retriever)]
+                    if (options.DatabaseMode == RavenDatabaseMode.Single)
+                    {
+                        Assert.True(timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Retriever)]
                         .Timings[nameof(QueryTimingsScope.Names.Projection)].Timings[nameof(QueryTimingsScope.Names.Load)].DurationInMs >= 0);
+                    }
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task Custom_Function_With_Where_and_Load_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -699,8 +712,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Custom_Function_With_Multiple_Loads(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -749,8 +762,8 @@ from 'Users' as u where u.Name != $p0 select output(u) include timings()",
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task Custom_Function_With_Multiple_Loads_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -799,19 +812,21 @@ from 'Users' as u where u.Name != $p0 select output(u) include timings()",
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_Let_And_Load(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Detail { Number = 12345 }, "detail/1");
-                    session.Store(new Detail { Number = 67890 }, "detail/2");
+                    session.Store(new Detail { Number = 12345 }, "detail/1$users/1");
+                    session.Store(new Detail { Number = 67890 }, "detail/2$users/2");
 
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailId = "detail/1" }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailId = "detail/2" }, "users/2");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailId = "detail/1$users/1" }, "users/1");
+                    session.SaveChanges();
+
+                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailId = "detail/2$users/2" }, "users/2");
                     session.SaveChanges();
                 }
 
@@ -843,8 +858,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task Custom_Functions_With_Let_And_Load_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -887,21 +902,21 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_With_Where_and_Load_Array(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Detail { Number = 1 }, "details/1");
-                    session.Store(new Detail { Number = 2 }, "details/2");
-                    session.Store(new Detail { Number = 3 }, "details/3");
-                    session.Store(new Detail { Number = 4 }, "details/4");
+                    session.Store(new Detail { Number = 1 }, "details/1$users/1");
+                    session.Store(new Detail { Number = 2 }, "details/2$users/1");
+                    session.Store(new Detail { Number = 3 }, "details/3$users/2");
+                    session.Store(new Detail { Number = 4 }, "details/4$users/2");
 
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new[] { "details/1", "details/2" } }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new[] { "details/3", "details/4" } }, "users/2");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new[] { "details/1$users/1", "details/2$users/1" } }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new[] { "details/3$users/2", "details/4$users/2" } }, "users/2");
                     session.SaveChanges();
                 }
 
@@ -929,8 +944,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task Custom_Function_With_Where_and_Load_Array_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -971,21 +986,21 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_With_Where_and_Load_List(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Detail { Number = 1 }, "details/1");
-                    session.Store(new Detail { Number = 2 }, "details/2");
-                    session.Store(new Detail { Number = 3 }, "details/3");
-                    session.Store(new Detail { Number = 4 }, "details/4");
+                    session.Store(new Detail { Number = 1 }, "details/1$users/1");
+                    session.Store(new Detail { Number = 2 }, "details/2$users/1");
+                    session.Store(new Detail { Number = 3 }, "details/3$users/2");
+                    session.Store(new Detail { Number = 4 }, "details/4$users/2");
 
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1", "details/2" } }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3", "details/4" } }, "users/2");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1$users/1", "details/2$users/1" } }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3$users/2", "details/4$users/2" } }, "users/2");
                     session.SaveChanges();
                 }
 
@@ -1013,21 +1028,21 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Custom_Function_With_Where_and_Load_List_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Detail { Number = 1 }, "details/1");
-                    await session.StoreAsync(new Detail { Number = 2 }, "details/2");
-                    await session.StoreAsync(new Detail { Number = 3 }, "details/3");
-                    await session.StoreAsync(new Detail { Number = 4 }, "details/4");
+                    await session.StoreAsync(new Detail { Number = 1 }, "details/1$users/1");
+                    await session.StoreAsync(new Detail { Number = 2 }, "details/2$users/1");
+                    await session.StoreAsync(new Detail { Number = 3 }, "details/3$users/2");
+                    await session.StoreAsync(new Detail { Number = 4 }, "details/4$users/2");
 
-                    await session.StoreAsync(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new[] { "details/1", "details/2" } }, "users/1");
-                    await session.StoreAsync(new User { Name = "Bob", LastName = "Weir", DetailIds = new[] { "details/3", "details/4" } }, "users/2");
+                    await session.StoreAsync(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new[] { "details/1$users/1", "details/2$users/1" } }, "users/1");
+                    await session.StoreAsync(new User { Name = "Bob", LastName = "Weir", DetailIds = new[] { "details/3$users/2", "details/4$users/2" } }, "users/2");
                     await session.SaveChangesAsync();
                 }
 
@@ -1055,19 +1070,19 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_Multiple_Where_And_Let(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Detail { Number = 12345 }, "detail/1");
-                    session.Store(new Detail { Number = 67890 }, "detail/2");
+                    session.Store(new Detail { Number = 12345 }, "detail/1$users/1");
+                    session.Store(new Detail { Number = 67890 }, "detail/2$users/2");
 
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailId = "detail/1" }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailId = "detail/2" }, "users/2");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailId = "detail/1$users/1" }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailId = "detail/2$users/2" }, "users/2");
                     session.SaveChanges();
                 }
 
@@ -1100,8 +1115,8 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task Custom_Functions_With_Multiple_Where_And_Let_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1145,8 +1160,8 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_Math_Support(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1174,8 +1189,8 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Project_Into_Class(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1183,6 +1198,8 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.SaveChanges();
+
                     session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     session.SaveChanges();
                 }
@@ -1197,14 +1214,15 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
-                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
-                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+
+                    Assert.Contains("Jerry Garcia", queryResult.Select(x => x.FullName));
+                    Assert.Contains("Bob Weir", queryResult.Select(x => x.FullName));
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Project_Into_Class_With_Let(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1212,6 +1230,8 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.SaveChanges();
+
                     session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     session.SaveChanges();
                 }
@@ -1236,14 +1256,14 @@ from 'Users' as user select output(user)", query.ToString());
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
-                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
-                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FullName == "Jerry Garcia"));
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FullName == "Bob Weir"));
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_DateTime_Object(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1276,8 +1296,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_Escape_Hatch(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1305,8 +1325,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_Escape_Hatch_Inside_Let(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1338,8 +1358,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_Escape_Hatch_With_Path(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1367,8 +1387,8 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Custom_Function_With_Complex_Loads(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1426,8 +1446,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Should_Throw_With_Proper_Message_When_Using_Wrong_Load(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1454,8 +1474,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_ToList_And_ToArray(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1489,8 +1509,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_Null_Coalescing_Support(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1515,20 +1535,15 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var queryResult = query.ToList();
                     Assert.Equal(3, queryResult.Count);
 
-                    Assert.Equal("Jerry", queryResult[0].FirstName);
-                    Assert.Equal("Garcia", queryResult[0].LastName);
-
-                    Assert.Equal("Phil", queryResult[1].FirstName);
-                    Assert.Equal("", queryResult[1].LastName);
-
-                    Assert.Equal("Pigpen", queryResult[2].FirstName);
-                    Assert.Equal("Has no last name", queryResult[2].LastName);
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FirstName == "Jerry" && x.LastName == "Garcia"));
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FirstName == "Phil" && x.LastName == ""));
+                    Assert.NotNull(queryResult.FirstOrDefault(x => x.FirstName == "Pigpen" && x.LastName == "Has no last name"));
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_ValueTypeParse_Support(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1591,8 +1606,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_Nested_Conditional_Support(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1600,11 +1615,18 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
-                    session.Store(new User { Name = "Phil", LastName = "Lesh" }, "users/3");
-                    session.Store(new User { Name = "Bill", LastName = "Kreutzmann" }, "users/4");
-                    session.Store(new User { Name = "Jon", LastName = "Doe" }, "users/5");
+                    session.SaveChanges();
 
+                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
+                    session.SaveChanges();
+
+                    session.Store(new User { Name = "Phil", LastName = "Lesh" }, "users/3");
+                    session.SaveChanges();
+
+                    session.Store(new User { Name = "Bill", LastName = "Kreutzmann" }, "users/4");
+                    session.SaveChanges();
+
+                    session.Store(new User { Name = "Jon", LastName = "Doe" }, "users/5");
                     session.SaveChanges();
                 }
 
@@ -1642,8 +1664,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_String_Support(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1651,7 +1673,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", IdNumber = 19420801, Roles = new[] { "The", "Grateful", "Dead" } }, "users/1");
+                    session.SaveChanges();
+
                     session.Store(new User { Name = "Bob", LastName = "Weir", Roles = new[] { "o" } }, "users/2");
+                    session.SaveChanges();
+
                     session.Store(new User { Name = "  John   ", LastName = "Doe" }, "users/3");
                     session.SaveChanges();
                 }
@@ -1745,8 +1771,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_ToDictionary_Support(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1796,34 +1822,39 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var queryResult = query.ToList();
                     Assert.Equal(2, queryResult.Count);
 
-                    Assert.Equal("Administrators", queryResult[0].Name);
-                    Assert.Equal("Doe", queryResult[0].UsersByName["John"].LastName);
-                    Assert.Equal("Ripper", queryResult[0].UsersByNameLastName["Jack"]);
-                    Assert.Equal(3, queryResult[0].UsersByName.Count);
+                    var administrators = queryResult.First(x => x.Name == "Administrators");
 
-                    Assert.Equal("Editors", queryResult[1].Name);
-                    Assert.Equal("Smith", queryResult[1].UsersByName["Tom"].LastName);
-                    Assert.Equal("Leetch", queryResult[1].UsersByNameLastName["Russell"]);
-                    Assert.Equal(3, queryResult[1].UsersByNameLastName.Count);
+                    Assert.Equal("Administrators", administrators.Name);
+                    Assert.Equal("Ripper", administrators.UsersByNameLastName["Jack"]);
+                    Assert.Equal(3, administrators.UsersByName.Count);
+
+                    var editors = queryResult.First(x => x.Name == "Editors");
+
+                    Assert.Equal("Editors", editors.Name);
+                    Assert.Equal("Smith", editors.UsersByName["Tom"].LastName);
+                    Assert.Equal("Leetch", editors.UsersByNameLastName["Russell"]);
+                    Assert.Equal(3, editors.UsersByNameLastName.Count);
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_First_And_FirstOrDefault_Support(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Detail { Number = 1 }, "details/1");
-                    session.Store(new Detail { Number = 2 }, "details/2");
-                    session.Store(new Detail { Number = 3 }, "details/3");
-                    session.Store(new Detail { Number = 4 }, "details/4");
+                    session.Store(new Detail { Number = 1 }, "details/1$users/1");
+                    session.Store(new Detail { Number = 2 }, "details/2$users/1");
+                    session.Store(new Detail { Number = 3 }, "details/3$users/2");
+                    session.Store(new Detail { Number = 4 }, "details/4$users/2");
 
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1", "details/2" } }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3", "details/4" } }, "users/2");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1$users/1", "details/2$users/1" } }, "users/1");
+                    session.SaveChanges();
+
+                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3$users/2", "details/4$users/2" } }, "users/2");
 
                     session.SaveChanges();
                 }
@@ -1863,21 +1894,23 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_With_Nested_Query(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Detail { Number = 1 }, "details/1");
-                    session.Store(new Detail { Number = 2 }, "details/2");
-                    session.Store(new Detail { Number = 3 }, "details/3");
-                    session.Store(new Detail { Number = 4 }, "details/4");
+                    session.Store(new Detail { Number = 1 }, "details/1$users/1");
+                    session.Store(new Detail { Number = 2 }, "details/2$users/1");
+                    session.Store(new Detail { Number = 3 }, "details/3$users/2");
+                    session.Store(new Detail { Number = 4 }, "details/4$users/2");
 
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1", "details/2" } }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3", "details/4" } }, "users/2");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1$users/1", "details/2$users/1" } }, "users/1");
+                    session.SaveChanges();
+
+                    session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3$users/2", "details/4$users/2" } }, "users/2");
 
                     session.SaveChanges();
                 }
@@ -1919,8 +1952,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Query_On_Index_With_Load(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1934,9 +1967,9 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2" }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", FriendId = "users/1" }, "users/2");
-                    session.Store(new User { Name = "Pigpen", FriendId = "users/1" }, "users/3");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2$sameShard" }, "users/1$sameShard");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", FriendId = "users/1$sameShard" }, "users/2$sameShard");
+                    session.Store(new User { Name = "Pigpen", FriendId = "users/1$sameShard" }, "users/3$sameShard");
                     session.SaveChanges();
                 }
 
@@ -1965,7 +1998,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying, Skip = "Throws Invalid Json - RavenDB-19127")]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void Streaming_Query_On_Index_With_Load(Options options)
         {
@@ -1974,7 +2007,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 var definition = new IndexDefinitionBuilder<User>("UsersByNameAndFriendId")
                 {
                     Map = docs => from doc in docs
-                        select new { doc.Name, doc.FriendId }
+                                  select new { doc.Name, doc.FriendId }
                 }.ToIndexDefinition(store.Conventions);
                 store.Maintenance.Send(new PutIndexesOperation(definition));
 
@@ -2046,8 +2079,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Query_On_Index_With_Load_Into_Class(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2092,8 +2125,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_With_GetMetadataFor(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2134,8 +2167,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Custom_Function_With_GetMetadataFor_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2176,8 +2209,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Can_Load_Static_Value(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2217,8 +2250,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_With_RavenQueryMetadata(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2259,8 +2292,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryCompareExchangeValue(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2290,8 +2323,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task SingleProjectionQueryCompareExchange(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2319,8 +2352,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryCompareExchangeInnerValue(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2350,8 +2383,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryCompareExchangeWithNullValue(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2378,8 +2411,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryCompareExchangeWhere(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2484,21 +2517,21 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Should_Add_An_Alias_To_Where_Tokens(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Employee { FirstName = "Jerry", LastName = "Garcia" }, "employees/1");
+                    session.Store(new Employee { FirstName = "Jerry", LastName = "Garcia" }, "employees/1$orders/1");
 
-                    session.Store(new Employee { FirstName = "Bob", LastName = "Weir" }, "employees/2");
+                    session.Store(new Employee { FirstName = "Bob", LastName = "Weir" }, "employees/2$orders/2");
 
-                    session.Store(new Order { Employee = "employees/1", OrderedAt = new DateTime(1942, 8, 1) });
+                    session.Store(new Order { Employee = "employees/1$orders/1", OrderedAt = new DateTime(1942, 8, 1) }, "orders/1");
 
-                    session.Store(new Order { Employee = "employees/2", OrderedAt = new DateTime(1947, 10, 16) });
+                    session.Store(new Order { Employee = "employees/2$orders/2", OrderedAt = new DateTime(1947, 10, 16) }, "orders/2");
 
                     session.SaveChanges();
                 }
@@ -2522,8 +2555,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_With_Sum(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2574,20 +2607,21 @@ from 'Orders' as o select output(o)", complexLinqQuery.ToString());
                         (Func<Order, decimal>)(order =>
                             order.Lines.Sum(l => l.PricePerUnit * l.Quantity - l.Discount));
 
-                    Assert.Equal("orders/1-A", queryResult[0].Id);
-                    Assert.Equal(totalSpentOnOrder(o1), queryResult[0].TotalMoneySpent);
+                    Assert.Contains("orders/1-A", queryResult.Select(x => x.Id));
+                    Assert.Equal(totalSpentOnOrder(o1), queryResult.First(x => x.Id == "orders/1-A").TotalMoneySpent);
 
-                    Assert.Equal("orders/2-A", queryResult[1].Id);
-                    Assert.Equal(totalSpentOnOrder(o2), queryResult[1].TotalMoneySpent);
+                    Assert.Contains("orders/2-A", queryResult.Select(x => x.Id));
+                    Assert.Equal(totalSpentOnOrder(o2), queryResult.First(x => x.Id == "orders/2-A").TotalMoneySpent);
 
-                    Assert.Equal("orders/3-A", queryResult[2].Id);
-                    Assert.Equal(totalSpentOnOrder(o3), queryResult[2].TotalMoneySpent);
+
+                    Assert.Contains("orders/3-A", queryResult.Select(x => x.Id));
+                    Assert.Equal(totalSpentOnOrder(o3), queryResult.First(x => x.Id == "orders/3-A").TotalMoneySpent);
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Can_project_id_property_to_any_name(Options options)
         {
             //https://issues.hibernatingrhinos.com/issue/RavenDB-9260
@@ -2627,8 +2661,8 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Should_quote_alias_if_its_a_reserved_word(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2654,8 +2688,8 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Function_With_ToString(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2685,8 +2719,8 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_Linq_Methods_Support(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2763,8 +2797,8 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Can_Load_With_Argument_That_Has_Computation(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2799,8 +2833,8 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Project_With_JsonPropertyAttribute(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2821,8 +2855,8 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Project_With_Json_Property_Rename(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2844,8 +2878,8 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Project_Where_Id_StartsWith(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2865,8 +2899,8 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Use_DefaultIfEmpty(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2918,8 +2952,8 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Custom_Functions_With_SelectMany(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2938,8 +2972,8 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(nestedNode);
-                    session.Store(simpleNode);
+                    session.Store(nestedNode, "nodes/2$nodes/1");
+                    session.Store(simpleNode, "nodes/1");
 
                     session.SaveChanges();
                 }
@@ -2967,8 +3001,8 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_SelectMany_From_Dictionary(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3020,8 +3054,8 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Custom_Functions_With_Nested_Loads_Simple(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3067,8 +3101,8 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Custom_Functions_With_Nested_Loads_Complex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3118,8 +3152,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Can_Load_SingleDocument_When_Declare(Options options)
         {
             //RavenDB-9637
@@ -3150,8 +3184,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Can_Load_Old_Document_With_Undefined_Member(Options options)
         {
             //RavenDB-9638
@@ -3181,8 +3215,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Do_Null_Comparison_On_Undefined_Member(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3190,7 +3224,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", Groups = new List<string>() { "groups/1" } }, "users/1");
+                    session.SaveChanges();
+
                     session.Store(new User { Name = "John", LastName = "Doe", Groups = null }, "users/2");
+                    session.SaveChanges();
+
                     session.Store(new OldUser.User { Name = "Bob", LastName = "Weir" }, "users/3");
 
                     session.SaveChanges();
@@ -3213,8 +3251,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void IsNullOrEmptySupport(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3222,7 +3260,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" });
+                    session.SaveChanges();
+
                     session.Store(new User { Name = "Bob", LastName = "" });
+                    session.SaveChanges();
+
                     session.Store(new User { Name = "Phil" });
                     session.SaveChanges();
                 }
@@ -3246,8 +3288,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void IsNullOrWhitespaceSupport(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3272,15 +3314,15 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
 
                     Assert.Equal(3, queryResult.Count);
 
-                    Assert.Equal("Garcia", queryResult[0].Name);
-                    Assert.Equal("Bob", queryResult[1].Name);
-                    Assert.Equal("Phil", queryResult[2].Name);
+                    Assert.Contains("Garcia", queryResult.Select(x => x.Name));
+                    Assert.Contains("Bob", queryResult.Select(x => x.Name));
+                    Assert.Contains("Phil", queryResult.Select(x => x.Name));
                 }
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanProjectWithEnumerableCount(Options options)
         {
             //https://issues.hibernatingrhinos.com/issue/RDBC-99
@@ -3310,8 +3352,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WrappedConstantSupportShouldKnowHowToHandleCallExpressionsOnWrappedConstantObject(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3384,8 +3426,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 }
             }
 
-            [Theory]
-            [RavenData]
+            [RavenTheory(RavenTestCategory.Querying)]
+            [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
             public void CanProjectWithArrayParameters(Options options)
             {
                 using (var store = GetDocumentStore(options))
@@ -3432,8 +3474,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 }
             }
 
-            [Theory]
-            [RavenData]
+            [RavenTheory(RavenTestCategory.Querying)]
+            [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
             public void CanProjectWithListParameters(Options options)
             {
                 using (var store = GetDocumentStore(options))
@@ -3479,8 +3521,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 }
             }
 
-            [Theory]
-            [RavenData]
+            [RavenTheory(RavenTestCategory.Querying)]
+            [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
             public void CanProjectWithStringParameter(Options options)
             {
                 using (var store = GetDocumentStore(options))

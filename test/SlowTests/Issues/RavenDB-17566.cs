@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Conventions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,21 +20,22 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ProjectionOnNonStoredFieldsInIndex()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ProjectionOnNonStoredFieldsInIndex(Options options)
         {
             var myEntityIndex = new MyEntityIndex();
-            using var store = base.GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = s => s.Conventions.FindProjectedPropertyNameForIndex =
-                    (indexedType, indexedName, path, prop) =>
-                    {
-                        if (indexedName == myEntityIndex.IndexName)
-                            return path + prop;
 
-                        return DocumentConventions.DefaultFindPropertyNameForIndex(indexedType, indexedName, path, prop);
-                    }
-            });
+            options.ModifyDocumentStore = s => s.Conventions.FindProjectedPropertyNameForIndex =
+                (indexedType, indexedName, path, prop) =>
+                {
+                    if (indexedName == myEntityIndex.IndexName)
+                        return path + prop;
+
+                    return DocumentConventions.DefaultFindPropertyNameForIndex(indexedType, indexedName, path, prop);
+                };
+
+            using var store = base.GetDocumentStore(options);
 
             var id = "myEntity/1";
             var value = 100;

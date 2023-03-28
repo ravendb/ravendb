@@ -8,6 +8,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,13 +28,13 @@ namespace SlowTests.Issues
 #pragma warning restore 169,649
         }
 
-        [Fact]
-        public async Task CreatingNewAutoIndexWillDeleteSmallerOnes()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CreatingNewAutoIndexWillDeleteSmallerOnes(Options options)
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0"
-            }))
+            options.ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
+
+            using (var store = GetDocumentStore(options))
             {
                 IndexDefinition[] indexes;
                 using (var session = store.OpenAsyncSession())

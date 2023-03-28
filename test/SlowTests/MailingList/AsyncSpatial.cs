@@ -19,7 +19,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task SpatialIndexTest(Options options)
         {
             using (var db = GetDocumentStore(options))

@@ -16,7 +16,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

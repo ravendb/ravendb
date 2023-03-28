@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,190 +17,164 @@ public class RavenDB_19016 : RavenTestBase
     {
     }
 
-    [Fact]
-    public async Task Can_Index_Nested_Document_Change_Different_Collections()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task Can_Index_Nested_Document_Change_Different_Collections(Options options)
     {
         using (var server = GetNewServer())
-        using (var store = GetDocumentStore(new Options { Server = server }))
         {
-            const string orderId = "OrdErs/1";
-            const string companyId = "CompaNies/1";
-            const string userName = "Grisha";
-            const string companyName = "Hibernating Rhinos";
-            const int orderCount = 10;
-
-            var deployedIndex = new UsersIndex();
-            await deployedIndex.ExecuteAsync(store);
-
-            using (var session = store.OpenAsyncSession())
+            options.Server = server;
+            using (var store = GetDocumentStore(options))
             {
-                await session.StoreAsync(new User
+                const string orderId = "OrdErs/1";
+                const string companyId = "CompaNies/1";
+                const string userName = "Grisha";
+                const string companyName = "Hibernating Rhinos";
+                const int orderCount = 10;
+
+                var deployedIndex = new UsersIndex();
+                await deployedIndex.ExecuteAsync(store);
+
+                using (var session = store.OpenAsyncSession())
                 {
-                    Name = userName,
-                    CompanyId = companyId
-                }, "UseRs/1");
+                    await session.StoreAsync(new User {Name = userName, CompanyId = companyId}, "UseRs/1");
 
-                session.Advanced.WaitForIndexesAfterSaveChanges();
-                await session.SaveChangesAsync();
-            }
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
+                    await session.SaveChangesAsync();
+                }
 
-            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            var index = database.IndexStore.GetIndex(deployedIndex.IndexName);
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var index = database.IndexStore.GetIndex(deployedIndex.IndexName);
 
-            using (var session = store.OpenAsyncSession())
-            {
-                index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = () =>
+                using (var session = store.OpenAsyncSession())
                 {
-                    index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = null;
-
-                    using (var session2 = store.OpenSession())
+                    index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = () =>
                     {
-                        session2.Store(new Order
+                        index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = null;
+
+                        using (var session2 = store.OpenSession())
                         {
-                            Count = orderCount
-                        }, orderId);
-                        session2.SaveChanges();
-                    }
-                };
+                            session2.Store(new Order {Count = orderCount}, orderId);
+                            session2.SaveChanges();
+                        }
+                    };
 
-                await session.StoreAsync(new Company
+                    await session.StoreAsync(new Company {Name = companyName, OrderId = orderId}, companyId);
+
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
                 {
-                    Name = companyName,
-                    OrderId = orderId
-                }, companyId);
+                    var results = await session
+                        .Query<UsersIndex.Result, UsersIndex>()
+                        .ProjectInto<UsersIndex.Result>()
+                        .ToListAsync();
 
-                session.Advanced.WaitForIndexesAfterSaveChanges();
-                await session.SaveChangesAsync();
-            }
-
-            using (var session = store.OpenAsyncSession())
-            {
-                var results = await session
-                    .Query<UsersIndex.Result, UsersIndex>()
-                    .ProjectInto<UsersIndex.Result>()
-                    .ToListAsync();
-
-                Assert.Equal(1, results.Count);
-                Assert.Equal(userName, results[0].UserName);
-                Assert.Equal(orderId, results[0].OrderId);
-                Assert.Equal(companyId, results[0].CompanyId);
-                Assert.Equal(companyName, results[0].CompanyName);
-                Assert.Equal(orderCount, results[0].OrderCount);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal(userName, results[0].UserName);
+                    Assert.Equal(orderId, results[0].OrderId);
+                    Assert.Equal(companyId, results[0].CompanyId);
+                    Assert.Equal(companyName, results[0].CompanyName);
+                    Assert.Equal(orderCount, results[0].OrderCount);
+                }
             }
         }
     }
 
-    [Fact]
-    public async Task Can_Index_Nested_Document_Change_Same_Collection()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task Can_Index_Nested_Document_Change_Same_Collection(Options options)
     {
         using (var server = GetNewServer())
-        using (var store = GetDocumentStore(new Options
         {
-            Server = server
-        }))
-        {
-            const string userId1 = "users/1";
-            const string userId2 = "users/2";
-            const string userId3 = "users/3";
-            const string userId4 = "users/4";
-            const string userId5 = "users/5";
-            const string userName1 = "Grisha";
-            const string userName2 = "Igal";
-            const string userName3 = "Egor";
-            const string userName4 = "Lev";
-            const string userName5 = "Yonatan";
-
-            var deployedIndex = new RelatedUsersIndex();
-            await deployedIndex.ExecuteAsync(store);
-
-            using (var session = store.OpenAsyncSession())
+            options.Server = server;
+            using (var store = GetDocumentStore(options))
             {
-                // users/1 -> users/2
-                await session.StoreAsync(new User
+                const string userId1 = "users/1";
+                const string userId2 = "users/2";
+                const string userId3 = "users/3";
+                const string userId4 = "users/4";
+                const string userId5 = "users/5";
+                const string userName1 = "Grisha";
+                const string userName2 = "Igal";
+                const string userName3 = "Egor";
+                const string userName4 = "Lev";
+                const string userName5 = "Yonatan";
+
+                var deployedIndex = new RelatedUsersIndex();
+                await deployedIndex.ExecuteAsync(store);
+
+                using (var session = store.OpenAsyncSession())
                 {
-                    Name = userName1,
-                    RelatedUser = userId2
-                }, userId1);
+                    // users/1 -> users/2
+                    await session.StoreAsync(new User {Name = userName1, RelatedUser = userId2}, userId1);
 
-                // users/4 -> users/5
-                await session.StoreAsync(new User
+                    // users/4 -> users/5
+                    await session.StoreAsync(new User {Name = userName4, RelatedUser = userId5}, userId4);
+
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var index = database.IndexStore.GetIndex(deployedIndex.IndexName);
+
+                using (var session = store.OpenAsyncSession())
                 {
-                    Name = userName4,
-                    RelatedUser = userId5
-                }, userId4);
-
-                session.Advanced.WaitForIndexesAfterSaveChanges();
-                await session.SaveChangesAsync();
-            }
-
-            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            var index = database.IndexStore.GetIndex(deployedIndex.IndexName);
-
-            using (var session = store.OpenAsyncSession())
-            {
-                index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = () =>
-                {
-                    index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = null;
-
-                    using (var session2 = store.OpenSession())
+                    index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = () =>
                     {
-                        session2.Store(new User
+                        index.ForTestingPurposesOnly().BeforeClosingDocumentsReadTransactionForHandleReferences = null;
+
+                        using (var session2 = store.OpenSession())
                         {
-                            Name = userName3,
-                            RelatedUser = null
-                        }, userId3);
+                            session2.Store(new User {Name = userName3, RelatedUser = null}, userId3);
 
-                        session2.Store(new User
-                        {
-                            Name = userName5,
-                            RelatedUser = null
-                        }, userId5);
+                            session2.Store(new User {Name = userName5, RelatedUser = null}, userId5);
 
-                        session2.SaveChanges();
-                    }
-                };
+                            session2.SaveChanges();
+                        }
+                    };
 
-                // saving users/2
-                await session.StoreAsync(new User
+                    // saving users/2
+                    await session.StoreAsync(new User {Name = userName2, RelatedUser = userId3}, userId2);
+
+                    await session.SaveChangesAsync();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
                 {
-                    Name = userName2,
-                    RelatedUser = userId3
-                }, userId2);
+                    var results = await session
+                        .Query<RelatedUsersIndex.Result, RelatedUsersIndex>()
+                        .OrderBy(x => x.UserName1)
+                        .ProjectInto<RelatedUsersIndex.Result>()
+                        .ToListAsync();
 
-                await session.SaveChangesAsync();
-            }
+                    Assert.Equal(5, results.Count);
 
-            Indexes.WaitForIndexing(store);
+                    Assert.Equal(userName3, results[0].UserName1);
+                    Assert.Equal(null, results[0].UserName2);
+                    Assert.Equal(null, results[0].UserName3);
 
-            using (var session = store.OpenAsyncSession())
-            {
-                var results = await session
-                    .Query<RelatedUsersIndex.Result, RelatedUsersIndex>()
-                    .OrderBy(x => x.UserName1)
-                    .ProjectInto<RelatedUsersIndex.Result>()
-                    .ToListAsync();
+                    Assert.Equal(userName1, results[1].UserName1);
+                    Assert.Equal(userName2, results[1].UserName2);
+                    Assert.Equal(userName3, results[1].UserName3);
 
-                Assert.Equal(5, results.Count);
+                    Assert.Equal(userName2, results[2].UserName1);
+                    Assert.Equal(userName3, results[2].UserName2);
+                    Assert.Equal(null, results[2].UserName3);
 
-                Assert.Equal(userName3, results[0].UserName1);
-                Assert.Equal(null, results[0].UserName2);
-                Assert.Equal(null, results[0].UserName3);
+                    Assert.Equal(userName4, results[3].UserName1);
+                    Assert.Equal(userName5, results[3].UserName2);
+                    Assert.Equal(null, results[3].UserName3);
 
-                Assert.Equal(userName1, results[1].UserName1);
-                Assert.Equal(userName2, results[1].UserName2);
-                Assert.Equal(userName3, results[1].UserName3);
-
-                Assert.Equal(userName2, results[2].UserName1);
-                Assert.Equal(userName3, results[2].UserName2);
-                Assert.Equal(null, results[2].UserName3);
-
-                Assert.Equal(userName4, results[3].UserName1);
-                Assert.Equal(userName5, results[3].UserName2);
-                Assert.Equal(null, results[3].UserName3);
-
-                Assert.Equal(userName5, results[4].UserName1);
-                Assert.Equal(null, results[4].UserName2);
-                Assert.Equal(null, results[4].UserName3);
+                    Assert.Equal(userName5, results[4].UserName1);
+                    Assert.Equal(null, results[4].UserName2);
+                    Assert.Equal(null, results[4].UserName3);
+                }
             }
         }
     }

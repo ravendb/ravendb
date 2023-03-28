@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -63,10 +64,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanExecuteLazyQueriesInAsyncSession()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExecuteLazyQueriesInAsyncSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

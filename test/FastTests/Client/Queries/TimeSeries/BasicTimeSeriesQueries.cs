@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,7 +32,7 @@ namespace FastTests.Client.Queries.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapIndex_Query(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -48,7 +49,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
                 {
@@ -72,7 +73,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Equal(0, results.Count);
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
               // WaitForUserToContinueTheTest(store);
@@ -93,7 +94,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Equal(0, session.DocumentsByEntity.Count);
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -116,7 +117,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Equal("companies/1", results[0].User);
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -135,7 +136,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Contains(now2.Date, results.Select(x => x.Date));
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 // delete time series
 
@@ -161,7 +162,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Contains(now2.Date, results.Select(x => x.Date));
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -179,7 +180,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 // delete document
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -199,7 +200,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Contains(now1.Date, results.Select(x => x.Date));
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -258,7 +259,7 @@ namespace FastTests.Client.Queries.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapReduceIndex_Query(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -279,34 +280,65 @@ namespace FastTests.Client.Queries.TimeSeries
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 string indexName = "AverageHeartRateDaily/ByDateAndUser";
 
-                var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {
-                    Name = indexName,
-                    Maps = {
-                    "from ts in timeSeries.Users.HeartRate " +
-                    "from entry in ts.Entries " +
-                    "select new { " +
-                    "   HeartBeat = entry.Value, " +
-                    "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
-                    "   User = ts.DocumentId.ToString(), " + // TODO arek RavenDB-14322
-                    "   Count = 1" +
-                    "}" },
-                    Reduce = "from r in results " +
-                             "group r by new { r.Date, r.User } into g " +
-                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
-                             "let sumCount = g.Sum(x => x.Count) " +
-                             "select new {" +
-                             "  HeartBeat = sumHeartBeat / sumCount, " +
-                             "  Date = g.Key.Date," +
-                             "  User = g.Key.User, " +
-                             "  Count = sumCount" +
-                             "}"
-                }));
-
+                    store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                    {
+                        Name = indexName,
+                        Maps = {
+                            "from ts in timeSeries.Users.HeartRate " +
+                            "from entry in ts.Entries " +
+                            "select new { " +
+                            "   HeartBeat = entry.Value, " +
+                            "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
+                            "   User = ts.DocumentId, " +
+                            "   SumHeartBeat = entry.Value, " +
+                            "   Count = 1" +
+                            "}" },
+                        Reduce = "from r in results " +
+                                 "group r by new { r.Date, r.User } into g " +
+                                 "let sumHeartBeat = g.Sum(x => x.SumHeartBeat) " +
+                                 "let sumCount = g.Sum(x => x.Count) " +
+                                 "select new {" +
+                                 "  HeartBeat = sumHeartBeat / sumCount, " +
+                                 "  Date = g.Key.Date," +
+                                 "  User = g.Key.User, " +
+                                 "  SumHeartBeat = sumHeartBeat, " +
+                                 "  Count = sumCount" +
+                                 "}"
+                    }));
+                }
+                else
+                {
+                    store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                    {
+                        Name = indexName,
+                        Maps = {
+                            "from ts in timeSeries.Users.HeartRate " +
+                            "from entry in ts.Entries " +
+                            "select new { " +
+                            "   HeartBeat = entry.Value, " +
+                            "   Date = new DateTime(entry.Timestamp.Date.Year, entry.Timestamp.Date.Month, entry.Timestamp.Date.Day), " +
+                            "   User = ts.DocumentId, " +
+                            "   Count = 1" +
+                            "}" },
+                        Reduce = "from r in results " +
+                                 "group r by new { r.Date, r.User } into g " +
+                                 "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                                 "let sumCount = g.Sum(x => x.Count) " +
+                                 "select new {" +
+                                 "  HeartBeat = sumHeartBeat / sumCount, " +
+                                 "  Date = g.Key.Date," +
+                                 "  User = g.Key.User, " +
+                                 "  Count = sumCount" +
+                                 "}"
+                    }));
+                }
+                
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<TsMapReduceIndexResult>(indexName)
@@ -317,7 +349,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Equal(0, results.Count);
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -339,7 +371,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Equal(0, session.DocumentsByEntity.Count);
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 // add more heart rates
                 using (var session = store.OpenSession())
@@ -368,7 +400,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Contains(10, results.Select(x => x.Count));
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -392,7 +424,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Equal(2, results.Select(x => x.User == "users/1").Count());
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 //// delete some time series
 
@@ -430,7 +462,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Equal(2, results.Select(x => x.User == "users/1").Count());
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -452,7 +484,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 //// delete document
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -476,7 +508,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Equal(1, results.Select(x => x.User == "users/1").Count());
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 

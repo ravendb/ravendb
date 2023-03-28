@@ -64,9 +64,34 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         }
     }
 
+    public async Task AssertAnyAsync(Action<UniqueDatabaseInstanceKey, TResult> assert)
+    {
+        var assertionFailures = new List<InvalidOperationException>();
+
+        await foreach (var (key, result) in GetResultsAsync())
+        {
+            try
+            {
+                assert(key, result);
+                return;
+            }
+            catch (XunitException e)
+            {
+                assertionFailures.Add(new InvalidOperationException($"Assertion failed for '{key}'.", e));
+            }
+        }
+
+        throw new AggregateException(assertionFailures);
+    }
+
     public void AssertAll(Action<UniqueDatabaseInstanceKey, TResult> assert)
     {
         AsyncHelpers.RunSync(() => AssertAllAsync(assert));
+    }
+
+    public void AssertAny(Action<UniqueDatabaseInstanceKey, TResult> assert)
+    {
+        AsyncHelpers.RunSync(() => AssertAnyAsync(assert));
     }
 
     private async IAsyncEnumerable<(UniqueDatabaseInstanceKey Key, TResult Result)> GetResultsAsync()
@@ -147,4 +172,9 @@ public interface IMaintenanceOperationExecutorReadTester<TResult>
     Task AssertAllAsync(Action<UniqueDatabaseInstanceKey, TResult> assert);
 
     void AssertAll(Action<UniqueDatabaseInstanceKey, TResult> assert);
+
+    Task AssertAnyAsync(Action<UniqueDatabaseInstanceKey, TResult> assert);
+
+    void AssertAny(Action<UniqueDatabaseInstanceKey, TResult> assert);
+
 }

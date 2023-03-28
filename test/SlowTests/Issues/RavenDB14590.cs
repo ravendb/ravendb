@@ -59,7 +59,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetUpdatesTimeSeriesValuesUsingInclude_UsingQuery(Options options)
         {
             using var store = GetDocumentStore(options);

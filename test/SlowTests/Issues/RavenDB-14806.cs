@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,12 +15,13 @@ public class RavenDB_14806 : RavenTestBase
     {
     }
 
-    [Fact]
-    public async Task CanQueryOverReservedPropertieS()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanQueryOverReservedPropertieS(Options options)
     {
         string companyId = "companies/1-A";
 
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         {
             using var session = store.OpenAsyncSession();
             await session.StoreAsync(new ContractClause() {CompanyId = companyId});
@@ -45,10 +47,11 @@ public class RavenDB_14806 : RavenTestBase
         }
     }
 
-    [Fact]
-    public async Task CanQueryWithGroupOverStaticIndex()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanQueryWithGroupOverStaticIndex(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         {
             using var session = store.OpenSession();
             session.Store(new Data() {Name = "Test"});

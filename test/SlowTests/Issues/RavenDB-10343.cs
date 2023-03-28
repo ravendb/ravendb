@@ -430,7 +430,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanQueryWithLoadFromSelectAndProjectWhereAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1313,7 +1313,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanQueryFromStaticIndexWithLoadFromSelectWithoutProjectionAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1624,7 +1624,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanSelectMemberAccessOfLoadedDocumentWhereAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
