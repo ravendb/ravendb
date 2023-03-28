@@ -242,7 +242,7 @@ namespace FastTests.Client.Queries
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork(Options options)
         {
             using var store = GetDocumentStore(options);

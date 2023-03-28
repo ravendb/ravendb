@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +31,7 @@ namespace FastTests.Client.Queries.Counters
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapIndex_Query(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -44,7 +45,7 @@ namespace FastTests.Client.Queries.Counters
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 var result = store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
                 {
@@ -68,7 +69,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.Equal(0, results.Count);
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -89,7 +90,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.Equal(0, session.DocumentsByEntity.Count);
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -124,7 +125,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.Equal("companies/1", results[0].User);
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -149,7 +150,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.True(results.All(x => x.Name == "HeartRate"));
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 // delete counter
 
@@ -182,7 +183,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.True(results.All(x => x.Name == "HeartRate"));
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -204,7 +205,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.True(results.All(x => x.Name == "HeartRate"));
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 // delete document
 
@@ -232,7 +233,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.True(results.All(x => x.Name == "HeartRate"));
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -301,7 +302,7 @@ namespace FastTests.Client.Queries.Counters
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapReduceIndex_Query(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -319,30 +320,62 @@ namespace FastTests.Client.Queries.Counters
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 string indexName = "AverageHeartRate";
 
-                var result = store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {
-                    Name = indexName,
-                    Maps = {
-                    "from counter in counters.Users.HeartRate " +
-                    "select new { " +
-                    "   HeartBeat = counter.Value, " +
-                    "   Name = counter.Name, " +
-                    "   Count = 1" +
-                    "}" },
-                    Reduce = "from r in results " +
-                             "group r by r.Name into g " +
-                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
-                             "let sumCount = g.Sum(x => x.Count) " +
-                             "select new {" +
-                             "  HeartBeat = sumHeartBeat / sumCount, " +
-                             "  Name = g.Key, " +
-                             "  Count = sumCount" +
-                             "}"
-                }));
+                    store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                    {
+                        Name = indexName,
+                        Maps =
+                        {
+                            "from counter in counters.Users.HeartRate " +
+                            "select new { " +
+                            "   HeartBeat = counter.Value, " +
+                            "   Name = counter.Name, " +
+                            "   SumHeartBeat = counter.Value, " +
+                            "   Count = 1" +
+                            "}"
+                        },
+                        Reduce = "from r in results " +
+                                 "group r by r.Name into g " +
+                                 "let sumHeartBeat = g.Sum(x => x.SumHeartBeat) " +
+                                 "let sumCount = g.Sum(x => x.Count) " +
+                                 "select new {" +
+                                 "  HeartBeat = sumHeartBeat / sumCount, " +
+                                 "  Name = g.Key, " +
+                                 "  SumHeartBeat = sumHeartBeat, " +
+                                 "  Count = sumCount" +
+                                 "}"
+                    }));
+                }
+                else
+                {
+                    store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
+                    {
+                        Name = indexName,
+                        Maps =
+                        {
+                            "from counter in counters.Users.HeartRate " +
+                            "select new { " +
+                            "   HeartBeat = counter.Value, " +
+                            "   Name = counter.Name, " +
+                            "   Count = 1" +
+                            "}"
+                        },
+                        Reduce = "from r in results " +
+                                 "group r by r.Name into g " +
+                                 "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                                 "let sumCount = g.Sum(x => x.Count) " +
+                                 "select new {" +
+                                 "  HeartBeat = sumHeartBeat / sumCount, " +
+                                 "  Name = g.Key, " +
+                                 "  Count = sumCount" +
+                                 "}"
+                    }));
+                }
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -354,13 +387,14 @@ namespace FastTests.Client.Queries.Counters
                     Assert.Equal(0, results.Count);
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
                     var results = session.Query<CounterMapReduceIndexResult>(indexName)
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out var stats)
                         .ToList();
 
@@ -375,7 +409,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.Equal(0, session.DocumentsByEntity.Count);
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 // add more heart rates
                 using (var session = store.OpenSession())
@@ -404,7 +438,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.Equal(10, results[0].Count);
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -421,7 +455,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.Equal(20, results[0].Count);
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 //// delete some counters
 
@@ -450,7 +484,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.Equal(20, results[0].Count);
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -469,7 +503,7 @@ namespace FastTests.Client.Queries.Counters
 
                 //// delete documents
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -492,7 +526,7 @@ namespace FastTests.Client.Queries.Counters
                     Assert.Equal(10, results[0].Count);
                 }
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -109,10 +110,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task NullListAsync()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task NullListAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.ExecuteIndexAsync(new BlogPostAll());
 
@@ -220,10 +222,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ListWithRatingAsync()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ListWithRatingAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.ExecuteIndexAsync(new BlogPostWithAverageRatingAll());
 

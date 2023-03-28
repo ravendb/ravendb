@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,12 +12,12 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
         }
 
-        [Theory]
-        [InlineData("לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ")]
-        [InlineData("Оптиматика")]
-        public async Task TextEnteredShouldNotBeNormalized(string content)
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData("לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("Оптиматика", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TextEnteredShouldNotBeNormalized(Options options, string content)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

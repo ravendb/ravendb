@@ -41,7 +41,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task LowLevelRemoteStreamAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -110,7 +110,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task HighLevelLocalStreamWithFilterAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -153,7 +153,7 @@ namespace SlowTests.Issues
         }
         
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task LowLevelEmbeddedStreamAsync(Options options)
         {
             using (var store = GetDocumentStore(options))

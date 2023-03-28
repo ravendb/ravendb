@@ -39,7 +39,7 @@ namespace SlowTests.Issues
             }
 
             [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-            [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+            [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
             public async Task IsInTriggersSyncFromAsyncException(Options options)
             {
                 using (var store = GetDocumentStore(options))
@@ -65,7 +65,7 @@ namespace SlowTests.Issues
             }
 
             [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-            [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+            [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
             public async Task IsInTriggersSyncFromAsyncWorks(Options options)
             {
                 using (var store = GetDocumentStore(options))
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
             }
 
             [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-            [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+            [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
             public async Task WithoutIsInItWorks(Options options)
             {
                 using (var store = GetDocumentStore(options))

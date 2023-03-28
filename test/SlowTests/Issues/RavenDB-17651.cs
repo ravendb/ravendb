@@ -2,6 +2,7 @@
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Can_Use_Any_For_A_CollectionQuery_With_An_Id()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Use_Any_For_A_CollectionQuery_With_An_Id(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string companyId;
                 using (var session = store.OpenAsyncSession())

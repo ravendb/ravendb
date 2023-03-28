@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -10,10 +11,11 @@ namespace StressTests.Client
 {
     public class StreamingWithTimeout : RavenTestBase
     {
-        [Fact]
-        public async Task TimeoutOnHangingStreamQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task TimeoutOnHangingStreamQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const int numberOfItems = 10_000;
 

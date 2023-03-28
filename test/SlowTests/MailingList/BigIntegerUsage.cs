@@ -10,6 +10,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList;
 
@@ -19,41 +20,35 @@ public class BigIntegerUsage : RavenTestBase
     {
     }
 
-    [Fact]
-    public async Task CanQueryOnBigIntegerValues()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanQueryOnBigIntegerValues(Options options)
     {
-        using var store = GetDocumentStore(new Options
+        options.ModifyDocumentStore = s =>
         {
-            ModifyDocumentStore = s =>
+            s.Conventions.Serialization = new CustomSerializationConventions();
+            s.Conventions.RegisterCustomQueryTranslator<BigInteger>((i) => i.CompareTo(BigInteger.Zero), ConvertMethod);
+
+            s.Conventions.RegisterQueryValueConverter((string name, BigInteger value, bool range, out string objValue) =>
             {
-                s.Conventions.Serialization = new CustomSerializationConventions();
-                s.Conventions.RegisterCustomQueryTranslator<BigInteger>((i) => i.CompareTo(BigInteger.Zero), ConvertMethod);
-                
-                s.Conventions.RegisterQueryValueConverter((string name, BigInteger value, bool range, out string objValue) =>
-                {
-                    objValue = value.ToString("D40");
-                    return true;
-                });
+                objValue = value.ToString("D40");
+                return true;
+            });
 
-                LinqPathProvider.Result ConvertMethod(LinqPathProvider provider, Expression expression)
-                {
-                    if (expression is not MethodCallExpression mce)
-                        throw new NotSupportedException(expression.ToString());
+            LinqPathProvider.Result ConvertMethod(LinqPathProvider provider, Expression expression)
+            {
+                if (expression is not MethodCallExpression mce)
+                    throw new NotSupportedException(expression.ToString());
 
-                    var target = provider.GetPath(mce.Object);
-                    object valueFromExpression = provider.GetValueFromExpression(mce.Arguments[1], typeof(BigInteger));
-                    if(valueFromExpression is not BigInteger bi)
-                        throw new NotSupportedException(expression.ToString() + " should have a BigInteger value");
-                    return new LinqPathProvider.Result()
-                    {
-                        MemberType = typeof(string), 
-                        IsNestedPath = false,
-                        Path = target.Path,
-                        Args = new[]{bi.ToString("D40")}
-                    };
-                }
+                var target = provider.GetPath(mce.Object);
+                object valueFromExpression = provider.GetValueFromExpression(mce.Arguments[1], typeof(BigInteger));
+                if (valueFromExpression is not BigInteger bi)
+                    throw new NotSupportedException(expression.ToString() + " should have a BigInteger value");
+                return new LinqPathProvider.Result() {MemberType = typeof(string), IsNestedPath = false, Path = target.Path, Args = new[] {bi.ToString("D40")}};
             }
-        });
+        };
+
+        using var store = GetDocumentStore(options);
 
         using (var session = store.OpenAsyncSession())
         {

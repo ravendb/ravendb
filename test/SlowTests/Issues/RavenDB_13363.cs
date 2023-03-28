@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,19 +17,19 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CanUseConvertersToSerializeQueryParameters()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseConvertersToSerializeQueryParameters(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = documentStore =>
             {
-                ModifyDocumentStore = documentStore =>
+                documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
-                    documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                    {
-                        CustomizeJsonSerializer = serializer => serializer.Converters.Add(new NumberJsonConverter())
-                    };
-                }
-            }))
+                    CustomizeJsonSerializer = serializer => serializer.Converters.Add(new NumberJsonConverter())
+                };
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
