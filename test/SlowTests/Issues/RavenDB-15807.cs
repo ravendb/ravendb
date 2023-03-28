@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                 await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)));
                 await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(pullReplicationName, new ReplicationHubAccess
                 {
-                    Name = sinkCerts.ServerCertificate.Value.Thumbprint,
+                    Name = "foo",
                     CertificateBase64 = Convert.ToBase64String(ownCertificate.Export(X509ContentType.Cert))
                 }));
 
@@ -76,20 +76,17 @@ namespace SlowTests.Issues
                 }));
 
                 long taskId;
-                // sink with ownCertificate - unauthorized to access
-                var json = "{\"PullReplicationAsSink\":{\"TaskId\": null,\"Database\":\"" + hubStore.Database + "\",\"ConnectionStringName\": \"ConnectionString-" + hubStore.Database + "\",\"HubName\": \"" + pullReplicationName + "\",\"Mode\": \"HubToSink\",\"AccessName\": null,\"CertificateWithPrivateKey\":\" " + Convert.ToBase64String(ownCertificate.Export(X509ContentType.Pfx)) + "\",  \"AllowedHubToSinkPaths\": null ,\"AllowedSinkToHubPaths\": null }}";
-
+                // sink with client cert 2 - unauthorized to access
+                var json = "{\"PullReplicationAsSink\":{\"TaskId\": null,\"Database\":\"" + hubStore.Database + "\",\"ConnectionStringName\": \"ConnectionString-" + hubStore.Database + "\",\"HubName\": \"" + pullReplicationName + "\",\"Mode\": \"HubToSink\",\"AccessName\": null,\"CertificateWithPrivateKey\":\" " + Convert.ToBase64String(sinkCertificates.ClientCertificate2.Value.Export(X509ContentType.Pfx)) + "\",  \"AllowedHubToSinkPaths\": null ,\"AllowedSinkToHubPaths\": null }}";
+                
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
                     BlittableJsonReaderObject reader = ctx.Sync.ReadForMemory(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
-
-                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    {
-                        var task = sinkServer.ServerStore.UpdatePullReplicationAsSink(sinkStore.Database, reader, Guid.NewGuid().ToString(), out PullReplicationAsSink pullReplication);
-                        Task.WaitAll(task);
-                        taskId = task.Result.Index;
-                        Assert.NotNull(pullReplication.CertificateWithPrivateKey);
-                    }
+                    
+                    var task = sinkServer.ServerStore.UpdatePullReplicationAsSink(sinkStore.Database, reader, Guid.NewGuid().ToString(), out PullReplicationAsSink pullReplication);
+                    Task.WaitAll(task);
+                    taskId = task.Result.Index;
+                    Assert.NotNull(pullReplication.CertificateWithPrivateKey);
                 }
 
                 using (var hubSession = hubStore.OpenSession())
@@ -106,13 +103,10 @@ namespace SlowTests.Issues
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
                     BlittableJsonReaderObject reader = ctx.Sync.ReadForMemory(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
-
-                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    {
-                        var task = sinkServer.ServerStore.UpdatePullReplicationAsSink(sinkStore.Database, reader, Guid.NewGuid().ToString(), out PullReplicationAsSink pullReplication);
-                        Task.WaitAll(task);
-                        Assert.Null(pullReplication.CertificateWithPrivateKey);
-                    }
+                    
+                    var task = sinkServer.ServerStore.UpdatePullReplicationAsSink(sinkStore.Database, reader, Guid.NewGuid().ToString(), out PullReplicationAsSink pullReplication);
+                    Task.WaitAll(task);
+                    Assert.Null(pullReplication.CertificateWithPrivateKey);
                 }
 
                 using (var hubSession = hubStore.OpenSession())

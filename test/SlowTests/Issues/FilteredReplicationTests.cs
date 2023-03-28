@@ -208,6 +208,8 @@ namespace SlowTests.Issues
             var pullCertA = certificates.ClientCertificate2.Value;
             var pullCertB = certificates.ClientCertificate3.Value;
 
+            await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition { Name = "pull" }));
+
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull", new ReplicationHubAccess
             {
                 Name = "pull1",
