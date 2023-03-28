@@ -48,9 +48,13 @@ namespace SlowTests.Issues
                         let ret = RavenQuery.Raw<int>("result.Id.length")
                         select new { userIdLength = ret };
 
-                    Assert.Equal(
-                        "declare function output(result) {\r\n\tvar ret = result.Id.length;\r\n\treturn { userIdLength : ret };\r\n}\r\nfrom 'Users' as result select output(result)"
-                        , asyncDocumentQuery.ToString());
+                    RavenTestHelper.AssertEqualRespectingNewLines(
+                        @"declare function output(result) {
+	var ret = result.Id.length;
+	return { userIdLength : ret };
+}
+from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
+
                 }
 
                 /*
@@ -79,9 +83,13 @@ namespace SlowTests.Issues
                         let ret = RavenQuery.Raw<object>("result.Id.length")
                         select new { myval = ret };
 
-                    Assert.Equal(
-                        "declare function output(result) {\r\n\tvar ret = result.Id.length;\r\n\treturn { myval : ret };\r\n}\r\nfrom 'Users' as result select output(result)"
-                        , asyncDocumentQuery.ToString());
+
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"declare function output(result) {
+	var ret = result.Id.length;
+	return { myval : ret };
+}
+from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
+                    
                 }
 
                 /* should work:
@@ -93,9 +101,11 @@ namespace SlowTests.Issues
                         let ret = RavenQuery.Raw<object>("{ retval : result.Id.length}")
                         select ret;
 
-                    Assert.Equal(
-                        "declare function output(result) {\r\n\tvar ret = { retval : result.Id.length};\r\n\treturn ret;\r\n}\r\nfrom 'Users' as result select output(result)"
-                        , asyncDocumentQuery.ToString());
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"declare function output(result) {
+	var ret = { retval : result.Id.length};
+	return ret;
+}
+from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
                 }
 
                 /* shouldn't work:
@@ -107,10 +117,12 @@ namespace SlowTests.Issues
                     var asyncDocumentQuery = from result in session.Query<User>()
                         let ret = RavenQuery.Raw<object>("result.Id.length")
                         select ret;
-
-                    Assert.Equal(
-                        "declare function output(result) {\r\n\tvar ret = result.Id.length;\r\n\treturn ret;\r\n}\r\nfrom 'Users' as result select output(result)"
-                        , asyncDocumentQuery.ToString());
+                    
+                      RavenTestHelper.AssertEqualRespectingNewLines(@"declare function output(result) {
+	var ret = result.Id.length;
+	return ret;
+}
+from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 
                     var exception = Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
                     Assert.StartsWith("System.InvalidOperationException: Query returning a single function call result must return an object",
@@ -124,10 +136,11 @@ namespace SlowTests.Issues
                 {
                     var asyncDocumentQuery = from result in session.Query<User>()
                         select RavenQuery.Raw<object>("{ retval : result.Id.length }");
-
-                    Assert.Equal(
-                        "declare function output(result) {\r\n\treturn { retval : result.Id.length };\r\n}\r\nfrom 'Users' as result select output(result)"
-                        , asyncDocumentQuery.ToString());
+                    
+                      RavenTestHelper.AssertEqualRespectingNewLines(@"declare function output(result) {
+	return { retval : result.Id.length };
+}
+from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
                 }
 
                 /* shouldn't work:
@@ -139,9 +152,10 @@ namespace SlowTests.Issues
                     var asyncDocumentQuery = from result in session.Query<User>()
                         select RavenQuery.Raw<object>("result.Id.length");
 
-                    Assert.Equal(
-                        "declare function output(result) {\r\n\treturn result.Id.length;\r\n}\r\nfrom 'Users' as result select output(result)"
-                        , asyncDocumentQuery.ToString());
+                      RavenTestHelper.AssertEqualRespectingNewLines(@"declare function output(result) {
+	return result.Id.length;
+}
+from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 
                     var exception = Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
                     Assert.StartsWith("System.InvalidOperationException: Query returning a single function call result must return an object",
