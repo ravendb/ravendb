@@ -84,11 +84,6 @@ function BuildUbuntuDockerImage ($version, $arch) {
     $dockerPackagePath = Join-Path -Path $DockerfileDir -ChildPath "RavenDB.tar.bz2"
     Copy-Item -Path $artifactsPackagePath -Destination $dockerPackagePath -Force
     Copy-Item -Path $RavenDockerSettingsPath -Destination $(Join-Path -Path $DockerfileDir -ChildPath "settings.json") -Force
-    write-host "Build docker image: $version"
-    $tags = GetUbuntuImageTags $repo $version $arch
-    write-host "Tags: $tags"
-
-    $fullNameTag = $tags[0]
 
     if ([string]::IsNullOrEmpty($DebPackagePath)) {
         $ubuntuVersion = GetUbuntuVersionFromDockerfile $DockerfileDir "Dockerfile.$arch"
@@ -96,7 +91,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
         
         $archNameToMatch = switch ($arch) {
             "x64" { "amd64"; break }
-            "arm32v7" { "arm32"; break }
+            "arm32v7" { "armhf"; break }
             "arm64v8" { "arm64"; break }
             Default {
                 throw "ERROR: Unsupported architecture $($arch)"
@@ -124,7 +119,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
 
             $matchingDebFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$version*$archNameToMatch*.deb" }
             if ($matchingDebFile) {
-                $pathToDeb = $matchingDebFile.FullName
+                $pathToDeb = $matchingDebFile.Name
             } else {
                 Write-Host "FATAL: No ravendb .deb file for '$($arch)' architecture found after running script building .deb package." 
                 exit 1
@@ -137,9 +132,14 @@ function BuildUbuntuDockerImage ($version, $arch) {
     else {
         $pathToDeb = $DebPackagePath
     }
-
     Write-Host "Providing deb path '$($pathToDeb)' to Dockerfile.."
-    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "PATH_TO_DEB=./$matchingDebFile" --build-arg "RAVEN_USER_ID=999" --build-arg "RAVEN_GROUP_ID=999"
+
+    Write-Host "Build docker image: $version"
+    $tags = GetUbuntuImageTags $repo $version $arch
+    Write-Host "Tags: $tags"
+    $fullNameTag = $tags[0]
+
+    docker build $DockerfileDir -f "$($DockerfileDir)/Dockerfile.$($arch)" -t "$fullNameTag" --build-arg "PATH_TO_DEB=$pathToDeb" --build-arg "RAVEN_USER_ID=999" --build-arg "RAVEN_GROUP_ID=999"
     CheckLastExitCode
     
     foreach ($tag in $tags[1..$tags.Length]) {

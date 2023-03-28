@@ -64,7 +64,7 @@ if ($env:TARBALL_DIR)
     $packageFileDir = $($env:TARBALL_DIR)
 }
 
-docker run --rm -it `
+docker run --rm -t `
     --platform $env:DOCKER_BUILDPLATFORM `
     -v "$($env:OUTPUT_DIR):/dist" `
     -v "$($packageFileDir):/cache" `
