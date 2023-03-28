@@ -854,7 +854,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             return true;
         }
 
-        private static readonly string[] AliasKeywords =
+        internal static readonly string[] AliasKeywords =
         {
             "AS",
             "SELECT",
