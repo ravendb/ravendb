@@ -29,6 +29,7 @@ namespace SlowTests.Server.Documents.ETL
                 AddEtl(src, configuration, new RavenConnectionString {Name = "test", TopologyDiscoveryUrls = dst.Urls, Database = dst.Database,});
 
                 var etlDone = WaitForEtl(src, (_, statistics) => statistics.LoadSuccesses == 3);
+                var loadDone = WaitForEtl(src, (_, statistics) => statistics.LoadSuccesses == 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -42,6 +43,8 @@ namespace SlowTests.Server.Documents.ETL
                     user.Name = "Gracjan";
                     session.SaveChanges();
                 }
+                
+                Assert.True(loadDone.Wait(TimeSpan.FromSeconds(3)));
                 
                 using (var session = dst.OpenSession())
                 {
