@@ -130,10 +130,12 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
             if (process.SourceShard == ShardNumber && process.Status == MigrationStatus.OwnershipTransferred)
             {
+                bool alreadyExist = false;
                 index = (long)Hashing.XXHash64.CalculateRaw(process.LastSourceChangeVector ?? $"No docs for {process.MigrationIndex}");
 
                 if (_confirmations.TryGetValue(index, out t))
                 {
+                    alreadyExist = true;
                     if (t.IsCompleted == false)
                         continue;
                 }
@@ -141,11 +143,13 @@ public class ShardedDocumentDatabase : DocumentDatabase
                 // cleanup values
                 t = DeleteBucketAsync(process.Bucket, process.MigrationIndex, process.LastSourceChangeVector);
 
-                t?.ContinueWith(_ =>
+                if (alreadyExist == false)
                 {
-                    t.RunSynchronously();
-                    _ = DocumentsMigrator.ExecuteMoveDocumentsAsync();
-                });
+                    t.ContinueWith(_ =>
+                    {
+                        _ = DocumentsMigrator.ExecuteMoveDocumentsAsync();
+                    });
+                }
             }
 
             if (t != null)
