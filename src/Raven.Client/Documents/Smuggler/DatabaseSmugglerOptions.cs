@@ -51,6 +51,9 @@ namespace Raven.Client.Documents.Smuggler
                                                               DatabaseItemType.Identities |
                                                               DatabaseItemType.Subscriptions;
 
+        internal const DatabaseRecordItemType ShardingNotSupportedDatabaseSmugglerOptions = DatabaseRecordItemType.HubPullReplications | 
+                                                                                            DatabaseRecordItemType.SinkPullReplications;
+
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 
         public DatabaseSmugglerOptions()
