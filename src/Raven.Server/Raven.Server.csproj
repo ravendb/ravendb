@@ -220,7 +220,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Dashboard\Server\" />
-    <Folder Include="Documents\Streaming" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
