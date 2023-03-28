@@ -11,6 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
@@ -251,6 +252,30 @@ function execute(doc, args){
             get
             {
                 return _orderByFieldNames ??= OrderBy.Select(x => x.Name.Value).ToHashSet();
+            }
+        }
+
+        private QueryData _queryData;
+
+        public QueryData QueryData
+        {
+            get
+            {
+                if (Query.Select is { Count: > 0 } && _queryData == null)
+                {
+                    string[] fields = new string[Query.Select.Count];
+                    string[] projections = new string[Query.Select.Count];
+
+                    for (var i = 0; i < Query.Select.Count; i++)
+                    {
+                        fields[i] = Query.Select[i].Expression.GetTextWithAlias(parent: null);
+                        projections[i] = Query.Select[i].Alias.HasValue ? Query.Select[i].Alias.ToString() : null;
+                    }
+
+                    _queryData = new QueryData(fields, projections, fromAlias: Query.From.Alias?.Value);
+                }
+
+                return _queryData;
             }
         }
 

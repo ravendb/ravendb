@@ -34,6 +34,14 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string GetTextWithAlias(IndexQueryServerSide parent)
         {
+            if (Value == ValueTokenType.Parameter)
+            {
+                if (parent != null)
+                    return GetText(parent);
+
+                return $"${Token.Value}";
+            }
+
             return GetText(parent);
         }
 

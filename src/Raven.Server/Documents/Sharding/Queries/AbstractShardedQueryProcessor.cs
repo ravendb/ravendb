@@ -575,11 +575,11 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         if (includeBuilder != null)
             documentQuery.Include(includeBuilder);
 
-        if (Query.Metadata.Query.Select is { Count: > 0 })
-        {
-            var queryData = GetQueryData(Query);
+        var queryData = Query.Metadata.QueryData;
+        if (queryData != null)
             documentQuery.SelectFields<dynamic>(queryData);
-        }
+
+        var queryText = documentQuery.ToString();
 
         Dictionary<int, BlittableJsonReaderObject> queryTemplates = new();
 
@@ -591,14 +591,39 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
             var q = new DynamicJsonValue
             {
-                [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
-                {
-                    [listParameterName] = GetIds()
-                },
-                [nameof(IndexQuery.Query)] = documentQuery.ToString()
+                [nameof(IndexQuery.QueryParameters)] = GetParameters(),
+                [nameof(IndexQuery.Query)] = queryText
             };
 
             queryTemplates[shardId] = Context.ReadObject(q, "query");
+
+            DynamicJsonValue GetParameters()
+            {
+                var djv = new DynamicJsonValue
+                {
+                    [listParameterName] = GetIds()
+                };
+
+                if (Query.QueryParameters is { Count: > 0 })
+                {
+                    var offsetParameterName = GetParameterName(Query.Metadata.Query.Offset);
+                    var limitParameterName = GetParameterName(Query.Metadata.Query.Limit);
+
+                    var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                    for (var i = 0; i < Query.QueryParameters.Count; i++)
+                    {
+                        Query.QueryParameters.GetPropertyByIndex(i, ref propertyDetails);
+
+                        string parameterName = propertyDetails.Name;
+                        if (parameterName == offsetParameterName || parameterName == limitParameterName)
+                            continue;
+
+                        djv[parameterName] = propertyDetails.Value;
+                    }
+                }
+
+                return djv;
+            }
 
             IEnumerable<string> GetIds()
             {
@@ -607,23 +632,20 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                     yield return idAsAlice.ToString();
                 }
             }
+
+            string GetParameterName(ValueExpression valueExpression)
+            {
+                if (valueExpression == null)
+                    return null;
+
+                if (valueExpression.Value != ValueTokenType.Parameter)
+                    return null;
+
+                return valueExpression.Token.Value;
+            }
         }
 
         return queryTemplates;
-
-        static QueryData GetQueryData(IndexQueryServerSide query)
-        {
-            string[] fields = new string[query.Metadata.Query.Select.Count];
-            string[] projections = new string[query.Metadata.Query.Select.Count];
-
-            for (var i = 0; i < query.Metadata.Query.Select.Count; i++)
-            {
-                fields[i] = query.Metadata.Query.Select[i].Expression.GetTextWithAlias(query);
-                projections[i] = query.Metadata.Query.Select[i].Alias.HasValue ? query.Metadata.Query.Select[i].Alias.ToString() : null;
-            }
-            
-            return new QueryData(fields, projections, fromAlias: query.Metadata.Query.From.Alias?.Value);
-        }
     }
 
     protected async ValueTask HandleMissingDocumentIncludesAsync<T, TIncludes>(TransactionOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext, HashSet<string> missingIncludes,

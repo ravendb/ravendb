@@ -207,6 +207,28 @@ select {
 
         [RavenTheory(RavenTestCategory.Spatial)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanProjectDistanceComputation_WithParameters(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                store.Maintenance.Send(new CreateSampleDataOperation());
+
+                using (var s = store.OpenSession())
+                {
+                    var d = s.Advanced.RawQuery<JObject>(@"from Orders  as a
+where id() ='orders/830-A'
+select id(), spatial.distance($pa, $pb , a.ShipTo.Location.Latitude, a.ShipTo.Location.Longitude, 'kilometers') as Distance")
+                        .AddParameter("pa", 35.2)
+                        .AddParameter("pb", -107.2)
+                        .Single();
+
+                    Assert.Equal(48.99, Math.Round(d.Value<double>("Distance"), 2));
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetDistanceFromSpatialQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
