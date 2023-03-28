@@ -7,12 +7,13 @@ interface RichPanelProps {
     className?: string;
     children: ReactNode | ReactNode[];
     innerRef?: any;
+    hover?: boolean;
 }
 
 export function RichPanel(props: RichPanelProps) {
-    const { children, className, innerRef } = props;
+    const { children, className, innerRef, hover } = props;
     return (
-        <Card className={classNames("rich-panel-item", className)} ref={innerRef}>
+        <Card className={classNames("rich-panel-item", className, { "rich-panel-hover": hover })} ref={innerRef}>
             {children}
         </Card>
     );
