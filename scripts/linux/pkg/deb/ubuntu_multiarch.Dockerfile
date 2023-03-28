@@ -9,7 +9,7 @@ COPY --from=qemu /usr/bin/qemu-${QEMU_ARCH}-static /usr/bin
 ARG DISTRO_VERSION_NAME
 ARG DISTRO_VERSION
 
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y dos2unix devscripts dh-make wget gettext-base lintian curl dh-systemd debhelper
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y dos2unix devscripts dh-make wget gettext-base lintian curl debhelper
 
 RUN apt update \ 
     && apt-get -y dist-upgrade \
