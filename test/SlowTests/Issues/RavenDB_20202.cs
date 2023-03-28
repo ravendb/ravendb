@@ -26,8 +26,6 @@ public class RavenDB_20202 : ClusterTestBase
     public async Task ShouldGettingBackToTheNodeAfterExperiencingTimeoutAndTopologyUpdateSimultaneously()
     {
         const string databaseName = "testDb";
-        const string userName = "RavenDB-20202";
-        const string userId = "user/1";
         const int clusterSize = 3;
         var timeOut = TimeSpan.FromSeconds(5);
 

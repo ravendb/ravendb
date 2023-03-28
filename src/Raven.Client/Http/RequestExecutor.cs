@@ -1736,8 +1736,17 @@ namespace Raven.Client.Http
         {
             // In some cases, race conditions may occur with a recently changed topology and a failed node.
             // We still should check the node's health, and if healthy, remove its timer and restore its index.
+            int nodeIndex;
+            try
+            {
+                nodeIndex = _nodeSelector.GetRequestedNode(nodeStatus.Node.ClusterTag).Index;
+            }
+            catch (Exception e) when (e is DatabaseDoesNotExistException or RequestedNodeUnavailableException)
+            {
+                return; // There are no nodes in the topology or could not find requested node. Nothing we can do here
+            }
+            
             var copy = TopologyNodes;
-            var nodeIndex = _nodeSelector.GetRequestedNode(nodeStatus.Node.ClusterTag).Index;
             var serverNode = copy.FirstOrDefault(x => x.ClusterTag.Equals(nodeStatus.Node.ClusterTag));
             if (serverNode == null)
                 return;
@@ -1749,7 +1758,7 @@ namespace Raven.Client.Http
                     Lazy<NodeStatus> status;
                     try
                     {
-                        await PerformHealthCheck(serverNode, nodeStatus.NodeIndex, context).ConfigureAwait(false);
+                        await PerformHealthCheck(serverNode, nodeIndex, context).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -1765,7 +1774,7 @@ namespace Raven.Client.Http
                     if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
                         status.Value.Dispose();
 
-                    _nodeSelector?.RestoreNodeIndex(nodeStatus.NodeIndex);
+                    _nodeSelector?.RestoreNodeIndex(nodeIndex);
                 }
             }
             catch (Exception e)
