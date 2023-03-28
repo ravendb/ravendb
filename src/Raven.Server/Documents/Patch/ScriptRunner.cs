@@ -1087,19 +1087,8 @@ namespace Raven.Server.Documents.Patch
                 {
                     reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    if (_database is ShardedDocumentDatabase shardedDatabase)
-                    {
-                        if (id?[^1] == _database.IdentityPartsSeparator)
-                        {
-                            while (true)
-                            {
-                                id = ShardHelper.GenerateStickyId(id, _database.IdentityPartsSeparator);
-                                var shard = ShardHelper.GetShardNumberAndBucketForIdentity(shardedDatabase.ShardingConfiguration,  _docsCtx.Allocator, id, _database.IdentityPartsSeparator).ShardNumber;
-                                if (shard == shardedDatabase.ShardNumber)
-                                    break;
-                            }
-                        }
-                    }
+                    if (_database is ShardedDocumentDatabase)
+                        id = GenerateIdForShard(args, id);
 
                     var put = _database.DocumentsStorage.Put(
                         _docsCtx,
@@ -1129,6 +1118,28 @@ namespace Raven.Server.Documents.Patch
                     if (DebugMode == false)
                         reader?.Dispose();
                 }
+            }
+
+            private string GenerateIdForShard(JsValue[] args, string id)
+            {
+                if (id?[^1] != _database.IdentityPartsSeparator)
+                    return id;
+
+                var originalId = (args[1].AsObject() as BlittableObjectInstance)?.DocumentId;
+                if (originalId != null)
+                {
+                    var builder = new StringBuilder(id);
+                    var index = originalId.IndexOf('$');
+                    if (index != -1)
+                        originalId = originalId[index..originalId.Length];
+                    else
+                        builder.Append('$');
+
+                    builder.Append(originalId + '$' + _database.IdentityPartsSeparator);
+                    id = builder.ToString();
+                }
+                
+                return id;
             }
 
             private static void AssertValidId()
