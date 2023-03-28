@@ -312,6 +312,7 @@
                                     <div class="form-group">
                                         <div data-bind="validationElement: key" class="flex-grow margin-left">
                                             <input class="form-control" placeholder="Indexing Configuration Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" />
+                                            <i title="Unrecognized per-index configuration option. Might be ignored by the server." data-bind="visible: unknownKey" class="text-warning icon-warning unknown-option-warning"></i>
                                             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
                                                 <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
                                                     <a role="menuitem" tabindex="-1" href="#">

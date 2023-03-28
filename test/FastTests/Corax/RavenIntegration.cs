@@ -347,4 +347,81 @@ public class RavenIntegration : RavenTestBase
     }
 
     private record Person(string Name);
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanQueryWithLongOnDoubleField(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Doc{Name = "Maciej", BoostFactor = 11.5f});
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            //  The `11` on the server side will be long ( and the string made of it is "11") but the index doesn't contain the such term (because we indexed it as `11.5`.)
+            var query = session.Advanced.RawQuery<Doc>("from Docs where BoostFactor == 11").WaitForNonStaleResults().ToList();
+            WaitForUserToContinueTheTest(store);
+            Assert.Equal(1, query.Count);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanUpdateSingleWhenFrequencyIsChangingLevel(Options options)
+    {
+        const string initial = "12345";
+        string DataGenerator(int i) => string.Join(" ", Enumerable.Range(0, i).Select(i => initial));
+        using var store = GetDocumentStore(options);
+        DtoForDynamics docToModify;
+        using (var session = store.OpenSession())
+        {
+            docToModify = new DtoForDynamics() {Tag = DataGenerator(17)};
+            session.Store(docToModify);
+            session.SaveChanges();
+        }
+
+        var index = new SearchIndex();
+        index.Execute(store);
+        Indexes.WaitForIndexing(store);
+        using (var session = store.OpenSession())
+        {
+            var doc = session.Load<DtoForDynamics>(docToModify.Id);
+            doc.Tag = DataGenerator(1);
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+        WaitForUserToContinueTheTest(store);
+    }
+    
+    private class SearchIndex : AbstractIndexCreationTask<DtoForDynamics>
+    {
+        public SearchIndex()
+        {
+            Map = enumerable => enumerable.Select(i => new {i.Tag});
+            Index(i => i.Tag, FieldIndexing.Search);
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void TermMatchCanQueryOnDoubleTermThatDoesntExists(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Doc{Name = "Maciej", BoostFactor = 11.5f});
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var results = session.Query<Doc>().Where(i => i.BoostFactor == 0f).ToList();
+            Assert.Empty(results);
+        }
+    }
+
 }

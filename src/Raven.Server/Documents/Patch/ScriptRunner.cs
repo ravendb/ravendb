@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Patch
             TimeSeriesDeclaration.Add(func.Name, func);
         }
 
-        public ReturnRun GetRunner(out SingleRun run)
+        public ReturnRun GetRunner(bool ignoreValidationErrors, out SingleRun run)
         {
             _lastRun = DateTime.UtcNow;
             Interlocked.Increment(ref Runs);
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    holder.Value = new SingleRun(_parent.Database, _parent.Configuration, this, ScriptsSource);
+                    holder.Value = new SingleRun(_parent.Database, _parent.Configuration, this, ScriptsSource, ignoreValidationErrors);
                 }
             }
 
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents.Patch
             private const string _timeSeriesSignature = "timeseries(doc, name)";
             public const string GetMetadataMethod = "getMetadata";
 
-            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<Script> scriptsSource)
+            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<Script> scriptsSource, bool ignoreValidationErrors)
             {
                 _database = database;
                 _configuration = configuration;
@@ -355,6 +355,7 @@ namespace Raven.Server.Documents.Patch
                     }
                     catch (Exception e)
                     {
+                        if (ignoreValidationErrors == false)
                         throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
                     }
                 }

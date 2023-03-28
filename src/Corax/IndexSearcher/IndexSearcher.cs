@@ -251,7 +251,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
 
-    public long GetEntriesAmountInField(FieldMetadata field)
+    public long GetTermAmountInField(FieldMetadata field)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 

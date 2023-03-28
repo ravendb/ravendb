@@ -1507,6 +1507,13 @@ namespace Corax
                     switch (AddEntriesToTerm(tmpBuf, existingIdInTree, ref entries, out termId))
                     {
                         case AddEntriesToTermResult.UpdateTermId:
+#if ENABLE_TERMDUMPER
+                            if (termId != existingIdInTree)
+                            {
+                                dumper.WriteRemoval(term, existingIdInTree);
+                            }
+#endif
+     
                             dumper.WriteAddition(term, termId);
                             fieldTree.Add(scope.Key, termId);
                             break;
@@ -1514,7 +1521,7 @@ namespace Corax
                             if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
                             {
                                 dumper.WriteRemoval(term, termId);
-                                throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
+                                ThrowTriedToDeleteTermThatDoesNotExists();
                             }
 
                             _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, -entries.TermSize);
@@ -1524,6 +1531,12 @@ namespace Corax
                         case AddEntriesToTermResult.NothingToDo:
                             break;
                     }
+                    
+                    void ThrowTriedToDeleteTermThatDoesNotExists()
+                    {
+                        throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
+                    }
+
                 }
 
                 scope.Dispose();
@@ -1534,7 +1547,7 @@ namespace Corax
         {
             NothingToDo,
             UpdateTermId,
-            RemoveTermId
+            RemoveTermId,
         }
 
 
@@ -1638,31 +1651,64 @@ namespace Corax
         private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
             entries.AssertPreparationIsNotFinished();
+            
             var (existingEntryId, existingFrequency) = EntryIdEncodings.Decode(idInTree);
-
-            // single
-            if (entries.TotalAdditions == 1 && entries.Additions[0] == existingEntryId && entries.AdditionsFrequency[0] == existingFrequency && entries.TotalRemovals == 0)
+            
+            // In case when existingEntryId and only addition is the same:
+            // Let's assert whether the current document will output the same ID as the previous one.
+            // We can assume that removals are "agnostic" for us since the already stored document has the same ID as this one.
+            // In any other case, where did the different ID come from?
+            if (entries.TotalAdditions == 1 && entries.Additions[0] == existingEntryId) 
             {
-                // Same element to add, nothing to do here.
-                termId = -1;
-                return AddEntriesToTermResult.NothingToDo;
-            }
-
-            if (entries.TotalRemovals != 0)
-            {
-                if (entries.Removals[0] != existingEntryId || entries.RemovalsFrequency[0] != existingFrequency || entries.TotalRemovals != 1)
-                    throw new InvalidDataException($"Attempt to delete id {string.Join(", ", entries.Removals.ToArray())} that does not exists, only value is: {idInTree}");
-
-                if (entries.TotalAdditions == 0)
+                if (entries.TotalRemovals > 0)
+                    Debug.Assert(entries.Removals[0] == existingEntryId);
+                
+                var newId = EntryIdEncodings.Encode(entries.Additions[0], entries.AdditionsFrequency[0], (long)TermIdMask.Single);
+                if (newId == idInTree)
                 {
                     termId = -1;
-                    return AddEntriesToTermResult.RemoveTermId;
+                    return AddEntriesToTermResult.NothingToDo;
                 }
             }
-            else
+            
+            if (entries.TotalAdditions == 0 && entries.TotalRemovals > 0) 
             {
-                entries.Addition(existingEntryId, existingFrequency);
+                if (entries.TotalRemovals > 1) 
+                    throw new InvalidOperationException($"More than one removal found for a single item, which is impossible. " +
+                                                        $"{Environment.NewLine}Current tree id: {idInTree}" +
+                                                        $"{Environment.NewLine}Current entry id {existingEntryId}" +
+                                                        $"{Environment.NewLine}Current term frequency: {existingFrequency}" +
+                                                        $"{Environment.NewLine}Items we wanted to delete (entryId|Frequency): " +
+                                                        $"{string.Join(", ", entries.Removals.ToArray().Zip(entries.RemovalsFrequency.ToArray()).Select(i => $"({i.First}|{i.Second})"))}");
+                
+                Debug.Assert(EntryIdEncodings.QuantizeAndDequantize(entries.RemovalsFrequency[0]) == existingFrequency, "The item stored and the item we're trying to delete are different, which is impossible.");
+                
+                termId = -1;
+                return AddEntriesToTermResult.RemoveTermId;
             }
+
+            // Another document contains the same term. Let's check if the currently indexed document is in EntriesModification.
+            // If it's not, we have to add it (since it has to be included in Small/Set too).
+            if (entries.TotalAdditions >= 1)
+            {
+                bool isIncluded = false;
+                for (int idX = 0; idX < entries.TotalAdditions && isIncluded == false; ++idX)
+                {
+                    if (entries.Additions[idX] == existingEntryId)
+                        isIncluded = true;
+                }
+                
+                //User may wants to delete it.
+                for (int idX = 0; idX < entries.TotalRemovals && isIncluded == false; ++idX)
+                {
+                    if (entries.Removals[idX] == existingEntryId)
+                        isIncluded = true;
+                }
+
+                if (isIncluded == false)
+                    entries.Addition(existingEntryId, existingFrequency);
+            }
+            
             
             AddNewTerm(ref entries, tmpBuf, out termId);
             return AddEntriesToTermResult.UpdateTermId;
