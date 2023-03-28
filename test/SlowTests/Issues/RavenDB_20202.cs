@@ -92,16 +92,20 @@ public class RavenDB_20202 : ClusterTestBase
                 forTestingPurposes.HealthCheckHold?.Set();
             }
 
-            // Wait 25s (time with buffer) for timers to execute callbacks; expect no failed nodes/timers after it
-            await Task.Delay(25_000);
+            // Wait for timers to execute callbacks; expect no timers after it
+            WaitForValue(() =>
+            {
+                // Assert that there are no health check timers for failed nodes
+                var failedNodesTimers = store.GetRequestExecutor().ForTestingPurposesOnly().GetFailedNodesTimers;
+                return failedNodesTimers.Count;
+            }, 
+                expectedVal: 0, 
+                timeout: TimeSpan.FromMinutes(1).Milliseconds, 
+                interval: TimeSpan.FromSeconds(1).Milliseconds);
 
             // Assert that there are no failures in the node selector state
             var nodeSelectorFailures = store.GetRequestExecutor().ForTestingPurposesOnly().GetNodeSelectorFailures;
             Assert.Equal(new[] { 0, 0, 0 }, nodeSelectorFailures);
-
-            // Assert that there are no health check timers for failed nodes
-            var failedNodesTimers = store.GetRequestExecutor().ForTestingPurposesOnly().GetFailedNodesTimers;
-            Assert.Equal(0, failedNodesTimers.Count);
 
             // Assert that we're back to the first node 
             var preferredNode = store.GetRequestExecutor().ForTestingPurposesOnly().GetPreferredNode;

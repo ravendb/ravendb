@@ -2330,7 +2330,6 @@ namespace Raven.Client.Http
         {
             private readonly RequestExecutor _requestExecutor;
 
-            internal TestingStuff() { }
             internal TestingStuff(RequestExecutor requestExecutor)
             {
                 _requestExecutor = requestExecutor;
