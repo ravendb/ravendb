@@ -50,11 +50,14 @@ public partial class IndexSearcher
         {
             numericalField = field.GetNumericFieldMetadata<double>(_transaction.Allocator);
             using var set = _fieldsTree?.FixedTreeForDouble(numericalField.FieldName, sizeof(double));
-            var ptr = set.ReadPtr((double)(object)term, out var length);
-            if (ptr != null)
+            if (set != null)
             {
-                containerId = *(long*)ptr;
-                Debug.Assert(length == sizeof(long));
+                var ptr = set.ReadPtr((double)(object)term, out var length);
+                if (ptr != null)
+                {
+                    containerId = *(long*)ptr;
+                    Debug.Assert(length == sizeof(double));
+                }
             }
         }
 

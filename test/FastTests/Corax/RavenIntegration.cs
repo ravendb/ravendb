@@ -405,4 +405,23 @@ public class RavenIntegration : RavenTestBase
             Index(i => i.Tag, FieldIndexing.Search);
         }
     }
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void TermMatchCanQueryOnDoubleTermThatDoesntExists(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Doc{Name = "Maciej", BoostFactor = 11.5f});
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var results = session.Query<Doc>().Where(i => i.BoostFactor == 0f).ToList();
+            Assert.Empty(results);
+        }
+    }
+
 }
