@@ -56,18 +56,6 @@ namespace FastTests
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
         }
 
-        protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, List<RavenServer> cluster, string database = null)
-        {
-            foreach (var node in cluster)
-            {
-                var db = node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
-                if (db != null)
-                    return db;
-            }
-
-            return null;
-        }
-
         public bool WaitForDocument<T>(IDocumentStore store,
             string docId,
             Func<T, bool> predicate,
