@@ -407,7 +407,7 @@ namespace SlowTests.Sharding.Cluster
         }
 
         [Fact]
-        public async Task CompareExchangeTombstoneWillNotBeCleanedWhenSomeShardsNeverBackedUp()
+        public async Task CompareExchangeTombstonesWillBeCleanedWhenSomeShardsNeverBackedUp()
         {
             var database = GetDatabaseName();
             var settings = new Dictionary<string, string>
@@ -471,7 +471,9 @@ namespace SlowTests.Sharding.Cluster
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard0User, shardToCX[0].Index));
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard1User, shardToCX[1].Index));
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard2User, shardToCX[2].Index));
-                
+
+                await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
+
                 //run periodic backup on leader
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 * *");
                 var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(leader, store, config, isFullBackup: false);
@@ -494,18 +496,21 @@ namespace SlowTests.Sharding.Cluster
                 }, true);
                 
                 Assert.True(done);
-                
+
+                await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
+
                 //unsuspend and wait for the tombstone cleaner
                 leader.ServerStore.Observer.Suspended = false;
 
                 //wait for the servers to execute the cleanup command waiting in the state machine
+                //(_lastTombstonesCleanupTimeInTicks only represents last time LOOKED for something to delete)
                 await WaitAndAssertForValueAsync(() =>
                 {
                     return leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks > timeBeforeCxDeletion.Ticks;
                 }, true);
 
                 //ensure no compare exchange tombstones were deleted after the tombstone cleanup
-                await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
+                await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 0, nodes);
             }
         }
 
