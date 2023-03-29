@@ -5,6 +5,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
 
-        [Fact]
-        public void RavenDB_15732_1()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RavenDB_15732_1(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2019, 12, 17).EnsureUtc();
                 var id = "companies/1";
@@ -63,10 +65,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void RavenDB_15732_2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RavenDB_15732_2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2019, 12, 24).EnsureUtc();
                 var id = "companies/1";
@@ -109,10 +112,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void RavenDB15732_3()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RavenDB15732_3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2019, 12, 24).EnsureUtc();
                 var id = "companies/1";

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,10 +31,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanStreamTimeSeriesProjection()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanStreamTimeSeriesProjection(Options options)
         {
-            RunTest(@"
+            RunTest(options, @"
                 declare timeseries welliba(o)
                 {
                     from o.Welliba between $start and $end
@@ -57,10 +59,11 @@ namespace SlowTests.Issues
             ");
         }
 
-        [Fact]
-        public void CanStreamTimeSeriesProjectionAndUseCountPropertyInProjection()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanStreamTimeSeriesProjectionAndUseCountPropertyInProjection(Options options)
         {
-            RunTest(@"
+            RunTest(options, @"
                 declare timeseries welliba(o)
                 {
                     from o.Welliba between $start and $end
@@ -84,9 +87,9 @@ namespace SlowTests.Issues
             );
         }
 
-        private void RunTest(string rawQuery)
+        private void RunTest(Options options, string rawQuery)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var startDate = DateTime.Today;
 
             using (var s = store.OpenSession())

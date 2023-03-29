@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,12 +16,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task TimeSeriesMultiMapReduceShouldWork()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task TimeSeriesMultiMapReduceShouldWork(Options options)
         {
             var deviceId = "device/1";
 
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             await new DeviceInfoIndexMapReduce().ExecuteAsync(store);
 
             using (var session = store.OpenAsyncSession())
@@ -45,12 +47,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task TimeSeriesMultiMapShouldWork()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task TimeSeriesMultiMapShouldWork(Options options)
         {
             var deviceId = "device/1";
 
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             await new DeviceInfoIndexMap().ExecuteAsync(store);
 
             using (var session = store.OpenAsyncSession())

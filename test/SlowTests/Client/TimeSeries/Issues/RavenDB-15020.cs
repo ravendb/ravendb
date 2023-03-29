@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
@@ -20,10 +21,11 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
-        public void CanUsePercentileInTimeSeriesQuery_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -79,10 +81,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUsePercentileInTimeSeriesQuery_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -169,10 +172,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUsePercentileInTimeSeriesQuery_WithGroupBy()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithGroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -233,10 +237,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUsePercentileInTimeSeriesQuery_WithWhere()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -293,10 +298,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUsePercentileInTimeSeriesQuery_WithMultipleValues()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithMultipleValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -363,10 +369,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUsePercentileInTimeSeriesQuery_WithScale()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithScale(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -424,10 +431,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUsePercentileInTimeSeriesQuery_WithInterpolation()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithInterpolation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -519,10 +527,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUsePercentileInTimeSeriesQuery_EdgeCases()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_EdgeCases(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -570,10 +579,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public async Task ShouldThrowOnUsingPercentileOnRolledUpSeries()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ShouldThrowOnUsingPercentileOnRolledUpSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -641,10 +651,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseSlopeInTimeSeriesQuery_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseSlopeInTimeSeriesQuery_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -711,10 +722,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseSlopeInTimeSeriesQuery_Raw()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseSlopeInTimeSeriesQuery_Raw(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -758,10 +770,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void ShouldThrowOnUsingSlopeWithoutGroupBy()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldThrowOnUsingSlopeWithoutGroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -798,10 +811,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseSlopeInTimeSeriesQuery_WithInterpolation()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseSlopeInTimeSeriesQuery_WithInterpolation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -853,10 +867,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseSlopeInTimeSeriesQuery_WithScale()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseSlopeInTimeSeriesQuery_WithScale(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -906,10 +921,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public async Task CanUseSlopeInTimeSeriesQuery_OnRollUps()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanUseSlopeInTimeSeriesQuery_OnRollUps(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -986,10 +1002,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseStdDevInTimeSeriesQuery_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -1050,10 +1067,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseStdDevInTimeSeriesQuery_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -1147,10 +1165,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseStdDevInTimeSeriesQuery_WithGroupBy()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_WithGroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -1214,10 +1233,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseStdDevInTimeSeriesQuery_WithWhere()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_WithWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -1276,10 +1296,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseStdDevInTimeSeriesQuery_WithScale()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_WithScale(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -1336,10 +1357,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseStdDevInTimeSeriesQuery_WithMultipleValues()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_WithMultipleValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -1410,10 +1432,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanUseStdDevInTimeSeriesQuery_WithInterpolation()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_WithInterpolation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -1507,10 +1530,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public async Task ShouldThrowOnUsingStdDevOnRolledUpSeries()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ShouldThrowOnUsingStdDevOnRolledUpSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 

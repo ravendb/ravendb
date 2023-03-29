@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -117,10 +118,11 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -220,10 +222,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_TagAsParameter()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_TagAsParameter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -325,10 +328,11 @@ select {
         }
 
 
-        [Fact]
-        public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -393,10 +397,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction_MultipleSeries()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction_MultipleSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -488,10 +493,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -590,10 +596,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction_DifferentRanges()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction_DifferentRanges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -721,10 +728,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_MultipleValues()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_MultipleValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -784,10 +792,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanUseTimeSeriesQueryResultAsArgumentToJavascriptDeclaredFunction()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseTimeSeriesQueryResultAsArgumentToJavascriptDeclaredFunction(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -846,10 +855,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanUseTimeSeriesAggregationResultAsArgumentToJavascriptDeclaredFunction()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseTimeSeriesAggregationResultAsArgumentToJavascriptDeclaredFunction(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -932,10 +942,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1000,10 +1011,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_FromLoadedDocument()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_FromLoadedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1075,10 +1087,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WithLoadedTag()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WithLoadedTag(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1153,10 +1166,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_MultipleSeries()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_MultipleSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1231,10 +1245,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_CanDefineTmeSeriesInsideLet()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_CanDefineTmeSeriesInsideLet(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1300,10 +1315,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WithVariables()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WithVariables(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1371,10 +1387,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanUseTimeSeriesQueryResultAsArgumentToJavascriptFunction_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseTimeSeriesQueryResultAsArgumentToJavascriptFunction_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1468,10 +1485,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanUseTimeSeriesAggregationResultAsArgumentToJavascriptFunction_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseTimeSeriesAggregationResultAsArgumentToJavascriptFunction_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1570,10 +1588,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WhenTsQueryExpressionIsNestedInsideAnotherExpression()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WhenTsQueryExpressionIsNestedInsideAnotherExpression(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1650,10 +1669,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -1742,10 +1762,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_InvokeOnDifferentObjectInstances()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_InvokeOnDifferentObjectInstances(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1829,10 +1850,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_TimeSeriesCallWithJustNameParameter()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_TimeSeriesCallWithJustNameParameter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1917,10 +1939,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnRawResult()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnRawResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1994,10 +2017,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnAggregatedResult()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnAggregatedResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2087,10 +2111,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithOrderByOnTimeSeriesResultValues()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithOrderByOnTimeSeriesResultValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2173,10 +2198,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnValueField()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnValueField(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2248,10 +2274,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_UsingLinq_TagAsParameter()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_UsingLinq_TagAsParameter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 

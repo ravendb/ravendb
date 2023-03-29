@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Client.TimeSeries
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void RavenDB_14877()
         {
             using (var store = GetDocumentStore())
@@ -81,7 +82,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void UpdateStatsAfterEndDeletion()
         {
             using (var store = GetDocumentStore())
@@ -120,7 +121,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void UpdateStatsAfterStartDeletion()
         {
             using (var store = GetDocumentStore())
@@ -164,7 +165,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void UpdateStatsAfterEndReplacement()
         {
             using (var store = GetDocumentStore())
@@ -198,7 +199,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void UpdateStatsAfterStartReplacement()
         {
             using (var store = GetDocumentStore())

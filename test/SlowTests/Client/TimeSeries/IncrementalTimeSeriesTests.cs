@@ -15,6 +15,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,7 +50,7 @@ namespace SlowTests.Client.TimeSeries
             return entryA.IsRollup == entryB.IsRollup;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ReplicationShouldWorkWithMultipleIncrementOperations()
         {
             var baseline = DateTime.UtcNow;
@@ -120,7 +121,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ReplicationShouldWorkWithMultipleIncrementOperations2()
         {
             var baseline = DateTime.UtcNow;
@@ -186,7 +187,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ReplicationShouldWorkWithMultipleIncrementOperations3()
         {
             var baseline = DateTime.UtcNow;
@@ -251,7 +252,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void IncrementOperationsWithSameTimestampOnDifferentSessionsShouldWork()
         {
             using (var store = GetDocumentStore())
@@ -283,7 +284,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task SplitSegmentSpecialCaseShouldWork()
         {
             var baseline = RavenTestHelper.UtcToday;
@@ -346,7 +347,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldIncrementValueOnEditIncrementalEntry()
         {
             using (var store = GetDocumentStore())
@@ -378,7 +379,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void GetTagForIncremental()
         {
             using (var store = GetDocumentStore())
@@ -404,7 +405,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldIncrementValueOnEditIncrementalEntry2()
         {
             using (var store = GetDocumentStore())
@@ -436,7 +437,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldIncrementValueOnEditIncrementalEntry3()
         {
             using (var store = GetDocumentStore())
@@ -468,7 +469,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldIncrementValueOnEditIncrementalEntry4()
         {
             using (var store = GetDocumentStore())
@@ -508,7 +509,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldSplitOperationsIfIncrementContainBothPositiveNegativeValues()
         {
             using (var store = GetDocumentStore())
@@ -533,7 +534,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldSplitOperationsIfIncrementContainBothPositiveNegativeValues2()
         {
             using (var store = GetDocumentStore())
@@ -565,7 +566,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void MultipleOperationsOnIncrementalTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -597,7 +598,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ShouldThrowEntriesWhenSegmentIsFull()
         {
             var baseline = RavenTestHelper.UtcToday;
@@ -646,7 +647,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ShouldTakeLowerValueOnReplicationConflictWhenDecrementOperation()
         {
             var baseline = RavenTestHelper.UtcToday;
@@ -738,7 +739,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ShouldTakeHigherValueOnReplicationConflictWhenIncrementOperation()
         {
             var baseline = RavenTestHelper.UtcToday;
@@ -948,7 +949,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ShouldMergeEntriesForIncrementalTimeSeries()
         {
             var baseline = RavenTestHelper.UtcToday;
@@ -999,7 +1000,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ShouldMergeEntriesForIncrementalTimeSeries2()
         {
             var baseline = RavenTestHelper.UtcToday;
@@ -1059,7 +1060,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ShouldMergeEntriesForIncrementalTimeSeries3()
         {
             var baseline = RavenTestHelper.UtcToday;
@@ -1110,7 +1111,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ShouldThrowIfIncrementOperationOnRollupTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -1167,7 +1168,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task GetIncrementalTimeSeriesFullResultsShouldWork()
         {
             var baseline = RavenTestHelper.UtcToday;
@@ -1223,7 +1224,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task GetIncrementalTimeSeriesFullResultsShouldWork2()
         {
             var baseline = DateTime.UtcNow;
@@ -1297,7 +1298,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task GetIncrementalTimeSeriesFullResultsShouldWork3()
         {
             var baseline = DateTime.UtcNow;
@@ -1371,7 +1372,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task MergeDecAndIncForNodesValues()
         {
             using (var storeA = GetDocumentStore())
@@ -1410,7 +1411,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task CheckSkippedResultsCalculation()
         {
             var baseline = DateTime.UtcNow;
@@ -1475,7 +1476,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task CheckSkippedResultsCalculationWithLargeTimeSeries()
         {
             var baseline = DateTime.UtcNow;
@@ -1538,7 +1539,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ShouldThrowIfIncrementalTimeSeriesReceiveNameWithoutIncrementalPrefix()
         {
             using (var store = GetDocumentStore())
@@ -1566,7 +1567,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ReplicationShouldWorkWithMultipleIncrementAndDeleteOperations()
         {
             var baseline = DateTime.UtcNow;
@@ -1641,10 +1642,11 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task IncrementalTimeSeriesQueryShouldWork()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task IncrementalTimeSeriesQueryShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1709,7 +1711,7 @@ namespace SlowTests.Client.TimeSeries
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task IncrementalTimeSeriesQueryShouldWorkInACluster()
         {
             var cluster = await CreateRaftCluster(numberOfNodes: 3, watcherCluster: true);
@@ -1767,10 +1769,11 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task CanQueryDuplicateValues()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryDuplicateValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1869,10 +1872,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public async Task CanQueryDuplicateValues2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryDuplicateValues2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

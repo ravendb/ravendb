@@ -9,6 +9,7 @@ using Raven.Client.Documents.Session.TimeSeries;
 using SlowTests.Client.TimeSeries.Query;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,8 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseDynamicGrouping()
         {
             using var store = GetDocumentStore();
@@ -68,10 +70,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             Assert.Equal(expected: 2, actual: firstTimeSeriesGrouping.Count.Dispatches);
         }
 
-        [Fact]
-        public void CanUseDynamicGrouping_WithFunc()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseDynamicGrouping_WithFunc(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today;
 
@@ -130,10 +133,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public void CanUseDynamicGrouping_WithLambda()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseDynamicGrouping_WithLambda(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today;
 
@@ -190,10 +194,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public void CanUseDynamicGrouping_WithTagAndInterpolation()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseDynamicGrouping_WithTagAndInterpolation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = TimeSeriesGroupByTag.PopulateCanGroupByTagWithInterpolation(store);
 
@@ -251,10 +256,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public void CanUseDynamicGrouping_WithFuncAndLoadedTag()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseDynamicGrouping_WithFuncAndLoadedTag(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = TimeSeriesGroupByTag.PopulateCanGroupByLoadedTag(store);
 

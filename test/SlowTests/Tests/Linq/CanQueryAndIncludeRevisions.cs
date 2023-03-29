@@ -23,10 +23,10 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [RavenData(false, false, SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(false, true, SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(true, false, SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(true, true, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(false, false, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, true, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, false, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, true, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Query_IncludeAllQueryFunctionality(Options options, bool includeCounters, bool includeTimeSeries)
         {
             using (var store = GetDocumentStore(options))
