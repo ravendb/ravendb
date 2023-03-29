@@ -627,25 +627,31 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             List<long> periodicBackupTaskIds;
             maxEtag = long.MaxValue;
+            bool isSharded;
 
             if (mergedState.RawDatabase != null)
             {
                 periodicBackupTaskIds = mergedState.RawDatabase.PeriodicBackupsTaskIds;
+                isSharded = mergedState.RawDatabase.IsSharded;
             }
             else
             {
                 using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                {
                     periodicBackupTaskIds = rawRecord.PeriodicBackupsTaskIds;
+                    isSharded = rawRecord.IsSharded;
+                }
             }
 
             foreach (var (shardNumber, state) in mergedState.States)
             {
+                //if sharded, we have to get backup status by shard name
+                var shardName = isSharded ? ShardHelper.ToShardName(databaseName, shardNumber) : databaseName;
+
                 if (periodicBackupTaskIds != null && periodicBackupTaskIds.Count > 0)
                 {
                     foreach (var taskId in periodicBackupTaskIds)
                     {
-                        //if sharded, we have to get backup status by shard name
-                        var shardName = state?.Name ?? ShardHelper.ToShardName(databaseName, shardNumber);
                         var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(shardName, taskId));
                         if (singleBackupStatus == null)
                             continue;
