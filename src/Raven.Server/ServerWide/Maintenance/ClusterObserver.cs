@@ -693,7 +693,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (state != null)
                 {
                     DevelopmentHelper.ToDo(DevelopmentHelper.Feature.Cluster, DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
-                        "handle this after RavenDB-20064 is fixed");
+                        "remove this after RavenDB-20150 is fixed");
                     // if (state.DatabaseTopology.Count != state.Current.Count) // we have a state change, do not remove anything
                     // return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
