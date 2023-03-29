@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
@@ -14,14 +14,17 @@ internal class ShardedIndexHandlerProcessorForGetAllNames : AbstractIndexHandler
     {
     }
 
-    protected override bool SupportsCurrentNode => false;
-
-    protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
-
     protected override Task HandleRemoteNodeAsync(ProxyCommand<string[]> command, OperationCancelToken token)
     {
         var shardNumber = GetShardNumber();
 
         return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
+    }
+
+    protected override string[] GetIndexNames(string name)
+    {
+        return RequestHandler.DatabaseContext.Indexes.GetIndexes()
+            .Select(x => x.Name)
+            .ToArray();
     }
 }

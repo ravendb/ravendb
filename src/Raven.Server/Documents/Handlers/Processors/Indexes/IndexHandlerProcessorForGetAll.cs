@@ -22,19 +22,18 @@ internal class IndexHandlerProcessorForGetAll : AbstractIndexHandlerProcessorFor
     protected override ValueTask HandleCurrentNodeAsync()
     {
         var name = GetName();
+        var start = RequestHandler.GetStart();
+        var pageSize = RequestHandler.GetPageSize();
 
-        var indexDefinitions = GetIndexDefinitions(RequestHandler, name);
+        var indexDefinitions = GetIndexDefinitions(RequestHandler, name, start, pageSize);
 
         return WriteResultAsync(indexDefinitions);
     }
 
     protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexDefinition[]> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
-    internal static IndexDefinition[] GetIndexDefinitions(DatabaseRequestHandler requestHandler, string indexName)
+    internal static IndexDefinition[] GetIndexDefinitions(DatabaseRequestHandler requestHandler, string indexName, int start, int pageSize)
     {
-        var start = requestHandler.GetStart();
-        var pageSize = requestHandler.GetPageSize();
-
         IndexDefinition[] indexDefinitions;
         if (string.IsNullOrEmpty(indexName))
             indexDefinitions = requestHandler.Database.IndexStore
