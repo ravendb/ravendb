@@ -87,8 +87,7 @@ namespace Raven.Server.Config.Categories
         public bool CompressAllCollectionsDefault { get; set; }
 
         /// <summary>
-        /// This much time has to wait for the database to become available when too much
-        /// different databases get loaded at the same time
+        /// Time to wait for the database to become available when too many different databases get loaded at the same time.
         /// </summary>
         [Description("The time in seconds to wait for a database to start loading when under load")]
         [DefaultValue(60)]
@@ -97,35 +96,54 @@ namespace Raven.Server.Config.Categories
         public TimeSetting ConcurrentLoadTimeout { get; set; }
 
         /// <summary>
-        /// specifies the maximum amount of databases that can be loaded simultaneously
+        /// Specifies the maximum number of databases that can be loaded simultaneously
         /// </summary>
+        [Description("Specifies the maximum number of databases that can be loaded simultaneously")]
         [DefaultValue(8)]
         [ConfigurationEntry("Databases.MaxConcurrentLoads", ConfigurationEntryScope.ServerWideOnly)]
         public int MaxConcurrentLoads { get; set; }
 
+        /// <summary>
+        /// Set time in seconds for maximum idle time for the database.  
+        /// After this time an idle database will be unloaded from memory.  
+        /// </summary>
+        [Description("Specifies the maximum idle time for the database. After this time an idle database will be unloaded from memeory.")]
         [DefaultValue(900)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.MaxIdleTimeInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MaxIdleTime { get; set; }
 
+        /// <summary>
+        /// The time in seconds to check for an idle database
+        /// </summary>
         [Description("The time in seconds to check for an idle database")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.FrequencyToCheckForIdleInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting FrequencyToCheckForIdle { get; set; }
 
+        /// <summary>
+        /// Number of megabytes occupied by encryption buffers (if database is encrypted) or mapped 32 bites buffers (when running on 32 bits)
+        /// after which a read transaction will be renewed to reduce memory usage during long running operations like backups or streaming.
+        /// </summary>
         [Description("Number of megabytes occupied by encryption buffers (if database is encrypted) or mapped 32 bites buffers (when running on 32 bits) after which a read transaction will be renewed to reduce memory usage during long running operations like backups or streaming")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Databases.PulseReadTransactionLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PulseReadTransactionLimit { get; set; }
 
+        /// <summary>
+        /// EXPERT: A deep database cleanup will be done when this number of minutes has passed since the last time work was done on the database.
+        /// </summary>
         [Description("EXPERT: A deep database cleanup will be done when this number of minutes has passed since the last time work was done on the database.")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Databases.DeepCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting DeepCleanupThreshold { get; set; }
 
+        /// <summary>
+        /// EXPERT: A regular database cleanup will be done when this number of minutes has passed since the last database idle time.
+        /// </summary>
         [Description("EXPERT: A regular database cleanup will be done when this number of minutes has passed since the last database idle time.")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Minutes)]
