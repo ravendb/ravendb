@@ -291,8 +291,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                     _hasMoreTombstones = true;
                                     break;
                                 case CompareExchangeTombstonesCleanupState.HasMoreTombstones:
-                                    Debug.Assert(cmd != null);
-                                    Console.WriteLine($"added clean command max raft: {cmd.MaxRaftIndex}");
+                                    Debug.Assert(cmd != null, $"Expected to get command {nameof(CleanCompareExchangeTombstonesCommand)} but it was null");
                                     cleanCompareExchangeTombstonesCommands.Add(cmd);
                                     break;
                                 case CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus:
@@ -600,7 +599,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         internal CleanCompareExchangeTombstonesCommand GetCompareExchangeTombstonesToCleanup(string databaseName, MergedDatabaseObservationState mergedState, ClusterOperationContext context, out CompareExchangeTombstonesCleanupState cleanupState)
         {
-            Debug.Assert(ShardHelper.IsShardName(databaseName) == false, "Compare exchanges are put in cluster under sharded database name, so can't delete them from under shard name");
+            Debug.Assert(ShardHelper.IsShardName(databaseName) == false, $"Compare exchanges are put in cluster under sharded database name, so can't delete them from under shard name {databaseName}");
             const int amountToDelete = 8192;
 
             if (_server.Cluster.HasCompareExchangeTombstones(context, databaseName) == false)

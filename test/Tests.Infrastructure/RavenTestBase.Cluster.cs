@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
+using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
@@ -141,6 +142,17 @@ public partial class RavenTestBase
                     }
                 }
             }
+        }
+        public virtual Task<DocumentDatabase> GetAnyDocumentDatabaseInstanceFor(IDocumentStore store, List<RavenServer> cluster, string database = null)
+        {
+            foreach (var node in cluster)
+            {
+                var db = node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
+                if (db != null)
+                    return db;
+            }
+
+            return null;
         }
 
         public long LastRaftIndexForCommand(RavenServer server, string commandType)
