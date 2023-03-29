@@ -21,8 +21,7 @@ namespace SlowTests.Client.TimeSeries.Query
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void TimeValueMultipleTest()
         {
             var second = TimeValue.FromSeconds(1);

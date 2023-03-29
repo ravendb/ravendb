@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Google.Cloud.Storage.V1;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
@@ -6151,9 +6152,9 @@ select out()");
         }
 
         [Fact(Skip = "RavenDB-14988")]
-        public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds(Options options)
+        public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -6675,9 +6676,9 @@ select out(p)
         }
 
         [Fact(Skip = "RavenDB-14988")]
-        public void CanQueryTimeSeriesRaw_UsingFirst_Milliseconds(Options options)
+        public void CanQueryTimeSeriesRaw_UsingFirst_Milliseconds()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -7424,10 +7425,10 @@ select out(c)
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public async Task CanQueryTimeSeriesAggregationUsingNamedValues()
+        public async Task CanQueryTimeSeriesAggregationUsingNamedValues(Options options)
         {
             const string seriesName = "StockPrices";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.TimeSeries.RegisterAsync<Company, StockPrice>();
 

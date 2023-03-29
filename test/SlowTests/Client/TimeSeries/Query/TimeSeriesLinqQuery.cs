@@ -78,7 +78,7 @@ namespace SlowTests.Client.TimeSeries.Query
             [TimeSeriesValue(4)] public double Volume;
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLinq(Options options)
         {
@@ -139,7 +139,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanQueryTimeSeriesAggregation_Async(Options options)
         {
@@ -200,7 +200,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WithFromAndToDates(Options options)
         {
@@ -265,7 +265,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_NoAlias(Options options)
         {
@@ -326,7 +326,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void MaxCanGoNegative(Options options)
         {
@@ -377,7 +377,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereTagIn(Options options)
         {
@@ -437,7 +437,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereInOnLoadedTag(Options options)
         {
@@ -513,7 +513,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_FromLoadedDocument(Options options)
         {
@@ -580,7 +580,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereOnLoadedTag(Options options)
         {
@@ -656,7 +656,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_StronglyTypedGroupBy(Options options)
         {
@@ -717,7 +717,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_SimpleProjectionToAnonymousClass(Options options)
         {
@@ -787,7 +787,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_SimpleMemberInitProjection(Options options)
         {
@@ -858,7 +858,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_MultipleSeries(Options options)
         {
@@ -955,7 +955,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanQueryTimeSeriesAggregation_DifferentNumberOfValues(Options options)
         {
@@ -1032,7 +1032,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanQueryTimeSeriesAggregation_DifferentNumberOfValues2(Options options)
         {
@@ -1081,7 +1081,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereOnVariable(Options options)
         {
@@ -1144,7 +1144,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WithNameVariable(Options options)
         {
@@ -1204,7 +1204,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereOr(Options options)
         {
@@ -1262,7 +1262,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereAnd(Options options)
         {
@@ -1331,7 +1331,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_SelectSingleCall(Options options)
         {
@@ -1385,7 +1385,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldUseQueryParameters(Options options)
         {
@@ -1464,7 +1464,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WithSelectSum(Options options)
         {
@@ -1508,7 +1508,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_GroupByWithoutSelect(Options options)
         {
@@ -1559,7 +1559,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldThrowOnMultipleCalls(Options options)
         {
@@ -1600,7 +1600,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldThrowOnBadReturnType(Options options)
         {
@@ -1743,7 +1743,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_UsingLinq(Options options)
         {
@@ -1813,7 +1813,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanQueryTimeSeriesRaw_Async(Options options)
         {
@@ -1875,7 +1875,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_WithFromAndToDates(Options options)
         {
@@ -1940,7 +1940,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_WhereTagIn(Options options)
         {
@@ -1999,7 +1999,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_WithNullTag(Options options)
         {
@@ -2037,7 +2037,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_FromLoadedDocument(Options options)
         {
@@ -2101,7 +2101,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_WhereOnLoadedTag(Options options)
         {
@@ -2173,7 +2173,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_WhereInOnLoadedTag(Options options)
         {
@@ -2249,7 +2249,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_WhereOnVariable(Options options)
         {
@@ -2306,7 +2306,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_MultipleSeries(Options options)
         {
@@ -2381,7 +2381,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_WhereOnValue(Options options)
         {
@@ -2434,7 +2434,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_SelectWithoutGroupBy(Options options)
         {
@@ -2479,7 +2479,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WithOffset(Options options)
         {
@@ -2602,7 +2602,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_WithNegativeOffset(Options options)
         {
@@ -2710,7 +2710,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_WithOffset(Options options)
         {
@@ -2791,7 +2791,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_WithOffset_BetweenDateTimeMinAndDateTimeMax(Options options)
         {
@@ -2875,9 +2875,9 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact(Skip = "RavenDB-14988")]
-        public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds(Options options)
+        public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 var id = "people/1";
@@ -2920,7 +2920,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_Seconds(Options options)
         {
@@ -2965,7 +2965,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_Minutes(Options options)
         {
@@ -3015,7 +3015,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_UsingLast_Hour(Options options)
         {
@@ -3066,7 +3066,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_Hour(Options options)
         {
@@ -3145,7 +3145,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_Day(Options options)
         {
@@ -3195,7 +3195,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_WithFilter(Options options)
         {
@@ -3249,7 +3249,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_UsingLast_WithOffset(Options options)
         {
@@ -3304,9 +3304,9 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact(Skip = "RavenDB-14988")]
-        public void CanQueryTimeSeriesRaw_UsingFirst_Milliseconds(Options options)
+        public void CanQueryTimeSeriesRaw_UsingFirst_Milliseconds()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 var id = "people/1";
@@ -3349,7 +3349,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_Seconds(Options options)
         {
@@ -3399,7 +3399,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_Minutes(Options options)
         {
@@ -3454,7 +3454,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_UsingFirst_Hour(Options options)
         {
@@ -3502,7 +3502,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_Hour(Options options)
         {
@@ -3579,7 +3579,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_Day(Options options)
         {
@@ -3635,7 +3635,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_WithFilter(Options options)
         {
@@ -3694,7 +3694,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_UsingFirst_WithOffset(Options options)
         {
@@ -3747,7 +3747,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldThrowOnUsingLastAndBetweenInTheSameTimeSeriesQuery(Options options)
         {
@@ -3785,7 +3785,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldThrowOnUsingFirstAndBetweenInTheSameTimeSeriesQuery(Options options)
         {
@@ -3823,7 +3823,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldThrowOnUsingFirstAndLastInTheSameTimeSeriesQuery(Options options)
         {
@@ -3862,12 +3862,12 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public async Task CanQueryTimeSeriesUsingNamedValues()
+        public async Task CanQueryTimeSeriesUsingNamedValues(Options options)
         {
             var seriesName = "StockPrices";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.TimeSeries.RegisterAsync<Company, StockPrice>();
 
@@ -3927,12 +3927,12 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public async Task CanQueryTimeSeriesAggregationUsingNamedValues()
+        public async Task CanQueryTimeSeriesAggregationUsingNamedValues(Options options)
         {
             var seriesName = "StockPrices";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.TimeSeries.RegisterAsync<Company, StockPrice>();
 
@@ -3995,7 +3995,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_UsingScale(Options options)
         {
@@ -4053,7 +4053,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingScale(Options options)
         {
@@ -4123,7 +4123,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryTimeSeriesRaw_UsingScaleAndOffset(Options options)
         {

@@ -14,6 +14,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 

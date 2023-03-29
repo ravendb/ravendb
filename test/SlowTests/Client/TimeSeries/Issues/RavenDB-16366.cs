@@ -23,9 +23,9 @@ namespace SlowTests.Client.TimeSeries.Issues
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void CanUseDynamicGrouping()
+        public void CanUseDynamicGrouping(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             store.TimeSeries.Register<MobaroLocation, DispatchEntry>(DispatchEntryDefinition.Name);
             

@@ -20,7 +20,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
         string keyFieldName = null,
         bool storeValue = false,
         string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) :
-        base(index, storeValue, indexImplicitNull, indexEmptyEntries, 1, keyFieldName, storeValueFieldName)
+        base(index, storeValue, indexImplicitNull, indexEmptyEntries, 1, keyFieldName, storeValueFieldName, canContainSourceDocumentId: false)
     {
     }
 

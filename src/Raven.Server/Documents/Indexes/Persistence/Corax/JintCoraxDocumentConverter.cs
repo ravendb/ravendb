@@ -21,26 +21,34 @@ using CoraxLib = global::Corax;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
+public sealed class CoraxJintDocumentConverter : CoraxJintDocumentConverterBase
+{
+    public CoraxJintDocumentConverter(MapIndex index, bool storeValue = false) : base(index, index.Definition.IndexDefinition, storeValue, 1, keyFieldName: Constants.Documents.Indexing.Fields.DocumentIdFieldName, storeValueFieldName: Constants.Documents.Indexing.Fields.ValueFieldName) 
+    {
+    }
+
+    public CoraxJintDocumentConverter(MapReduceIndex index, bool storeValue = false) : base(index, index.Definition.IndexDefinition, storeValue, 1, keyFieldName: Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, storeValueFieldName: Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) 
+    {
+    }
+}
+
+public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBase
 {
     private readonly IndexFieldOptions _allFields;
+    private const string ValuePropertyName = "$value";
+    private const string OptionsPropertyName = "$options";
+    private const string NamePropertyName = "$name";
+    private const string SpatialPropertyName = "$spatial";
+    private const string BoostPropertyName = "$boost";
 
-    public JintCoraxDocumentConverter(MapIndex index, bool storeValue = false)
-        : base(index, storeValue, false, true, 1, null, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+    protected CoraxJintDocumentConverterBase(Index index, IndexDefinition definition, bool storeValue, int numberOfBaseFields, string keyFieldName,
+        string storeValueFieldName, ICollection<IndexField> fields = null) :
+        base(index, storeValue, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, numberOfBaseFields, keyFieldName, storeValueFieldName, canContainSourceDocumentId: false, fields) //todo
     {
-        index.Definition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
+        definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
     }
 
-    public JintCoraxDocumentConverter(MapReduceIndex index, bool storeValue = false)
-        : base(index, storeValue, false, true, 1, null, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
-    {
-        index.Definition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
-    }
-    
-    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
-        LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext, out LazyStringValue id,
-        out ByteString output, out float? documentBoost)
+    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, out LazyStringValue id, out ByteString output, out float? documentBoost)
     {
         documentBoost = null;
         // We prepare for the next entry.
@@ -56,13 +64,19 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                 return default;
             }
 
-            id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
             var singleEntryWriterScope = new SingleEntryWriterScope(Allocator);
+
+            if (key != null)
+                singleEntryWriterScope.Write(string.Empty, 0, key.AsSpan(), ref entryWriter);
+            id = key;
+            // if (sourceDocumentId != null)
+            // {
+            //     singleEntryWriterScope.Write(string.Empty, 0, sourceDocumentId.AsSpan(), ref entryWriter);
+            // }
 
             if (TryGetBoostedValue(documentToProcess, out var boostedValue, out documentBoost))
                 documentToProcess = boostedValue.AsObject();
 
-            singleEntryWriterScope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
             var indexingScope = CurrentIndexingScope.Current;
             foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
@@ -79,30 +93,32 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                     enumerableScope.SetAsDynamic();
                     do
                     {
-                        ProcessObject(iterator.Current, propertyAsString, field, ref entryWriter, enumerableScope, indexingScope, documentToProcess, out shouldSaveAsBlittable, out value, out actualValue);
+                        ProcessObject(iterator.Current, propertyAsString, field, ref entryWriter, enumerableScope, indexingScope, documentToProcess,
+                            out shouldSaveAsBlittable, out value, out actualValue);
                         if (shouldSaveAsBlittable)
                             ProcessAsJson(actualValue, field, ref entryWriter, enumerableScope, documentToProcess);
-                        
+
                         var disposable = value as IDisposable;
                         disposable?.Dispose();
-                        
                     } while (iterator.MoveNext());
-                    
+
                     enumerableScope.Finish(field.Name, field.Id, ref entryWriter);
                 }
                 else
                 {
-                    ProcessObject(propertyDescriptor.Value, propertyAsString, field, ref entryWriter, singleEntryWriterScope, indexingScope, documentToProcess, out shouldSaveAsBlittable, out value, out actualValue);
+                    ProcessObject(propertyDescriptor.Value, propertyAsString, field, ref entryWriter, singleEntryWriterScope, indexingScope, documentToProcess,
+                        out shouldSaveAsBlittable, out value, out actualValue);
                     if (shouldSaveAsBlittable)
                         ProcessAsJson(actualValue, field, ref entryWriter, singleEntryWriterScope, documentToProcess);
                     var disposable = value as IDisposable;
                     disposable?.Dispose();
                 }
             }
+
             if (_storeValue)
             {
                 //Write __stored_fields at the end of entry...
-                StoreValue(ref entryWriter, singleEntryWriterScope, documentToProcess);
+                StoreValue(indexContext, ref entryWriter, singleEntryWriterScope, documentToProcess);
             }
 
             return entryWriter.Finish(out output);
@@ -121,7 +137,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                 context: indexContext);
             InsertRegularField(field, value, indexContext, ref entryWriter, writerScope);
         }
-        
+
         static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, out float? boost)
         {
             value = JsValue.Undefined;
@@ -146,158 +162,140 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         {
             return value.IsObject() && value.IsArray() == false;
         }
-        
-        void ProcessObject(JsValue valueToInsert, in string propertyAsString, 
-            IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, 
-            IWriterScope writerScope, CurrentIndexingScope indexingScope, ObjectInstance documentToProcess,
-            out bool shouldProcessAsBlittable, out object value, out JsValue actualValue)
+
+        void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope,
+            CurrentIndexingScope indexingScope, ObjectInstance documentToProcess, out bool shouldProcessAsBlittable, out object value, out JsValue actualValue)
+        {
+            value = null;
+            actualValue = valueToInsert;
+            var isObject = IsObject(actualValue);
+            if (isObject)
             {
-                value = null;
-                actualValue = valueToInsert;
-                var isObject = IsObject(actualValue);
-                if (isObject)
+                if (TryGetBoostedValue(actualValue.AsObject(), out _, out _))
                 {
-                    if (TryGetBoostedValue(actualValue.AsObject(), out _, out _))
-                    { 
-                        ThrowWhenBoostingIsInDocument();
-                    }
+                    ThrowWhenBoostingIsInDocument();
+                }
 
-                    //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
-                    //so we must use field.Name and not property from this point on.
-                    var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), field, indexingScope);
-                    if (val != null)
+                //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
+                //so we must use field.Name and not property from this point on.
+                var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), field, indexingScope);
+                if (val != null)
+                {
+                    if (val.IsObject() && val.AsObject().TryGetValue(SpatialPropertyName, out _))
                     {
-                        if (val.IsObject() && val.AsObject().TryGetValue(SpatialPropertyName, out _))
-                        {
-                            actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
-                        }
-                        else
-                        {
-                            value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
-                                context: indexContext);
-
-                            InsertRegularField(field, value, indexContext, ref entryWriter, writerScope);
-
-                            if (value is IDisposable toDispose1)
-                            {
-                                // the value was converted to a corax field and isn't needed anymore
-                                toDispose1.Dispose();
-                            }
-
-                            shouldProcessAsBlittable = false;
-                            return;
-                        }
+                        actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
                     }
-
-                    var objectValue = actualValue.AsObject();
-                    if (objectValue.HasOwnProperty(SpatialPropertyName) && objectValue.TryGetValue(SpatialPropertyName, out var inner))
+                    else
                     {
-                        SpatialField spatialField;
-                        IEnumerable<object> spatial;
-                        if (inner.IsString())
-                        {
-                            spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                            spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
-                        }
-                        else if (inner.IsObject())
-                        {
-                            var innerObject = inner.AsObject();
-                            if (innerObject.HasOwnProperty("Lat") && innerObject.HasOwnProperty("Lng") && innerObject.TryGetValue("Lat", out var lat)
-                                && lat.IsNumber() && innerObject.TryGetValue("Lng", out var lng) && lng.IsNumber())
-                            {
-                                spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
-                            }
-                            else
-                            {
-                                shouldProcessAsBlittable = false;
-                                return; //Ignoring bad spatial field
-                            }
-                        }
-                        else
-                        {
-                            shouldProcessAsBlittable = false;
-                            return; //Ignoring bad spatial field
-                        }
+                        value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
+                            context: indexContext);
 
-                        InsertRegularField(field, spatial, indexContext, ref entryWriter, writerScope);
+                        InsertRegularField(field, value, indexContext, ref entryWriter, writerScope);
+
+                        if (value is IDisposable toDispose1)
+                        {
+                            // the value was converted to a corax field and isn't needed anymore
+                            toDispose1.Dispose();
+                        }
 
                         shouldProcessAsBlittable = false;
                         return;
                     }
                 }
 
-                shouldProcessAsBlittable = true;
-            }
-        
-        
-        IndexField GetFieldObjectForProcessing(in string propertyAsString, CurrentIndexingScope indexingScope)
-        {
-            if (_fields.TryGetValue(propertyAsString, out var field) == false)
-            {
-                int currentId = CoraxLib.Constants.IndexWriter.DynamicField;
-                if (KnownFieldsForWriter.TryGetByFieldName(Allocator, propertyAsString, out var binding))
-                    currentId = binding.FieldId;
-
-                field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields, currentId);
-                indexingScope.DynamicFields ??= new();
-                indexingScope.DynamicFields[propertyAsString] = field.Indexing;
-                indexingScope.CreatedFieldsCount++;
-            }
-
-            return field;
-        }
-        
-        bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, CurrentIndexingScope indexingScope, out IEnumerator<JsValue> iterator)
-        {
-            iterator = Enumerable.Empty<JsValue>().GetEnumerator();
-
-            if (propertyDescriptorValue.IsArray() == false)
-                return false;
-
-            iterator = propertyDescriptorValue.AsArray().GetEnumerator();
-            if (iterator.MoveNext() == false || iterator.Current is null || iterator.Current.IsObject() == false || iterator.Current.IsArray() == true)
-                return false;
-
-            var valueAsObject = iterator.Current.AsObject();
-
-            return TryDetectDynamicFieldCreation(propertyAsString, valueAsObject, field, indexingScope) is not null
-                   || valueAsObject.HasOwnProperty(SpatialPropertyName);
-        }
-
-        void StoreValue(ref CoraxLib.IndexEntryWriter entryWriter, SingleEntryWriterScope scope, ObjectInstance documentToProcess)
-        {
-            var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
-            unsafe
-            {
-                using (Allocator.Allocate(storedValue.Size, out Span<byte> blittableBuffer))
+                var objectValue = actualValue.AsObject();
+                if (objectValue.HasOwnProperty(SpatialPropertyName) && objectValue.TryGetValue(SpatialPropertyName, out var inner))
                 {
-                    fixed (byte* bPtr = blittableBuffer)
-                        storedValue.CopyTo(bPtr);
+                    SpatialField spatialField;
+                    IEnumerable<object> spatial;
+                    if (inner.IsString())
+                    {
+                        spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
+                        spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
+                    }
+                    else if (inner.IsObject())
+                    {
+                        var innerObject = inner.AsObject();
+                        if (innerObject.HasOwnProperty("Lat") && innerObject.HasOwnProperty("Lng") && innerObject.TryGetValue("Lat", out var lat)
+                            && lat.IsNumber() && innerObject.TryGetValue("Lng", out var lng) && lng.IsNumber())
+                        {
+                            spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
+                            spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                        }
+                        else
+                        {
+                            shouldProcessAsBlittable = false;
+                            return; //Ignoring bad spatial field
+                        }
+                    }
+                    else
+                    {
+                        shouldProcessAsBlittable = false;
+                        return; //Ignoring bad spatial field
+                    }
 
-                    scope.Write(string.Empty, GetKnownFieldsForWriter().Count - 1, blittableBuffer, ref entryWriter);
+                    InsertRegularField(field, spatial, indexContext, ref entryWriter, writerScope);
+
+                    shouldProcessAsBlittable = false;
+                    return;
                 }
             }
+
+            shouldProcessAsBlittable = true;
         }
     }
-}
 
-public abstract class JintCoraxDocumentConverterBase : CoraxDocumentConverterBase
-{
-    protected const string ValuePropertyName = "$value";
-    protected const string OptionsPropertyName = "$options";
-    protected const string NamePropertyName = "$name";
-    protected const string SpatialPropertyName = "$spatial";
-    protected const string BoostPropertyName = "$boost";
-
-    protected JintCoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields,
-        string keyFieldName,
-        string storeValueFieldName, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
-        keyFieldName, storeValueFieldName, fields)
+    private IndexField GetFieldObjectForProcessing(in string propertyAsString, CurrentIndexingScope indexingScope)
     {
+        if (_fields.TryGetValue(propertyAsString, out var field) == false)
+        {
+            int currentId = CoraxLib.Constants.IndexWriter.DynamicField;
+            if (KnownFieldsForWriter.TryGetByFieldName(Allocator, propertyAsString, out var binding))
+                currentId = binding.FieldId;
+
+            field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields, currentId);
+            indexingScope.DynamicFields ??= new();
+            indexingScope.DynamicFields[propertyAsString] = field.Indexing;
+            indexingScope.CreatedFieldsCount++;
+        }
+
+        return field;
     }
 
-    protected static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field, CurrentIndexingScope scope)
+    private bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, CurrentIndexingScope indexingScope,
+        out IEnumerator<JsValue> iterator)
+    {
+        iterator = Enumerable.Empty<JsValue>().GetEnumerator();
+
+        if (propertyDescriptorValue.IsArray() == false)
+            return false;
+
+        iterator = propertyDescriptorValue.AsArray().GetEnumerator();
+        if (iterator.MoveNext() == false || iterator.Current is null || iterator.Current.IsObject() == false || iterator.Current.IsArray() == true)
+            return false;
+
+        var valueAsObject = iterator.Current.AsObject();
+
+        return TryDetectDynamicFieldCreation(propertyAsString, valueAsObject, field, indexingScope) is not null
+               || valueAsObject.HasOwnProperty(SpatialPropertyName);
+    }
+
+    private void StoreValue(JsonOperationContext indexContext, ref CoraxLib.IndexEntryWriter entryWriter, SingleEntryWriterScope scope, ObjectInstance documentToProcess)
+    {
+        var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
+        unsafe
+        {
+            using (Allocator.Allocate(storedValue.Size, out Span<byte> blittableBuffer))
+            {
+                fixed (byte* bPtr = blittableBuffer)
+                    storedValue.CopyTo(bPtr);
+
+                scope.Write(string.Empty, GetKnownFieldsForWriter().StoredJsonPropertyOffset, blittableBuffer, ref entryWriter);
+            }
+        }
+    }
+
+    private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field, CurrentIndexingScope scope)
     {
         //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
         if (!valueAsObject.HasOwnProperty(ValuePropertyName))
@@ -372,7 +370,7 @@ public abstract class JintCoraxDocumentConverterBase : CoraxDocumentConverterBas
         }
 
         return value;
-
+        
         TEnum GetEnum<TEnum>(JsValue optionValue, string propertyName)
         {
             if (optionValue.IsString() == false)
@@ -387,13 +385,8 @@ public abstract class JintCoraxDocumentConverterBase : CoraxDocumentConverterBas
         }
     }
 
-    protected static void ThrowWhenBoostingIsInDocument()
+    private static void ThrowWhenBoostingIsInDocument()
     {
         throw new NotImplementedInCoraxException("Indexing-time boosting of field is not implemented.");
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
     }
 }
