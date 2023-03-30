@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -15,6 +16,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using FluentFTP;
+using FluentFTP.Exceptions;
 using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -64,67 +66,81 @@ namespace Raven.Server.Documents.PeriodicBackup
             Progress?.UploadProgress.SetTotal(stream.Length);
             Progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
 
-            var url = CreateNestedFoldersIfNeeded(folderName);
-            url += $"/{fileName}";
+            var url = CreateNestedFoldersIfNeeded(folderName, out string path);
+            path += $"/{fileName}";
 
-            using (var client = CreateFtpClient(_url, keepAlive: true))
+            using (var client = CreateFtpClient(url, keepAlive: true))
             {
-                var readBuffer = new byte[DefaultBufferSize];
-
-                int count;
-                while ((count = stream.Read(readBuffer, 0, readBuffer.Length)) != 0)
+                try
                 {
-                    client.UploadBytes(readBuffer, url, FtpRemoteExists.Resume);
+                    var readBuffer = new byte[DefaultBufferSize];
 
-                    Progress?.UploadProgress.ChangeState(UploadState.Uploading);
-                    Progress?.UploadProgress.UpdateUploaded(count);
-                    Progress?.OnUploadProgress();
+                    int count;
+                    while ((count = stream.Read(readBuffer, 0, readBuffer.Length)) != 0)
+                    {
+                        client.UploadBytes(readBuffer, path, FtpRemoteExists.Resume, progress: (p) =>
+                        {
+                            if (Progress == null)
+                                return;
+                            switch (p.Progress)
+                            {
+                                case 100:
+                                    Progress?.UploadProgress.ChangeState(UploadState.Done);
+                                    break;
+                                case 0:
+                                    Progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
+                                    break;
+                                case > 0 and < 100:
+                                    Progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                                    break;
+                            }
+
+                        });
+                        Progress?.UploadProgress.UpdateUploaded(count);
+                        Progress?.OnUploadProgress();
+                    }
                 }
-
-                Progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
-                if (client.FileExists(url))
+                finally
                 {
-                    Progress?.UploadProgress.ChangeState(UploadState.Done);
+                    Progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
+                    if (client.FileExists(url))
+                    {
+                        Progress?.UploadProgress.ChangeState(UploadState.Done);
+                    }
                 }
             }
         }
 
-        private string CreateNestedFoldersIfNeeded(string folderName)
+        private string CreateNestedFoldersIfNeeded(string folderName, out string path)
         {
-            ExtractUrlAndDirectories(out var directories);
+            ExtractUrlAndDirectories(out var url, out var directories);
 
             // create the nested folders including the new folder
             directories.Add(folderName);
-            string url = "";
-
+            path = string.Empty;
             foreach (var directory in directories)
             {
                 if (directory == string.Empty)
                     continue;
 
-                url += $"/{directory}";
-                using (var client = CreateFtpClient(_url, keepAlive: false))
+                path += $"/{directory}";
+                using (var client = CreateFtpClient(url, keepAlive: false))
                 {
-                    try
-                    {
-                        if (!client.DirectoryExists($"/{directory}"))
-                            client.CreateDirectory($"/{directory}");
-                    }
-                    catch (WebException e)
-                    {
-                        throw ;
-                    }
+                    if (!client.DirectoryExists(path))
+                        client.CreateDirectory(path);
                 }
             }
 
             return url;
         }
 
-        private void ExtractUrlAndDirectories(out List<string> dirs)
+        private void ExtractUrlAndDirectories(out string url, out List<string> dirs)
         {
             var uri = new Uri(_url);
 
             dirs = uri.AbsolutePath.TrimStart('/').TrimEnd('/').Split("/").ToList();
+
+            url = $"{uri.Scheme}://{uri.Host}";
         }
 
         internal FtpClient CreateFtpClient(string url, bool keepAlive)
@@ -142,10 +158,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     client.Config.EncryptionMode = FtpEncryptionMode.Explicit;
                     client.Config.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
                     client.Config.ClientCertificates.Add(x509Certificate);
-                    client.ValidateCertificate += (control, e) =>
-                    {
-                        e.Accept = e.PolicyErrors == SslPolicyErrors.None;
-                    };
+                    client.Config.ValidateAnyCertificate = true;
                 }
                 catch (Exception e)
                 {
@@ -166,8 +179,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             if (_useSsl && string.IsNullOrWhiteSpace(_certificateAsBase64))
                 throw new ArgumentException("Certificate must be provided when using ftp with SSL!");
-
-            using (var client = CreateFtpClient(_url, keepAlive: false))
+            ExtractUrlAndDirectories(out var url, out var _);
+            using (var client = CreateFtpClient(url, keepAlive: false))
             {
                 try
                 {
@@ -178,10 +191,58 @@ namespace Raven.Server.Documents.PeriodicBackup
                     throw new AuthenticationException("Make sure that you provided the correct certificate " +
                                                       "and that the url matches the one that is defined in it", e);
                 }
-                catch (WebException e)
+            }
+        }
+
+        private string GetPath()
+        {
+            var path = "";
+            ExtractUrlAndDirectories(out var _, out var dirs);
+            foreach (string dir in dirs)
+            {
+                path += "/" + dir;
+            }
+
+            return path;
+        }
+
+        private List<string> GetItemsInternal(string url, string path, FtpObjectType type)
+        {
+            var list = new List<string>();
+            using (var client = CreateFtpClient(url, keepAlive: false))
+            {
+                foreach (FtpListItem ftpListItem in client.GetListing(path))
                 {
-                    throw;
+                    if (ftpListItem.Type == type)
+                    {
+                        list.Add(ftpListItem.FullName);
+                    }
                 }
+            }
+
+            return list;
+        }
+
+        public List<string> GetFolders()
+        {
+            TestConnection();
+            ExtractUrlAndDirectories(out var url, out _);
+            var path = GetPath();
+            return GetItemsInternal(url, path, FtpObjectType.Directory);
+        }
+
+        public List<string> GetFiles(string folderName)
+        {
+            ExtractUrlAndDirectories(out var url, out _);
+            return GetItemsInternal(url, folderName, FtpObjectType.File);
+        }
+
+        public void DeleteFolder(string folderName)
+        {
+            ExtractUrlAndDirectories(out var url, out _);
+            using (var client = CreateFtpClient(url, keepAlive: false))
+            {
+                client.DeleteDirectory($"{folderName}");
             }
         }
     }

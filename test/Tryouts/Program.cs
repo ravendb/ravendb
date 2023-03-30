@@ -33,7 +33,7 @@ public static class Program
                 using (var test = new Ftp(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.CanUploadBackup();
+                    await test.CanUploadBackupOnEncrypted();
                 }
             }
             catch (Exception e)
