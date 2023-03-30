@@ -19,9 +19,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class Ftp : CloudBackupTestBase
+    public class FtpBasicTests : CloudBackupTestBase
     {
-        public Ftp(ITestOutputHelper output) : base(output)
+        public FtpBasicTests(ITestOutputHelper output) : base(output)
         {
         }
 
