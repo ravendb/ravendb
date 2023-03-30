@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -7,7 +9,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly RavenFtpClient _client;
 
-        protected override string Name => "Glacier";
+        protected override string Name => "Ftp";
 
         public FtpRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenFtpClient client)
             : base(parameters)
@@ -17,22 +19,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override GetFoldersResult GetSortedFolders()
         {
-            throw new NotSupportedException();
+            var dirs = _client.GetFolders();
+            return new GetFoldersResult { List = dirs.OrderBy(x => x).ToList(), HasMore = false };
         }
 
         protected override string GetFolderName(string folderPath)
         {
-            throw new NotSupportedException();
+            return folderPath.Substring(0, folderPath.Length - 1);
         }
 
         protected override GetBackupFolderFilesResult GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
         {
-            throw new NotSupportedException();
+            var filesList = _client.GetFiles(folder);
+            return new GetBackupFolderFilesResult { FirstFile = filesList.FirstOrDefault(), LastFile = filesList.LastOrDefault() };
         }
 
         protected override void DeleteFolders(List<string> folders)
         {
-            throw new NotSupportedException();
+            foreach (var folder in folders)
+            {
+                _client.DeleteFolder(folder);
+
+                CancellationToken.ThrowIfCancellationRequested();
+            }
         }
     }
 }
