@@ -1,4 +1,25 @@
 ﻿#infoPackageSection {
+    @item-colors: @color-1-1, @color-1-3, @color-2-1, @color-2-3, @color-3-1, @color-3-3;
+    .description {
+        width: 66%;
+        margin: 0 auto;
+    }
+    .checkbox-list-group {
+        gap: @grid-gutter-width;
+        .checkbox-list {
+            flex-basis: 50%;
+            .well {
+                padding: @grid-gutter-width;
+            }
+        }
+    }
+    .well {
+        border-radius: @grid-gutter-width/2;
+    }
+    .create-package {
+        width: 75%;
+        margin: 0 auto;
+    }
     .info-package-items {
         list-style: none;
         display: flex;
@@ -12,25 +33,31 @@
             text-align: center;
             line-height: 14px;
             margin-bottom: @grid-gutter-width;
-
-            i {
-                display: block;
-                margin: auto;
-                width: 66px;
-                height: 66px;
-                border: 3px solid @gray;
-                color: @text-color;
-                border-radius: 50%;
-                font-size: 37px;
-                line-height: 58px;
-                margin-bottom: @grid-gutter-width/2;
+            .make-icon-color(replication, @color-1-1, @color-1-1);
+            .make-icon-color(stats, @color-1-3, @color-1-3);
+            .make-icon-color(io-test, @color-2-1, @color-2-1);
+            .make-icon-color(storage, @color-2-3, @color-2-3);
+            .make-icon-color(memory, @color-3-1, @color-3-1);
+            .make-icon-color(other, @color-3-3, @color-3-3);
             }
 
-            span {
-                margin-left: 0;
-                display: block;
-                font-size: 14px;
-            }
+        i {
+            display: block;
+            margin: auto;
+            width: 64px;
+            height: 64px;
+            color: @text-color;
+            border-radius: @grid-gutter-width/2;
+            font-size: 24px;
+            line-height: 64px;
+            background: @well-bg;
+            margin-bottom: @grid-gutter-width/2;
+        }
+
+        span {
+            margin-left: 0;
+            display: block;
+            font-size: 14px;
         }
     }
 }
