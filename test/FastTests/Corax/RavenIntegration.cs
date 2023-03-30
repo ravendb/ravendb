@@ -191,6 +191,7 @@ public class RavenIntegration : RavenTestBase
 
     private class Doc
     {
+        public string Id { get; set; }
         public string Name { get; set; }
         public float BoostFactor { get; set; }
     }
@@ -421,6 +422,70 @@ public class RavenIntegration : RavenTestBase
         {
             var results = session.Query<Doc>().Where(i => i.BoostFactor == 0f).ToList();
             Assert.Empty(results);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanDistinguishBetweenIdMethodAndIdFieldName(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        var idObject = new IdClass();
+        using (var session = store.OpenSession())
+        {
+            session.Store(idObject);
+            session.SaveChanges();
+        }
+
+        var index = new IdIndex();
+        index.Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            var classicId = session.Advanced.RawQuery<IdClass>($"from index '{index.IndexName}' where id() == '{idObject.Id}'").Count();
+            var modifiedId = session.Advanced.RawQuery<IdClass>($"from index '{index.IndexName}' where startsWith(Id, 'modified')").Count();
+            Assert.Equal(1, classicId);
+            Assert.Equal(1, modifiedId);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanDistinguishBetweenIdMethodAndIdFieldName2(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        var doc = new Doc()
+        {
+            Name = "maciej"
+        };
+        using (var session = store.OpenSession())
+        {
+            session.Store(doc);
+            session.SaveChanges();
+        }
+        
+        using (var session = store.OpenSession())
+        {
+            var classicId = session.Advanced.RawQuery<IdClass>($"from Docs where Name == 'maciej' and  id() == '{doc.Id}'").WaitForNonStaleResults().Count();
+            WaitForUserToContinueTheTest(store);
+            var classicIdViaFieldName = session.Advanced.RawQuery<IdClass>($"from Docs where Name == 'maciej' and Id == '{doc.Id}'").WaitForNonStaleResults().Count();
+            Assert.Equal(1, classicId);
+            Assert.Equal(0, classicIdViaFieldName);
+        }
+    }
+    
+    
+    private class IdClass
+    {
+        public string Id { get; set; }
+    }
+
+    private class IdIndex : AbstractIndexCreationTask<IdClass>
+    {
+        public IdIndex()
+        {
+            Map = classes => classes.Select(i => new {Id = "ModifiedId" + i.Id});
         }
     }
 
