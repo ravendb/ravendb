@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Session.Operations
             return CreateStreamCommand(startsWith, matches, start, pageSize, exclude, startAfter);
         }
 
-        internal static StreamCommand CreateStreamCommand(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null)
+        internal static StreamCommand CreateStreamCommand(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string format = null)
         {
             var sb = new StringBuilder("streams/docs?");
 
@@ -137,6 +137,11 @@ namespace Raven.Client.Documents.Session.Operations
             if (startAfter != null)
             {
                 sb.Append("startAfter=").Append(Uri.EscapeDataString(startAfter)).Append("&");
+            }
+
+            if (format != null)
+            {
+                sb.Append("format=").Append(Uri.EscapeDataString(format)).Append("&");
             }
 
             if (start != 0)

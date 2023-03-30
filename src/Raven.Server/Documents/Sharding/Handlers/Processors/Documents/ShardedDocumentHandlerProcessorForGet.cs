@@ -117,7 +117,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         if (startsWith != null)
         {
             op = new ShardedStreamDocumentsOperation(HttpContext, startsWith.IdPrefix, startsWith.Matches, startsWith.Exclude, startsWith.StartAfterId,
-                changeVector, token);
+                format: null, changeVector, token);
         }
         else // recent docs
         {

@@ -1,7 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Streaming;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -17,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         }
 
         protected override async ValueTask GetDocumentsAndWriteAsync(DocumentsOperationContext context, int start, int pageSize, string startsWith,
-            string excludes, string matches, string startAfter, OperationCancelToken token)
+            string excludes, string matches, string startAfter, string format, OperationCancelToken token)
         {
             using (context.OpenReadTransaction())
             {
@@ -56,16 +58,25 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     },
                     initialState);
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
+                await using (var writer = GetLoadDocumentsResultsWriter(format, context, RequestHandler.ResponseBodyStream(), token.Token))
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
+                    writer.StartResponse();
+                    writer.StartResults();
 
-                    await writer.WriteDocumentsAsync(context, documentsEnumerator, metadataOnly: false, token.Token);
+                    foreach (var document in documentsEnumerator)
+                        await writer.AddResultAsync(document, token.Token);
 
-                    writer.WriteEndObject();
+                    writer.EndResults();
+                    writer.EndResponse();
                 }
             }
+        }
+
+        private IStreamResultsWriter<Document> GetLoadDocumentsResultsWriter(string format, JsonOperationContext context, Stream responseBodyStream, CancellationToken token)
+        {
+            if (string.IsNullOrEmpty(format) == false && string.Equals(format, "jsonl", StringComparison.OrdinalIgnoreCase))
+                return new StreamJsonlResultsWriter(responseBodyStream, context, token);
+            return new StreamResultsWriter(responseBodyStream, context, token);
         }
     }
 }

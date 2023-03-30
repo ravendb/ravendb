@@ -1015,7 +1015,11 @@ namespace Raven.Server.Rachis
                     {
                         if (_engine.GetTermFor(context, negotiation.PrevLogIndex) == negotiation.PrevLogTerm)
                         {
-                            minIndex = Math.Min(negotiation.PrevLogIndex + 1, maxIndex);
+                            if (negotiation.PrevLogIndex < midpointIndex)
+                                //If the value from the leader is lower, it mean that the term of the follower mid value in the leader doesn't match to the term in the follower 
+                                maxIndex = Math.Max(midpointIndex - 1, minIndex);
+                            
+                            minIndex = Math.Min(negotiation.PrevLogIndex, maxIndex);
                         }
                         else
                         {

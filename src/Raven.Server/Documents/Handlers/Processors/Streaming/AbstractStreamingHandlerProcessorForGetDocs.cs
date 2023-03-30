@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         }
 
         protected abstract ValueTask GetDocumentsAndWriteAsync(TOperationContext context, int start, int pageSize, string startsWith,
-            string excludes, string matches, string startAfter, OperationCancelToken token);
+            string excludes, string matches, string startAfter, string format, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             {
                 await GetDocumentsAndWriteAsync(context, RequestHandler.GetStart(), RequestHandler.GetPageSize(), RequestHandler.GetStringQueryString("startsWith", required: false),
                     RequestHandler.GetStringQueryString("excludes", required: false), RequestHandler.GetStringQueryString("matches", required: false),
-                    RequestHandler.GetStringQueryString("startAfter", required: false), token);
+                    RequestHandler.GetStringQueryString("startAfter", required: false), RequestHandler.GetStringQueryString("format", required: false), token);
             }
         }
     }
