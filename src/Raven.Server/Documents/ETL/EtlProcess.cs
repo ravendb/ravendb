@@ -322,6 +322,8 @@ namespace Raven.Server.Documents.ETL
                 catch (JavaScriptParseException e)
                 {
                     HandleTransformationScriptParseException(stats, e);
+
+                    return transformer.GetTransformedResults();
                 }
 
                 var batchSize = 0;
