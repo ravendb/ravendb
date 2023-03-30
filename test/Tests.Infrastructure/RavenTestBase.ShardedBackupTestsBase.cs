@@ -359,10 +359,11 @@ public partial class RavenTestBase
 
         public async Task RunBackupAsync(string database, long taskId, bool isFullBackup, List<RavenServer> servers = null)
         {
+            var time = SystemTime.UtcNow;
             await foreach (var documentDatabase in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, servers))
             {
                 var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+                periodicBackupRunner.StartBackupTask(taskId, isFullBackup, startTimeUtc: time);
             }
         }
 
