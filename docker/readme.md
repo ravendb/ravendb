@@ -15,20 +15,20 @@ The following tags are available:
 
 - `latest` / `ubuntu-latest` - contains the latest version of RavenDB running on Ubuntu container
 
-- `windows-1809-latest` - contains the latest version of RavenDB running running on Windows nanoserver (kernel 1809)
+- `windows-1809-latest` - contains the latest version of RavenDB running running on Windows nanoserver (Windows version 1809)
 
-- `windows-ltsc2022-latest` - contains the latest version of RavenDB running running on Windows nanoserver (kernel 2022)
+- `windows-ltsc2022-latest` - contains the latest version of RavenDB running running on Windows nanoserver (Windows version 2022)
 
 #### Latest LTS
 
-- `latest-lts` / `ubuntu-latest-lts` - contains the latest version of RavenDB running on Ubuntu container
+- `latest-lts` / `ubuntu-latest-lts` - contains the latest LTS version of RavenDB running on Ubuntu container
 
-- `windows-1809-latest-lts` - contains the latest version of RavenDB running on Windows nanoserver
+- `windows-1809-latest-lts` - contains the latest LTS version of RavenDB running on Windows nanoserver (Windows version 1809)
 
-- `windows-ltsc2022-latest-lts` - contains the latest version of RavenDB running on Windows nanoserver
+- `windows-ltsc2022-latest-lts` - contains the latest LTS version of RavenDB running on Windows nanoserver (Windows version 2022)
 
 
-*Note: windows-latest and windows-latest-lts tags were recently removed*
+*Note: windows-latest and windows-latest-lts tags were recently removed due to incompatibilities between different Windows versions and containers based on them.*
 
 ### Running
 
