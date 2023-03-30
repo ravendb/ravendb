@@ -121,7 +121,9 @@ public class RavenDB_20206 : RavenTestBase
 
     private static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> CleanupCompareExchangeTombstonesAsync(RavenServer server, string database, ClusterOperationContext context)
     {
-        var cmd = server.ServerStore.Observer.GetCompareExchangeTombstonesToCleanup(database, state: null, context, out var cleanupState);
+        var merged = ClusterObserver.MergedDatabaseObservationState.GetEmpty();
+        merged.States.Add(0, null);
+        var cmd = server.ServerStore.Observer.GetCompareExchangeTombstonesToCleanup(database, merged, context, out var cleanupState);
         if (cleanupState != ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones)
             return cleanupState;
 
