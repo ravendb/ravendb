@@ -8,7 +8,6 @@ using RachisTests.DatabaseCluster;
 using Raven.Server.Utils;
 using SlowTests.Cluster;
 using SlowTests.Issues;
-using SlowTests.Server.Documents.PeriodicBackup;
 using SlowTests.Sharding.Cluster;
 
 namespace Tryouts;
@@ -30,10 +29,10 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new Ftp(testOutputHelper))
+                using (var test = new ReshardingTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.CanUploadBackupOnEncrypted();
+                    await test.RestoreShardedDatabaseFromIncrementalBackupAfterBucketMigration();
                 }
             }
             catch (Exception e)
