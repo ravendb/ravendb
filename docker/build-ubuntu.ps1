@@ -23,7 +23,7 @@ function GetPackageFileName ($version, $arch) {
             return "RavenDB-$version-linux-x64.tar.bz2"
         }
         Default {
-            throw "Arch not supported (currently x64 and arm32v7 are supported)"
+            throw "Arch $arch not supported (currently x64 and arm32v7 are supported)"
         }
     }
 }
@@ -126,7 +126,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
             }
         }
         else {
-            $pathToDeb = $matchingDebFile.FullName
+            $pathToDeb = $matchingDebFile.Name
         }
     }
     else {
