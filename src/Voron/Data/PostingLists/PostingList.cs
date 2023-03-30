@@ -532,10 +532,11 @@ namespace Voron.Data.PostingLists
         private void AddNewPageForTheExtras(PostingListLeafPage leafPage, List<PostingListLeafPage.ExtraSegmentDetails> extras)
         {
             int idx = 0;
-            var page = _llt.AllocatePage(1);
-            _state.LeafPages++;
-            var newPage = new PostingListLeafPage(page);
+
+            var newPage = new PostingListLeafPage(_llt.AllocatePage(1));
             PostingListLeafPage.InitLeaf(newPage.Header, leafPage.Header->Baseline);
+            _state.LeafPages++;
+
             long firstValue = leafPage.Header->Baseline | extras[0].FirstValue;
             while (idx < extras.Count)
             {
@@ -548,14 +549,20 @@ namespace Voron.Data.PostingLists
                 }
                 _state.NumberOfEntries += newPage.Header->NumberOfEntries;
                 AddToParentPage(firstValue, newPage.Header->PageNumber);
-                page = _llt.AllocatePage(1);
-                newPage = new PostingListLeafPage(page);
-                firstValue = leafPage.Header->Baseline | cur.FirstValue;
+
+                // The leaf page of the current one is no longer the leaf page that was given
+                // to us before. Because we have already added a new leaf page, now we need to
+                // do everything in relation with our new leaf page.
+                leafPage = newPage;
+
+                newPage = new PostingListLeafPage(_llt.AllocatePage(1));
                 PostingListLeafPage.InitLeaf(newPage.Header, leafPage.Header->Baseline);
+                _state.LeafPages++;
+
+                firstValue = leafPage.Header->Baseline | cur.FirstValue;
             }
 
             _state.NumberOfEntries += newPage.Header->NumberOfEntries;
-            
             AddToParentPage(firstValue, newPage.Header->PageNumber);
         }
 
