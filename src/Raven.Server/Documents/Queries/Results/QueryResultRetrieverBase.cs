@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Queries.Results
                
                 if (FieldsToFetch.ExtractAllFromIndex)
                 {
-                    if (retrieverInput is not {LuceneDocument: null, State: null})
+                    if (retrieverInput.IsLuceneDocument())
                     {
                         fields = retrieverInput.LuceneDocument!.GetFields()
                             .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName

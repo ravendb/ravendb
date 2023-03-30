@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.Queries.Results
 
     public struct RetrieverInput
     {
+        public bool IsLuceneDocument() => LuceneDocument != null;
+
         public IndexFieldsMapping KnownFields;
         
         public IndexEntryReader CoraxEntry;
