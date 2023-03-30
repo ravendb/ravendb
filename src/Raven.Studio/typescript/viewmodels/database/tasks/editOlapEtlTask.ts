@@ -31,8 +31,6 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
-import { shardingTodo } from "common/developmentHelper";
-
 class partitionTable {
     key: string;
     private dto: Raven.Server.Documents.ETL.Providers.OLAP.Test.OlapEtlTestScriptResult.PartitionItems;

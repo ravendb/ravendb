@@ -23,7 +23,6 @@ import testRavenEtlCommand = require("commands/database/tasks/testRavenEtlComman
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
-import { shardingTodo } from "common/developmentHelper";
 
 type resultItem = {
     header: string;

@@ -69,8 +69,9 @@
                 <div class="row margin-bottom">
                     <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
                         <div class="toggle">
-                            <div class="toggle" data-placement="right" data-toggle="tooltip" title="Toggle on to set a responsible node for the task" data-animation="true">
-                                <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor">
+                            <div class="toggle" data-placement="right" data-toggle="tooltip" data-bind="attr: { title: $root.db.isSharded() ? 'Not supported in sharded databases' : 'Toggle on to set a responsible node for the task'  }"
+                                 data-animation="true">
+                                <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor, disable: $root.db.isSharded()">
                                 <label for="responsibleNode">Set responsible node</label>
                             </div>
                         </div>

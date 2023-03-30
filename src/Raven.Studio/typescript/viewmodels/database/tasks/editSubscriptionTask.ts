@@ -21,7 +21,6 @@ import rqlLanguageService = require("common/rqlLanguageService");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
-import { shardingTodo } from "common/developmentHelper";
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
