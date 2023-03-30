@@ -36,6 +36,7 @@ if ($env:DEB_ARCHITECTURE -eq "amd64") {
 
 $DEB_BUILD_ENV_IMAGE = "ravendb-deb_ubuntu_$env:DEB_ARCHITECTURE"
 
+docker pull --platform $env:DOCKER_BUILDPLATFORM ubuntu:$env:DISTRO_VERSION
 docker build `
     --platform $env:DOCKER_BUILDPLATFORM `
     --build-arg "DISTRO_VERSION_NAME=$env:DISTRO_VERSION_NAME" `
