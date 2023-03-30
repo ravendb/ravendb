@@ -218,7 +218,7 @@ namespace FastTests.Voron.Sets
                     for (int i = 0; i < size; i++)
                     {
                         var rname = (int)(uint)random.Next();
-                        if (!uniqueKeys.Contains(rname))
+                        if (!uniqueKeys.Contains(rname) && rname != 0)
                         {
                             uniqueKeys.Add(rname);
                             inTreeKeys.Add(rname);
