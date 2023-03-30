@@ -3100,7 +3100,7 @@ namespace Raven.Server.ServerWide
                 if (cmd.TryGet(nameof(CleanCompareExchangeTombstonesCommand.Take), out long take) == false)
                     throw new RachisApplyException("Clear Compare Exchange command must contain a Take property");
 
-                var databaseNameLowered = databaseName.ToLowerInvariant();
+                var databaseNameLowered = (databaseName + "/"). ToLowerInvariant();
                 result = DeleteCompareExchangeTombstonesUpToPrefix(context, databaseNameLowered, maxEtag, take);
             }
             finally
