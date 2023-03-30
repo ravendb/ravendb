@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
@@ -17,6 +20,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Restore.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -24,6 +28,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.PeriodicBackup;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
@@ -1098,6 +1103,521 @@ namespace SlowTests.Sharding.Backup
                         Assert.False(databaseExists);
                     }
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromLocalBackup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new User(), $"users/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config, isFullBackup: false);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                // add counters
+                waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.CountersFor($"users/{i}").Increment("downloads", i);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                // add more docs
+                waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new Order(), $"orders/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(cluster.Nodes.Count, dirs.Length);
+
+                foreach (var dir in dirs)
+                {
+                    var files = Directory.GetFiles(dir);
+                    Assert.Equal(3, files.Length);
+                }
+
+
+                var client = store.GetRequestExecutor().HttpClient;
+                var data = new StringContent(JsonConvert.SerializeObject(new LocalSettings
+                {
+                    FolderPath = backupPath
+                }), Encoding.UTF8, "application/json");
+                var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Local", data);
+                string result = await response.Content.ReadAsStringAsync();
+
+                var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
+                Assert.Equal(9, restorePoints.List.Count);
+
+                var pointsPerShard = restorePoints.List.GroupBy(p => p.DatabaseName).ToList();
+                Assert.Equal(3, pointsPerShard.Count);
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+
+                foreach (var shardRestorePoints in pointsPerShard)
+                {
+                    Assert.True(ShardHelper.TryGetShardNumberFromDatabaseName(shardRestorePoints.Key, out var shardNumber));
+                    Assert.True(settings.Shards.ContainsKey(shardNumber));
+
+                    var points = shardRestorePoints.ToList();
+                    Assert.Equal(3, points.Count);
+
+                    // restore up to 2nd backup file (out of 3)
+                    var lastFileToRestore = points[1].FileName;
+                    settings.Shards[shardNumber].LastFileNameToRestore = lastFileToRestore;
+                }
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                using (Sharding.Backup.ReadOnly(backupPath))
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    DatabaseName = databaseName,
+                    ShardRestoreSettings = settings
+                }, timeout: TimeSpan.FromSeconds(60)))
+                {
+                    var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(3, dbRec.Sharding.Shards.Count);
+
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            var doc = session.Load<User>($"users/{i}");
+                            Assert.NotNull(doc);
+
+                            var counter = session.CountersFor(doc).Get("downloads");
+                            Assert.Equal(i, counter);
+
+                            var order = session.Load<Order>($"orders/{i}");
+                            Assert.Null(order);
+                        }
+                    }
+                }
+            }
+        }
+
+        [AmazonS3Fact]
+        public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromS3Backup()
+        {
+            var s3Settings = GetS3Settings();
+
+            try
+            {
+                var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+                var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+                using (var store = Sharding.GetDocumentStore(options))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.Store(new User(), $"users/{i}");
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+
+                    var config = Backup.CreateBackupConfiguration(s3Settings: s3Settings);
+                    var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config, isFullBackup: false);
+
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    // add counters
+                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.CountersFor($"users/{i}").Increment("downloads", i);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    // add more docs
+                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.Store(new Order(), $"orders/{i}");
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                    ShardedRestoreSettings settings;
+                    using (var s3Client = new RavenAwsS3Client(s3Settings, DefaultBackupConfiguration))
+                    {
+                        var prefix = $"{s3Settings.RemoteFolderName}/";
+                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, "/", listFolders: true);
+
+                        Assert.Equal(3, cloudObjects.FileInfoDetails.Count);
+
+                        settings = Sharding.Backup.GenerateShardRestoreSettings(cloudObjects.FileInfoDetails.Select(fileInfo => fileInfo.FullPath).ToList(), sharding);
+                    }
+
+                    var client = store.GetRequestExecutor().HttpClient;
+                    var data = new StringContent(JsonConvert.SerializeObject(s3Settings), Encoding.UTF8, "application/json");
+                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=S3", data);
+                    string result = await response.Content.ReadAsStringAsync();
+
+                    var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
+                    Assert.Equal(9, restorePoints.List.Count);
+
+                    var pointsPerShard = restorePoints.List.GroupBy(p => p.DatabaseName).ToList();
+                    Assert.Equal(3, pointsPerShard.Count);
+
+                    foreach (var shardRestorePoints in pointsPerShard)
+                    {
+                        Assert.True(ShardHelper.TryGetShardNumberFromDatabaseName(shardRestorePoints.Key, out var shardNumber));
+                        Assert.True(settings.Shards.ContainsKey(shardNumber));
+
+                        var points = shardRestorePoints.ToList();
+                        Assert.Equal(3, points.Count);
+
+                        // restore up to 2nd backup file (out of 3)
+                        var lastFileToRestore = points[1].FileName;
+                        settings.Shards[shardNumber].LastFileNameToRestore = lastFileToRestore;
+                    }
+
+                    var databaseName = $"restored_database-{Guid.NewGuid()}";
+                    using (Backup.RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
+                    {
+                        DatabaseName = databaseName,
+                        ShardRestoreSettings = settings,
+                        Settings = s3Settings
+                    }, timeout: TimeSpan.FromSeconds(60)))
+                    {
+                        var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                        Assert.Equal(3, dbRec.Sharding.Shards.Count);
+
+                        using (var session = store.OpenSession(databaseName))
+                        {
+                            for (int i = 0; i < 10; i++)
+                            {
+                                var doc = session.Load<User>($"users/{i}");
+                                Assert.NotNull(doc);
+
+                                var counter = session.CountersFor(doc).Get("downloads");
+                                Assert.Equal(i, counter);
+
+                                var order = session.Load<Order>($"orders/{i}");
+                                Assert.Null(order);
+                            }
+                        }
+                    }
+                }
+
+            }
+            finally
+            {
+                await DeleteObjects(s3Settings);
+            }
+        }
+
+        [AzureFact]
+        public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromAzureBackup()
+        {
+            var azureSettings = GetAzureSettings();
+
+            try
+            {
+                var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+                var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+                using (var store = Sharding.GetDocumentStore(options))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.Store(new User(), $"users/{i}");
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+
+                    var config = Backup.CreateBackupConfiguration(azureSettings: azureSettings);
+                    var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config, isFullBackup: false);
+
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    // add counters
+                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.CountersFor($"users/{i}").Increment("downloads", i);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    // add more docs
+                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.Store(new Order(), $"orders/{i}");
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                    ShardedRestoreSettings settings;
+                    using (var azureClient = RavenAzureClient.Create(azureSettings, DefaultBackupConfiguration))
+                    {
+                        var prefix = $"{azureSettings.RemoteFolderName}/";
+                        var blobs = await azureClient.ListBlobsAsync(prefix, delimiter: "/", listFolders: true);
+                        var folderNames = blobs.List.Select(item => item.Name).ToList();
+                        Assert.Equal(3, folderNames.Count);
+
+                        settings = Sharding.Backup.GenerateShardRestoreSettings(folderNames, sharding);
+                    }
+
+                    var client = store.GetRequestExecutor().HttpClient;
+                    var data = new StringContent(JsonConvert.SerializeObject(azureSettings), Encoding.UTF8, "application/json");
+                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Azure", data);
+                    string result = await response.Content.ReadAsStringAsync();
+
+                    var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
+                    Assert.Equal(9, restorePoints.List.Count);
+
+                    var pointsPerShard = restorePoints.List.GroupBy(p => p.DatabaseName).ToList();
+                    Assert.Equal(3, pointsPerShard.Count);
+
+                    foreach (var shardRestorePoints in pointsPerShard)
+                    {
+                        Assert.True(ShardHelper.TryGetShardNumberFromDatabaseName(shardRestorePoints.Key, out var shardNumber));
+                        Assert.True(settings.Shards.ContainsKey(shardNumber));
+
+                        var points = shardRestorePoints.ToList();
+                        Assert.Equal(3, points.Count);
+
+                        // restore up to 2nd backup file (out of 3)
+                        var lastFileToRestore = points[1].FileName;
+                        settings.Shards[shardNumber].LastFileNameToRestore = lastFileToRestore;
+                    }
+
+                    var databaseName = $"restored_database-{Guid.NewGuid()}";
+                    using (Backup.RestoreDatabaseFromCloud(store, new RestoreFromAzureConfiguration
+                    {
+                        DatabaseName = databaseName,
+                        ShardRestoreSettings = settings,
+                        Settings = azureSettings
+                    }, timeout: TimeSpan.FromSeconds(60)))
+                    {
+                        var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                        Assert.Equal(3, dbRec.Sharding.Shards.Count);
+
+                        using (var session = store.OpenSession(databaseName))
+                        {
+                            for (int i = 0; i < 10; i++)
+                            {
+                                var doc = session.Load<User>($"users/{i}");
+                                Assert.NotNull(doc);
+
+                                var counter = session.CountersFor(doc).Get("downloads");
+                                Assert.Equal(i, counter);
+
+                                var order = session.Load<Order>($"orders/{i}");
+                                Assert.Null(order);
+                            }
+                        }
+                    }
+                }
+
+            }
+            finally
+            {
+                await DeleteObjects(azureSettings);
+            }
+        }
+
+        [GoogleCloudFact]
+        public async Task CanRestoreShardedDatabase_UsingRestorePoint_FromGoogleCloudBackup()
+        {
+            var googleCloudSettings = GetGoogleCloudSettings();
+
+            try
+            {
+                var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+                var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+                using (var store = Sharding.GetDocumentStore(options))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.Store(new User(), $"users/{i}");
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+
+                    var config = Backup.CreateBackupConfiguration(googleCloudSettings: googleCloudSettings);
+                    var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config, isFullBackup: false);
+
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    // add counters
+                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.CountersFor($"users/{i}").Increment("downloads", i);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    // add more docs
+                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.Store(new Order(), $"orders/{i}");
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                    var sharding = await Sharding.GetShardingConfigurationAsync(store);
+
+                    ShardedRestoreSettings settings;
+                    using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, DefaultBackupConfiguration))
+                    {
+                        var objects = await googleCloudClient.ListObjectsAsync(googleCloudSettings.RemoteFolderName);
+                        var fileNames = objects.Select(item => item.Name).ToList();
+                        Assert.Equal(3, fileNames.Count);
+
+                        settings = Sharding.Backup.GenerateShardRestoreSettings(fileNames, sharding);
+                    }
+
+                    var client = store.GetRequestExecutor().HttpClient;
+                    var data = new StringContent(JsonConvert.SerializeObject(googleCloudSettings), Encoding.UTF8, "application/json");
+                    var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=GoogleCloud", data);
+                    string result = await response.Content.ReadAsStringAsync();
+
+                    var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
+                    Assert.Equal(9, restorePoints.List.Count);
+
+                    var pointsPerShard = restorePoints.List.GroupBy(p => p.DatabaseName).ToList();
+                    Assert.Equal(3, pointsPerShard.Count);
+
+                    foreach (var shardRestorePoints in pointsPerShard)
+                    {
+                        Assert.True(ShardHelper.TryGetShardNumberFromDatabaseName(shardRestorePoints.Key, out var shardNumber));
+                        Assert.True(settings.Shards.ContainsKey(shardNumber));
+
+                        var points = shardRestorePoints.ToList();
+                        Assert.Equal(3, points.Count);
+
+                        // restore up to 2nd backup file (out of 3)
+                        var lastFileToRestore = points[1].FileName;
+                        settings.Shards[shardNumber].LastFileNameToRestore = lastFileToRestore;
+                    }
+
+                    var databaseName = $"restored_database-{Guid.NewGuid()}";
+                    using (Backup.RestoreDatabaseFromCloud(store, new RestoreFromGoogleCloudConfiguration()
+                    {
+                        DatabaseName = databaseName,
+                        ShardRestoreSettings = settings,
+                        Settings = googleCloudSettings
+                    }, timeout: TimeSpan.FromSeconds(60)))
+                    {
+                        var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                        Assert.Equal(3, dbRec.Sharding.Shards.Count);
+
+                        using (var session = store.OpenSession(databaseName))
+                        {
+                            for (int i = 0; i < 10; i++)
+                            {
+                                var doc = session.Load<User>($"users/{i}");
+                                Assert.NotNull(doc);
+
+                                var counter = session.CountersFor(doc).Get("downloads");
+                                Assert.Equal(i, counter);
+
+                                var order = session.Load<Order>($"orders/{i}");
+                                Assert.Null(order);
+                            }
+                        }
+                    }
+                }
+
+            }
+            finally
+            {
+                await DeleteObjects(googleCloudSettings);
             }
         }
 
