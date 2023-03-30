@@ -2540,9 +2540,12 @@ more responsive application.
             bool isProjectInto)
         {
             var metadata = json.GetMetadata();
-            var changeVector = metadata.GetChangeVector();
-            //MapReduce indexes return reduce results that don't have @id property
-            metadata.TryGetId(out string id);
+
+            string changeVector = null;
+
+            //MapReduce indexes return reduce results that don't have @id property and @change-vector
+            if (metadata.TryGetId(out string id))
+                changeVector = metadata.GetChangeVector();
 
             return new StreamResult<T>
             {
@@ -2557,9 +2560,12 @@ more responsive application.
         {
             var json = enumerator.Current;
             var metadata = json.GetMetadata();
-            var changeVector = metadata.GetChangeVector();
-            //MapReduce indexes return reduce results that don't have @id property
-            metadata.TryGetId(out string id);
+
+            string changeVector = null;
+
+            //MapReduce indexes return reduce results that don't have @id property and @change-vector
+            if (metadata.TryGetId(out string id))
+                changeVector = metadata.GetChangeVector();
 
             var result = new TimeSeriesStreamResult<T>
             {
