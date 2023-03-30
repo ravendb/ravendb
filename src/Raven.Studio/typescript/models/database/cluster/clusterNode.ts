@@ -24,6 +24,7 @@ class clusterNode {
     osFullName: KnockoutComputed<string>;
     osTitle: KnockoutComputed<string>;
     osIcon: KnockoutComputed<string>;
+    memoryTitle: string;
 
     constructor(isPassive: KnockoutObservable<boolean>) {
         this.isPassive = isPassive;
@@ -62,6 +63,14 @@ class clusterNode {
         });
         
         this.osIcon = ko.pureComputed(() => clusterNode.osIcon(this.osInfo().Type));
+
+        this.memoryTitle =
+            `<div class="text-left margin-left-sm">
+                 <ul class='margin-top margin-left margin-right-sm no-padding-left'>
+                     <li>The amount of memory that RavenDB will use on the node <br> for managed memory (.NET) and unmanaged memory <br> (handled by RavenDB).</li> 
+                     <li>This limit, which is set by your license, <br> is Not enforced on the mmap files managed by the OS.</li>
+                 </ul>
+             </div>`;
     }
     
     static osIcon(type: Raven.Client.ServerWide.Operations.OSType) {

@@ -135,7 +135,7 @@
                                 </div>
                                 <div class="memory" data-bind="if: installedMemoryInGb">
                                     <h5><i class="icon-memory"></i> &nbsp; MEMORY</h5>
-                                    <strong class="text-emphasis" data-toggle="tooltip" title="Assigned memory limit" data-animation="true">
+                                    <strong class="text-emphasis" data-toggle="tooltip" data-html="true" data-bind="attr: { 'title': memoryTitle }" data-animation="true" data-placement="bottom">
                                         <span data-bind="text: utilizedMemoryInGb"></span>GB
                                     </strong>
                                     <span data-bind="if: installedMemoryInGb() && installedMemoryInGb() != -1">
