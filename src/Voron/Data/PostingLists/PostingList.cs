@@ -603,56 +603,75 @@ namespace Voron.Data.PostingLists
         {
             ref var state = ref _stk[_pos];
 
+            // Create a new branch page to split the existing page
             var pageToSplit = new PostingListBranchPage(state.Page);
             var page = _llt.AllocatePage(1);
             var branch = new PostingListBranchPage(page);
             branch.Init();
             _state.BranchPages++;
-            
-            // grow rightward
+
+            // grow rightward:
+            // If the key is greater than the last key in the page to split, add it to the new branch page
             if (key > pageToSplit.Last)
             {
                 if (branch.TryAdd(_llt, key, value) == false)
                     throw new InvalidOperationException("Failed to add to a newly created page? Should never happen");
+
+                // Add the new branch page to the parent page
                 AddToParentPage(key, page.PageNumber);
                 return;
             }
 
-            // grow leftward
+            // grow leftward:
+            // If the key is less than the first key in the page to split, add it to the existing page
             if (key < pageToSplit.First)
             {
+                // Save the first key of the page to split
                 long oldFirst = pageToSplit.First;
+
+                // Copy the page to split to the newly allocated page
                 var cpy = page.PageNumber;
                 state.Page.AsSpan().CopyTo(page.AsSpan());
                 page.PageNumber = cpy;
 
+                // Clear the page to split and initialize it as a new branch page
                 cpy = state.Page.PageNumber;
                 state.Page.AsSpan().Clear();
                 state.Page.PageNumber = cpy;
-
                 var curPage = new PostingListBranchPage(state.Page);
                 curPage.Init();
-                if(curPage.TryAdd(_llt, key, value) == false)
+
+                // Add the key-value pair to the existing page
+                if (curPage.TryAdd(_llt, key, value) == false)
                     throw new InvalidOperationException("Failed to add to a newly initialized page? Should never happen");
+
+                // Add the existing page to the parent page
                 AddToParentPage(oldFirst, page.PageNumber);
                 return;
             }
 
-            // split in half
+            // split in half:
+            // If the key is between the first and last key in the page to split, split the page in half
             for (int i = pageToSplit.Header->NumberOfEntries / 2; i < pageToSplit.Header->NumberOfEntries; i++)
             {
+                // Add the remaining entries to the new branch page
                 var (k, v) = pageToSplit.GetByIndex(i);
                 if(branch.TryAdd(_llt, k, v) == false)
                     throw new InvalidOperationException("Failed to add half our capacity to a newly created page? Should never happen");
             }
 
+            // Truncate the original page to half its entries
             pageToSplit.Header->NumberOfEntries /= 2;// truncate entries
+
+            // Add the key-value pair to the appropriate child node based on the first key of the new branch page
             var success = pageToSplit.Last > key ?
-                branch.TryAdd(_llt, key, value) :
-                pageToSplit.TryAdd(_llt, key, value);
+                pageToSplit.TryAdd(_llt, key, value) :
+                branch.TryAdd(_llt, key, value);
+
             if(success == false)
                 throw new InvalidOperationException("Failed to add final to a newly created page after adding half the capacit? Should never happen");
 
+            // Add the new branch page to the parent page
             AddToParentPage(branch.First, page.PageNumber);
         }
         
