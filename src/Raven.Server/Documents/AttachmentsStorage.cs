@@ -256,7 +256,7 @@ namespace Raven.Server.Documents
                         Name = name,
                         DocumentId = documentId,
                         Hash = hash,
-                        Size = stream.Length
+                        Size = stream?.Length ?? -1
                     };
                 }
             }
@@ -409,11 +409,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void PutAttachmentRevert(DocumentsOperationContext context, Document document, out bool hasAttachments)
+        public void PutAttachmentRevert(DocumentsOperationContext context, LazyStringValue id, BlittableJsonReaderObject document, out bool hasAttachments)
         {
             hasAttachments = false;
 
-            if (document.Data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+            if (document.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                 metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                 return;
 
@@ -429,7 +429,7 @@ namespace Raven.Server.Documents
                 var cv = Slices.Empty;
                 var type = AttachmentType.Document;
 
-                using (DocumentIdWorker.GetSliceFromId(context, document.Id, out Slice lowerDocumentId))
+                using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerDocumentId))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice nameSlice))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                 using (Slice.External(context.Allocator, hash, out Slice base64Hash))
@@ -1221,9 +1221,9 @@ namespace Raven.Server.Documents
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);
 
-            // we are running just before the delete, so we may still have 1 entry there, the one just
-            // about to be deleted
-            DeleteAttachmentStream(context, hash, key);
+            // We may have another operation in the same transaction that would cause us to re-create
+            // the missing references, let's move the actual stream delete to the end of the transaction
+            context.Transaction.CheckIfShouldDeleteAttachmentStream(hash);
         }
 
         private void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
@@ -1359,6 +1359,18 @@ namespace Raven.Server.Documents
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
                     yield return attachment;
+                }
+            }
+        }
+
+        public void RemoveAttachmentStreamsWithoutReferences(DocumentsOperationContext context, List<Slice> attachmentHashesToMaybeDelete)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+            foreach (var hash in attachmentHashesToMaybeDelete)
+            {
+                if (GetCountOfAttachmentsForHash(context, hash) == 0)
+                {
+                    tree.DeleteStream(hash);
                 }
             }
         }

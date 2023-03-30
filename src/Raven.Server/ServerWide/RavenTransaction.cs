@@ -16,8 +16,14 @@ namespace Raven.Server.ServerWide
             InnerTransaction = transaction;
         }
 
+        public virtual void BeforeCommit()
+        {
+
+        }
+
         public void Commit()
         {
+            BeforeCommit();
             InnerTransaction.Commit();
         }
 

@@ -1132,7 +1132,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     var user = await session.LoadAsync<User>("users/1");
 
                     var flags = session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.Flags];
-                    Assert.Equal((DocumentFlags.HasTimeSeries).ToString(), flags);
+                    Assert.Equal((DocumentFlags.HasTimeSeries | DocumentFlags.Resolved).ToString(), flags);
                     var list = session.Advanced.GetTimeSeriesFor(user);
                     Assert.Equal(2, list.Count);
                 }
@@ -1166,7 +1166,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     var user = await session.LoadAsync<User>("users/1");
 
                     var flags = session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.Flags];
-                    Assert.Equal((DocumentFlags.HasTimeSeries | DocumentFlags.HasCounters).ToString(), flags);
+                    Assert.Equal((DocumentFlags.HasTimeSeries | DocumentFlags.HasCounters | DocumentFlags.Resolved).ToString(), flags);
 
                     var ts = session.Advanced.GetTimeSeriesFor(user);
                     Assert.Equal(1, ts.Count);

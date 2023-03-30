@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
@@ -18,6 +20,16 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public Slice Key;
         public Slice Base64Hash;
         public Stream Stream;
+
+        public override DynamicJsonValue ToDebugJson()
+        {
+            var djv = base.ToDebugJson();
+            djv[nameof(Name)] = Name.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(ContentType)] = ContentType.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Base64Hash)] = Base64Hash.ToString();
+            djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
+            return djv;
+        }
 
         public static unsafe AttachmentReplicationItem From(DocumentsOperationContext context, Attachment attachment)
         {

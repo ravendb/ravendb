@@ -1514,18 +1514,19 @@ namespace Raven.Server.Documents
                 Type = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _),
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
                 ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr),
-                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr)
+                LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr)
             };
 
-            if (result.Type == Tombstone.TombstoneType.Document)
+            switch (result.Type)
             {
-                result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
-                result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
-                result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
-            }
-            else if (result.Type == Tombstone.TombstoneType.Revision)
-            {
-                result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                case Tombstone.TombstoneType.Document:
+                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
+                    result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
+                    break;
+                case Tombstone.TombstoneType.Revision:
+                    result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    break;
             }
 
             return result;

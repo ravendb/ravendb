@@ -527,11 +527,17 @@ namespace Raven.Server.Documents.Replication.Senders
                         return true;
                     }
 
+                    if (doc.Flags.Contain(DocumentFlags.Resolved))
+                    {
+                        // we let all resolved documents to pass to the other side, since we might resolved them to a merged change vector, and we want to ensure
+                        // that this is properly synced between the nodes
+                        return false;
+                    }
+
                     if (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision))
                     {
-                        // we let pass all the conflicted/resolved revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
+                        // we let pass all the conflicted revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
                         if (doc.Flags.Contain(DocumentFlags.Conflicted) ||
-                            doc.Flags.Contain(DocumentFlags.Resolved) ||
                             doc.Flags.Contain(DocumentFlags.FromClusterTransaction) ||
                             doc.Flags.Contain(DocumentFlags.FromOldDocumentRevision))
                         {

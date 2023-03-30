@@ -252,7 +252,7 @@ namespace SlowTests.Client.Counters
                     var user = await session.LoadAsync<User>("users/1");
 
                     var flags = session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.Flags];
-                    Assert.Equal((DocumentFlags.HasCounters).ToString(), flags);
+                    Assert.Equal((DocumentFlags.HasCounters|DocumentFlags.Resolved).ToString(), flags);
                     var list = session.Advanced.GetCountersFor(user);
                     Assert.Equal(2, list.Count);
                 }
