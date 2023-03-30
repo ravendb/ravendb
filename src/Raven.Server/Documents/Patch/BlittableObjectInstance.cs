@@ -18,6 +18,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 
@@ -137,7 +138,7 @@ namespace Raven.Server.Documents.Patch
                 if (parent.IndexFields.TryGetValue(_property, out var indexField) == false && parent.AnyDynamicIndexFields == false)
                     return false;
 
-                bool isLucene = parent.IndexRetriever.LuceneDocument != null && parent.IndexRetriever.State != null;
+                bool isLucene = parent.IndexRetriever.IsLuceneDocument();
 
                 return isLucene
                     ? TryGetValueFromLucene(parent, property, indexField, out value)
@@ -179,7 +180,12 @@ namespace Raven.Server.Documents.Patch
                             if (iterator.IsNull)
                                 tupleList[idX] = null;
                             else if (iterator.IsEmptyCollection)
-                                throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
+                            {
+                                var identifierFound = reader.GetFieldReaderFor(0).Read(out var identifier);
+                                throw new InvalidDataException($"Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)" +
+                                                               $"{Environment.NewLine}Field: {binding?.FieldNameAsString ?? property}" +
+                                                               $"{Environment.NewLine}Document: {(identifierFound ? Encodings.Utf8.GetString(identifier) : "(unknown)")}");
+                            }
                             else
                                 tupleList[idX] = Encodings.Utf8.GetString(iterator.Sequence);
                         }
@@ -195,10 +201,10 @@ namespace Raven.Server.Documents.Patch
                         var hasTime = parent.IndexRetriever.IndexFieldsPersistence.HasTimeValues(binding?.FieldNameAsString ?? property);
                         if (hasTime)
                             value = Encodings.Utf8.GetString(valueInEntry);
-                        else if (valueInEntry.Contains((byte)'.'))
-                            value = dVal;
-                        else
+                        else if (dVal.AlmostEquals(lVal))
                             value = lVal;
+                        else
+                            value = dVal;
                     }
 
                         break;
@@ -256,7 +262,7 @@ namespace Raven.Server.Documents.Patch
                             fixed (byte* ptr = &iterator.Sequence.GetPinnableReference())
                             {
                                 var itemAsBlittable = new BlittableJsonReaderObject(ptr, iterator.Sequence.Length, parent.Blittable._context);
-                                arrayItems[idX] = TranslateToJs(parent, indexField.Name, BlittableJsonToken.StartObject, itemAsBlittable);
+                                arrayItems[idX] = TranslateToJs(parent, indexField?.Name ?? property, BlittableJsonToken.StartObject, itemAsBlittable);
                             }
                         }
                         
@@ -271,7 +277,7 @@ namespace Raven.Server.Documents.Patch
                         fixed (byte* ptr = &blittableBinary.GetPinnableReference())
                         {
                             var itemAsBlittable = new BlittableJsonReaderObject(ptr, blittableBinary.Length, parent.Blittable._context);
-                            value = TranslateToJs(parent, indexField.Name, BlittableJsonToken.StartObject, itemAsBlittable);
+                            value = TranslateToJs(parent, indexField?.Name ?? property, BlittableJsonToken.StartObject, itemAsBlittable);
                         }
                     }
                         break;
