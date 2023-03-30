@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
@@ -2541,11 +2542,11 @@ more responsive application.
         {
             var metadata = json.GetMetadata();
 
-            // Projection / MapReduce return results without @change-vector property
-            metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector);
+            string changeVector = null;
 
-            //MapReduce indexes return reduce results that don't have @id property
-            metadata.TryGetId(out string id);
+            //MapReduce indexes return reduce results that don't have @id property and @change-vector
+            if (metadata.TryGetId(out string id))
+                changeVector = metadata.GetChangeVector();
 
             return new StreamResult<T>
             {
@@ -2560,9 +2561,12 @@ more responsive application.
         {
             var json = enumerator.Current;
             var metadata = json.GetMetadata();
-            var changeVector = metadata.GetChangeVector();
-            //MapReduce indexes return reduce results that don't have @id property
-            metadata.TryGetId(out string id);
+
+            string changeVector = null;
+
+            //MapReduce indexes return reduce results that don't have @id property and @change-vector
+            if (metadata.TryGetId(out string id))
+                changeVector = metadata.GetChangeVector();
 
             var result = new TimeSeriesStreamResult<T>
             {
