@@ -2015,54 +2015,34 @@ namespace Raven.Server.Json
                 }
             }
 
-            if (document.ChangeVector != null)
+            if (first == false)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
-                writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
-                writer.WriteString(document.ChangeVector);
+                writer.WriteComma();
             }
+            writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
+            writer.WriteString(document.ChangeVector);
 
             if (document.Flags != DocumentFlags.None)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Flags);
                 writer.WriteString(document.Flags.ToString());
             }
             if (document.Id != null)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Id);
                 writer.WriteString(document.Id);
             }
             if (document.IndexScore != null)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.IndexScore);
                 writer.WriteDouble(document.IndexScore.Value);
             }
             if (document.Distance != null)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 var result = document.Distance.Value;
                 writer.WritePropertyName(Constants.Documents.Metadata.SpatialResult);
                 writer.WriteStartObject();
@@ -2078,11 +2058,7 @@ namespace Raven.Server.Json
             }
             if (document.LastModified != DateTime.MinValue)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
+                writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.LastModified);
                 writer.WriteDateTime(document.LastModified, isUtc: true);
             }
