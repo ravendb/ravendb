@@ -65,12 +65,8 @@ class clusterNode {
         this.osIcon = ko.pureComputed(() => clusterNode.osIcon(this.osInfo().Type));
 
         this.memoryTitle =
-            `<div class="text-left margin-left-sm">
-                 <ul class='margin-top margin-left margin-right-sm no-padding-left'>
-                     <li>The amount of memory that RavenDB will use on the node <br> for managed memory (.NET) and unmanaged memory <br> (handled by RavenDB).</li> 
-                     <li>This limit, which is set by your license, <br> is not enforced on the mmap files managed by the OS.</li>
-                 </ul>
-             </div>`;
+            `License limit on single node.<br> 
+             Doesn't apply to memory-mapped files managed by the OS.`;
     }
     
     static osIcon(type: Raven.Client.ServerWide.Operations.OSType) {
