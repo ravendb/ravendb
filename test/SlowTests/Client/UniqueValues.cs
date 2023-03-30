@@ -316,8 +316,8 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.CompareExchange)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CompareExchangeTombstoneShouldBeRemovedFromStorageWhenDbGetsDeleted(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -326,14 +326,29 @@ namespace SlowTests.Client
                 {
                     Name = "🤡"
                 };
+                
                 var cxRes = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/clown", user, 0));
-
+                
                 var dbName = store.Database;
-                var stats = store.Maintenance.ForDatabase(dbName).Send(new GetDetailedStatisticsOperation());
-                Assert.Equal(1, stats.CountOfCompareExchange);
+                
+                long compareExchange;
+                
+                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    compareExchange = Server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                }
+
+                Assert.Equal(1, compareExchange);
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("emojis/clown", cxRes.Index));
-                stats = store.Maintenance.ForDatabase(dbName).Send(new GetDetailedStatisticsOperation());
-                Assert.Equal(0, stats.CountOfCompareExchange);
+
+                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    compareExchange = Server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                }
+                
+                Assert.Equal(0, compareExchange);
 
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(dbName, hardDelete: false));
                 int resultItems = 0;

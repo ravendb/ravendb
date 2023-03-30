@@ -27,6 +27,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -280,28 +281,25 @@ namespace Raven.Server.ServerWide.Maintenance
                             var cleanupCommandsForDatabase = GetUnusedAutoIndexes(mergedState);
                                 cleanUnusedAutoIndexesCommands.AddRange(cleanupCommandsForDatabase);
                         }
-
+                        
                         if (cleanupTombstones)
                         {
-                            foreach (var shardToState in mergedState.States)
+                            var cmd = GetCompareExchangeTombstonesToCleanup(database, mergedState, context, out var cleanupState);
+                            switch (cleanupState)
                             {
-                                var cmd = GetCompareExchangeTombstonesToCleanup(shardToState.Value.Name, shardToState.Value, context, out var cleanupState);
-                                switch (cleanupState)
-                                {
-                                    case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
-                                        _hasMoreTombstones = true;
-                                        break;
-                                    case CompareExchangeTombstonesCleanupState.HasMoreTombstones:
-                                        Debug.Assert(cmd != null);
-                                        cleanCompareExchangeTombstonesCommands.Add(cmd);
-                                        break;
-                                    case CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus:
-                                    case CompareExchangeTombstonesCleanupState.NoMoreTombstones:
-                                        break;
+                                case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
+                                    _hasMoreTombstones = true;
+                                    break;
+                                case CompareExchangeTombstonesCleanupState.HasMoreTombstones:
+                                    Debug.Assert(cmd != null, $"Expected to get command {nameof(CleanCompareExchangeTombstonesCommand)} but it was null");
+                                    cleanCompareExchangeTombstonesCommands.Add(cmd);
+                                    break;
+                                case CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus:
+                                case CompareExchangeTombstonesCleanupState.NoMoreTombstones:
+                                    break;
 
-                                    default:
-                                        throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
-                                }
+                                default:
+                                    throw new NotSupportedException($"Not supported state: '{cleanupState}'.");
                             }
                         }
                     }
@@ -326,7 +324,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     var result = await _server.SendToLeaderAsync(cmd);
                     await _server.Cluster.WaitForIndexNotification(result.Index);
                     var hasMore = (bool)result.Result;
-
                     _hasMoreTombstones |= hasMore;
                 }
 
@@ -600,8 +597,9 @@ namespace Raven.Server.ServerWide.Maintenance
             return cleanupCommands;
         }
 
-        internal CleanCompareExchangeTombstonesCommand GetCompareExchangeTombstonesToCleanup(string databaseName, DatabaseObservationState state, ClusterOperationContext context, out CompareExchangeTombstonesCleanupState cleanupState)
+        internal CleanCompareExchangeTombstonesCommand GetCompareExchangeTombstonesToCleanup(string databaseName, MergedDatabaseObservationState mergedState, ClusterOperationContext context, out CompareExchangeTombstonesCleanupState cleanupState)
         {
+            Debug.Assert(ShardHelper.IsShardName(databaseName) == false, $"Compare exchanges are put in cluster under sharded database name, so can't delete them from under shard name {databaseName}");
             const int amountToDelete = 8192;
 
             if (_server.Cluster.HasCompareExchangeTombstones(context, databaseName) == false)
@@ -610,8 +608,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 return null;
             }
 
-            cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, state, out long maxEtag);
-
+            cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, mergedState, out long maxEtag);
+            
             return cleanupState == CompareExchangeTombstonesCleanupState.HasMoreTombstones
                 ? new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId())
                 : null;
@@ -624,86 +622,101 @@ namespace Raven.Server.ServerWide.Maintenance
             InvalidPeriodicBackupStatus,
             NoMoreTombstones
         }
-
-        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string databaseName, DatabaseObservationState state, out long maxEtag) where TRavenTransaction : RavenTransaction
+        
+        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string databaseName, MergedDatabaseObservationState mergedState, out long maxEtag) where TRavenTransaction : RavenTransaction
         {
             List<long> periodicBackupTaskIds;
             maxEtag = long.MaxValue;
+            bool isSharded;
 
-            if (state?.RawDatabase != null)
+            if (mergedState.RawDatabase != null)
             {
-                periodicBackupTaskIds = state.RawDatabase.PeriodicBackupsTaskIds;
+                periodicBackupTaskIds = mergedState.RawDatabase.PeriodicBackupsTaskIds;
+                isSharded = mergedState.RawDatabase.IsSharded;
             }
             else
             {
                 using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                    periodicBackupTaskIds = rawRecord.PeriodicBackupsTaskIds;
-            }
-
-            if (periodicBackupTaskIds != null && periodicBackupTaskIds.Count > 0)
-            {
-                foreach (var taskId in periodicBackupTaskIds)
                 {
-                    var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
-                    if (singleBackupStatus == null)
-                        continue;
-
-                    if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastFullBackupInternal), out DateTime? lastFullBackupInternal) == false || lastFullBackupInternal == null)
-                    {
-                        // never backed up yet
-                        if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackupInternal), out DateTime? lastIncrementalBackupInternal) == false || lastIncrementalBackupInternal == null)
-                            continue;
-                    }
-
-                    if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false ||
-                        lastRaftIndexBlittable == null)
-                    {
-                        if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.Error), out BlittableJsonReaderObject error) == false || error != null)
-                        {
-                            // backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones
-                            return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
-                        }
-
-                        continue;
-                    }
-
-                    if (lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false || lastRaftIndex == null)
-                    {
-                        continue;
-                    }
-
-                    if (lastRaftIndex < maxEtag)
-                        maxEtag = lastRaftIndex.Value;
-
-                    if (maxEtag == 0)
-                        return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                    periodicBackupTaskIds = rawRecord.PeriodicBackupsTaskIds;
+                    isSharded = rawRecord.IsSharded;
                 }
             }
 
-            if (state != null)
+            foreach (var (shardNumber, state) in mergedState.States)
             {
-                if (state.DatabaseTopology.Count != state.Current.Count) // we have a state change, do not remove anything
-                    return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                //if sharded, we have to get backup status by shard name
+                var shardName = isSharded ? ShardHelper.ToShardName(databaseName, shardNumber) : databaseName;
 
-                foreach (var node in state.DatabaseTopology.AllNodes)
+                if (periodicBackupTaskIds != null && periodicBackupTaskIds.Count > 0)
                 {
-                    if (state.Current.TryGetValue(node, out var nodeReport) == false)
-                        continue;
-
-                    if (nodeReport.Report.TryGetValue(state.Name, out var report) == false)
-                        continue;
-
-                    foreach (var kvp in report.LastIndexStats)
+                    foreach (var taskId in periodicBackupTaskIds)
                     {
-                        var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;
-                        if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
+                        var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(shardName, taskId));
+                        if (singleBackupStatus == null)
                             continue;
 
-                        if (lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
-                            maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
+                        if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastFullBackupInternal), out DateTime? lastFullBackupInternal) == false ||
+                            lastFullBackupInternal == null)
+                        {
+                            // never backed up yet
+                            if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackupInternal), out DateTime? lastIncrementalBackupInternal) ==
+                                false || lastIncrementalBackupInternal == null)
+                                continue;
+                        }
+
+                        if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false ||
+                            lastRaftIndexBlittable == null)
+                        {
+                            if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.Error), out BlittableJsonReaderObject error) == false || error != null)
+                            {
+                                // backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones
+                                return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
+                            }
+
+                            continue;
+                        }
+
+                        if (lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false || lastRaftIndex == null)
+                        {
+                            continue;
+                        }
+
+                        if (lastRaftIndex < maxEtag)
+                            maxEtag = lastRaftIndex.Value;
 
                         if (maxEtag == 0)
                             return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                    }
+                }
+
+                if (state != null)
+                {
+                    DevelopmentHelper.ToDo(DevelopmentHelper.Feature.Cluster, DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
+                        "remove this after RavenDB-20150 is fixed");
+                    // if (state.DatabaseTopology.Count != state.Current.Count) // we have a state change, do not remove anything
+                    // return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+
+                    foreach (var node in state.DatabaseTopology.AllNodes)
+                    {
+                        if (state.Current.TryGetValue(node, out var nodeReport) == false)
+                            continue;
+
+                        if (nodeReport.Report.TryGetValue(state.Name, out var report) == false)
+                            continue;
+
+                        foreach (var kvp in report.LastIndexStats)
+                        {
+                            var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;
+                            if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
+                                continue;
+
+                            if (lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
+                                maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
+
+                            if (maxEtag == 0)
+                                return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                        }
                     }
                 }
             }
@@ -815,6 +828,8 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             public static MergedDatabaseObservationState Empty = new MergedDatabaseObservationState();
             private readonly bool _isShardedState;
+            public readonly Dictionary<int, DatabaseObservationState> States;
+            public readonly RawDatabaseRecord RawDatabase;
 
             public MergedDatabaseObservationState(RawDatabaseRecord record)
             {
@@ -849,12 +864,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (_isShardedState == false)
                     throw new InvalidOperationException($"The database {state.Name} is sharded (shard: {shardNumber}), but was initialized as a regular one.");
-
+                
                 States[shardNumber] = state;
             }
 
-            public readonly Dictionary<int, DatabaseObservationState> States;
-            public readonly RawDatabaseRecord RawDatabase;
+            public static MergedDatabaseObservationState GetEmpty()
+            {
+                return new MergedDatabaseObservationState();
+            }
         }
 
         internal class DatabaseObservationState

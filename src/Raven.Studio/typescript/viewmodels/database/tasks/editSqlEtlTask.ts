@@ -25,7 +25,6 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import popoverUtils = require("common/popoverUtils");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
-import { shardingTodo } from "common/developmentHelper";
 
 class sqlTaskTestMode {
     

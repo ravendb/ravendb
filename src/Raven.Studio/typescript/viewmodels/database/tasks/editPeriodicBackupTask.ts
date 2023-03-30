@@ -13,7 +13,6 @@ import manualBackupConfiguration = require("models/database/tasks/periodicBackup
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
-import { shardingTodo } from "common/developmentHelper";
 
 type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 

@@ -14,71 +14,82 @@ namespace Raven.Server.Documents
 {
     public class ConfigurationStorage : IDisposable
     {
+        private readonly DocumentDatabase _db;
         private const string ResourceName = nameof(ConfigurationStorage);
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ConfigurationStorage>(ResourceName);
 
-        public TransactionContextPool ContextPool { get; }
+        public TransactionContextPool ContextPool { get; private set; }
 
         public OperationsStorage OperationsStorage { get; }
 
-        public StorageEnvironment Environment { get; }
+        public StorageEnvironment Environment { get; private set; }
 
         public ConfigurationStorage(DocumentDatabase db)
         {
-            var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
-            string tempPath = null;
-            if (db.Configuration.Storage.TempPath != null)
-            {
-                tempPath = db.Configuration.Storage.TempPath.Combine("Configuration").ToFullPath();
-            }
-
-            var options = db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, tempPath, db.IoChanges, db.CatastrophicFailureNotification)
-                : StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, db.IoChanges, db.CatastrophicFailureNotification);
-
-            options.OnNonDurableFileSystemError += db.HandleNonDurableFileSystemError;
-            options.OnRecoverableFailure += db.HandleRecoverableFailure;
-            options.OnRecoveryError += db.HandleOnConfigurationRecoveryError;
-            options.OnIntegrityErrorOfAlreadySyncedData += db.HandleOnConfigurationIntegrityErrorOfAlreadySyncedData;
-            options.CompressTxAboveSizeInBytes = db.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-            options.SchemaVersion = SchemaUpgrader.CurrentVersion.ConfigurationVersion;
-            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Configuration, this, null, null);
-            options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
-            options.EnablePrefetching = db.Configuration.Storage.EnablePrefetching;
-            options.DiscardVirtualMemory = db.Configuration.Storage.DiscardVirtualMemory;
-            options.TimeToSyncAfterFlushInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
-            options.Encryption.MasterKey = db.MasterKey?.ToArray();
-
-            options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-            if (db.Configuration.Storage.MaxScratchBufferSize.HasValue)
-                options.MaxScratchBufferSize = db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = db.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = db.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.SyncJournalsCountThreshold = db.Configuration.Storage.SyncJournalsCountThreshold;
-            options.IgnoreInvalidJournalErrors = db.Configuration.Storage.IgnoreInvalidJournalErrors;
-            options.SkipChecksumValidationOnDatabaseLoading = db.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
-            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = db.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
-            options.MaxNumberOfRecyclableJournals = db.Configuration.Storage.MaxNumberOfRecyclableJournals;
-
-            DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
+            _db = db;
 
             OperationsStorage = new OperationsStorage();
-
-            Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Configuration);
-
-            ContextPool = new TransactionContextPool(Environment, db.Configuration.Memory.MaxContextSizeToKeep);
         }
 
         public void Initialize()
         {
+            var path = _db.Configuration.Core.DataDirectory.Combine("Configuration");
+            string tempPath = null;
+            if (_db.Configuration.Storage.TempPath != null)
+            {
+                tempPath = _db.Configuration.Storage.TempPath.Combine("Configuration").ToFullPath();
+            }
+
+            var options = _db.Configuration.Core.RunInMemory
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, tempPath, _db.IoChanges, _db.CatastrophicFailureNotification)
+                : StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, _db.IoChanges, _db.CatastrophicFailureNotification);
+
+            options.OnNonDurableFileSystemError += _db.HandleNonDurableFileSystemError;
+            options.OnRecoverableFailure += _db.HandleRecoverableFailure;
+            options.OnRecoveryError += _db.HandleOnConfigurationRecoveryError;
+            options.OnIntegrityErrorOfAlreadySyncedData += _db.HandleOnConfigurationIntegrityErrorOfAlreadySyncedData;
+            options.CompressTxAboveSizeInBytes = _db.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
+            options.SchemaVersion = SchemaUpgrader.CurrentVersion.ConfigurationVersion;
+            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Configuration, this, null, null);
+            options.ForceUsing32BitsPager = _db.Configuration.Storage.ForceUsing32BitsPager;
+            options.EnablePrefetching = _db.Configuration.Storage.EnablePrefetching;
+            options.DiscardVirtualMemory = _db.Configuration.Storage.DiscardVirtualMemory;
+            options.TimeToSyncAfterFlushInSec = (int)_db.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
+            options.Encryption.MasterKey = _db.MasterKey?.ToArray();
+
+            options.DoNotConsiderMemoryLockFailureAsCatastrophicError = _db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
+            if (_db.Configuration.Storage.MaxScratchBufferSize.HasValue)
+                options.MaxScratchBufferSize = _db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
+            options.PrefetchSegmentSize = _db.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
+            options.PrefetchResetThreshold = _db.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+            options.SyncJournalsCountThreshold = _db.Configuration.Storage.SyncJournalsCountThreshold;
+            options.IgnoreInvalidJournalErrors = _db.Configuration.Storage.IgnoreInvalidJournalErrors;
+            options.SkipChecksumValidationOnDatabaseLoading = _db.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
+            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = _db.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
+            options.MaxNumberOfRecyclableJournals = _db.Configuration.Storage.MaxNumberOfRecyclableJournals;
+
+            try
+            {
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, _db.Configuration.Storage, _db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
+
+                Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Configuration);
+            }
+            catch
+            {
+                options.Dispose();
+                throw;
+            }
+
+            ContextPool = new TransactionContextPool(Environment, _db.Configuration.Memory.MaxContextSizeToKeep);
+
             OperationsStorage.Initialize(Environment, ContextPool);
         }
 
         public void Dispose()
         {
             ContextPool?.Dispose();
-            Environment.Dispose();
+            Environment?.Dispose();
         }
     }
 }

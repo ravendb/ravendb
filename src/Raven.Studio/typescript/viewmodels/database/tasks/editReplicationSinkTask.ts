@@ -20,7 +20,6 @@ import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
-import { shardingTodo } from "common/developmentHelper";
 
 class editReplicationSinkTask extends shardViewModelBase {
 

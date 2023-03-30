@@ -1,19 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Azure;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
+using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -310,7 +321,7 @@ namespace SlowTests.Sharding.Cluster
             {
                 { RavenConfiguration.GetKey(x => x.Indexing.CleanupInterval), "0" },
             };
-            var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0, customSettings: settings);
+            var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0, customSettings: settings, shouldRunInMemory: true);
             await ShardingCluster.CreateShardedDatabaseInCluster(database, replicationFactor: 1, cluster, shards: 3);
 
             using (var store = Sharding.GetDocumentStore(new Options {Server = cluster.Leader, CreateDatabase = false, ModifyDatabaseName = _ => database,}))
@@ -392,6 +403,283 @@ namespace SlowTests.Sharding.Cluster
                 }, true);
 
                 Assert.True(normalOnRecord);
+            }
+        }
+
+        [Fact]
+        public async Task CompareExchangeTombstonesWillBeCleanedWhenSomeShardsNeverBackedUp()
+        {
+            var database = GetDatabaseName();
+            var settings = new Dictionary<string, string>
+            {
+                { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "0" },
+            };
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0, customSettings: settings);
+            await ShardingCluster.CreateShardedDatabaseInCluster(database, replicationFactor: 1, (nodes, leader), shards: 3);
+
+            var backupPath = NewDataPath(suffix: $"BackupFolder");
+
+            using (var store = new DocumentStore()
+            {
+                Database = database,
+                Urls = new string[] { leader.WebUrl }
+            }.Initialize())
+            {
+                var user = new User
+                {
+                    Name = "🤡"
+                };
+
+                //find shard number instance on leader
+                var shardingConfig = await Sharding.GetShardingConfigurationAsync(store);
+
+                var serverToShard = new Dictionary<RavenServer, int>();
+                foreach (var server in nodes)
+                {
+                    var shard = shardingConfig.Shards.First(x => x.Value.Members.Contains(server.ServerStore.NodeTag)).Key;
+                    serverToShard[server] = shard;
+                }
+
+                var shardOnLeader = serverToShard[leader];
+
+                var shardToCX = new Dictionary<int, CompareExchangeResult<User>>();
+                var shard2User = "users/1";
+                Assert.Equal(2, await Sharding.GetShardNumberFor(store, shard2User));
+                var shard0User = "users/0";
+                Assert.Equal(0, await Sharding.GetShardNumberFor(store, shard0User));
+                var shard1User = "users/6";
+                Assert.Equal(1, await Sharding.GetShardNumberFor(store, shard1User));
+
+                //create one 3 compare exchanges in cluster
+                shardToCX[0] = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard0User, user, 0));
+                shardToCX[1] = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard1User, user, 0));
+                shardToCX[2] = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard2User, user, 0));
+                
+                //suspend observer to stall tombstone cleaning
+                leader.ServerStore.Observer.Suspended = true;
+
+                //stall the periodic backup on 2 shards
+                var tcs = new TaskCompletionSource<object>();
+                var server1Database = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]), new List<RavenServer>() { nodes[1] });
+                server1Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
+                var server2Database = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]), new List<RavenServer>() { nodes[2] });
+                server2Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
+
+                var timeBeforeCxDeletion = DateTime.UtcNow;
+
+                //delete the compare exchanges
+                await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard0User, shardToCX[0].Index));
+                await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard1User, shardToCX[1].Index));
+                await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard2User, shardToCX[2].Index));
+
+                await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
+
+                //run periodic backup on leader
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 * *");
+                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(leader, store, config, isFullBackup: false);
+                
+                //wait for periodic backup to finish running
+                var done = await WaitForValueAsync(() =>
+                {
+                    using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var itemName = PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(database, shardOnLeader), backupTaskId);
+                        var status = leader.ServerStore.Cluster.Read(context, itemName);
+                        if (status == null)
+                            return false;
+                        status.TryGet(nameof(LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable);
+                        lastRaftIndexBlittable.TryGet(nameof(LastRaftIndex.LastEtag), out long etag);
+                        
+                        return etag >= shardToCX[shardOnLeader].Index;
+                    }
+                }, true);
+                
+                Assert.True(done);
+
+                await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
+
+                //unsuspend and wait for the tombstone cleaner
+                leader.ServerStore.Observer.Suspended = false;
+
+                //wait for the servers to execute the cleanup command waiting in the state machine
+                //(_lastTombstonesCleanupTimeInTicks only represents last time LOOKED for something to delete)
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    return leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks > timeBeforeCxDeletion.Ticks;
+                }, true);
+
+                //ensure no compare exchange tombstones were deleted after the tombstone cleanup
+                await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 0, nodes);
+            }
+        }
+
+        [Fact]
+        public async Task CompareExchangeTombstoneWillBeCleanedOnlyWhenAllShardsHaveBackedUpPreviousOnes()
+        {
+            var database = GetDatabaseName();
+            var settings = new Dictionary<string, string>
+            {
+                { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "0" },
+            };
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0, customSettings: settings);
+            await ShardingCluster.CreateShardedDatabaseInCluster(database, replicationFactor: 1, (nodes, leader), shards: 3);
+
+            var backupPath = NewDataPath(suffix: $"BackupFolder");
+
+            using (var store = new DocumentStore()
+            {
+                Database = database,
+                Urls = new string[] { leader.WebUrl }
+            }.Initialize())
+            {
+                var user = new User
+                {
+                    Name = "🤡"
+                };
+
+                //find shard number instance on leader
+                var shardingConfig = await Sharding.GetShardingConfigurationAsync(store);
+
+                var serverToShard = new Dictionary<RavenServer, int>();
+                foreach (var server in nodes)
+                {
+                    var shard = shardingConfig.Shards.First(x => x.Value.Members.Contains(server.ServerStore.NodeTag)).Key;
+                    serverToShard[server] = shard;
+                }
+
+                var shardOnLeader = serverToShard[leader];
+                
+                var shard2User = "users/1";
+                Assert.Equal(2, await Sharding.GetShardNumberFor(store, shard2User));
+                var shard0User = "users/0";
+                Assert.Equal(0, await Sharding.GetShardNumberFor(store, shard0User));
+                var shard1User = "users/6";
+                Assert.Equal(1, await Sharding.GetShardNumberFor(store, shard1User));
+
+                //create 3 compare exchanges in cluster
+                var cx1 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard0User, user, 0));
+                var cx2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard1User, user, 0));
+                var lastDeletedCx = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard2User, user, 0));
+
+                var timeBeforeCxDeletion = DateTime.UtcNow;
+
+                //delete cx to create tombstones
+                cx1 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard0User, cx1.Index));
+                cx2 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard1User, cx2.Index));
+
+                //run periodic backup on all shards
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 * *");
+                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(leader, store, config, isFullBackup: false);
+
+                var documentDatabase1 = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() { nodes[1] }, ShardHelper.ToShardName(database, serverToShard[nodes[1]]));
+                await WaitAndAssertForValueAsync(() => documentDatabase1.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == backupTaskId) != null, true);
+                documentDatabase1.PeriodicBackupRunner.StartBackupTask(backupTaskId, isFullBackup: false);
+
+                var documentDatabase2 = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() { nodes[2] }, ShardHelper.ToShardName(database, serverToShard[nodes[2]]));
+                await WaitAndAssertForValueAsync(() => documentDatabase2.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == backupTaskId) != null, true);
+                documentDatabase2.PeriodicBackupRunner.StartBackupTask(backupTaskId, isFullBackup: false);
+                
+                //wait till all shards finish backing up the 2 tombstones
+                foreach (var node in nodes)
+                {
+                    var finished = await WaitForValueAsync(() =>
+                    {
+                        using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var itemName = PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(database, serverToShard[node]), backupTaskId);
+                            var status = node.ServerStore.Cluster.Read(context, itemName);
+                            if (status == null)
+                                return false;
+                            status.TryGet(nameof(LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable);
+                            lastRaftIndexBlittable.TryGet(nameof(LastRaftIndex.LastEtag), out long etag);
+                            
+                            return etag >= cx2.Index;
+                        }
+                    }, true);
+
+                    Assert.True(finished);
+                }
+
+                //wait till tombstone cleaner cleans the 2 cx tombstones
+                await WaitAndAssertForValueAsync(() => leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks > timeBeforeCxDeletion.Ticks, true);
+                
+                await AssertCompareExchangesAsync(database, expectedCompareExchanges: 1, expectedTombstones: 0, nodes);
+
+                //suspend observer to stall tombstone cleaning
+                leader.ServerStore.Observer.Suspended = true;
+
+                //stall the periodic backup on 2 shards
+                var tcs = new TaskCompletionSource<object>();
+                var server1Database = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]), new List<RavenServer>() { nodes[1] });
+                server1Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
+                var server2Database = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]), new List<RavenServer>() { nodes[2] });
+                server2Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
+
+                timeBeforeCxDeletion = DateTime.UtcNow;
+
+                //delete the last compare exchanges
+                lastDeletedCx = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard2User, lastDeletedCx.Index));
+                
+                //trigger periodic backup again on leader
+                var documentDatabase = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() {leader}, ShardHelper.ToShardName(database, shardOnLeader));
+                documentDatabase.PeriodicBackupRunner.StartBackupTask(backupTaskId, isFullBackup: false);
+                
+                //wait for periodic backup to finish running
+                var done = await WaitForValueAsync(() =>
+                {
+                    using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var itemName = PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(database, shardOnLeader), backupTaskId);
+                        var status = leader.ServerStore.Cluster.Read(context, itemName);
+                        if (status == null)
+                            return false;
+                        status.TryGet(nameof(LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable);
+                        lastRaftIndexBlittable.TryGet(nameof(LastRaftIndex.LastEtag), out long etag);
+                        
+                        return etag >= lastDeletedCx.Index;
+                    }
+                }, true);
+
+                Assert.True(done);
+                
+                //unsuspend and wait for the tombstone cleaner
+                leader.ServerStore.Observer.Suspended = false;
+                
+                //wait for the cleaner to execute
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    return leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks > timeBeforeCxDeletion.Ticks;
+                }, true);
+
+                //ensure last compare exchange tombstone wasn't deleted after the tombstone cleanup
+                await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 1, nodes);
+            }
+        }
+
+        private async Task AssertCompareExchangesAsync(string database, int expectedCompareExchanges, int expectedTombstones, List<RavenServer> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                long numOfCompareExchangeTombstones = -1;
+                long numOfCompareExchanges = -1;
+                
+                await WaitForValueAsync(() =>
+                {
+                    using (node.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        numOfCompareExchangeTombstones = node.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, database);
+                        numOfCompareExchanges = node.ServerStore.Cluster.GetNumberOfCompareExchange(context, database);
+                        
+                        return numOfCompareExchanges == expectedCompareExchanges && numOfCompareExchangeTombstones == expectedTombstones;
+                    }
+                }, true);
+
+                Assert.Equal(expectedCompareExchanges, numOfCompareExchanges);
+                Assert.Equal(expectedTombstones, numOfCompareExchangeTombstones);
             }
         }
     }

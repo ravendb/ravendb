@@ -26,7 +26,6 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
-import { shardingTodo } from "common/developmentHelper";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class editReplicationHubTask extends shardViewModelBase {
