@@ -77,7 +77,7 @@ public class CoraxIndexQueryingScope : IndexQueryingScopeBase<UnmanagedSpan>
         foreach (var id in distinctIds)
         {
             var coraxEntry = _searcher.GetReaderAndIdentifyFor(id, out var key);
-            var retrieverInput = new RetrieverInput(_fieldsMapping, coraxEntry, key, indexFieldsPersistence);
+            var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, coraxEntry, key, indexFieldsPersistence);
             var result = _retriever.Get(ref retrieverInput, token);
 
             if (result.Document != null)
