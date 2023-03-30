@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Patch
                 ref var reader = ref parent.IndexRetriever.CoraxEntry;
                 var fieldReader = binding is not null
                     ? reader.GetFieldReaderFor(binding.Metadata)
-                    : reader.GetFieldReaderFor(Encodings.Utf8.GetBytes(property));
+                    : reader.GetFieldReaderFor(parent.IndexRetriever.CoraxIndexSearcher.GetDynamicFieldName(property));
 
                 switch (fieldReader.Type)
                 {
