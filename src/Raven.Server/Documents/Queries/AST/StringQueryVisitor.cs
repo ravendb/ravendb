@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client.Documents.Session.Tokens;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -87,7 +88,8 @@ namespace Raven.Server.Documents.Queries.AST
                 if (expressions[i].Alias != null)
                 {
                     _sb.Append(" AS ");
-                    _sb.Append(expressions[i].Alias.Value.Value);
+
+                    AppendStringSegment(expressions[i].Alias.Value);
                 }
             }
         }
@@ -279,18 +281,8 @@ namespace Raven.Server.Documents.Queries.AST
             EnsureSpace();
             for (int i = 0; i < field.Compound.Count; i++)
             {
-                var quote = RequiresQuotes(field.Compound[i]);
+                AppendStringSegment(field.Compound[i]);
 
-                if (quote)
-                {
-                    _sb.Append("'");
-                    _sb.Append(field.Compound[i].Value.Replace("'", "\\'"));
-                    _sb.Append("'");
-                }
-                else
-                {
-                    _sb.Append(field.Compound[i].Value);
-                }
                 if (i + 1 != field.Compound.Count)
                     _sb.Append(".");
             }
@@ -357,6 +349,10 @@ namespace Raven.Server.Documents.Queries.AST
                 if (char.IsLetterOrDigit(s[i]) == false)
                     return true;
             }
+
+            if (QueryToken.IsKeyword(s.Value))
+                return true;
+
             return false;
         }
 
@@ -383,7 +379,24 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 EnsureSpace();
 
-                _sb.Append("AS ").Append(alias);
+                _sb.Append("AS ");
+
+                AppendStringSegment(alias.Value);
+            }
+        }
+
+        private void AppendStringSegment(StringSegment stringSegment)
+        {
+            var quote = RequiresQuotes(stringSegment);
+            if (quote)
+            {
+                _sb.Append("'");
+                _sb.Append(stringSegment.Value.Replace("'", "\\'"));
+                _sb.Append("'");
+            }
+            else
+            {
+                _sb.Append(stringSegment.Value);
             }
         }
     }
