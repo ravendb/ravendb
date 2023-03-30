@@ -161,7 +161,7 @@ Data is stored in a different directory, and needs to be migrated or linked upon
 
 We highly recommend migrating your data from legacy data directory to the new one `/var/lib/ravendb/data/`.
 
-However, running the server using `run-server.sh`, which is a default entrypoint for the container, causes to run `link-legacy-datadir.sh` script. It checks whether RavenDB data is stored under legacy data directory. If so, it tries to create symlink to the new data directory. If the permissions are insufficent for the 'ravendb' user (which is running the container) it is going to fail with an appropriate error message.
+However, running the server using `run-server.sh`, which is a default entry point for the container, causes to run `link-legacy-datadir.sh` script. It checks whether RavenDB data is stored under legacy data directory. If so, it tries to create symlink to the new data directory. If the permissions are insufficent for the 'ravendb' user (which is running the container) it is going to fail with an appropriate error message.
 
 ##### How to run as different UID?
 To run with a different UID or GID, you need to build the Ubuntu image yourself with these build args (both are optional):
