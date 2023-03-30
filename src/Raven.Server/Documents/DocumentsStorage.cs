@@ -1514,14 +1514,14 @@ namespace Raven.Server.Documents
                 Type = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _),
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
                 ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr),
-                LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr)
+                LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr),
+                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr)
             };
 
             switch (result.Type)
             {
                 case Tombstone.TombstoneType.Document:
                     result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
-                    result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                     result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
                     break;
                 case Tombstone.TombstoneType.Revision:

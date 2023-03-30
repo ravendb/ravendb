@@ -479,14 +479,20 @@ namespace Raven.Server.Documents
             _documentDatabase.Metrics.Attachments.BytesPutsPerSec.MarkSingleThreaded(stream.Length);
         }
 
-        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, Slice key, int expectedCount = 1)
+        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)
         {
             if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
             {
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                var deleteResult = tree.DeleteStream(hash);
-                var size = deleteResult.Size;
-                UpdateBucketStatsOnPutOrDeleteStream(context, key, -size);
+                using (tree.GetStreamTag(hash, out var keySlice))
+                {
+                    if (keySlice.HasValue == false)
+                        return; // stream doesn't exists
+
+                    var deleteResult = tree.DeleteStream(hash);
+                    var size = deleteResult.Size;
+                    UpdateBucketStatsOnPutOrDeleteStream(context, keySlice, -size);
+                }
             }
         }
 
@@ -1365,13 +1371,9 @@ namespace Raven.Server.Documents
 
         public void RemoveAttachmentStreamsWithoutReferences(DocumentsOperationContext context, List<Slice> attachmentHashesToMaybeDelete)
         {
-            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
             foreach (var hash in attachmentHashesToMaybeDelete)
             {
-                if (GetCountOfAttachmentsForHash(context, hash) == 0)
-                {
-                    tree.DeleteStream(hash);
-                }
+                DeleteAttachmentStream(context, hash, 0);
             }
         }
     }

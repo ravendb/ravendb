@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Data.Fixed;
@@ -506,6 +507,17 @@ namespace Voron.Data.BTrees
             return GetStreamTag(info);
         }
 
+        public ByteStringContext.InternalScope GetStreamTag(Slice key, out Slice tag)
+        {
+            var info = GetStreamInfo(key, writable: false);
+
+            tag = default;
+            if (info == null || info->TagSize == 0)
+                return default;
+
+            return Slice.From(_tx.Allocator, StreamInfo.GetTagPtr(info), info->TagSize, out tag);
+        }
+
         public string GetStreamTag(string key)
         {
             using (Slice.From(_tx.Allocator, key, out Slice str))
@@ -521,6 +533,15 @@ namespace Voron.Data.BTrees
             {
                 return result.ToString().Replace((char)SpecialChars.RecordSeparator, '|');
             }
+        }
+
+        private ByteStringContext.InternalScope GetStreamTag(StreamInfo* info, out Slice tag)
+        {
+            tag = default;
+            if (info == null || info->TagSize == 0)
+                return default;
+
+            return Slice.From(_tx.Allocator, StreamInfo.GetTagPtr(info), info->TagSize, out tag);
         }
 
         private void ThrowStreamSizeMismatch(Slice name, long totalChunksSize, StreamInfo* info)
