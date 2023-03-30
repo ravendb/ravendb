@@ -11,8 +11,6 @@ import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
-import { shardingTodo } from "common/developmentHelper";
-
 class editExternalReplicationTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editExternalReplicationTask.html");

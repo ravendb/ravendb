@@ -24,8 +24,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import document = require("models/database/documents/document");
 import { highlight, languages } from "prismjs";
-import { shardingTodo } from "common/developmentHelper";
-
 class kafkaTaskTestMode {
     documentId = ko.observable<string>();
     testDelete = ko.observable<boolean>(false);
@@ -199,6 +197,11 @@ class editKafkaEtlTask extends viewModelBase {
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
     collections = collectionsTracker.default.collections;
+
+    isSharded = ko.pureComputed(() => {
+        const db = this.activeDatabase();
+        return db ? db.isSharded() : false;
+    });
 
     constructor() {
         super();

@@ -25,8 +25,6 @@ import ongoingTaskElasticSearchTransformationModel = require("models/database/ta
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
-import { shardingTodo } from "common/developmentHelper";
-
 class elasticSearchTaskTestMode {
 
     documentId = ko.observable<string>();

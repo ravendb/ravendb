@@ -24,8 +24,6 @@ import testQueueEtlCommand = require("commands/database/tasks/testQueueEtlComman
 import document = require("models/database/documents/document");
 import popoverUtils = require("common/popoverUtils");
 import { highlight, languages } from "prismjs";
-import { shardingTodo } from "common/developmentHelper";
-
 class rabbitMqTaskTestMode {
     documentId = ko.observable<string>();
     testDelete = ko.observable<boolean>(false);
@@ -194,6 +192,11 @@ class editRabbitMqEtlTask extends viewModelBase {
     
     collections = collectionsTracker.default.collections;
 
+    isSharded = ko.pureComputed(() => {
+        const db = this.activeDatabase();
+        return db ? db.isSharded() : false;
+    });
+    
     constructor() {
         super();
         
