@@ -144,6 +144,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             var shardRestoreSetting = configuration.ShardRestoreSettings.Shards.Single(s => s.Value.ShardNumber == shardNumber).Value;
             configuration.DatabaseName = ShardHelper.ToShardName(configuration.DatabaseName, shardNumber);
+            configuration.LastFileNameToRestore = shardRestoreSetting.LastFileNameToRestore;
             configuration.ShardRestoreSettings = null;
 
             switch (configuration)
