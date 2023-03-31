@@ -5,15 +5,17 @@ using System.Threading.Tasks;
 
 namespace Raven.Server.Documents.Replication.Senders
 {
-    public class MergedEnumerator<T> : IEnumerator<T> 
+    public class MergedEnumerator<T> : IEnumerator<T>
     {
-        private readonly IComparer<T> _comparer;
-        protected  readonly List<IEnumerator<T>> _workEnumerators = new List<IEnumerator<T>>();
-        protected T _currentItem;
+        protected readonly IComparer<T> Comparer;
+        protected readonly List<IEnumerator<T>> WorkEnumerators = new();
+        protected T CurrentItem;
+
+        protected IEnumerator<T> CurrentEnumerator;
 
         public MergedEnumerator(IComparer<T> comparer)
         {
-            _comparer = comparer;
+            Comparer = comparer;
         }
 
         public virtual void AddEnumerator(IEnumerator<T> enumerator)
@@ -23,30 +25,41 @@ namespace Raven.Server.Documents.Replication.Senders
 
             if (enumerator.MoveNext())
             {
-                _workEnumerators.Add(enumerator);
+                WorkEnumerators.Add(enumerator);
+            }
+            else
+            {
+                enumerator.Dispose();
             }
         }
 
         public virtual bool MoveNext()
         {
-            if (_workEnumerators.Count == 0)
-                return false;
-
-            var current = _workEnumerators[0];
-            for (var index = 1; index < _workEnumerators.Count; index++)
+            if (CurrentEnumerator != null)
             {
-                if (_comparer.Compare(_workEnumerators[index].Current, current.Current) < 0)
+                if (CurrentEnumerator.MoveNext() == false)
                 {
-                    current = _workEnumerators[index];
+                    using (CurrentEnumerator)
+                    {
+                        WorkEnumerators.Remove(CurrentEnumerator);
+                        CurrentEnumerator = null;
+                    }
                 }
             }
 
-            _currentItem = current.Current;
-            
-            if (current.MoveNext() == false)
+            if (WorkEnumerators.Count == 0)
+                return false;
+
+            CurrentEnumerator = WorkEnumerators[0];
+            for (var index = 1; index < WorkEnumerators.Count; index++)
             {
-                _workEnumerators.Remove(current);
+                if (Comparer.Compare(WorkEnumerators[index].Current, CurrentEnumerator.Current) < 0)
+                {
+                    CurrentEnumerator = WorkEnumerators[index];
+                }
             }
+
+            CurrentItem = CurrentEnumerator.Current;
 
             return true;
         }
@@ -58,32 +71,33 @@ namespace Raven.Server.Documents.Replication.Senders
 
         object IEnumerator.Current => Current;
 
-        public T Current => _currentItem;
+        public T Current => CurrentItem;
 
         public void Dispose()
         {
-            foreach (var workEnumerator in _workEnumerators)
+            foreach (var workEnumerator in WorkEnumerators)
             {
                 workEnumerator.Dispose();
             }
 
-            _workEnumerators.Clear();
+            WorkEnumerators.Clear();
         }
     }
 
-    public class MergedAsyncEnumerator<T> : IAsyncEnumerator<T> 
+    public sealed class MergedAsyncEnumerator<T> : IAsyncEnumerator<T>
     {
         private readonly IComparer<T> _comparer;
-        protected  readonly List<IAsyncEnumerator<T>> _workEnumerators = new List<IAsyncEnumerator<T>>();
-        protected T _currentItem;
-        private IAsyncEnumerator<T> _currentWorker;
+        private readonly List<IAsyncEnumerator<T>> _workEnumerators = new();
+        private T _currentItem;
+
+        private IAsyncEnumerator<T> _currentEnumerator;
 
         public MergedAsyncEnumerator(IComparer<T> comparer)
         {
             _comparer = comparer;
         }
 
-        public virtual async ValueTask AddAsyncEnumerator(IAsyncEnumerator<T> enumerator)
+        public async ValueTask AddAsyncEnumerator(IAsyncEnumerator<T> enumerator)
         {
             if (enumerator == null)
                 return;
@@ -92,37 +106,40 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 _workEnumerators.Add(enumerator);
             }
+            else
+            {
+                await enumerator.DisposeAsync();
+            }
         }
 
-        public bool _firstMove = true;
-
-        public virtual async ValueTask<bool> MoveNextAsync()
+        public async ValueTask<bool> MoveNextAsync()
         {
+            if (_currentEnumerator != null)
+            {
+                if (await _currentEnumerator.MoveNextAsync() == false)
+                {
+                    await using (_currentEnumerator)
+                    {
+                        _workEnumerators.Remove(_currentEnumerator);
+                        _currentEnumerator = null;
+                    }
+                }
+            }
+
             if (_workEnumerators.Count == 0)
                 return false;
 
-            if (_firstMove == false)
-            {
-                if (await _currentWorker.MoveNextAsync() == false)
-                {
-                    _workEnumerators.Remove(_currentWorker);
-                }
-
-                if (_workEnumerators.Count == 0)
-                    return false;
-            }
-            _firstMove = false;
-
-            _currentWorker = _workEnumerators[0];
+            _currentEnumerator = _workEnumerators[0];
             for (var index = 1; index < _workEnumerators.Count; index++)
             {
-                if (_comparer.Compare(_workEnumerators[index].Current, _currentWorker.Current) < 0)
+                if (_comparer.Compare(_workEnumerators[index].Current, _currentEnumerator.Current) < 0)
                 {
-                    _currentWorker = _workEnumerators[index];
+                    _currentEnumerator = _workEnumerators[index];
                 }
             }
 
-            _currentItem = _currentWorker.Current;
+            _currentItem = _currentEnumerator.Current;
+
             return true;
         }
 

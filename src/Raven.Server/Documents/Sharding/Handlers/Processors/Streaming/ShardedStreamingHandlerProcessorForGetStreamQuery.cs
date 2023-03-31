@@ -11,7 +11,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Streaming;
 using Raven.Server.Documents.Handlers;
@@ -76,7 +75,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             return new StreamBlittableDocumentQueryResultWriter(responseBodyStream, context);
         }
 
-        private async ValueTask<(IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)> ExecuteQueryAsync(TransactionOperationContext context, IndexQueryServerSide query, string debug, bool ignoreLimit, OperationCancelToken token)
+        private async ValueTask<ShardedStreamQueryResult> ExecuteQueryAsync(TransactionOperationContext context, IndexQueryServerSide query, string debug, bool ignoreLimit, OperationCancelToken token)
         {
             var indexName = AbstractQueryRunner.GetIndexName(query);
 
@@ -100,21 +99,22 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             {
                 try
                 {
-                    var (results, queryStatistics) = await ExecuteQueryAsync(context, query, null, ignoreLimit, token);
-
-                    var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token); // writes blittable docs as blittable docs
-                    queryResult.TotalResults = queryStatistics.TotalResults;
-                    queryResult.IndexName = queryStatistics.IndexName;
-                    queryResult.IndexTimestamp = queryStatistics.IndexTimestamp;
-                    queryResult.IsStale = queryStatistics.IsStale;
-                    queryResult.ResultEtag = queryStatistics.ResultEtag;
-
-                    foreach (BlittableJsonReaderObject doc in results)
+                    using (var result = await ExecuteQueryAsync(context, query, null, ignoreLimit, token))
                     {
-                        await queryResult.AddResultAsync(doc, token.Token);
-                    }
+                        var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token); // writes blittable docs as blittable docs
+                        queryResult.TotalResults = result.Statistics.TotalResults;
+                        queryResult.IndexName = result.Statistics.IndexName;
+                        queryResult.IndexTimestamp = result.Statistics.IndexTimestamp;
+                        queryResult.IsStale = result.Statistics.IsStale;
+                        queryResult.ResultEtag = result.Statistics.ResultEtag;
 
-                    queryResult.Flush();
+                        foreach (BlittableJsonReaderObject doc in result.GetEnumerator())
+                        {
+                            await queryResult.AddResultAsync(doc, token.Token);
+                        }
+
+                        queryResult.Flush();
+                    }
                 }
                 catch (IndexDoesNotExistException)
                 {
@@ -134,16 +134,17 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             {
                 try
                 {
-                    var (results, _) = await ExecuteQueryAsync(context, query, debug, ignoreLimit, token);
-
-                    var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token);
-
-                    foreach (BlittableJsonReaderObject doc in results)
+                    using (var result = await ExecuteQueryAsync(context, query, debug, ignoreLimit, token))
                     {
-                        await queryResult.AddResultAsync(doc, token.Token);
-                    }
+                        var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token);
 
-                    queryResult.Flush();
+                        foreach (BlittableJsonReaderObject doc in result.GetEnumerator())
+                        {
+                            await queryResult.AddResultAsync(doc, token.Token);
+                        }
+
+                        queryResult.Flush();
+                    }
                 }
                 catch (IndexDoesNotExistException)
                 {
@@ -154,7 +155,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         }
     }
 
-    public readonly struct ShardedStreamQueryOperation : IShardedOperation<StreamResult, (IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)>
+    public readonly struct ShardedStreamQueryOperation : IShardedOperation<StreamResult, ShardedStreamQueryResult>
     {
         private readonly HttpContext _httpContext;
         private readonly Func<(JsonOperationContext, IDisposable)> _allocateJsonContext;
@@ -182,7 +183,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
         public string ExpectedEtag { get; }
 
-        public (IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics) Combine(Dictionary<int, ShardExecutionResult<StreamResult>> results)
+        public ShardedStreamQueryResult Combine(Dictionary<int, ShardExecutionResult<StreamResult>> results)
         {
             var queryStats = new StreamQueryStatistics();
 
@@ -206,21 +207,49 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                 mergedEnumerator.AddEnumerator(enumerator);
             }
 
-            return (ApplySkipTake(mergedEnumerator, _skip, _take), queryStats);
+            return new ShardedStreamQueryResult(mergedEnumerator, _skip, _take, queryStats);
+        }
+    }
+
+    public readonly struct ShardedStreamQueryResult : IDisposable
+    {
+        private readonly MergedEnumerator<BlittableJsonReaderObject> _enumerator;
+        private readonly long _skip;
+        private readonly long _take;
+
+        public readonly StreamQueryStatistics Statistics;
+
+        public ShardedStreamQueryResult([NotNull] MergedEnumerator<BlittableJsonReaderObject> enumerator, long skip, long take, [NotNull] StreamQueryStatistics statistics)
+        {
+            _enumerator = enumerator ?? throw new ArgumentNullException(nameof(enumerator));
+            _skip = skip;
+            _take = take;
+            Statistics = statistics ?? throw new ArgumentNullException(nameof(statistics));
         }
 
-        private IEnumerator<BlittableJsonReaderObject> ApplySkipTake(MergedEnumerator<BlittableJsonReaderObject> mergedEnumerator, long skip, long take)
+        public IEnumerator<BlittableJsonReaderObject> GetEnumerator()
         {
-            foreach (var item in mergedEnumerator)
+            var skip = _skip;
+            var take = _take;
+
+            foreach (var item in _enumerator)
             {
                 if (skip-- > 0)
+                {
+                    item.Dispose();
                     continue;
+                }
 
                 if (take-- <= 0)
                     yield break;
 
                 yield return item;
             }
+        }
+
+        public void Dispose()
+        {
+            _enumerator.Dispose();
         }
     }
 }
