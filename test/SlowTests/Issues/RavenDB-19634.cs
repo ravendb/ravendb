@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ public class RavenDB_19634 : RavenTestBase
     {
     }
 
-    [Fact]
-    public async Task Should_Wait_For_Time_Series_Index_Changes()
+    [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task Should_Wait_For_Time_Series_Index_Changes(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             const string id = "users/1";
 
@@ -49,10 +51,11 @@ public class RavenDB_19634 : RavenTestBase
         }
     }
 
-    [Fact]
-    public async Task Should_Wait_For_Time_Series_Copy_Index_Changes()
+    [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task Should_Wait_For_Time_Series_Copy_Index_Changes(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             const string id = "users/1";
             const string id2 = "users/2";
@@ -88,10 +91,11 @@ public class RavenDB_19634 : RavenTestBase
         }
     }
 
-    [Fact]
-    public async Task Should_Wait_For_Counters_Index_Changes()
+    [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task Should_Wait_For_Counters_Index_Changes(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             const string id = "users/1";
 

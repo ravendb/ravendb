@@ -215,8 +215,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -422,8 +422,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapIndexWithLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -581,8 +581,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -741,8 +741,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapReduceIndexWithLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -888,8 +888,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllCountersFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1054,8 +1054,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllCounters(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1214,8 +1214,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CounterNamesFor(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1237,9 +1237,12 @@ return ({
                 var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names", null));
                 Assert.Equal(0, terms.Length);
 
-                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
-                Assert.Equal(1, terms.Length);
-                Assert.Contains("true", terms);
+                if (options.SearchEngineMode is RavenSearchEngineMode.Lucene)
+                {
+                    terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("true", terms);
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -1259,9 +1262,12 @@ return ({
                 Assert.Contains("heartrate", terms);
                 Assert.Contains("heartrate2", terms);
 
-                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
-                Assert.Equal(1, terms.Length);
-                Assert.Contains("true", terms);
+                if (options.SearchEngineMode is RavenSearchEngineMode.Lucene)
+                {
+                    terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("true", terms);
+                }
             }
         }
     }
