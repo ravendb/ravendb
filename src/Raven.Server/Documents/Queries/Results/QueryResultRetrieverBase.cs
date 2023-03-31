@@ -123,6 +123,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         public abstract bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
 
+        public abstract bool CoraxTryGetKey(IndexSearcher searcher, long id, out UnmanagedSpan key);
+
         public abstract Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
 
         protected abstract Document LoadDocument(string id);

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Corax;
 using Lucene.Net.Store;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
@@ -11,9 +11,11 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -55,6 +57,11 @@ namespace Raven.Server.Documents.Queries.Results
         public override bool TryGetKey(ref RetrieverInput retrieverInput, out string key)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
+        }
+
+        public override bool CoraxTryGetKey(IndexSearcher searcher, long id, out UnmanagedSpan key)
+        {
+            throw new NotSupportedException("Graph Queries do not deal with Corax indexes.");
         }
 
         public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields) => DocumentsStorage.Get(_context, id);

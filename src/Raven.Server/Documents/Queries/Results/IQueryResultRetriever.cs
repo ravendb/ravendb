@@ -7,6 +7,8 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Server.Documents.Indexes;
 using IndexSearcher = Lucene.Net.Search.IndexSearcher;
+using Sparrow;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -15,6 +17,8 @@ namespace Raven.Server.Documents.Queries.Results
         (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
         bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
+
+        bool CoraxTryGetKey(Corax.IndexSearcher searcher, long id, out UnmanagedSpan key);
 
         Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
 
