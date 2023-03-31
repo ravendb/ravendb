@@ -2067,13 +2067,7 @@ namespace Raven.Server.Json
             {
                 if (shardedQueryResult.OrderByFields is {Count: > 0})
                 {
-                    if (first == false)
-                    {
-                        writer.WriteComma();
-                    }
-
-                    first = false;
-                    
+                    writer.WriteComma();
                     writer.WritePropertyName(Constants.Documents.Metadata.Sharding.Querying.OrderByFields);
                     writer.WriteStartArray();
 
@@ -2103,11 +2097,7 @@ namespace Raven.Server.Json
 
                 if (shardedQueryResult.ResultDataHash is not null)
                 {
-                    if (first == false)
-                    {
-                        writer.WriteComma();
-                    }
-
+                    writer.WriteComma();
                     writer.WritePropertyName(Constants.Documents.Metadata.Sharding.Querying.ResultDataHash);
                     writer.WriteString(shardedQueryResult.ResultDataHash.Value.ToString());
                 }
