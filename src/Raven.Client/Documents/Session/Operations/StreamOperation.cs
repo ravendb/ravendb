@@ -631,9 +631,11 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_builderContext.AllocatedMemory > 4 * 1024 * 1024 ||
                     _docsCountOnCachedRenewSession > _maxDocsCountOnCachedRenewSession)
                 {
+                    _builder.Dispose();
                     _builderContext.Reset();
                     _builderContext.Renew();
                     _docsCountOnCachedRenewSession = 0;
+                    _builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
                     return;
                 }
 

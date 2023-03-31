@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Commands.Streaming;
 using Raven.Server.Documents.Queries;
@@ -16,7 +14,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Queries
 {
-    internal class ShardedQueryStreamProcessor : AbstractShardedQueryProcessor<PostQueryStreamCommand, StreamResult, (IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)>
+    internal class ShardedQueryStreamProcessor : AbstractShardedQueryProcessor<PostQueryStreamCommand, StreamResult, ShardedStreamQueryResult>
     {
         private readonly string _debug;
         private readonly bool _ignoreLimit;
@@ -45,7 +43,7 @@ namespace Raven.Server.Documents.Sharding.Queries
                 throw new NotSupportedInShardingException("Includes and Loads are not supported in sharded streaming queries");
         }
 
-        public override Task<(IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)> ExecuteShardedOperations(QueryTimingsScope scope)
+        public override Task<ShardedStreamQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
 

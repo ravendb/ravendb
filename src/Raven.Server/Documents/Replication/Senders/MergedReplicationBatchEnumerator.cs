@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 
@@ -9,12 +8,12 @@ namespace Raven.Server.Documents.Replication.Senders
 {
     public class ReplicationBatchItemByEtagComparer : Comparer<ReplicationBatchItem>
     {
-        public static ReplicationBatchItemByEtagComparer Instance = new ReplicationBatchItemByEtagComparer();
+        public static ReplicationBatchItemByEtagComparer Instance = new();
 
         public override int Compare(ReplicationBatchItem x, ReplicationBatchItem y)
         {
             var diff = y.Etag - x.Etag;
-            
+
             if (diff < 0)
                 return -1;
             if (diff > 0)
@@ -55,8 +54,12 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 using (GetStatsFor(type)?.Start())
                 {
-                    _workEnumerators.Add(enumerator);
+                    WorkEnumerators.Add(enumerator);
                 }
+            }
+            else
+            {
+                enumerator.Dispose();
             }
         }
 
@@ -92,28 +95,36 @@ namespace Raven.Server.Documents.Replication.Senders
 
         public override bool MoveNext()
         {
-            if (_workEnumerators.Count == 0)
+            if (CurrentEnumerator != null)
+            {
+                using (GetStatsFor(CurrentItem.Type)?.Start())
+                {
+                    if (CurrentEnumerator.MoveNext() == false)
+                    {
+                        using (CurrentEnumerator)
+                        {
+                            WorkEnumerators.Remove(CurrentEnumerator);
+                            CurrentEnumerator = null;
+                        }
+                    }
+                }
+            }
+
+            if (WorkEnumerators.Count == 0)
                 return false;
 
-            var current = _workEnumerators[0];
-            for (var index = 1; index < _workEnumerators.Count; index++)
+            CurrentEnumerator = WorkEnumerators[0];
+            for (var index = 1; index < WorkEnumerators.Count; index++)
             {
-                if (_workEnumerators[index].Current.Etag < current.Current.Etag)
+                if (WorkEnumerators[index].Current.Etag < CurrentEnumerator.Current.Etag)
                 {
-                    current = _workEnumerators[index];
+                    CurrentEnumerator = WorkEnumerators[index];
                 }
             }
 
-            _currentItem = current.Current;
-            using (GetStatsFor(_currentItem.Type)?.Start())
-            {
-                if (current.MoveNext() == false)
-                {
-                    _workEnumerators.Remove(current);
-                }
+            CurrentItem = CurrentEnumerator.Current;
 
-                return true;
-            }
+            return true;
         }
     }
 }
