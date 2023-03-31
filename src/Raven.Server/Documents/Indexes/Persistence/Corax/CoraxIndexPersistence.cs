@@ -4,6 +4,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Sparrow.Json;
@@ -32,7 +34,16 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                 _converter = new AnonymousCoraxDocumentConverter(index, true);
                 break;
             case IndexType.Map:
-                _converter = new AnonymousCoraxDocumentConverter(index);
+                switch (_index.SourceType)
+                {
+                    case IndexSourceType.Documents:
+                        _converter = new AnonymousCoraxDocumentConverter(index);
+                        break;
+                    case IndexSourceType.TimeSeries:
+                    case IndexSourceType.Counters:
+                        _converter = new CountersAndTimeSeriesAnonymousCoraxDocumentConverter(index);
+                        break;
+                }
                 break;
             case IndexType.JavaScriptMap:
                 switch (_index.SourceType)

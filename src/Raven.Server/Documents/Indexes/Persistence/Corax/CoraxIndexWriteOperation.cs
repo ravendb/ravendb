@@ -209,7 +209,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
         {
-            throw new NotImplementedException();
+            EnsureValidStats(stats);
+            
+            using var _ = Stats.DeleteStats.Start();
+            if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, sourceDocumentId.ToString(CultureInfo.InvariantCulture), out var entriesCountDifference))
+                    _entriesCount += entriesCountDifference;
         }
 
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
