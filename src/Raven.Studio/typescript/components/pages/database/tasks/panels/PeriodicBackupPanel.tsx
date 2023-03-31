@@ -88,7 +88,11 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
 
         const backupTypeText = formatBackupType(data.shared.backupType, nextBackup.IsFull);
         const formatDuration = genUtils.formatDuration(moment.duration(diff), true, 2, true);
-        return `in ${formatDuration} (${backupTypeText})`;
+        const originalDate = nextBackup.OriginalBackupTime;
+        const originalDateText = originalDate
+            ? ", delayed backup from: " + genUtils.formatUtcDateAsLocal(originalDate)
+            : "";
+        return `in ${formatDuration} (${backupTypeText}) ${originalDateText}`;
     }, [data.shared]);
 
     const onGoingBackup = data.nodesInfo.map((x) => x.details?.onGoingBackup).find((x) => x);
