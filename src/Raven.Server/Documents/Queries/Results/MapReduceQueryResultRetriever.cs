@@ -16,7 +16,9 @@ using Sparrow.Json.Parsing;
 using Newtonsoft.Json;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents.Indexes;
+using Sparrow;
 using Constants = Raven.Client.Constants;
+using IndexSearcher = Corax.IndexSearcher;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -89,7 +91,7 @@ namespace Raven.Server.Documents.Queries.Results
             BlittableJsonReaderObject result;
             if (retrieverInput.IsLuceneDocument() == false)
             {
-                retrieverInput.CoraxEntry.GetFieldReaderFor(FieldsToFetch.IndexFields.Count + 1).Read(out var binaryValue);
+                retrieverInput.CoraxEntry.GetFieldReaderFor(retrieverInput.KnownFields.StoredJsonPropertyOffset).Read(out var binaryValue);
                 fixed (byte* ptr = &binaryValue.GetPinnableReference())
                 {
                     using var temp = new BlittableJsonReaderObject(ptr, binaryValue.Length, _context);
@@ -131,6 +133,12 @@ namespace Raven.Server.Documents.Queries.Results
         public override bool TryGetKey(ref RetrieverInput retrieverInput, out string key)
         {
             key = null;
+            return false;
+        }
+        
+        public override bool CoraxTryGetKey(IndexSearcher searcher, long id, out UnmanagedSpan key)
+        {
+            key = default;
             return false;
         }
     }

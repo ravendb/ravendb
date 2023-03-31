@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return 0;
 
                 var distinctIds = ids.Slice(0, limit);
-
+                
                 if (_isMap && hasProjection.IsProjection == false)
                 {
                     // Assumptions: we're in Map, so that mean we have ID of the doc saved in the tree. So we want to keep track what we returns
@@ -558,12 +558,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (willAlwaysIncludeInResults)
                         goto Include;
 
-                    // Ok, we will need to check for duplicates, then we will have to work. 
-                    var rawIdentity = _indexSearcher.GetRawIdentityFor(ids[i]);
-                    bool includeInResults = identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity);
+                    // Ok, we will need to check for duplicates, then we will have to work. In some cases (like TimeSeries) we don't "have" unique identifier so we skip checking.
+                    var identityExists = retriever.CoraxTryGetKey(_indexSearcher, ids[i], out var rawIdentity);
 
                     // If we have figured out that this document identity has already been seen, we are skipping it.
-                    if (includeInResults == false)
+                    if (identityExists && identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity) == false)
                     {
                         docsToLoad++;
                         skippedResults.Value++;
