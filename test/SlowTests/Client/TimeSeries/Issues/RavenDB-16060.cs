@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static SlowTests.Client.TimeSeries.Session.TimeSeriesTypedSessionTests;
@@ -56,10 +57,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public async Task CanIncludeTypedTimeSeriesAsync()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanIncludeTypedTimeSeriesAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today;
 
@@ -539,10 +541,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public async Task CanIncludeTypedTimeSeries_Rollup()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanIncludeTypedTimeSeries_Rollup(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 

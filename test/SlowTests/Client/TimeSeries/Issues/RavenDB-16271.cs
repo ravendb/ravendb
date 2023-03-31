@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,13 +14,14 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesWithQuotedName()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryTimeSeriesWithQuotedName(Options options)
         {
             const string documentId = "users/ayende";
             const string seriesName = "1-0.16.7.1";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -49,13 +51,14 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesWithQuotedName2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryTimeSeriesWithQuotedName2(Options options)
         {
             const string documentId = "users/ayende";
             const string seriesName = "'1.2-345.6'";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

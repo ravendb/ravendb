@@ -221,8 +221,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -379,8 +379,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapIndexWithLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -540,8 +540,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -720,8 +720,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapReduceIndexWithLoad(Options options)
         {
             {
@@ -868,8 +868,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeriesFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1015,8 +1015,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1207,8 +1207,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMultiMapIndex(Options options)
         {
             var now = DateTime.UtcNow.Date;
@@ -1269,7 +1269,7 @@ return ({
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void TimeSeriesNamesFor(Options options)
         {
@@ -1290,13 +1290,16 @@ return ({
 
                 Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
-
+                WaitForUserToContinueTheTest(store);
                 var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names", null));
                 Assert.Equal(0, terms.Length);
 
-                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
-                Assert.Equal(1, terms.Length);
-                Assert.Contains("true", terms);
+                if (options.SearchEngineMode == RavenSearchEngineMode.Lucene)
+                {
+                    terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("true", terms);
+                }
 
                 using (var session = store.OpenSession())
                 {
