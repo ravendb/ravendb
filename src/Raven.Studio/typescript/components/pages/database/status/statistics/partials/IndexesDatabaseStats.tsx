@@ -155,9 +155,9 @@ function IndexStatistics(props: { indexName: string; database: database }) {
                             <DetailsBlock index={index}>
                                 {(data) => (
                                     <>
-                                        {data.mappedPerSecondRate > 1
+                                        {data.mappedPerSecondRate > 0.01
                                             ? genUtils.formatNumberToStringFixed(data.mappedPerSecondRate, 2)
-                                            : ""}
+                                            : "0"}
                                     </>
                                 )}
                             </DetailsBlock>
@@ -192,9 +192,9 @@ function IndexStatistics(props: { indexName: string; database: database }) {
                                     <DetailsBlock index={index}>
                                         {(data) => (
                                             <>
-                                                {data.reducedPerSecondRate > 1
+                                                {data.reducedPerSecondRate > 0.01
                                                     ? genUtils.formatNumberToStringFixed(data.reducedPerSecondRate, 2)
-                                                    : ""}
+                                                    : "0"}
                                             </>
                                         )}
                                     </DetailsBlock>
