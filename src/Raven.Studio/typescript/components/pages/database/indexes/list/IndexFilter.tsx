@@ -2,26 +2,11 @@
 import classNames from "classnames";
 import { shardingTodo } from "common/developmentHelper";
 import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "components/models/indexes";
-import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
-import IndexUtils from "../../../../utils/IndexUtils";
-import {
-    Badge,
-    Button,
-    Col,
-    DropdownItem,
-    FormGroup,
-    Input,
-    InputGroup,
-    Label,
-    PopoverBody,
-    Row,
-    UncontrolledPopover,
-} from "reactstrap";
-import useId from "hooks/useId";
+import { Badge, Button, Col, DropdownItem, Input, InputGroup, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
 import useBoolean from "hooks/useBoolean";
 import { DropdownPanel } from "components/common/DropdownPanel";
 import { Switch } from "components/common/Checkbox";
-import { MultiToggle } from "components/common/MultiToggle";
+import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -138,7 +123,15 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
                 />
             </Col>
             <Col>
-                <MultiToggle inputList={indexesStatesList} label="Filter by state"></MultiToggle>
+                {/* TODO: add selectedItems and setSelectedItems
+                <MultiCheckboxToggle
+                    inputItems={indexesStatesList}
+                    label="Filter by state"
+                    selectedItems={[]}
+                    setSelectedItems={() => {
+                        // TODO: add logic
+                    }}
+                /> */}
             </Col>
             <Col sm="auto">
                 <Switch id="autoRefresh" toggleSelection={null} selected={null} color="info" className="mt-1">

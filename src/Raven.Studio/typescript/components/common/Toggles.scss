@@ -14,7 +14,7 @@ $toggle-hover-color: colors.$text-emphasis-var !default;
 $toggle-icon-size: 21px !default;
 $toggle-width-scale: 2.1 !default;
 
-$toggle-knob-highlight-color: colors.$base-text-emphasis-var !default;
+$toggle-knob-highlight-color: colors.$text-emphasis-var !default;
 $toggle-knob-muted-color: colors.$text-muted-var !default;
 
 $toggle-knob-bg: colors.$primary-var !default;
@@ -131,6 +131,7 @@ $toggle-knob-hover-scale: 0.9 !default;
         }
 
         &:first-of-type {
+
             //First radio is active
             &:checked {
                 & ~ .toggle-knob {
@@ -138,6 +139,7 @@ $toggle-knob-hover-scale: 0.9 !default;
                         &:first-of-type {
                             color: $toggle-knob-highlight-color;
                         }
+
                         &:last-of-type {
                             color: $toggle-knob-muted-color;
                         }
@@ -147,6 +149,7 @@ $toggle-knob-hover-scale: 0.9 !default;
         }
 
         &:last-of-type {
+
             //Second radio is active
             &:checked {
                 & ~ .toggle-knob {
@@ -154,6 +157,7 @@ $toggle-knob-hover-scale: 0.9 !default;
                         &:first-of-type {
                             color: $toggle-knob-muted-color;
                         }
+
                         &:last-of-type {
                             color: $toggle-knob-highlight-color;
                         }
@@ -202,6 +206,7 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
         .multi-toggle-item {
             display: flex;
             position: relative;
+
             & + .multi-toggle-item {
                 margin-left: sizes.$gutter-xxs * -0.5;
             }
@@ -218,6 +223,7 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
                 position: relative;
                 transition: all 0.6s sizes.$global-easing;
                 margin: sizes.$gutter-xxs * 0.5;
+                white-space: nowrap;
 
                 span {
                     position: relative;
@@ -282,6 +288,7 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
                 &:hover + label::after {
                     opacity: 0.75;
                 }
+
                 &:checked {
                     & + label {
                         &:after {
@@ -291,6 +298,7 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
                 }
             }
         }
+
         &:hover .multi-toggle-item input[type="radio"] + label {
             color: $multi-toggle-color;
 

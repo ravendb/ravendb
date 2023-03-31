@@ -11,14 +11,12 @@ import {
     loadDatabasesDetails,
     openCreateDatabaseFromRestoreDialog,
     selectAllDatabases,
-    selectDatabaseSearchCriteria,
     selectFilteredDatabases,
     syncDatabaseDetails,
 } from "components/common/shell/databasesSlice";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
-import { shallowEqual } from "react-redux";
 import { CheckboxTriple } from "components/common/CheckboxTriple";
 
 interface DatabasesPageProps {
@@ -34,7 +32,6 @@ interface DatabasesPageProps {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function DatabasesPage(props: DatabasesPageProps) {
     const databases = useAppSelector(selectAllDatabases);
-    const searchCriteria = useAppSelector(selectDatabaseSearchCriteria, shallowEqual);
 
     const dispatch = useAppDispatch();
 
@@ -127,7 +124,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
                     <DatabasesToolbarActions selectedDatabases={selectedDatabases} />
                 </Col>
             </Row>
-            <DatabasesFilter filter={searchCriteria} />
+            <DatabasesFilter />
             <div className="flex-grow scroll js-scroll-container">
                 <div>
                     {filteredDatabases.map((db) => (

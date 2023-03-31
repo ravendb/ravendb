@@ -21,7 +21,6 @@ export interface DatabaseLocalInfo {
     performanceHints: number;
     indexingStatus: IndexRunningStatus;
     documentsCount: number;
-
     tempBuffersSize: Raven.Client.Util.Size;
     totalSize: Raven.Client.Util.Size;
     upTime?: string;
@@ -51,6 +50,9 @@ export interface ShardedDatabaseSharedInfo extends DatabaseSharedInfo {
     shards: DatabaseSharedInfo[];
 }
 
+export type DatabaseFilterByStateOption = DatabaseState | "Sharded" | "NonSharded" | "Local" | "Remote";
+
 export interface DatabaseFilterCriteria {
-    searchText: string;
+    name: string;
+    states: DatabaseFilterByStateOption[];
 }
