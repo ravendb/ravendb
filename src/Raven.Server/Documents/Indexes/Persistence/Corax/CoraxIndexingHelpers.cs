@@ -47,7 +47,7 @@ public static class CoraxIndexingHelpers
         return analyzerInstance;
     }
 
-    public static IndexFieldsMapping CreateMappingWithAnalyzers(ByteStringContext context, Index index, IndexDefinitionBaseServerSide indexDefinition, string keyFieldName, bool storedValue, string storedValueFieldName,  bool forQuerying = false)
+    public static IndexFieldsMapping CreateMappingWithAnalyzers(ByteStringContext context, Index index, IndexDefinitionBaseServerSide indexDefinition, string keyFieldName, bool storedValue, string storedValueFieldName,  bool forQuerying = false, bool canContainSourceDocumentId = false)
     {
         if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
             throw new InvalidOperationException(
@@ -156,6 +156,9 @@ public static class CoraxIndexingHelpers
             }
         }
 
+        if (canContainSourceDocumentId)
+            mappingBuilder.AddBindingToEnd(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, fieldIndexingMode: FieldIndexingMode.Exact);
+        
         if (storedValue)
         {
             mappingBuilder.AddBindingToEnd(storedValueFieldName, fieldIndexingMode: FieldIndexingMode.No);
