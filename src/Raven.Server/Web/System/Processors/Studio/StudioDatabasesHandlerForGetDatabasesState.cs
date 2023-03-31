@@ -62,16 +62,16 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
         }
     }
 
-    protected override RavenCommand<StudioDatabasesState> CreateCommandForNode(string nodeTag)
+    protected override ValueTask<RavenCommand<StudioDatabasesState>> CreateCommandForNodeAsync(string nodeTag, JsonOperationContext context)
     {
         var name = GetName();
         if (name != null)
-            return new GetStudioDatabasesStateCommand(name, nodeTag);
+            return ValueTask.FromResult<RavenCommand<StudioDatabasesState>>(new GetStudioDatabasesStateCommand(name, nodeTag));
 
         var start = GetStart();
         var pageSize = GetPageSize();
 
-        return new GetStudioDatabasesStateCommand(start, pageSize, nodeTag);
+        return ValueTask.FromResult<RavenCommand<StudioDatabasesState>>(new GetStudioDatabasesStateCommand(start, pageSize, nodeTag));
     }
 
     private void WriteStudioDatabaseState(string databaseName, RawDatabaseRecord record, TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)

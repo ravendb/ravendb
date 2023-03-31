@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.Databases;
@@ -60,7 +59,7 @@ internal class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerP
         }
     }
 
-    protected override RavenCommand<StudioDatabasesInfo> CreateCommandForNode(string nodeTag) => throw new NotSupportedException();
+    protected override ValueTask<RavenCommand<StudioDatabasesInfo>> CreateCommandForNodeAsync(string nodeTag, JsonOperationContext context) => throw new NotSupportedException();
 
     private void WriteStudioDatabaseInfo(string databaseName, RawDatabaseRecord record, TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
     {
