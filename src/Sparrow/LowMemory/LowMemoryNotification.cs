@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -46,19 +47,51 @@ namespace Sparrow.LowMemory
         private DateTime _lastLoggedLowMemory = DateTime.MinValue;
         private readonly TimeSpan _logLowMemoryInterval = TimeSpan.FromSeconds(5);
 
+        private readonly TimeSpan _lohCompactionInterval = TimeSpan.FromMinutes(15);
+        private DateTime _lastLohCompaction = DateTime.MinValue;
+
+
+
         private void RunLowMemoryHandlers(bool isLowMemory, MemoryInfoResult memoryInfo, LowMemorySeverity lowMemorySeverity = LowMemorySeverity.ExtremelyLow)
         {
+
             try
             {
                 try
                 {
                     var now = DateTime.UtcNow;
+                    
                     if (isLowMemory && _logger.IsOperationsEnabled && now - _lastLoggedLowMemory > _logLowMemoryInterval)
                     {
                         _lastLoggedLowMemory = now;
                         _logger.Operations($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
                                            $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo)}");
                     }
+#if NET7_0_OR_GREATER
+                    if (isLowMemory && now - _lastLohCompaction > _lohCompactionInterval)
+                    {
+                        var info = GC.GetGCMemoryInfo(GCKind.Any);
+
+                        var lohSizeAfter = new Size(info.GenerationInfo[3].SizeAfterBytes, SizeUnit.Bytes);
+
+                        var threshold = 0.25;
+                        
+                        var envVariableThreshold = Environment.GetEnvironmentVariable("RAVEN_LOH_COMPACTION_THRESHOLD");
+
+                        if (string.IsNullOrEmpty(envVariableThreshold) == false)
+                            double.TryParse(envVariableThreshold, out threshold);
+
+                        if (lohSizeAfter > threshold * memoryInfo.TotalPhysicalMemory)
+                        {
+                            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+
+                            _lastLohCompaction = now;
+
+                            if (_logger.IsOperationsEnabled)
+                                _logger.Operations($"Forcing LOH compaction during next blocking generation 2 GC. LOH size after last GC: {lohSizeAfter} (threshold: {threshold})");
+                        }
+                    }
+#endif
                 }
                 catch
                 {
