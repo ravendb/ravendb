@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
@@ -29,8 +30,8 @@ namespace FastTests.Client.Queries.TimeSeries
             public long Count { get; set; }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void BasicMapIndex_Query(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -61,7 +62,6 @@ namespace FastTests.Client.Queries.TimeSeries
                     "   User = ts.DocumentId.ToString() " +
                     "}" }
                 }));
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<TsMapIndexResult>("MyTsIndex")
@@ -75,7 +75,7 @@ namespace FastTests.Client.Queries.TimeSeries
                 store.Maintenance.Send(new StartIndexingOperation());
 
                 Indexes.WaitForIndexing(store);
-
+              // WaitForUserToContinueTheTest(store);
                 using (var session = (DocumentSession)store.OpenSession())
                 {
                     var results = session.Query<TsMapIndexResult>("MyTsIndex")
@@ -122,11 +122,13 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
+                    Debugger.Break();
                     var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
 
                     Assert.False(stats.IsStale);
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(2, results.Count);
                     Assert.Contains(7, results.Select(x => x.HeartBeat));
                     Assert.Contains(now1.Date, results.Select(x => x.Date));
@@ -256,8 +258,8 @@ namespace FastTests.Client.Queries.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapReduceIndex_Query(Options options)
         {
             using (var store = GetDocumentStore(options))

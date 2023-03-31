@@ -14,6 +14,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Policies;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -50,7 +51,7 @@ namespace SlowTests.Client.TimeSeries.Session
             [TimeSeriesValue(0)] public double HeartRate;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task CanRegisterTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -73,7 +74,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task CanRegisterTimeSeriesForOtherDatabase()
         {
             using (var store1 = GetDocumentStore())
@@ -98,7 +99,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanCreateSimpleTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -126,7 +127,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task CanCreateSimpleTimeSeriesAsync()
         {
             using (var store = GetDocumentStore())
@@ -163,7 +164,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanCreateSimpleTimeSeries2()
         {
             using (var store = GetDocumentStore())
@@ -193,7 +194,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanRequestNonExistingTimeSeriesRange()
         {
             using (var store = GetDocumentStore())
@@ -227,7 +228,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanGetTimeSeriesNames()
         {
             using (var store = GetDocumentStore())
@@ -277,10 +278,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public unsafe void CanQueryTimeSeriesAggregation_DeclareSyntax_AllDocsQuery()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public unsafe void CanQueryTimeSeriesAggregation_DeclareSyntax_AllDocsQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -368,10 +370,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesAggregation_NoSelectOrGroupBy()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryTimeSeriesAggregation_NoSelectOrGroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -483,10 +486,11 @@ select out(doc)
             }
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesAggregation_UsingLinq()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryTimeSeriesAggregation_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -543,10 +547,11 @@ select out(doc)
             }
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesRaw_UsingLinq()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryTimeSeriesRaw_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -595,10 +600,11 @@ select out(doc)
             }
         }
 
-        [Fact]
-        public async Task CanWorkWithRollupTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanWorkWithRollupTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -727,10 +733,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task CanWorkWithRollupTimeSeries2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanWorkWithRollupTimeSeries2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -859,7 +866,7 @@ select out()
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void UsingDifferentNumberOfValues_LargeToSmall()
         {
             using (var store = GetDocumentStore())
@@ -923,7 +930,7 @@ select out()
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void MappingNeedsToContainConsecutiveValuesStartingFromZero()
         {
             using (var store = GetDocumentStore())

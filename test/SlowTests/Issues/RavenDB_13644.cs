@@ -25,14 +25,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes(Options options)
         {
             CanLoadCompareExchangeInIndexes<Index_With_CompareExchange>(options);
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_JavaScript(Options options)
         {
@@ -225,14 +225,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_Simple(Options options)
         {
             CanLoadCompareExchangeInIndexes_Simple<Index_With_CompareExchange_Simple>(options);
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_Simple_JavaScript(Options options)
         {
@@ -425,14 +425,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_Simple_Array(Options options)
         {
             CanLoadCompareExchangeInIndexes_Simple_Array<Index_With_CompareExchange_Simple_Array>(options);
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_Simple_Array_JavaScript(Options options)
         {
@@ -650,7 +650,7 @@ namespace SlowTests.Issues
         }
 
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_Query(Options options)
         {
@@ -2019,7 +2019,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_MapReduce_Query(Options options)
         {

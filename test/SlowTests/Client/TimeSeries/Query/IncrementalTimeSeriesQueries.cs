@@ -16,6 +16,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static SlowTests.Client.TimeSeries.Issues.RavenDB_15020;
@@ -129,10 +130,11 @@ namespace SlowTests.Client.TimeSeries.Query
 #pragma warning restore CS0649
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_DeclareSyntax()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_DeclareSyntax(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -186,11 +188,12 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_DeclareSyntax_MultipleSeries()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_DeclareSyntax_MultipleSeries(Options options)
         {
             const string incTsName2 = Constants.Headers.IncrementalTimeSeriesPrefix + "BloodPressure";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var baseline2 = RavenTestHelper.UtcToday.AddDays(-1);
@@ -293,11 +296,12 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_DeclareSyntax_FromLoadedDocument()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_DeclareSyntax_FromLoadedDocument(Options options)
         {
             const string stocksIncTs = Constants.Headers.IncrementalTimeSeriesPrefix + "Stocks";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -371,10 +375,11 @@ select out(Company)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_SelectSyntax()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_SelectSyntax(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -434,10 +439,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_SelectSyntax_WhereOnValue()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_SelectSyntax_WhereOnValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -517,14 +523,14 @@ select timeseries(from doc.'INC:HeartRate' between $start and $end
             }
         }
 
-        [Theory]
-        [InlineData("months")]
-        [InlineData("month")]
-        [InlineData("mon")]
-        [InlineData("mo")]
-        public void CanQueryIncrementalTimeSeriesAggregation_GroupByMonth(string syntax)
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object []{"months"})]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object []{"month"})]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object []{"mon"})]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object []{"mo"})]
+        public void CanQueryIncrementalTimeSeriesAggregation_GroupByMonth(Options options, string syntax)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -608,10 +614,11 @@ select out(doc)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_NoSelectOrGroupBy()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_NoSelectOrGroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -705,10 +712,11 @@ select out(doc)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_WithMultipleValues()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_WithMultipleValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -810,10 +818,11 @@ select heart_rate(p)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_DifferentNumberOfValues()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_DifferentNumberOfValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -993,10 +1002,11 @@ select heart_rate(p)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_WhereOnLoadedDocumentArgument()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_WhereOnLoadedDocumentArgument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1090,10 +1100,11 @@ select out(doc, c)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesRaw_UsingLast()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesRaw_UsingLast(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday.EnsureUtc().AddDays(-7);
                 var id = "people/1";
@@ -1145,10 +1156,11 @@ select out(doc)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_UsingFirst()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_UsingFirst(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday.EnsureUtc().AddDays(-7);
                 var id = "people/1";
@@ -1199,10 +1211,11 @@ select out(doc)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesRaw_UsingScaleAndOffset()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesRaw_UsingScaleAndOffset(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday.EnsureUtc();
                 var id = "people/1";
@@ -1272,11 +1285,12 @@ select out(p)
         }
 
 
-        [Fact]
-        public async Task CanQueryIncrementalTimeSeriesUsingNamedValues()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryIncrementalTimeSeriesUsingNamedValues(Options options)
         {
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "StockPrices";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.TimeSeries.RegisterAsync<Company, StockPrice>(name: tsName);
 
@@ -1343,12 +1357,13 @@ select out(c)
         }
 
 
-        [Fact]
-        public void CanPassIncrementalTimeSeriesNameAsQueryParameter()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanPassIncrementalTimeSeriesNameAsQueryParameter(Options options)
         {
             const string id = "users/ayende";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 using (var session = store.OpenSession())
@@ -1394,12 +1409,13 @@ select out()
             }
         }
 
-        [Fact]
-        public void CanPassIncrementalTimeSeriesNameAsQueryParameter_2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanPassIncrementalTimeSeriesNameAsQueryParameter_2(Options options)
         {
             const string id = "users/ayende";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 using (var session = store.OpenSession())
@@ -1445,10 +1461,11 @@ select out($tsName)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1504,12 +1521,13 @@ select out($tsName)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_FromLoadedDocument_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_FromLoadedDocument_UsingLinq(Options options)
         {
             var tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "Stock";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1572,10 +1590,11 @@ select out($tsName)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_StronglyTypedGroupBy_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_StronglyTypedGroupBy_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1631,10 +1650,11 @@ select out($tsName)
             }
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesAggregation_SimpleProjectionToAnonymousClass_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryTimeSeriesAggregation_SimpleProjectionToAnonymousClass_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1700,11 +1720,12 @@ select out($tsName)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_MultipleSeries_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_MultipleSeries_UsingLinq(Options options)
         {
             var tsName2 = Constants.Headers.IncrementalTimeSeriesPrefix + "BloodPressure";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1797,10 +1818,11 @@ select out($tsName)
             }
         }
 
-        [Fact]
-        public async Task CanQueryIncrementalTimeSeriesAggregation_DifferentNumberOfValues_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryIncrementalTimeSeriesAggregation_DifferentNumberOfValues_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = "users/1";
                 var baseline = RavenTestHelper.UtcToday;
@@ -1873,10 +1895,11 @@ select out($tsName)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_WhereOnVariable_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_WhereOnVariable_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1935,10 +1958,11 @@ select out($tsName)
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeriesAggregation_SelectSingleCall_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeriesAggregation_SelectSingleCall_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1988,11 +2012,12 @@ select out($tsName)
             }
         }
 
-        [Fact]
-        public void CanCallIncrementalTimeSeriesDeclaredFunctionFromJavascriptProjection()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCallIncrementalTimeSeriesDeclaredFunctionFromJavascriptProjection(Options options)
         {
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "Stocks";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2086,10 +2111,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanPassIncrementalSeriesNameAsParameterToTimeSeriesDeclaredFunction()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanPassIncrementalSeriesNameAsParameterToTimeSeriesDeclaredFunction(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2151,10 +2177,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanUseIncrementalTimeSeriesQueryResultAsArgumentToJavascriptDeclaredFunction()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseIncrementalTimeSeriesQueryResultAsArgumentToJavascriptDeclaredFunction(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2210,10 +2237,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanCallIncrementalTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCallIncrementalTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2307,11 +2335,12 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void IncrementalTimeSeriesAggregationInsideJsProjection_UsingLinq_FromLoadedDocument()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IncrementalTimeSeriesAggregationInsideJsProjection_UsingLinq_FromLoadedDocument(Options options)
         {
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "Stock";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2382,10 +2411,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void IncrementalTimeSeriesAggregationInsideJsProjection_UsingLinq_CanDefineTmeSeriesInsideLet()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IncrementalTimeSeriesAggregationInsideJsProjection_UsingLinq_CanDefineTmeSeriesInsideLet(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2451,10 +2481,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void IncrementalTimeSeriesAggregationInsideJsProjection_UsingLinq_WhenTsQueryExpressionIsNestedInsideAnotherExpression()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IncrementalTimeSeriesAggregationInsideJsProjection_UsingLinq_WhenTsQueryExpressionIsNestedInsideAnotherExpression(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2531,10 +2562,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasIncrementalTimeSeriesCall_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDefineCustomJsFunctionThatHasIncrementalTimeSeriesCall_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -2623,10 +2655,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void CanUseSlopeInIncrementalTimeSeriesQuery_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseSlopeInIncrementalTimeSeriesQuery_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -2693,10 +2726,11 @@ select out(p)")
             }
         }
 
-        [Fact] 
-        public void CanUsePercentileInIncrementalTimeSeriesQuery_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)] 
+        public void CanUsePercentileInIncrementalTimeSeriesQuery_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -2783,10 +2817,11 @@ select out(p)")
             }
         }
 
-        [Fact] 
-        public void CanUseStdDevInIncrementalTimeSeriesQuery_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)] 
+        public void CanUseStdDevInIncrementalTimeSeriesQuery_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -2880,10 +2915,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void IncrementalTimeSeriesQuery_CanFillGaps_LinearInterpolation()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IncrementalTimeSeriesQuery_CanFillGaps_LinearInterpolation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -2952,10 +2988,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void IncrementalTimeSeriesDocumentQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IncrementalTimeSeriesDocumentQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -3005,12 +3042,13 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void CanQueryIncrementalTimeSeries_MultipleIncrementsOnSameTimestamp()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIncrementalTimeSeries_MultipleIncrementsOnSameTimestamp(Options options)
         {
             const string id = "users/ayende";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -3060,13 +3098,14 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public async Task CanQueryIncrementalTimeSeriesRawValues_WithDuplicateTimestamps()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryIncrementalTimeSeriesRawValues_WithDuplicateTimestamps(Options options)
         {
             const string id = "users/ayende";
 
-            using (var store = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store, store2);
                 await SetupReplicationAsync(store2, store);
@@ -3146,13 +3185,14 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public async Task CanQueryIncrementalTimeSeriesAggregation_WithDuplicateTimestamps()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryIncrementalTimeSeriesAggregation_WithDuplicateTimestamps(Options options)
         {
             const string id = "users/ayende";
 
-            using (var store = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store, store2);
                 await SetupReplicationAsync(store2, store);

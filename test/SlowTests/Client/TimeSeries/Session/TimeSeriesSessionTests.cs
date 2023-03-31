@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanCreateSimpleTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -53,7 +54,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public void CanCreateSimpleTimeSeries2()
         {
             using (var store = GetDocumentStore())
@@ -83,7 +84,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public async Task TimeSeriesShouldBeCaseInsensitiveAndKeepOriginalCasing()
         {
             using (var store = GetDocumentStore())
@@ -161,10 +162,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public async Task ThrowIfAppendIsLessThen1Ms()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ThrowIfAppendIsLessThen1Ms(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
@@ -191,10 +193,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void CanDeleteTimestamp2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDeleteTimestamp2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -237,7 +240,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanDeleteTimestamp3()
         {
             using (var store = GetDocumentStore())
@@ -288,7 +291,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanDeleteTimestamp4()
         {
             using (var store = GetDocumentStore())
@@ -322,7 +325,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanDeleteTimestamp()
         {
             using (var store = GetDocumentStore())
@@ -369,7 +372,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void UsingDifferentTags()
         {
             using (var store = GetDocumentStore())
@@ -404,7 +407,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void UsingDifferentNumberOfValues_SmallToLarge()
         {
             using (var store = GetDocumentStore())
@@ -444,7 +447,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void UsingDifferentNumberOfValues_SmallToLargeSplit()
         {
             using (var store = GetDocumentStore())
@@ -497,7 +500,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void UsingDifferentNumberOfValues_LargeToSmall()
         {
             using (var store = GetDocumentStore())
@@ -539,7 +542,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanStoreAndReadMultipleTimestamps()
         {
             using (var store = GetDocumentStore())
@@ -585,7 +588,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanStoreLargeNumberOfValues()
         {
             using (var store = GetDocumentStore())
@@ -631,7 +634,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanStoreValuesOutOfOrder()
         {
             using (var store = GetDocumentStore())
@@ -704,7 +707,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanUseLocalDateTimeWhenRequestingTimeSeriesRange()
         {
             using (var store = GetDocumentStore())
@@ -771,7 +774,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanRequestNonExistingTimeSeriesRange()
         {
             using (var store = GetDocumentStore())
@@ -851,7 +854,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanGetMultipleTimeSeriesRange()
         {
             using (var store = GetDocumentStore())
@@ -890,7 +893,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanGetTimeSeriesNames()
         {
             using (var store = GetDocumentStore())
@@ -972,7 +975,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanGetTimeSeriesNames2()
         {
             using (var store = GetDocumentStore())
@@ -1060,7 +1063,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void DocumentsChangeVectorShouldBeUpdatedAfterAddingNewTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -1117,7 +1120,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanUseIEnumerableValues()
         {
             using (var store = GetDocumentStore())
@@ -1149,7 +1152,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldDeleteTimeSeriesUponDocumentDeletion()
         {
             using (var store = GetDocumentStore())
@@ -1188,7 +1191,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanSkipAndTakeTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -1226,7 +1229,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldEvictTimeSeriesUponEntityEviction()
         {
             using (var store = GetDocumentStore())
@@ -1304,7 +1307,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void GetAllTimeSeriesNamesWhenNoTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -1324,7 +1327,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void GetSingleTimeSeriesWhenNoTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -1344,7 +1347,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanDeleteWithoutProvidingFromAndToDates()
         {
             using (var store = GetDocumentStore())

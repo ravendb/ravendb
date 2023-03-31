@@ -6,6 +6,7 @@ using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,10 +32,11 @@ namespace SlowTests.Client.TimeSeries.Query
             public double Accuracy { get; set; }
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesUsingDocumentQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryTimeSeriesUsingDocumentQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -93,10 +95,11 @@ select min(), max(), avg()
             }
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesRawValuesUsingDocumentQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryTimeSeriesRawValuesUsingDocumentQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -157,10 +160,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public async Task CanQueryTimeSeriesUsingDocumentQuery_Async()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryTimeSeriesUsingDocumentQuery_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -219,10 +223,11 @@ select min(), max(), avg()
             }
         }
 
-        [Fact]
-        public async Task CanQueryTimeSeriesRawValuesUsingDocumentQuery_Async()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryTimeSeriesRawValuesUsingDocumentQuery_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -283,10 +288,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -332,10 +338,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_Between()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_Between(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -384,10 +391,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_Where()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_Where(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -442,10 +450,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_GroupBy()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_GroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -500,10 +509,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_StronglyTypedGroupBy()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_StronglyTypedGroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -558,10 +568,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_GroupByAndSelect()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_GroupByAndSelect(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -611,10 +622,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_SelectNoGroupBy()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_SelectNoGroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -657,10 +669,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_WhereOnLoadedTag()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_WhereOnLoadedTag(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -734,10 +747,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_GroupByTag()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_GroupByTag(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -816,10 +830,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_GroupByWithInterpolation()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_GroupByWithInterpolation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -870,10 +885,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_FromLast()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_FromLast(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
                 var id = "people/1";
@@ -922,10 +938,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_FromFirst()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_FromFirst(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
                 var id = "people/1";
@@ -974,10 +991,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void ShouldThrowOnUsingLastAndBetweenInTheSameTimeSeriesDocumentQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldThrowOnUsingLastAndBetweenInTheSameTimeSeriesDocumentQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
                 var id = "people/1";
@@ -1012,10 +1030,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_Offset()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_Offset(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.ToUniversalTime();
 
@@ -1136,10 +1155,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_Scale()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_Scale(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -1204,10 +1224,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public void TimeSeriesDocumentQuery_UsingBuilder_ScaleAndOffset()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesDocumentQuery_UsingBuilder_ScaleAndOffset(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday.EnsureUtc();
                 var id = "people/1";
@@ -1268,10 +1289,11 @@ where Tag = 'watches/fitbit'
             }
         }
 
-        [Fact]
-        public async Task TimeSeriesAsyncDocumentQuery_UsingBuilder()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task TimeSeriesAsyncDocumentQuery_UsingBuilder(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 

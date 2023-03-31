@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,10 +37,11 @@ namespace SlowTests.Issues
             public Dog[] Dogs;
         } 
         
-        [Fact]
-        public async Task CanProjectNoValuesFromResult()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanProjectNoValuesFromResult(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -69,10 +71,11 @@ select project(u)
             }
         } 
 
-        [Fact]
-        public async Task CanProjectMultipleValuesFromManyResult()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanProjectMultipleValuesFromManyResult(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -106,10 +109,11 @@ select project(u)
         } 
 
 
-        [Fact]
-        public async Task CanProjectMultipleValuesFromSingleResultInCollectionQuery()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanProjectMultipleValuesFromSingleResultInCollectionQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -139,10 +143,11 @@ select project(u)
             }
         } 
         
-        [Fact]
-        public async Task CanProjectMultipleValuesFromSingleResultInIndexQuery()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanProjectMultipleValuesFromSingleResultInIndexQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -174,10 +179,11 @@ select project(u)
         } 
 
         
-        [Fact]
-        public async Task CanProjectTimeSeriesInCollectionQuery()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanProjectTimeSeriesInCollectionQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -213,10 +219,11 @@ select project(e)
             }
         } 
         
-        [Fact]
-        public async Task CanProjectTimeSeriesInIndexQuery()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanProjectTimeSeriesInIndexQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
