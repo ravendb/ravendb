@@ -139,7 +139,7 @@ namespace Raven.Server.ServerWide
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
-        private readonly Lazy<ClusterRequestExecutor> _clusterRequestExecutor;
+        private Lazy<ClusterRequestExecutor> _clusterRequestExecutor;
 
         public long LastClientConfigurationIndex { get; private set; } = -2;
 
@@ -168,8 +168,7 @@ namespace Raven.Server.ServerWide
 
             _server = server;
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Critical, "Handle server certificate changes");
-            _clusterRequestExecutor = new Lazy<ClusterRequestExecutor>(() => ClusterRequestExecutor.Create(new[] { GetNodeHttpServerUrl() }, Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
+            _clusterRequestExecutor = CreateClusterRequestExecutor();
 
             IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
 
@@ -245,11 +244,19 @@ namespace Raven.Server.ServerWide
             });
         }
 
+        private Lazy<ClusterRequestExecutor> CreateClusterRequestExecutor() => new(() => ClusterRequestExecutor.Create(new[] { GetNodeHttpServerUrl() }, Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
+
         internal readonly FifoSemaphore ServerWideConcurrentlyRunningIndexesLock;
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
         {
             Interlocked.Exchange(ref _serverCertificateChanged, 1);
+
+            if (_clusterRequestExecutor.IsValueCreated == false)
+                return;
+
+            using (_clusterRequestExecutor.Value)
+                _clusterRequestExecutor = CreateClusterRequestExecutor();
         }
 
         public RavenServer Server => _server;

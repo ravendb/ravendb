@@ -44,7 +44,7 @@ internal abstract class AbstractHandlerProxyReadProcessor<TResult, TRequestHandl
 
 internal abstract class AbstractServerHandlerProxyReadProcessor<TResult> : AbstractServerHandlerProxyProcessor
 {
-    protected AbstractServerHandlerProxyReadProcessor([NotNull] RequestHandler requestHandler) 
+    protected AbstractServerHandlerProxyReadProcessor([NotNull] RequestHandler requestHandler)
         : base(requestHandler)
     {
     }
@@ -53,7 +53,7 @@ internal abstract class AbstractServerHandlerProxyReadProcessor<TResult> : Abstr
 
     protected abstract Task HandleRemoteNodeAsync(ProxyCommand<TResult> command, JsonOperationContext context, OperationCancelToken token);
 
-    protected virtual RavenCommand<TResult> CreateCommandForNode(string nodeTag) => throw new NotSupportedException($"Processor '{GetType().Name}' does not support creating commands.");
+    protected virtual ValueTask<RavenCommand<TResult>> CreateCommandForNodeAsync(string nodeTag, JsonOperationContext context) => throw new NotSupportedException($"Processor '{GetType().Name}' does not support creating commands.");
 
     public override async ValueTask ExecuteAsync()
     {
@@ -63,12 +63,14 @@ internal abstract class AbstractServerHandlerProxyReadProcessor<TResult> : Abstr
         }
         else
         {
-            var command = CreateCommandForNode(nodeTag);
-            var proxyCommand = new ProxyCommand<TResult>(command, RequestHandler.HttpContext.Response);
-
-            using (var token = RequestHandler.CreateOperationToken())
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                await HandleRemoteNodeAsync(proxyCommand, context, token);
+            {
+                var command = await CreateCommandForNodeAsync(nodeTag, context);
+                var proxyCommand = new ProxyCommand<TResult>(command, RequestHandler.HttpContext.Response);
+
+                using (var token = RequestHandler.CreateOperationToken())
+                    await HandleRemoteNodeAsync(proxyCommand, context, token);
+            }
         }
     }
 }

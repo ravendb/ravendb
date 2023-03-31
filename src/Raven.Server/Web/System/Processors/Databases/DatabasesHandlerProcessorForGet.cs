@@ -34,18 +34,18 @@ internal class DatabasesHandlerProcessorForGet : AbstractDatabasesHandlerProcess
 
     protected bool GetNamesOnly() => RequestHandler.GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
-    protected override RavenCommand<DatabasesInfo> CreateCommandForNode(string nodeTag)
+    protected override ValueTask<RavenCommand<DatabasesInfo>> CreateCommandForNodeAsync(string nodeTag, JsonOperationContext context)
     {
         var name = GetName();
         if (name != null)
-            return new GetDatabasesInfoCommand(name, nodeTag);
+            return ValueTask.FromResult<RavenCommand<DatabasesInfo>>(new GetDatabasesInfoCommand(name, nodeTag));
 
         var namesOnly = GetNamesOnly();
 
         var start = GetStart();
         var pageSize = GetPageSize();
 
-        return new GetDatabasesInfoCommand(namesOnly, start, pageSize, nodeTag);
+        return ValueTask.FromResult<RavenCommand<DatabasesInfo>>(new GetDatabasesInfoCommand(namesOnly, start, pageSize, nodeTag));
     }
 
     protected override async ValueTask HandleCurrentNodeAsync()

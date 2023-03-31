@@ -553,86 +553,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/restore/points", "POST", AuthorizationStatus.Operator)]
         public async Task GetRestorePoints()
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                PeriodicBackupConnectionType connectionType;
-                var type = GetStringValuesQueryString("type", false).FirstOrDefault();
-                if (type == null)
-                {
-                    //Backward compatibility
-                    connectionType = PeriodicBackupConnectionType.Local;
-                }
-                else if (Enum.TryParse(type, out connectionType) == false)
-                {
-                    throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
-                }
-
-                var restorePathBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "restore-info");
-                var restorePoints = new RestorePoints();
-                var sortedList = new SortedList<DateTime, RestorePoint>(new RestorePointsBase.DescendedDateComparer());
-
-                switch (connectionType)
-                {
-                    case PeriodicBackupConnectionType.Local:
-                        var localSettings = JsonDeserializationServer.LocalSettings(restorePathBlittable);
-                        var directoryPath = localSettings.FolderPath;
-
-                        try
-                        {
-                            Directory.GetLastAccessTime(directoryPath);
-                        }
-                        catch (UnauthorizedAccessException)
-                        {
-                            throw new InvalidOperationException($"Unauthorized access to path: {directoryPath}");
-                        }
-
-                        if (Directory.Exists(directoryPath) == false)
-                            throw new InvalidOperationException($"Path '{directoryPath}' doesn't exist");
-
-                        var localRestoreUtils = new LocalRestorePoints(sortedList, context);
-                        await localRestoreUtils.FetchRestorePoints(directoryPath);
-
-                        break;
-
-                    case PeriodicBackupConnectionType.S3:
-                        var s3Settings = JsonDeserializationServer.S3Settings(restorePathBlittable);
-                        using (var s3RestoreUtils = new S3RestorePoints(ServerStore.Configuration.Backup, sortedList, context, s3Settings))
-                        {
-                            await s3RestoreUtils.FetchRestorePoints(s3Settings.RemoteFolderName);
-                        }
-
-                        break;
-
-                    case PeriodicBackupConnectionType.Azure:
-                        var azureSettings = JsonDeserializationServer.AzureSettings(restorePathBlittable);
-                        using (var azureRestoreUtils = new AzureRestorePoints(ServerStore.Configuration.Backup, sortedList, context, azureSettings))
-                        {
-                            await azureRestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
-                        }
-                        break;
-
-                    case PeriodicBackupConnectionType.GoogleCloud:
-                        var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(restorePathBlittable);
-                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(ServerStore.Configuration.Backup, sortedList, context, googleCloudSettings))
-                        {
-                            await googleCloudRestoreUtils.FetchRestorePoints(googleCloudSettings.RemoteFolderName);
-                        }
-                        break;
-
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-
-                restorePoints.List = sortedList.Values.ToList();
-                if (restorePoints.List.Count == 0)
-                    throw new InvalidOperationException("Couldn't locate any backup files.");
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(restorePoints, context);
-                    context.Write(writer, blittable);
-                }
-            }
+            using (var processor = new DatabasesHandlerProcessorForGetRestorePoints(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/admin/restore/database", "POST", AuthorizationStatus.Operator)]
