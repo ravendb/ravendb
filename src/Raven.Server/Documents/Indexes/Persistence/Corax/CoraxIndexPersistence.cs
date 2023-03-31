@@ -49,16 +49,18 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                 switch (_index.SourceType)
                 {
                     case IndexSourceType.Documents:
-                        _converter = new JintCoraxDocumentConverter((MapIndex)index);
+                        _converter = new CoraxJintDocumentConverter((MapIndex)index);
                         break;
                     case IndexSourceType.TimeSeries:
-                        throw new NotSupportedException($"Currently, {nameof(TimeSeries)} is not supported by Corax");
+                        _converter = new CountersAndTimeSeriesJintCoraxDocumentConverter((MapTimeSeriesIndex)index);
+                        break;
                     case IndexSourceType.Counters:
-                        throw new NotSupportedException($"Currently, {nameof(IndexSourceType.Counters)} is not supported by Corax");
+                        _converter = new CountersAndTimeSeriesJintCoraxDocumentConverter((MapCountersIndex)index);
+                        break;
                 }
                 break;
             case IndexType.JavaScriptMapReduce:
-                _converter = new JintCoraxDocumentConverter((MapReduceIndex)index, storeValue: true);
+                _converter = new CoraxJintDocumentConverter((MapReduceIndex)index, storeValue: true);
                 break;
         }
         _converter ??= new CoraxDocumentConverter(index, storeValue: storeValue);
