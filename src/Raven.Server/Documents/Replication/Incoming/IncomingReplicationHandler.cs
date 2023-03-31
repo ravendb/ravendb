@@ -319,6 +319,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 var toDispose = new List<IDisposable>();
                 var database = context.DocumentDatabase;
                 var conflictManager = new ConflictManager(database, database.ReplicationLoader.ConflictResolver);
+                List<(string DocumentId, string ChangeVector, long ModifiedTicks)> pendingAttachmentsTombstoneUpdates = null;
 
                 try
                 {
@@ -372,11 +373,19 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
-                                if (localAttachment == null || ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment.ChangeVector) !=
-                                    ConflictStatus.AlreadyMerged)
+                                var newChangeVector = ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment?.ChangeVector) switch
+                                {
+                                    // we don't need to worry about the *contents* of the attachments, that is handled by the conflict detection during document replication
+                                    ConflictStatus.Conflict => ChangeVectorUtils.MergeVectors(attachment.ChangeVector, localAttachment.ChangeVector),
+                                    ConflictStatus.Update => attachment.ChangeVector,
+                                    ConflictStatus.AlreadyMerged => null, // nothing to do
+                                    _ => throw new ArgumentOutOfRangeException()
+                                };
+
+                                if (newChangeVector != null)
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, attachment.ChangeVector);
+                                        contentType, attachment.Base64Hash, newChangeVector);
                                 }
 
                                 break;
@@ -386,6 +395,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 var tombstone = database.DocumentsStorage.AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
                                 if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
                                     continue;
+
+                                string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key); 
+                                pendingAttachmentsTombstoneUpdates ??= new();
+                                pendingAttachmentsTombstoneUpdates.Add((documentId, attachmentTombstone.ChangeVector, attachmentTombstone.LastModifiedTicks));
 
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
                                     changeVectorVersion,
@@ -620,6 +633,30 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                             default:
                                 throw new ArgumentOutOfRangeException(item.GetType().ToString());
+                        }
+                    }
+
+                    if (pendingAttachmentsTombstoneUpdates != null)
+                    {
+                        foreach (var (docId, cv, modifiedTicks) in pendingAttachmentsTombstoneUpdates)
+                        {
+                            var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, DocumentFields.ChangeVector, throwOnConflict: false);
+
+                            // RavenDB-19421: if the document doesn't exist, the tombstone doesn't matter
+                            // and if the change vector is already merged, then it is already taken into consideration
+                            // we need to force an update when this is _not_ the case, because this replication batch gave us the tombstone only, without
+                            // the related document update, so we need to simulate that locally
+                            if (doc != null &&
+                                ChangeVectorUtils.GetConflictStatus(cv, doc.ChangeVector) != ConflictStatus.AlreadyMerged) 
+                            {
+                                // have to load the full document
+                                doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, fields: DocumentFields.All, throwOnConflict: false);
+                                long lastModifiedTicks = Math.Max(modifiedTicks, doc.LastModified.Ticks); // old versions may send with 0 in the tombstone ticks
+                                using var newVer = doc.Data.Clone(context);
+                                // now we save it again, and a side effect of that is syncing all the attachments
+                                context.DocumentDatabase.DocumentsStorage.Put(context, docId, null, newVer, lastModifiedTicks,
+                                    flags: doc.Flags);
+                            }
                         }
                     }
 

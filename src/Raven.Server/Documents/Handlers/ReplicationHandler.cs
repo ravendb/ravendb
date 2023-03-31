@@ -1,9 +1,11 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Replication;
+using Raven.Server.Documents.Replication.Senders;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
@@ -16,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
             using (var processor = new ReplicationHandlerProcessorForGetTombstones(this))
                 await processor.ExecuteAsync();
         }
-
+        
         [RavenAction("/databases/*/replication/conflicts", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetReplicationConflicts()
         {
@@ -85,6 +87,44 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new ReplicationHandlerProcessorForGetConflictSolver(this))
                 await processor.ExecuteAsync();
+        }
+        
+        [RavenAction("/databases/*/debug/replication/all-items", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetAllItems()
+        {
+            var etag = GetLongQueryString("etag", required: false) ?? 0L;
+            var pageSize = GetPageSize();
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var runStats = new OutgoingReplicationRunStats();
+                var stats = new ReplicationDocumentSenderBase.ReplicationStats
+                {
+                    Network = new OutgoingReplicationStatsScope(runStats),
+                    Storage = new OutgoingReplicationStatsScope(runStats),
+                    AttachmentRead = new OutgoingReplicationStatsScope(runStats),
+                    CounterRead = new OutgoingReplicationStatsScope(runStats),
+                    DocumentRead = new OutgoingReplicationStatsScope(runStats),
+                    TombstoneRead = new OutgoingReplicationStatsScope(runStats),
+                    TimeSeriesRead = new OutgoingReplicationStatsScope(runStats),
+                };
+
+                var supportedFeatures = new ReplicationDocumentSenderBase.ReplicationSupportedFeatures
+                {
+                    CaseInsensitiveCounters = true,
+                    RevisionTombstonesWithId = true
+                };
+
+                var items = ReplicationDocumentSenderBase.GetReplicationItems(Database, context, etag, stats, supportedFeatures)
+                    .Take(pageSize);
+                
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Results"] = new DynamicJsonArray(items.Select(x=>x.ToDebugJson()))
+                });
+            }
         }
     }
 }

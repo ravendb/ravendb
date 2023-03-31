@@ -31,7 +31,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                         Etag = doc.Etag,
                         TransactionMarker = doc.TransactionMarker,
                         ChangeVector = doc.ChangeVector,
-                        Flags = doc.Flags
+                        Flags = doc.Flags,
+                        LastModifiedTicks = doc.LastModified.Ticks,
                     };
 
                     item.ToDispose(Slice.From(context.Allocator, doc.LowerId.Buffer, doc.LowerId.Size, ByteStringType.Immutable, out item.Key));

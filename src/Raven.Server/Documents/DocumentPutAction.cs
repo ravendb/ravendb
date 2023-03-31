@@ -572,7 +572,7 @@ namespace Raven.Server.Documents
 
                 if (values.Count == 0)
                 {
-                    if (metadata != null)
+                    if (metadata != null && metadata.TryGetMember(type.MetadataProperty, out _))
                     {
                         metadata.Modifications = new DynamicJsonValue(metadata);
                         metadata.Modifications.Remove(type.MetadataProperty);

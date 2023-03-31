@@ -3,6 +3,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 
@@ -12,6 +13,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
     {
         public Slice Key;
         public DocumentFlags Flags;
+
+        public override DynamicJsonValue ToDebugJson()
+        {
+            var djv = base.ToDebugJson();
+            djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
+            return djv;
+        }
 
         public override long AssertChangeVectorSize()
         {

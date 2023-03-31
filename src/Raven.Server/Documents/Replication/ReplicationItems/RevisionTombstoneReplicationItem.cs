@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
+ using System.Globalization;
 using System.IO;
 using Raven.Server.Documents.Replication.Stats;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
@@ -16,6 +18,14 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Id;
         public DocumentFlags Flags;
 
+        public override DynamicJsonValue ToDebugJson()
+        {
+            var djv = base.ToDebugJson();
+            djv[nameof(Collection)] = Collection.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(Id)] = Id.ToString(CultureInfo.InvariantCulture);
+            return djv;
+        }
+        
         public override long AssertChangeVectorSize()
         {
             return sizeof(byte) + // type
