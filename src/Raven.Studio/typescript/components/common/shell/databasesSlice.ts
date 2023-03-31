@@ -7,6 +7,7 @@
     UnsubscribeListener,
 } from "@reduxjs/toolkit";
 import {
+    DatabaseFilterByStateOption,
     DatabaseFilterCriteria,
     DatabaseLocalInfo,
     DatabaseSharedInfo,
@@ -23,7 +24,7 @@ import viewHelpers from "common/helpers/view/viewHelpers";
 import changesContext from "common/changesContext";
 import compactDatabaseDialog from "viewmodels/resources/compactDatabaseDialog";
 import databasesManager from "common/shell/databasesManager";
-import { locationAwareLoadableData, perNodeTagLoadStatus } from "components/models/common";
+import { InputItem, locationAwareLoadableData, perNodeTagLoadStatus } from "components/models/common";
 import { services } from "hooks/useServices";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseLocationComparator } from "components/utils/common";
@@ -48,8 +49,8 @@ interface DatabasesState {
      */
     localDatabaseDetailedLoadStatus: EntityState<perNodeTagLoadStatus>;
     activeDatabase: string;
-
     searchCriteria: DatabaseFilterCriteria;
+    localNodeTag: string;
 }
 
 const databasesAdapter = createEntityAdapter<DatabaseSharedInfo>({
@@ -78,8 +79,10 @@ const initialState: DatabasesState = {
     localDatabaseDetailedLoadStatus: localDatabaseDetailedLoadStatusAdapter.getInitialState(),
     activeDatabase: null,
     searchCriteria: {
-        searchText: "",
+        name: "",
+        states: [],
     },
+    localNodeTag: "",
 };
 
 const sliceName = "databases";
@@ -88,21 +91,22 @@ export const selectAllDatabases = (store: RootState) => databasesSelectors.selec
 
 export const selectDatabaseSearchCriteria = (store: RootState) => store.databases.searchCriteria;
 
-export const selectDatabasesSummary = (store: RootState) => {
-    const allDatabases = selectAllDatabases(store);
+export const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterByStateOption>[] => {
+    let error = 0,
+        offline = 0,
+        disabled = 0,
+        online = 0,
+        sharded = 0,
+        nonSharded = 0,
+        local = 0,
+        remote = 0;
 
-    let loading = 0;
-    let error = 0;
-    let offline = 0;
-    let disabled = 0;
-    let online = 0;
-
-    allDatabases.forEach((db) => {
+    selectAllDatabases(store).forEach((db) => {
         const perNodeState = selectDatabaseState(db.name)(store);
         const state = DatabaseUtils.getDatabaseState(db, perNodeState);
+
         switch (state) {
             case "Loading":
-                loading++;
                 break;
             case "Error":
                 error++;
@@ -119,27 +123,82 @@ export const selectDatabasesSummary = (store: RootState) => {
             default:
                 assertUnreachable(state);
         }
+
+        if (db.sharded) {
+            sharded++;
+        } else {
+            nonSharded++;
+        }
+
+        if (db.currentNode.relevant) {
+            local++;
+        } else {
+            remote++;
+        }
     });
 
-    return {
-        count: allDatabases.length,
-        loading,
-        error,
-        offline,
-        disabled,
-        online,
-    };
+    return [
+        { value: "Online", label: "Online", count: online },
+        { value: "Offline", label: "Offline", count: offline },
+        { value: "Error", label: "Errored", count: error },
+        { value: "Disabled", label: "Disabled", count: disabled },
+        { value: "Sharded", label: "Sharded", count: sharded, verticalSeparatorLine: true },
+        { value: "NonSharded", label: "Non Sharded", count: nonSharded },
+        {
+            value: "Local",
+            label: `Local (Node ${store.databases.localNodeTag})`,
+            count: local,
+            verticalSeparatorLine: true,
+        },
+        { value: "Remote", label: "Remote", count: remote },
+    ];
+};
+
+const isDatabaseInFilterState = (
+    store: RootState,
+    db: DatabaseSharedInfo,
+    filterStates: DatabaseFilterByStateOption[]
+): boolean => {
+    const perNodeState = selectDatabaseState(db.name)(store);
+    const databaseState = DatabaseUtils.getDatabaseState(db, perNodeState);
+
+    if (
+        (!filterStates.some((x) => ["Online", "Offline", "Error", "Disabled"].includes(x)) ||
+            filterStates.includes(databaseState)) &&
+        (!filterStates.some((x) => ["Sharded", "NonSharded"].includes(x)) ||
+            (filterStates.includes("Sharded") && db.sharded) ||
+            (filterStates.includes("NonSharded") && !db.sharded)) &&
+        (!filterStates.some((x) => ["Local", "Remote"].includes(x)) ||
+            (filterStates.includes("Local") && db.currentNode.relevant) ||
+            (filterStates.includes("Remote") && !db.currentNode.relevant))
+    ) {
+        return true;
+    }
+
+    return false;
 };
 
 export const selectFilteredDatabases = (store: RootState): DatabaseSharedInfo[] => {
     const criteria = selectDatabaseSearchCriteria(store);
     const databases = selectAllDatabases(store);
 
-    if (criteria.searchText) {
-        return databases.filter((x) => x.name.toLowerCase().includes(criteria.searchText.toLowerCase()));
+    if (!(criteria.name || criteria.states?.length > 0)) {
+        return databases;
     }
 
-    return databases;
+    let filteredDatabases = [...databases];
+
+    if (criteria.name) {
+        filteredDatabases = filteredDatabases.filter((db) =>
+            db.name.toLowerCase().includes(criteria.name.toLowerCase())
+        );
+    }
+
+    if (criteria.states?.length > 0) {
+        filteredDatabases = filteredDatabases.filter((db) => isDatabaseInFilterState(store, db, criteria.states));
+    }
+
+    return filteredDatabases;
 };
 
 export const selectActiveDatabase = (store: RootState) => store.databases.activeDatabase;
@@ -277,8 +336,14 @@ export const databasesSlice = createSlice({
             //TODO: update in shallow mode?
             databasesAdapter.setAll(state.databases, action.payload);
         },
-        filterTextSet: (state, action: PayloadAction<string>) => {
-            state.searchCriteria.searchText = action.payload;
+        localNodeTagChanged: (state, action: PayloadAction<string>) => {
+            state.localNodeTag = action.payload;
+        },
+        setSearchCriteriaName: (state, action: PayloadAction<string>) => {
+            state.searchCriteria.name = action.payload;
+        },
+        setSearchCriteriaStates: (state, action: PayloadAction<DatabaseFilterByStateOption[]>) => {
+            state.searchCriteria.states = action.payload;
         },
         initDetails: {
             reducer: (state, action: PayloadAction<{ nodeTags: string[] }>) => {
@@ -372,7 +437,14 @@ function toLocalInfo(db: StudioDatabaseState, nodeTag: string): DatabaseLocalInf
     };
 }
 
-export const { activeDatabaseChanged, databasesLoaded, initDetails, filterTextSet } = databasesSlice.actions;
+export const {
+    activeDatabaseChanged,
+    databasesLoaded,
+    localNodeTagChanged,
+    initDetails,
+    setSearchCriteriaName,
+    setSearchCriteriaStates,
+} = databasesSlice.actions;
 
 export const loadDatabasesDetails = (nodeTags: string[]) => async (dispatch: AppDispatch) => {
     dispatch(initDetails(nodeTags));
@@ -527,15 +599,15 @@ export const deleteDatabases =
     async (dispatch, getState, getServices) => {
         const { databasesService } = getServices();
         /* TODO:
-           const dbsList = toDelete.map(x => {
-               //TODO: x.isBeingDeleted(true);
-               const asDatabase = x.asDatabase();
-
-               // disconnect here to avoid race condition between database deleted message
-               // and websocket disconnection
-               //TODO: changesContext.default.disconnectIfCurrent(asDatabase, "DatabaseDeleted");
-               return asDatabase;
-           });*/
+               const dbsList = toDelete.map(x => {
+                   //TODO: x.isBeingDeleted(true);
+                   const asDatabase = x.asDatabase();
+    
+                   // disconnect here to avoid race condition between database deleted message
+                   // and websocket disconnection
+                   //TODO: changesContext.default.disconnectIfCurrent(asDatabase, "DatabaseDeleted");
+                   return asDatabase;
+               });*/
 
         return databasesService.deleteDatabase(
             toDelete.map((x) => x.name),

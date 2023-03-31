@@ -19,3 +19,10 @@ export interface perNodeTagLoadStatus {
     nodeTag: string;
     status: loadStatus;
 }
+
+export interface InputItem<T = string> {
+    label: string;
+    value: T;
+    count?: number;
+    verticalSeparatorLine?: boolean;
+}
