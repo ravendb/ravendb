@@ -30,7 +30,7 @@ public class YieldShardStreamResults : IAsyncEnumerator<BlittableJsonReaderObjec
         if (await _readingState.ReadAsync() == false)
             _readingState.ThrowInvalidJson();
 
-        if (_readingState.CurrentTokenType == JsonParserToken.EndArray)
+        if (_readingState.CurrentTokenType is JsonParserToken.EndArray or JsonParserToken.EndObject)
             return false;
 
         Current = await _readingState.ReadObjectAsync();
@@ -77,7 +77,7 @@ public class YieldShardStreamResults : IAsyncEnumerator<BlittableJsonReaderObjec
         // need to read to end of the array
         while (await MoveNextAsync())
         {
-                        
+
         }
     }
 }
