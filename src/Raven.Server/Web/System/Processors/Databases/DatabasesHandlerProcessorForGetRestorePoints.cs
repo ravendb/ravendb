@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -61,64 +59,11 @@ internal class DatabasesHandlerProcessorForGetRestorePoints : AbstractServerHand
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             var connectionType = GetPeriodicBackupConnectionType();
+            var settings = await GetSettingsAsync(context);
 
-            var restorePathBlittable = await GetSettingsAsync(context);
-            var restorePoints = new RestorePoints();
-            var sortedList = new SortedList<DateTime, RestorePoint>(new RestorePointsBase.DescendedDateComparer());
+            using var source = GetRestorePointsSource(context, connectionType, settings, out string path);
+            var restorePoints = await source.FetchRestorePoints(path);
 
-            switch (connectionType)
-            {
-                case PeriodicBackupConnectionType.Local:
-                    var localSettings = JsonDeserializationServer.LocalSettings(restorePathBlittable);
-                    var directoryPath = localSettings.FolderPath;
-
-                    try
-                    {
-                        Directory.GetLastAccessTime(directoryPath);
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        throw new InvalidOperationException($"Unauthorized access to path: {directoryPath}");
-                    }
-
-                    if (Directory.Exists(directoryPath) == false)
-                        throw new InvalidOperationException($"Path '{directoryPath}' doesn't exist");
-
-                    var localRestoreUtils = new LocalRestorePoints(sortedList, context);
-                    await localRestoreUtils.FetchRestorePoints(directoryPath);
-
-                    break;
-
-                case PeriodicBackupConnectionType.S3:
-                    var s3Settings = JsonDeserializationServer.S3Settings(restorePathBlittable);
-                    using (var s3RestoreUtils = new S3RestorePoints(ServerStore.Configuration, sortedList, context, s3Settings))
-                    {
-                        await s3RestoreUtils.FetchRestorePoints(s3Settings.RemoteFolderName);
-                    }
-
-                    break;
-
-                case PeriodicBackupConnectionType.Azure:
-                    var azureSettings = JsonDeserializationServer.AzureSettings(restorePathBlittable);
-                    using (var azureRestoreUtils = new AzureRestorePoints(ServerStore.Configuration, sortedList, context, azureSettings))
-                    {
-                        await azureRestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
-                    }
-                    break;
-
-                case PeriodicBackupConnectionType.GoogleCloud:
-                    var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(restorePathBlittable);
-                    using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(ServerStore.Configuration, sortedList, context, googleCloudSettings))
-                    {
-                        await googleCloudRestoreUtils.FetchRestorePoints(googleCloudSettings.RemoteFolderName);
-                    }
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            restorePoints.List = sortedList.Values.ToList();
             if (restorePoints.List.Count == 0)
                 throw new InvalidOperationException("Couldn't locate any backup files.");
 
@@ -133,6 +78,43 @@ internal class DatabasesHandlerProcessorForGetRestorePoints : AbstractServerHand
     protected override Task HandleRemoteNodeAsync(ProxyCommand<RestorePoints> command, JsonOperationContext context, OperationCancelToken token)
     {
         return RequestHandler.ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
+    }
+
+    private RestorePointsBase GetRestorePointsSource(TransactionOperationContext context, PeriodicBackupConnectionType connectionType, BlittableJsonReaderObject settings, out string path)
+    {
+        path = null;
+
+        switch (connectionType)
+        {
+            case PeriodicBackupConnectionType.Local:
+                var localSettings = JsonDeserializationServer.LocalSettings(settings);
+                path = localSettings.FolderPath;
+                try
+                {
+                    Directory.GetLastAccessTime(path);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    throw new InvalidOperationException($"Unauthorized access to path: {path}");
+                }
+                if (Directory.Exists(path) == false)
+                    throw new InvalidOperationException($"Path '{path}' doesn't exist");
+                return new LocalRestorePoints(context);
+            case PeriodicBackupConnectionType.S3:
+                var s3Settings = JsonDeserializationServer.S3Settings(settings);
+                path = s3Settings.RemoteFolderName;
+                return new S3RestorePoints(ServerStore.Configuration, context, s3Settings);
+            case PeriodicBackupConnectionType.Azure:
+                var azureSettings = JsonDeserializationServer.AzureSettings(settings);
+                path = azureSettings.RemoteFolderName;
+                return new AzureRestorePoints(ServerStore.Configuration, context, azureSettings);
+            case PeriodicBackupConnectionType.GoogleCloud:
+                var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(settings);
+                path = googleCloudSettings.RemoteFolderName;
+                return new GoogleCloudRestorePoints(ServerStore.Configuration, context, googleCloudSettings);
+            default:
+                throw new ArgumentOutOfRangeException(nameof(connectionType));
+        }
     }
 
     private class GetRestorePointsCommand : RavenCommand<RestorePoints>
