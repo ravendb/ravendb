@@ -707,6 +707,9 @@ namespace Raven.Server.Documents
 
         private ShardedDatabaseContext GetOrAddShardedDatabaseContext(StringSegment databaseName, RawDatabaseRecord databaseRecord)
         {
+            if (databaseRecord.Sharding.Orchestrator.Topology.RelevantFor(_serverStore.NodeTag) == false)
+                throw new DatabaseNotRelevantException($"Can't get or add orchestrator for database {databaseName} because it is not relevant on this node {_serverStore.NodeTag}");
+
             var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
             var currentTask = ShardedDatabasesCache.GetOrAdd(databaseName, newTask);
 
