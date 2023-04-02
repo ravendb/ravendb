@@ -2882,9 +2882,6 @@ namespace Raven.Server.ServerWide
 
                 foreach (var (shardNumber, shardTopology) in record.Sharding.Shards)
                 {
-                    if (shardNumber > 9)
-                        throw new InvalidOperationException($"A two digit shard number ${shardNumber} is currently not supported");
-
                     InitializeTopology(shardTopology);
                 }
 

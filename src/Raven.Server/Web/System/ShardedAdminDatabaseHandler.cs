@@ -291,10 +291,7 @@ namespace Raven.Server.Web.System
                     node ??= FindFitNodeForDatabase(database, newShardTopology, databaseRecord.IsEncrypted, clusterTopology);
                     newShardTopology.Members.Add(node);
                 }
-
-                if (newChosenShardNumber > 9)
-                    throw new InvalidOperationException($"A two digit shard number ${newChosenShardNumber} is currently not supported");
-
+                
                 var update = new CreateNewShardCommand(database, newChosenShardNumber, newShardTopology, SystemTime.UtcNow, raftRequestId);
 
                 var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
