@@ -100,8 +100,8 @@ public class RavenDB_20202 : ClusterTestBase
                 return failedNodesTimers.Count;
             }, 
                 expectedVal: 0, 
-                timeout: TimeSpan.FromMinutes(1).Milliseconds, 
-                interval: TimeSpan.FromSeconds(1).Milliseconds);
+                timeout: Convert.ToInt32(TimeSpan.FromMinutes(1).TotalMilliseconds), 
+                interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));
 
             // Assert that there are no failures in the node selector state
             var nodeSelectorFailures = store.GetRequestExecutor().ForTestingPurposesOnly().GetNodeSelectorFailures;
