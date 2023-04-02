@@ -382,7 +382,7 @@ namespace SlowTests.Cluster
                         {
                             Members = members
                         }},
-                        {1, new DatabaseTopology
+                        {12, new DatabaseTopology
                         {
                             Members = members
                         }},

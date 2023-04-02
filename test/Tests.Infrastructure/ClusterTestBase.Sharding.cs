@@ -53,7 +53,15 @@ public partial class ClusterTestBase
             Assert.True(replicationFactor <= tags.Count);
             var topology = new Dictionary<int, DatabaseTopology>(shards);
             for (int i = 0; i < shards; i++)
+            {
+                if (i == 1)
+                {
+                    topology[12] = CreateTopology<DatabaseTopology>(replicationFactor, tags, 12);
+                    continue;
+                }
+
                 topology[i] = CreateTopology<DatabaseTopology>(replicationFactor, tags, i);
+            }
 
             return topology;
         }

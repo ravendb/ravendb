@@ -1593,7 +1593,7 @@ namespace SlowTests.Sharding.Replication
                     Shards = new Dictionary<int, DatabaseTopology>()
                     {
                         {0, new DatabaseTopology()},
-                        {1, new DatabaseTopology()},
+                        {12, new DatabaseTopology()},
                         {2, new DatabaseTopology()}
                     },
                     BucketMigrations = new Dictionary<int, ShardBucketMigration>(),
