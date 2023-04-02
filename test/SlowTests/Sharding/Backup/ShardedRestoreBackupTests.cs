@@ -1171,7 +1171,6 @@ namespace SlowTests.Sharding.Backup
                     Assert.Equal(3, files.Length);
                 }
 
-
                 var client = store.GetRequestExecutor().HttpClient;
                 var data = new StringContent(JsonConvert.SerializeObject(new LocalSettings
                 {
@@ -1188,7 +1187,7 @@ namespace SlowTests.Sharding.Backup
 
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
                 var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
-
+                
                 foreach (var shardRestorePoints in pointsPerShard)
                 {
                     Assert.True(ShardHelper.TryGetShardNumberFromDatabaseName(shardRestorePoints.Key, out var shardNumber));
