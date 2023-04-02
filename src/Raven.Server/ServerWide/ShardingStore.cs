@@ -177,11 +177,11 @@ namespace Raven.Server.ServerWide
                 shardingConfiguration.BucketRanges = new List<ShardBucketRange>();
                 var start = 0;
                 var step = ShardHelper.NumberOfBuckets / shardingConfiguration.Shards.Count;
-                for (int i = 0; i < shardingConfiguration.Shards.Count; i++)
+                foreach (var (shardNumber, _) in shardingConfiguration.Shards)
                 {
                     shardingConfiguration.BucketRanges.Add(new ShardBucketRange
                     {
-                        ShardNumber = i,
+                        ShardNumber = shardNumber,
                         BucketRangeStart = start
                     });
                     start += step;
