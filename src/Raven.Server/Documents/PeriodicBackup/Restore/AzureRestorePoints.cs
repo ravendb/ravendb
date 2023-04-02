@@ -15,15 +15,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     {
         private readonly RavenConfiguration _configuration;
         private readonly IRavenAzureClient _client;
-        public AzureRestorePoints(RavenConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, AzureSettings azureSettings) : base(sortedList, context)
+        public AzureRestorePoints(RavenConfiguration configuration, TransactionOperationContext context, AzureSettings azureSettings) : base(context)
         {
             _configuration = configuration;
             _client = RavenAzureClient.Create(azureSettings, configuration.Backup);
         }
 
-        public override async Task FetchRestorePoints(string path)
+        public override Task<RestorePoints> FetchRestorePoints(string path)
         {
-            await FetchRestorePointsForPath(path, assertLegacyBackups: true);
+            return FetchRestorePointsForPath(path, assertLegacyBackups: true);
         }
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)

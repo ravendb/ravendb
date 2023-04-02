@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -11,26 +9,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class LocalRestorePoints : RestorePointsBase
     {
-        public LocalRestorePoints(SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context) : base(sortedList, context)
+        public LocalRestorePoints(TransactionOperationContext context) : base(context)
         {
         }
 
-        public override async Task FetchRestorePoints(string directoryPath)
+        public override Task<RestorePoints> FetchRestorePoints(string directoryPath)
         {
             var directories = Directory.GetDirectories(directoryPath).OrderBy(x => x).ToList();
             if (directories.Count == 0)
             {
                 // no folders in directory
                 // will scan the directory for backup files
-                await FetchRestorePointsForPath(directoryPath, assertLegacyBackups: true);
+                return FetchRestorePointsForPath(directoryPath, assertLegacyBackups: true);
             }
-            else
-            {
-                foreach (var directory in directories)
-                {
-                    await FetchRestorePointsForPath(directory, assertLegacyBackups: true);
-                }
-            }
+
+            return FetchRestorePointsForPaths(directories, assertLegacyBackups: true);
         }
 
         protected override Task<List<FileInfoDetails>> GetFiles(string directoryPath)

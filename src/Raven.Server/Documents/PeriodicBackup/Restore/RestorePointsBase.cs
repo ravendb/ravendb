@@ -18,16 +18,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public static Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
         public static Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?)", RegexOptions.Compiled);
 
-        private readonly SortedList<DateTime, RestorePoint> _sortedList;
+        private readonly List<RestorePoint> _list;
         private readonly TransactionOperationContext _context;
 
-        protected RestorePointsBase(SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context)
+        protected RestorePointsBase(TransactionOperationContext context)
         {
-            _sortedList = sortedList;
             _context = context;
+            _list = new List<RestorePoint>();
         }
 
-        public abstract Task FetchRestorePoints(string path);
+        public abstract Task<RestorePoints> FetchRestorePoints(string path);
 
         protected abstract Task<List<FileInfoDetails>> GetFiles(string path);
 
@@ -95,7 +95,32 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             public string NodeTag { get; set; }
         }
 
-        protected async Task FetchRestorePointsForPath(string path, bool assertLegacyBackups)
+        protected Task<RestorePoints> FetchRestorePointsForPath(string path, bool assertLegacyBackups)
+        {
+            return FetchRestorePointsForPaths(new[] { path }, assertLegacyBackups);
+        }
+
+        protected async Task<RestorePoints> FetchRestorePointsForPaths(IEnumerable<string> paths, bool assertLegacyBackups)
+        {
+            foreach (var path in paths)
+            {
+                await FetchRestorePoints(path, assertLegacyBackups);
+            }
+
+            foreach (var restorePointGroup in _list.GroupBy(x => x.Location))
+            {
+                var count = restorePointGroup.Count();
+                foreach (var restorePoint in restorePointGroup)
+                    restorePoint.FilesToRestore = count--;
+            }
+
+            return new RestorePoints
+            {
+                List = _list.OrderBy(p => p.DateTime, new DescendedDateComparer()).ToList()
+            };
+        }
+
+        private async Task FetchRestorePoints(string path, bool assertLegacyBackups)
         {
             var fileInfos = (await GetFiles(path))
                 .Where(filePath =>
@@ -125,13 +150,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             foreach (var fileInfo in fileInfos)
             {
                 await UpdateRestorePoints(fileInfo.ToList());
-            }
-
-            foreach (var restorePointGroup in _sortedList.Values.GroupBy(x => x.Location))
-            {
-                var count = restorePointGroup.Count();
-                foreach (var restorePoint in restorePointGroup)
-                    restorePoint.FilesToRestore = count--;
             }
         }
 
@@ -169,26 +187,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
 
                 firstFile = false;
-
-                while (_sortedList.ContainsKey(fileInfo.LastModified))
-                {
-                    fileInfo.LastModified = fileInfo.LastModified.AddMilliseconds(1);
-                }
-
                 var folderDetails = ParseFolderNameFrom(fileInfo.DirectoryPath);
 
-                _sortedList.Add(fileInfo.LastModified,
-                    new RestorePoint
-                    {
-                        DateTime = fileInfo.LastModified,
-                        Location = fileInfo.DirectoryPath,
-                        FileName = fileInfo.FullPath,
-                        IsSnapshotRestore = snapshotRestore,
-                        IsIncremental = BackupUtils.IsIncrementalBackupFile(extension),
-                        IsEncrypted = isEncrypted,
-                        DatabaseName = folderDetails.DatabaseName,
-                        NodeTag = folderDetails.NodeTag
-                    });
+                _list.Add(new RestorePoint
+                {
+                    DateTime = fileInfo.LastModified,
+                    Location = fileInfo.DirectoryPath,
+                    FileName = fileInfo.FullPath,
+                    IsSnapshotRestore = snapshotRestore,
+                    IsIncremental = BackupUtils.IsIncrementalBackupFile(extension),
+                    IsEncrypted = isEncrypted,
+                    DatabaseName = folderDetails.DatabaseName,
+                    NodeTag = folderDetails.NodeTag
+                });
             }
         }
 

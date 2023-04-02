@@ -16,13 +16,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly RavenConfiguration _configuration;
         private readonly RavenAwsS3Client _client;
 
-        public S3RestorePoints(RavenConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, S3Settings s3Settings) : base(sortedList, context)
+        public S3RestorePoints(RavenConfiguration configuration, TransactionOperationContext context, S3Settings s3Settings) : base(context)
         {
             _configuration = configuration;
             _client = new RavenAwsS3Client(s3Settings, configuration.Backup);
         }
 
-        public override async Task FetchRestorePoints(string path)
+        public override async Task<RestorePoints> FetchRestorePoints(string path)
         {
             path = path.TrimEnd('/');
             var objects = await _client.ListAllObjectsAsync(string.IsNullOrEmpty(path) ? "" : path + "/", "/", listFolders: true);
@@ -30,15 +30,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             if (folders.Count == 0)
             {
-                await FetchRestorePointsForPath(path, assertLegacyBackups: true);
+                return await FetchRestorePointsForPath(path, assertLegacyBackups: true);
             }
-            else
-            {
-                foreach (var folder in folders)
-                {
-                    await FetchRestorePointsForPath(folder, assertLegacyBackups: true);
-                }
-            }
+
+            return await FetchRestorePointsForPaths(folders, assertLegacyBackups: true);
+
         }
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)
@@ -65,7 +61,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override ParsedBackupFolderName ParseFolderNameFrom(string path)
         {
             var arr = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var lastFolderName = arr.Length > 0 ? arr[arr.Length - 1] : string.Empty;
+            var lastFolderName = arr.Length > 0 ? arr[^1] : string.Empty;
 
             return ParseFolderName(lastFolderName);
         }
