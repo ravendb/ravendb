@@ -154,9 +154,16 @@ public partial class RavenTestBase
 
         private int GetShardNumberFromBackupPath(string path)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "Handle shard number being a two digit integer");
             var shardIndexPosition = path.LastIndexOf('$') + 1;
-            return int.Parse(path[shardIndexPosition].ToString());
+            
+            if (char.IsDigit(path[shardIndexPosition]) == false)
+                throw new ArgumentException($"Missing shard number after $ sign in backup path {path}. Expected a number but got '{path[shardIndexPosition]}'");
+
+            int shardNumberLength = 0;
+            while (int.TryParse(path.Substring(shardIndexPosition, shardNumberLength + 1), out _))
+                shardNumberLength++;
+
+            return int.Parse(path.Substring(shardIndexPosition, shardNumberLength));
         }
 
         private class AtomicGuard
