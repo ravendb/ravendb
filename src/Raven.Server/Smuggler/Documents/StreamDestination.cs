@@ -1258,39 +1258,34 @@ namespace Raven.Server.Smuggler.Documents
                 _filterMetadataProperty = filterMetadataProperty;
             }
 
-            public ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlush)
+            public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlush)
             {
-                return new ValueTask(AsyncWork());
-
-                async Task AsyncWork()
+                var document = item.Document;
+                using (document)
                 {
-                    var document = item.Document;
-                    using (document)
+                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
                     {
-                        if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                        if (item.Attachments != null)
                         {
-                            if (item.Attachments != null)
+                            foreach (var attachment in item.Attachments)
                             {
-                                foreach (var attachment in item.Attachments)
-                                {
-                                    attachment.Stream.Position = 0;
-                                    await WriteAttachmentStreamAsync(attachment.Base64Hash.Content.ToString(), attachment.Stream, attachment.Tag.ToString());
-                                }
-                            }
-                            else
-                            {
-                                await WriteUniqueAttachmentStreamsAsync(document, progress);
+                                attachment.Stream.Position = 0;
+                                await WriteAttachmentStreamAsync(attachment.Base64Hash.Content.ToString(), attachment.Stream, attachment.Tag.ToString());
                             }
                         }
-
-                        if (First == false)
-                            Writer.WriteComma();
-                        First = false;
-
-                        Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
-
-                        await Writer.MaybeFlushAsync();
+                        else
+                        {
+                            await WriteUniqueAttachmentStreamsAsync(document, progress);
+                        }
                     }
+
+                    if (First == false)
+                        Writer.WriteComma();
+                    First = false;
+
+                    Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
+
+                    await Writer.MaybeFlushAsync();
                 }
             }
 
