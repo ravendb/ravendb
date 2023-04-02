@@ -316,7 +316,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         using (Slice.External(allocator, buffer, buffer.Length, out var keySlice))
         using (Slice.External(allocator, buffer, buffer.Length - sizeof(long), out var prefix))
         {
-            foreach (var result in table.SeekForwardFromPrefix(dynamicIndex, keySlice, prefix, skip))
+            foreach (var result in table.SeekByPrefix(dynamicIndex, prefix, keySlice, skip))
             {
                 yield return result;
                 
