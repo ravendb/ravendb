@@ -134,6 +134,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             }
             writer.WriteEndArray();
 
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(GroupByFieldNames)));
             writer.WriteStartArray();
             first = true;
