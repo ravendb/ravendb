@@ -387,6 +387,7 @@ limit 1, 1")
 
                     Assert.Equal(1, autoLinqQueryResult.Count);
                     Assert.Equal("Grisha", autoLinqQueryResult[0].Name);
+                    Assert.Equal("Kotler", autoLinqQueryResult[0].LastName);
                     Assert.Equal(21, autoLinqQueryResult[0].Sum);
 
                     var autoIndexResult = session.Query<User>(stats.IndexName)
@@ -396,6 +397,7 @@ limit 1, 1")
 
                     Assert.Equal(1, autoIndexResult.Count);
                     Assert.Equal("Grisha", autoIndexResult[0].Name);
+                    Assert.Equal("Kotler", autoIndexResult[0].LastName);
                     Assert.Equal(21, autoIndexResult[0].Count);
 
                     autoIndexResult = session.Query<User>(stats.IndexName)
@@ -406,6 +408,7 @@ limit 1, 1")
 
                     Assert.Equal(1, autoIndexResult.Count);
                     Assert.Equal("Grisha", autoIndexResult[0].Name);
+                    Assert.Equal("Kotler", autoIndexResult[0].LastName);
                     Assert.Equal(21, autoIndexResult[0].Count);
 
                     autoIndexResult = session.Query<User>(stats.IndexName)
@@ -416,6 +419,7 @@ limit 1, 1")
 
                     Assert.Equal(1, autoIndexResult.Count);
                     Assert.Equal("Jane", autoIndexResult[0].Name);
+                    Assert.Equal("Doe", autoIndexResult[0].LastName);
                     Assert.Equal(30, autoIndexResult[0].Count);
                 }
             }
