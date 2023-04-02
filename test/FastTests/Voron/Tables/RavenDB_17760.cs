@@ -69,7 +69,7 @@ namespace FastTests.Voron.Tables
 
                 bool gotValues = false;
 
-                foreach (var reader in docs.SeekForwardFrom(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, 0))
+                foreach (var reader in docs.SeekByPrefix(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, Slices.Empty, 0))
                 {
                     AssertKey(id, etag, reader.Key);
 
@@ -116,7 +116,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var reader = docs.SeekForwardFrom(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, 0);
+                var reader = docs.SeekByPrefix(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, Slices.Empty, 0);
                 Assert.Empty(reader);
             }
         }
@@ -154,7 +154,7 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
                 bool gotValues = false;
-                foreach (var reader in docs.SeekForwardFrom(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, 0))
+                foreach (var reader in docs.SeekByPrefix(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, Slices.Empty, 0))
                 {
                     AssertKey(id, etag: 2, reader.Key);
 
@@ -197,7 +197,7 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
                 long count = 0;
-                foreach (var item in docs.SeekForwardFrom(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, 0))
+                foreach (var item in docs.SeekByPrefix(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, Slices.Empty, 0))
                 {
                     var handle = item.Result;
                     
@@ -271,7 +271,7 @@ namespace FastTests.Voron.Tables
 
                     long prevEtag = -1;
                     long count = 0;
-                    foreach (var reader in docs.SeekForwardFromPrefix(DocsSchema.DynamicKeyIndexes[IndexName], keySlice, prefix, skip: 0))
+                    foreach (var reader in docs.SeekByPrefix(DocsSchema.DynamicKeyIndexes[IndexName], prefix, keySlice, 0))
                     {
                         var b = *(int*)reader.Key.Content.Ptr;
                         Assert.Equal(bucketToCheck, b);
@@ -360,7 +360,7 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
                 bool gotValues = false;
-                foreach (var reader in docs.SeekForwardFrom(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, 0))
+                foreach (var reader in docs.SeekByPrefix(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, Slices.Empty, 0))
                 {
                     AssertKey(id, etag: 123456789L, reader.Key);
 

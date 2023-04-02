@@ -8,6 +8,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -17,6 +18,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
+using static Voron.Data.Tables.TableSchema;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Tables
@@ -608,16 +610,12 @@ namespace Voron.Data.Tables
 
             foreach (var dynamicKeyIndexDef in _schema.DynamicKeyIndexes.Values)
             {
-                var indexTree = GetTree(dynamicKeyIndexDef);
                 using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
                 {
                     dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: ref value, newValue: ref TableValueReaderUtils.EmptyReader);
 
-                    var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
-                    if (fst.Delete(id).NumberOfEntriesDeleted == 0)
-                    {
-                        ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
-                    }
+                    var tree = GetTree(dynamicKeyIndexDef);
+                    tree.Delete(val);
                 }
             }
 
@@ -853,10 +851,11 @@ namespace Voron.Data.Tables
                             forceUpdate)
                         {
                             var indexTree = GetTree(dynamicKeyIndexDef);
-                            var fst = GetFixedSizeTree(indexTree, oldVal.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
-                            fst.Delete(id);
-                            fst = GetFixedSizeTree(indexTree, newVal.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
-                            fst.Add(id);
+                            indexTree.Delete(oldVal);
+                            using (indexTree.DirectAdd(newVal, sizeof(long), TreeNodeFlags.Data, out var ptr))
+                            {
+                                *(long*)ptr = id;
+                            }
                         }
                     }
                 }
@@ -978,13 +977,15 @@ namespace Voron.Data.Tables
 
                 foreach (var dynamicKeyIndexDef in _schema.DynamicKeyIndexes.Values)
                 {
-                    using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
+                    using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice dynamicKey))
                     {
-                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: ref TableValueReaderUtils.EmptyReader, newValue: ref value);
-
-                        var indexTree = GetTree(dynamicKeyIndexDef);
-                        var index = GetFixedSizeTree(indexTree, val, 0, dynamicKeyIndexDef.IsGlobal);
-                        index.Add(id);
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, dynamicKey, oldValue: ref TableValueReaderUtils.EmptyReader, newValue: ref value);
+                        
+                        var dynamicIndex = GetTree(dynamicKeyIndexDef);
+                        using (dynamicIndex.DirectAdd(dynamicKey, sizeof(long), TreeNodeFlags.Data | TreeNodeFlags.NewOnly, out var ptr))
+                        {
+                            *(long*)ptr = id;
+                        }
                     }
                 }
 
@@ -1417,6 +1418,39 @@ namespace Voron.Data.Tables
             var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
 
             return fstIndex.NumberOfEntries;
+        }
+
+        public IEnumerable<SeekResult> SeekByPrefix(DynamicKeyIndexDef def, Slice requiredPrefix, Slice startAfter, long skip)
+        {
+            var isStartAfter = startAfter.Equals(Slices.Empty) == false;
+
+            var tree = GetTree(def);
+            if (tree == null)
+                yield break;
+            
+            using (var it = tree.Iterate(true))
+            {
+                it.SetRequiredPrefix(requiredPrefix);
+
+                var seekValue = isStartAfter ? startAfter : requiredPrefix;
+                if (it.Seek(seekValue) == false)
+                    yield break;
+
+                if (it.Skip(skip) == false)
+                    yield break;
+
+                do
+                {
+                    var result = new TableValueHolder();
+                    GetTableValueReader(it, out result.Reader);
+                    yield return new SeekResult
+                    {
+                        Key = it.CurrentKey,
+                        Result = result
+                    };
+                }
+                while (it.MoveNext());
+            }
         }
 
         public IEnumerable<(Slice Key, TableValueHolder Value)> SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, long skip)
