@@ -14,8 +14,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Group_by_multiple_fields(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -257,7 +257,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Select_composite_group_by_key(Options options)
         {
             using (var store = GetDocumentStore(options))

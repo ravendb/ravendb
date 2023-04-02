@@ -90,8 +90,8 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanUseExactInAutoMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

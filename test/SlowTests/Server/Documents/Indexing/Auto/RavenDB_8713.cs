@@ -3,6 +3,7 @@ using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         {
         }
 
-        [Fact]
-        public void CanQueryOnCaseSensitiveFields()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryOnCaseSensitiveFields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -43,13 +45,13 @@ namespace SlowTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public void ShouldExtendMappingDueToCaseSensitiveFields()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldExtendMappingDueToCaseSensitiveFields(Options options)
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0"
-            }))
+            options.ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -89,10 +91,11 @@ namespace SlowTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public void CanQueryOnCaseSensitiveGroupByFields()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryOnCaseSensitiveGroupByFields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -137,10 +140,11 @@ namespace SlowTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public void CanQueryOnCaseSensitiveFields_UsingSearch()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryOnCaseSensitiveFields_UsingSearch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
