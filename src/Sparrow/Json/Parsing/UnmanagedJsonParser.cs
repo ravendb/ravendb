@@ -146,6 +146,14 @@ namespace Sparrow.Json.Parsing
             return (count == amountToCopy, (int)amountToCopy);
         }
 
+        public (bool Done, int BytesRead) Copy(Stream dest, int count)
+        {
+            var amountToCopy = Math.Min(count, _bufSize - _pos);
+            dest.Write(new Span<byte>(_inputBuffer + _pos, (int)amountToCopy));
+            _pos += (uint)amountToCopy;
+            return (count == amountToCopy, (int)amountToCopy);
+        }
+
         public (bool Done, int BytesRead) Skip(int count)
         {
             var amountToCopy = Math.Min(count, _bufSize - _pos);

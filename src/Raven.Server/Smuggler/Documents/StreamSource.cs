@@ -52,8 +52,6 @@ namespace Raven.Server.Smuggler.Documents
 
         private JsonOperationContext.MemoryBuffer _buffer;
         private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
-        private JsonOperationContext.MemoryBuffer _writeBuffer;
-        private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnWriteBuffer;
         private JsonParserState _state;
         private UnmanagedJsonParser _parser;
         private DatabaseItemType? _currentType;
@@ -99,7 +97,6 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _parser.Dispose();
                 _returnBuffer.Dispose();
-                _returnWriteBuffer.Dispose();
             });
 
             return new SmugglerInitializeResult(disposable, buildVersion);
@@ -1900,9 +1897,6 @@ namespace Raven.Server.Smuggler.Documents
                 data.TryGet(nameof(DocumentItem.AttachmentStream.Tag), out LazyStringValue tag) == false)
                 throw new ArgumentException($"Data of attachment stream is not valid: {data}");
 
-            if (_writeBuffer == null)
-                _returnWriteBuffer = _context.GetMemoryBuffer(out _writeBuffer);
-
             var attachment = new DocumentItem.AttachmentStream
             {
                 Data = data
@@ -1910,19 +1904,14 @@ namespace Raven.Server.Smuggler.Documents
 
             attachment.Base64HashDispose = Slice.External(_allocator, hash, out attachment.Base64Hash);
             attachment.TagDispose = Slice.External(_allocator, tag, out attachment.Tag);
+
             attachment.Stream = actions != null ? actions.GetTempStream() : GetTempStream();
 
             while (size > 0)
             {
-                var sizeToRead = (int)Math.Min(_writeBuffer.Size, size);
+                var sizeToRead = (int)Math.Min(_buffer.Size, size);
 
-                (bool Done, int BytesRead) read;
-                unsafe
-                {
-                    read = _parser.Copy(_writeBuffer.Address, sizeToRead);
-                }
-
-                attachment.Stream.Write(_writeBuffer.Memory.Memory.Span.Slice(0, read.BytesRead));
+                (bool Done, int BytesRead) read = _parser.Copy(attachment.Stream, sizeToRead);
 
                 if (read.Done == false)
                 {
@@ -1930,12 +1919,15 @@ namespace Raven.Server.Smuggler.Documents
                     if (read2 == 0)
                         throw new EndOfStreamException("Stream ended without reaching end of stream content");
 
+
                     _parser.SetBuffer(_buffer, 0, read2);
                 }
+
                 size -= read.BytesRead;
             }
 
             await attachment.Stream.FlushAsync();
+
 
             return attachment;
         }
