@@ -162,31 +162,34 @@ const isDatabaseInFilterState = (
     const perNodeState = selectDatabaseState(db.name)(store);
     const databaseState = DatabaseUtils.getDatabaseState(db, perNodeState);
 
-    if (
-        (!filterStates.some((x) => ["Online", "Offline", "Error", "Disabled"].includes(x)) ||
-            filterStates.includes(databaseState)) &&
-        (!filterStates.some((x) => ["Sharded", "NonSharded"].includes(x)) ||
+    // prettier-ignore
+    return (
+        (
+            !filterStates.some((x) => ["Online", "Offline", "Error", "Disabled"].includes(x)) ||
+            filterStates.includes(databaseState)
+        ) &&
+        (
+            !filterStates.some((x) => ["Sharded", "NonSharded"].includes(x)) ||
             (filterStates.includes("Sharded") && db.sharded) ||
-            (filterStates.includes("NonSharded") && !db.sharded)) &&
-        (!filterStates.some((x) => ["Local", "Remote"].includes(x)) ||
+            (filterStates.includes("NonSharded") && !db.sharded)
+        ) &&
+        (
+            !filterStates.some((x) => ["Local", "Remote"].includes(x)) ||
             (filterStates.includes("Local") && db.currentNode.relevant) ||
-            (filterStates.includes("Remote") && !db.currentNode.relevant))
-    ) {
-        return true;
-    }
-
-    return false;
+            (filterStates.includes("Remote") && !db.currentNode.relevant)
+        )
+    );
 };
 
 export const selectFilteredDatabases = (store: RootState): DatabaseSharedInfo[] => {
     const criteria = selectDatabaseSearchCriteria(store);
-    const databases = selectAllDatabases(store);
+    const allDatabases = selectAllDatabases(store);
 
     if (!(criteria.name || criteria.states?.length > 0)) {
-        return databases;
+        return allDatabases;
     }
 
-    let filteredDatabases = [...databases];
+    let filteredDatabases = allDatabases;
 
     if (criteria.name) {
         filteredDatabases = filteredDatabases.filter((db) =>

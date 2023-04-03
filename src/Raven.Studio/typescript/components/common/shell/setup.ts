@@ -22,5 +22,7 @@ export function initRedux() {
 
     databasesManager.default.onUpdateCallback = throttledUpdateReduxStore;
     activeDatabaseTracker.default.database.subscribe((db) => globalDispatch(activeDatabaseChanged(db?.name ?? null)));
+
+    // TODO: create seprate slice for cluster info
     clusterTopologyManager.default.localNodeTag.subscribe((nodeTag) => globalDispatch(localNodeTagChanged(nodeTag)));
 }
