@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Utils.VxSort;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
@@ -376,8 +377,10 @@ namespace Voron.Data.PostingLists
         {
             Span<long> additions = _additions.Items;
             Span<long> removals = _removals.Items;
-            additions.Sort();
-            removals.Sort();
+            if (additions.Length > 0)
+                Sort.Run(additions);
+            if (removals.Length > 0)
+                Sort.Run(removals);
 
             while (additions.IsEmpty == false || removals.IsEmpty == false)
             {
@@ -482,6 +485,8 @@ namespace Voron.Data.PostingLists
             if (current.TryAdd(_llt, newKey, leafPageNum) == false)
                 throw new InvalidOperationException("We just removed two values to add one, should have enough space. This error should never happen");
 
+            Debug.Assert(current.Header->NumberOfEntries >= 2);
+            
             if (_pos == 0)
                 return; // root has no siblings
 
@@ -561,7 +566,10 @@ namespace Voron.Data.PostingLists
         {
             if (_pos == 0) // need to create a root page
             {
-                CreateRootPage();
+                var root = CreateRootPage();
+                if(root.TryAdd(_llt, separator, newPage) == false)
+                    throw new InvalidOperationException("Failed to add to a newly created ROOT page? Should never happen");
+                return;
             }
 
             PopPage();
@@ -586,28 +594,18 @@ namespace Voron.Data.PostingLists
             _state.BranchPages++;
             
             // grow rightward:
-            // If the key is greater than the last key in the page to split, add it to the new branch page
+            int rightMostSectionToMove = pageToSplit.Header->NumberOfEntries / 2;
             if (key > pageToSplit.Last)
             {
-                if (branch.TryAdd(_llt, key, value) == false)
-                    throw new InvalidOperationException("Failed to add to a newly created page? Should never happen");
-                AddToParentPage(key, page.PageNumber);
-                return;
-            }
-
-            // grow leftward
-            //if (key < pageToSplit.First)
-            {
-                // Here we add a key that is less than the first item in the current page
-                // We *could* optimize this by creating a new empty page left to the current one
-                // and write the details to it, but it is a rare scenario, we can just accept the
-                // split in this case and call it a day
-                
+                // If the key is greater than the last key in the page to split,
+                // we'll move a single entry from the current page to the new branch page
+                // this ensures that we always have branches with at least 2 leaves
+                rightMostSectionToMove = pageToSplit.Header->NumberOfEntries - 1;
             }
 
             // split in half
             // add the upper half of the entries to the new page 
-            for (int i = pageToSplit.Header->NumberOfEntries / 2; i < pageToSplit.Header->NumberOfEntries; i++)
+            for (int i = rightMostSectionToMove; i < pageToSplit.Header->NumberOfEntries; i++)
             {
                 var (k, v) = pageToSplit.GetByIndex(i);
                 if(branch.TryAdd(_llt, k, v) == false)
@@ -615,7 +613,7 @@ namespace Voron.Data.PostingLists
             }
 
             pageToSplit.Header->NumberOfEntries /= 2;// truncate entries
-            var success = pageToSplit.Last > key ?
+            var success = pageToSplit.Last < key ?
                 branch.TryAdd(_llt, key, value) :
                 pageToSplit.TryAdd(_llt, key, value);
             if(success == false)
@@ -639,7 +637,7 @@ namespace Voron.Data.PostingLists
             _pos++;
         }
 
-        private void CreateRootPage()
+        private PostingListBranchPage CreateRootPage()
         {
             _state.Depth++;
             _state.BranchPages++;
@@ -662,6 +660,7 @@ namespace Voron.Data.PostingLists
             });
             state.LastMatch = -1;
             state.LastSearchPosition = 0;
+            return rootPage;
         }
 
         public static long Update(LowLevelTransaction transactionLowLevelTransaction, ref PostingListState postingListState, ReadOnlySpan<long> additions, ReadOnlySpan<long> removals)
