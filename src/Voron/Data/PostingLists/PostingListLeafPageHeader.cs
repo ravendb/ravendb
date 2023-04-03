@@ -26,13 +26,7 @@ namespace Voron.Data.PostingLists
         public PageFlags Flags;
 
         [FieldOffset(13)]
-        public ExtendedPageType SetFlags;
-        
-        [FieldOffset(14)]
-        private fixed byte Reserved[2];
-        
-        [FieldOffset(16)]
-        public long Baseline;
+        public ExtendedPageType PostingListFlags;
 
         [FieldOffset(24)]
         public int NumberOfEntries;
