@@ -1083,6 +1083,14 @@ namespace Voron
 
         public unsafe DetailedStorageReport GenerateDetailedReport(Transaction tx, bool includeDetails = false)
         {
+            DetailedReportInput detailedReportInput = CreateDetailedReportInput(tx, includeDetails);
+
+            var generator = new StorageReportGenerator(tx.LowLevelTransaction);
+            return generator.Generate(detailedReportInput);
+        }
+
+        public unsafe DetailedReportInput CreateDetailedReportInput(Transaction tx, bool includeDetails)
+        {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
 
@@ -1101,8 +1109,8 @@ namespace Voron
                 Trees = new(),
                 FixedSizeTrees = new(),
                 Tables = new(),
-                Containers =  new(),
-                Sets = new(),
+                Containers = new(),
+                PostingLists = new(),
                 PersistentDictionaries = new(),
                 CompactTrees = new(),
                 IncludeDetails = includeDetails,
@@ -1112,7 +1120,7 @@ namespace Voron
                 TotalEncryptionBufferSize = totalCryptoBufferSize,
                 InMemoryStorageState = GetInMemoryStorageState(tx.LowLevelTransaction)
             };
-            
+
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 if (rootIterator.Seek(Slices.BeforeAllKeys))
@@ -1150,7 +1158,7 @@ namespace Voron
                                 break;
                             case RootObjectType.Set:
                                 var set = tx.OpenPostingList(currentKey);
-                                detailedReportInput.Sets.Add(set);
+                                detailedReportInput.PostingLists.Add(set);
                                 break;
                             case RootObjectType.CompactTree:
                                 var ct = tx.CompactTreeFor(currentKey);
@@ -1163,13 +1171,11 @@ namespace Voron
                             default:
                                 throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
                         }
-                    }
-                    while (rootIterator.MoveNext());
+                    } while (rootIterator.MoveNext());
                 }
             }
 
-            var generator = new StorageReportGenerator(tx.LowLevelTransaction);
-            return generator.Generate(detailedReportInput);
+            return detailedReportInput;
         }
 
         public InMemoryStorageState GetInMemoryStorageState(LowLevelTransaction tx)
