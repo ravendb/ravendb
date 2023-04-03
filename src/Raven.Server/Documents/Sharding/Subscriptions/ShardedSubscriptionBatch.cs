@@ -25,14 +25,14 @@ public class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJsonReade
 
     public void SetCancel()
     {
-        SendBatchToClientTcs.TrySetCanceled();
-        ConfirmFromShardSubscriptionConnectionTcs.TrySetCanceled();
+        SendBatchToClientTcs?.TrySetCanceled();
+        ConfirmFromShardSubscriptionConnectionTcs?.TrySetCanceled();
     }
 
     public void SetException(Exception e)
     {
-        SendBatchToClientTcs.TrySetException(e);
-        ConfirmFromShardSubscriptionConnectionTcs.TrySetException(e);
+        SendBatchToClientTcs?.TrySetException(e);
+        ConfirmFromShardSubscriptionConnectionTcs?.TrySetException(e);
     }
 
     public ShardedSubscriptionBatch(RequestExecutor requestExecutor, string dbName, Logger logger, ShardedDatabaseContext databaseContext) : base(requestExecutor, dbName, logger)
@@ -52,11 +52,19 @@ public class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJsonReade
         Context = batch.Context;
         batch.ReturnContext = null; // move the release responsibility to the OrchestratedSubscriptionProcessor
         batch.Context = null;
-  
-        await InitializeDocumentIncludesAsync(batch);
-        await base.InitializeAsync(batch);
 
-        LastSentChangeVectorInBatch = null;
+        try
+        {
+            await InitializeDocumentIncludesAsync(batch);
+            await base.InitializeAsync(batch);
+
+            LastSentChangeVectorInBatch = null;
+        }
+        catch (Exception e)
+        {
+            SetException(e);
+            throw;
+        }
     }
 
     internal async ValueTask InitializeDocumentIncludesAsync(BatchFromServer batchFromServer)

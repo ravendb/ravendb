@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
@@ -15,11 +16,13 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -196,6 +199,27 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
+        private async Task CheckSubscriptionNewCVs(IDocumentStore store, SubscriptionState state, Dictionary<string, string> cvs)
+        {
+            var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
+            await foreach (var db in shards)
+            {
+                var newCv = cvs[db.Name];
+                var cv = WaitForValue(() =>
+                {
+                    using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
+                        return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState?.ShardingState
+                            ?.ChangeVectorForNextBatchStartingPointPerShard[db.Name];
+                    }
+                }, newCv, interval: 333);
+
+                Assert.Equal(newCv, cv);
+            }
+        }
+
         [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task CanUpdateSubscriptionToStartFromLastDocument()
         {
@@ -209,36 +233,109 @@ namespace SlowTests.Sharding.Subscriptions
                 var state = subscriptions.First();
                 Assert.Equal("from 'Users' as doc", state.Query);
 
+                using var docs = new CountdownEvent(count / 2);
+                TimeSpan fromMilliseconds = TimeSpan.FromMilliseconds(16);
                 using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName)
                 {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16), MaxDocsPerBatch = 1
                 });
 
-                Exception onSubscriptionConnectionRetryException = null;
-                subscription.OnSubscriptionConnectionRetry += x =>
+                var t = subscription.Run(async x =>
                 {
-                    onSubscriptionConnectionRetryException = x;
+                    foreach (var user in x.Items)
+                    {
+                        await Task.Delay(fromMilliseconds);
+                    }
+                });
+
+                var ackDocs = new List<string>();
+                var mre = new AsyncManualResetEvent();
+                var mre2 = new AsyncManualResetEvent();
+                var f = true;
+                subscription.AfterAcknowledgment += async batch =>
+                {
+                    foreach (var user in batch.Items)
+                    {
+                        // there should be only 1 doc acked
+                        ackDocs.Add(user.Id);
+
+                        if (user.Result.Age > 18)
+                        {
+                            docs.Signal(1);
+                        }
+                    }
+
+                    if (f)
+                    {
+                        mre.Set();
+                        Assert.True(await mre2.WaitAsync(_reasonableWaitTime));
+                    }
                 };
-                using var docs = new CountdownEvent(count / 2);
 
-                var flag = true;
-                var t = subscription.Run(x =>
+                var addedDocs = new List<User>();
+                using (var session = store.OpenSession())
                 {
-                    if (docs.IsSet)
-                        flag = false;
-                    docs.Signal(x.NumberOfItemsInBatch);
-                });
+                    for (int i = 0; i < count; i++)
+                    {
+                        var id = Guid.NewGuid().ToString();
+                        var user = new User { Name = $"EGR_{i}", Age = 18 - i };
+                        session.Store(user, id);
 
+                        user.Id = id;
+                        addedDocs.Add(user);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+
+                var f1 = addedDocs.First();
+                var f2 = ackDocs.First();
+
+                // there should be only 1 doc acked
+                Assert.Equal(1, ackDocs.Count);
+                Assert.Contains(f2, addedDocs.Select(x => x.Id));
+                await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
+                {
+                    Name = state.SubscriptionName,
+                    ChangeVector = $"{Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument}"
+                });
+                f = false;
+
+                List<SubscriptionState> newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+
+                DatabasesLandlord.DatabaseSearchResult result = Server.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(store.Database);
+                Assert.Equal(DatabasesLandlord.DatabaseSearchResult.Status.Sharded, result.DatabaseStatus);
+                Assert.NotNull(result.DatabaseContext);
+                var shardExecutor = result.DatabaseContext.ShardExecutor;
+                var ctx = new DefaultHttpContext();
+
+                var changeVectorsCollection =
+                    (await shardExecutor.ExecuteParallelForAllAsync(
+                        new ShardedLastChangeVectorForCollectionOperation(ctx.Request, "Users", result.DatabaseContext.DatabaseName))).LastChangeVectors;
+                Assert.Equal(3, changeVectorsCollection.Count);
+
+                mre2.Set();
+
+                await CheckSubscriptionNewCVs(store, state, changeVectorsCollection);
+
+                // connect and assert no docs are sent 
+                // after setting subs id to LastDocument, we add Users with Age>18
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < count / 2; i++)
                     {
+                        var id = Guid.NewGuid().ToString();
+                        var user = new User { Name = $"EGR_{i}", Age = 19 + i };
+                        session.Store(user, id);
 
-                        session.Store(new User
-                        {
-                            Name = $"EGR_{i}",
-                            Age = 18
-                        }, Guid.NewGuid().ToString());
+                        user.Id = id;
+                        addedDocs.Add(user);
                     }
 
                     session.SaveChanges();
@@ -246,40 +343,15 @@ namespace SlowTests.Sharding.Subscriptions
 
                 Assert.True(docs.Wait(_reasonableWaitTime));
 
-                const string newQuery = "from Users where Age > 18";
-
-                await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
+                var added18OrLowerIds = addedDocs.Where(x => x.Age <= 18);
+                var added18PlusIds = addedDocs.Where(x => x.Age > 18);
+                Assert.True(ackDocs.Count < 10);
+                Assert.All(added18PlusIds, u =>
                 {
-                    Name = state.SubscriptionName,
-                    Query = newQuery,
-                    ChangeVector = $"{Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument}"
+                    Assert.Contains(u.Id, ackDocs);
                 });
 
-                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
-                var newState = newSubscriptions.First();
-                Assert.Equal(1, newSubscriptions.Count);
-                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
-                Assert.Equal(newQuery, newState.Query);
-                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
-
-                await CheckSubscriptionNewQuery(store, state, newQuery);
-
-                for (int i = count / 2; i < count; i++)
-                {
-                    using (var session = store.OpenSession())
-                    {
-                        session.Store(new User
-                        {
-                            Name = $"EGR_{i}",
-                            Age = 18
-                        }, Guid.NewGuid().ToString());
-                        session.SaveChanges();
-                    }
-                }
-
-                await Task.Delay(500);
-                Assert.True(flag);
-                AssertOnSubscriptionConnectionRetryEventException(onSubscriptionConnectionRetryException, state);
+                Assert.True(added18OrLowerIds.Any(u => ackDocs.Contains(u.Id) == false), "We didn't skip any docs");
             }
         }
 

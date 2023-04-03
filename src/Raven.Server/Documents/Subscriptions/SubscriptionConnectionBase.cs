@@ -914,6 +914,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         private async Task<Task<SubscriptionConnectionClientMessage>> WaitForClientAck(Task<SubscriptionConnectionClientMessage> replyFromClientTask)
         {
+            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Waiting for acknowledge from client."));
+
             SubscriptionConnectionClientMessage clientReply;
             while (true)
             {
@@ -942,6 +944,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
                 {
+                    AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Got acknowledge from client."));
                     await OnClientAckAsync(clientReply.ChangeVector);
                     break;
                 }

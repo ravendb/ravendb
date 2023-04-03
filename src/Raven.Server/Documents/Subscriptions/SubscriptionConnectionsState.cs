@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +16,6 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
-using Sparrow.Server.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Subscriptions
@@ -82,8 +80,6 @@ namespace Raven.Server.Documents.Subscriptions
                 // update the subscription data only on new concurrent connection or regular connection
                 SetLastChangeVectorSent(connection);
 
-                PreviouslyRecordedChangeVector = LastChangeVectorSent;
-                
                 using (var old = _disposableNotificationsRegistration)
                 {
                     _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection);
@@ -208,7 +204,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId, 
                 SubscriptionName, 
                 list, 
-                PreviouslyRecordedChangeVector, 
+                LastChangeVectorSent, 
                 lastRecordedChangeVector, 
                 _server.NodeTag, 
                 _server.LicenseManager.HasHighlyAvailableTasks(), 
@@ -230,7 +226,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId, 
                 SubscriptionName, 
                 list, 
-                PreviouslyRecordedChangeVector, 
+                LastChangeVectorSent, 
                 lastRecordedChangeVector, 
                 _server.NodeTag, 
                 _server.LicenseManager.HasHighlyAvailableTasks(), 

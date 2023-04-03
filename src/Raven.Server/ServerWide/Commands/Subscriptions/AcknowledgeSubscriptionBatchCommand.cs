@@ -73,6 +73,11 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 { AppropriateNode = appropriateNode };
             }
 
+            if (string.IsNullOrEmpty(ShardName) == false)
+            {
+                CheckConcurrencyForBatchCv(currentState, subscriptionName);
+            }
+
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
             {
                 return context.ReadObject(existingValue, SubscriptionName);
@@ -107,6 +112,19 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             return BatchId == null || // from an old version CSM
                    BatchId == ISubscriptionConnection.NonExistentBatch; // from noop ack
+        }
+
+        private void CheckConcurrencyForBatchCv(SubscriptionState state, string subscriptionName)
+        {
+            if (state.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage)) 
+            {
+                if (cvInStorage != LastKnownSubscriptionChangeVector)
+                {
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't apply {nameof(AcknowledgeSubscriptionBatchCommand)} for sharded subscription with name '{subscriptionName}' on shard '{ShardName}' due to inconsistency in change vector progress. " +
+                                                                                 $"Probably there was an admin intervention that changed the change vector value." +
+                                                                                 $" Stored value: '{cvInStorage}', received value: '{LastKnownSubscriptionChangeVector}'.");
+                }
+            }
         }
 
         public override void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)

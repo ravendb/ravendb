@@ -13,18 +13,17 @@ namespace Raven.Server.Documents.Sharding.Operations;
 
 public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedOperation<LastChangeVectorForCollectionResult, LastChangeVectorForCollectionCombinedResult>
 {
-    private readonly ShardedSubscriptionsHandler _shardedSubscriptionsHandler;
     private readonly string _collection;
     private readonly string _database;
 
-    public ShardedLastChangeVectorForCollectionOperation(ShardedSubscriptionsHandler shardedSubscriptionsHandler, string collection, string database)
+    public ShardedLastChangeVectorForCollectionOperation(HttpRequest request, string collection, string database)
     {
-        _shardedSubscriptionsHandler = shardedSubscriptionsHandler;
+        HttpRequest = request;
         _collection = collection ?? throw new ArgumentNullException(nameof(collection));
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
-    public HttpRequest HttpRequest => _shardedSubscriptionsHandler.HttpContext.Request;
+    public HttpRequest HttpRequest { get; }
 
     public LastChangeVectorForCollectionCombinedResult Combine(Dictionary<int, ShardExecutionResult<LastChangeVectorForCollectionResult>> results)
     {

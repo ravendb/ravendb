@@ -12,7 +12,6 @@ public class DummySubscriptionConnectionsState : SubscriptionConnectionsState
         _subscriptionName = "dummy";
 
         LastChangeVectorSent = state.ChangeVectorForNextBatchStartingPoint;
-        PreviouslyRecordedChangeVector = LastChangeVectorSent;
         Query = state.Query;
     }
 

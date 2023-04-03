@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +31,46 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 batch.ConfirmFromShardSubscriptionConnectionTcs.TrySetResult();
                 return Task.CompletedTask;
             };
+        }
+
+        internal override async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServerAsync(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.MemoryBuffer buffer, ShardedSubscriptionBatch batch)
+        {
+            try
+            {
+                return await base.ReadSingleSubscriptionBatchFromServerAsync(contextPool, tcpStream, buffer, batch);
+            }
+            catch (Exception e)
+            {
+                batch.SetException(e);
+                throw;
+            }
+        }
+
+        internal override async Task<BatchFromServer> PrepareBatchAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer,
+            ShardedSubscriptionBatch batch, Task notifiedSubscriber)
+        {
+            try
+            {
+                return await base.PrepareBatchAsync(contextPool, tcpStreamCopy, buffer, batch, notifiedSubscriber);
+            }
+            catch (Exception e)
+            {
+                batch.SetException(e);
+                throw;
+            }
+        }
+
+        internal override async Task SendAckAsync(ShardedSubscriptionBatch batch, Stream stream, JsonOperationContext context, CancellationToken token)
+        {
+            try
+            {
+                await SendAckInternalAsync(batch, stream, context, token).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                batch.SetException(e);
+                throw;
+            }
         }
 
         protected override RequestExecutor GetRequestExecutor() => _shardRequestExecutor;
@@ -118,6 +159,12 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 return (true, null);
 
             return (false, null);
+        }
+
+        protected override void HandleSubscriberError(Exception ex)
+        {
+            // for sharded worker we throw the real exception
+            throw ex;
         }
     }
 }

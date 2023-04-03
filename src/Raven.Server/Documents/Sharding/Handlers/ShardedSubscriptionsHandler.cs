@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
                         break;
                     case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                        result.ChangeVectorsCollection = (await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(this, sub.Collection, DatabaseContext.DatabaseName))).LastChangeVectors;
+                        result.ChangeVectorsCollection = (await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(HttpContext.Request, sub.Collection, DatabaseContext.DatabaseName))).LastChangeVectors;
                         foreach ((string key, string value) in result.ChangeVectorsCollection)
                         {
                             try
