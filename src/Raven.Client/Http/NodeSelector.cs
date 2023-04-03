@@ -127,7 +127,7 @@ namespace Raven.Client.Http
             return (preferredNode.Index, preferredNode.Node, state.Topology?.Etag??-2);
         }
 
-        internal int[] GetNodeSelectorFailures => _state.Failures;
+        internal int[] NodeSelectorFailures => _state.Failures;
 
         private static ValueTuple<int, ServerNode> UnlikelyEveryoneFaultedChoice(NodeSelectorState state)
         {

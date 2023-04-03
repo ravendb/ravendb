@@ -96,7 +96,7 @@ public class RavenDB_20202 : ClusterTestBase
             WaitForValue(() =>
             {
                 // Assert that there are no health check timers for failed nodes
-                var failedNodesTimers = store.GetRequestExecutor().ForTestingPurposesOnly().GetFailedNodesTimers;
+                var failedNodesTimers = store.GetRequestExecutor().ForTestingPurposesOnly().FailedNodesTimers;
                 return failedNodesTimers.Count;
             }, 
                 expectedVal: 0, 
@@ -104,11 +104,11 @@ public class RavenDB_20202 : ClusterTestBase
                 interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));
 
             // Assert that there are no failures in the node selector state
-            var nodeSelectorFailures = store.GetRequestExecutor().ForTestingPurposesOnly().GetNodeSelectorFailures;
+            var nodeSelectorFailures = store.GetRequestExecutor().ForTestingPurposesOnly().NodeSelectorFailures;
             Assert.Equal(new[] { 0, 0, 0 }, nodeSelectorFailures);
 
             // Assert that we're back to the first node 
-            var preferredNode = store.GetRequestExecutor().ForTestingPurposesOnly().GetPreferredNode;
+            var preferredNode = store.GetRequestExecutor().ForTestingPurposesOnly().PreferredNode;
             Assert.Equal(0, preferredNode.Index);
             Assert.Equal("A", preferredNode.Node.ClusterTag);
         }
