@@ -25,23 +25,27 @@ namespace Voron.Data.PostingLists
    *            then 5 bits value (B bits per number)
    * * 0b01   (15 bits) - variable header marker - followed by 8 bits value (number of items) and 5 bits value (B bits per number)
    * * 0b10   (15 bits) - repeated header marker - followed by 8 bits value (number of repetitions) and 5 bits value (B bits per number) 
-   * * 0b11   - reserved
+   * * 0b11   Extended value, need to read another 2 bits to understand
+   * *  - 0b00 - End of entries
+   * *  - 0b01 - Reserved  
+   * *  - 0b10 - Raw value base for future entries - 64 bits
+   * *  - 0b11 - Reserved
    */
     public unsafe ref struct PForEncoder
     {
         public const int BufferLen = 128;
 
-        private readonly Span<byte> _output;
+        private Span<byte> _output;
         private int _bufPos, _bitPos;
         private readonly int _maxNumOfBits;
         private readonly uint* _deltasBuffer;
-        public int Last;
-        public int First;
+        public long Last;
+        public long First;
         public int NumberOfAdditions;
         public int SizeInBytes;
         public int ConsumedBits => _bitPos;
 
-        public List<int> GetDebugOutput()
+        public List<long> GetDebugOutput()
         {
             return PForDecoder.GetDebugOutput(_output);
         }
@@ -60,7 +64,7 @@ namespace Voron.Data.PostingLists
             _deltasBuffer = scratchBuffer;
         }
 
-        public bool TryAdd(int value)
+        public bool TryAdd(long value)
         {
             if (value < 0)
                 throw new ArgumentOutOfRangeException();
@@ -69,18 +73,26 @@ namespace Voron.Data.PostingLists
             if (Last == value)
                 return true; // duplicate addition
 
-            if (NumberOfAdditions++==0)
+            if (NumberOfAdditions++ == 0)
             {
-                _deltasBuffer[_bufPos++] = (uint)value;
                 Last = value;
                 First = value;
-                return TryFlush();
+
+                return TryPushBits(0b11_10, 4) &&
+                       TryPushBits((ulong)value, 63);
             }
 
             if (_bufPos < BufferLen)
             {
                 var diff = value - Last;
                 Last = value;
+                if (diff >= int.MaxValue)
+                {
+                    return TryFlush() && 
+                           TryPushBits(0b11_10, 4) &&
+                           TryPushBits((ulong)value, 63);
+                }
+
                 _deltasBuffer[_bufPos++] = (uint)diff;
                 return true;
             }
@@ -90,12 +102,8 @@ namespace Voron.Data.PostingLists
             return TryFlush() && TryAdd(value);
         }
 
-        public bool TryClose()
+        private bool TryWriteSegmentSuffix()
         {
-            var result = TryFlush() &&
-                         TryPushBits(0b11, 2) &&
-                         TryPushBits(0, BitsAvailableInCurrentByte); // align to byte boundary
-
             byte* buf = stackalloc byte[10];
             var lenAdditions = VariableSizeEncoding.Write(buf, NumberOfAdditions);
             var lenLen = VariableSizeEncoding.Write(buf + lenAdditions, Last);
@@ -116,7 +124,27 @@ namespace Voron.Data.PostingLists
             
             SizeInBytes = pos;
             _bitPos = int.MaxValue;
+            return true;
+        }
+
+        public bool TryCloseWithSuffix()
+        {
+            return TryCloseInternal() && TryWriteSegmentSuffix();
+        }
+
+        public bool TryClose()
+        {
+            var result = TryCloseInternal();
+            SizeInBytes = _bitPos / 8 + (_bitPos % 8 == 0 ? 0 : 1);
+            _bitPos = int.MaxValue;
             return result;
+        }
+
+        private bool TryCloseInternal()
+        {
+            return TryFlush() &&
+                   TryPushBits(0b11_00, 4) &&
+                   TryPushBits(0, BitsAvailableInCurrentByte);// align to byte boundary
         }
 
         private bool TryFlush(Span<uint> buffer)
