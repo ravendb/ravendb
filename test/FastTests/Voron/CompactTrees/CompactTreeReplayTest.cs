@@ -14,10 +14,10 @@ namespace FastTests.Voron.CompactTrees
     public class CompactTreeReplayTest : StorageTest
     {
         public CompactTreeReplayTest(StorageEnvironmentOptions options, ITestOutputHelper output) : base(options, output)
-        {}
+        { }
 
         public CompactTreeReplayTest(ITestOutputHelper output) : base(output)
-        {}
+        { }
 
         protected static IEnumerable<List<string>> ReadTermsFromResource(string file)
         {

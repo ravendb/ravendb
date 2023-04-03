@@ -237,7 +237,33 @@ namespace Voron.Data.CompactTrees
                 return true;
             }
         }
-        
+
+        private bool GoToPreviousPage(ref IteratorCursorState cstate)
+        {
+            while (true)
+            {
+                PopPage(ref cstate); // go to parent
+                if (cstate._pos < 0)
+                    return false;
+
+                ref var state = ref cstate._stk[cstate._pos];
+                Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Branch));
+                if (--state.LastSearchPosition < 0)
+                    continue; // go up
+                do
+                {
+                    var next = GetValue(ref state, state.LastSearchPosition);
+                    PushPage(next, ref cstate);
+                    state = ref cstate._stk[cstate._pos]; 
+                    state.LastSearchPosition = state.Header->NumberOfEntries - 1;
+                }
+                while (state.Header->IsBranch);
+
+                state.LastSearchPosition = state.Header->NumberOfEntries - 1;
+                return true;
+            }
+        }
+
         public bool TryGetValue(string key, out long value)
         {
             using var _ = Slice.From(_llt.Allocator, key, out var slice);
@@ -1746,5 +1772,7 @@ namespace Voron.Data.CompactTrees
             state.LastMatch = 1;
             state.LastSearchPosition = 0;
         }
+
+
     }
 }
