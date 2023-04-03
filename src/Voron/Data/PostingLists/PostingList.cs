@@ -516,10 +516,9 @@ namespace Voron.Data.PostingLists
         private void AddNewPageForTheExtras(PostingListLeafPage leafPage, List<PostingListLeafPage.ExtraSegmentDetails> extras)
         {
             int idx = 0;
-            var page = _llt.AllocatePage(1);
-            _state.LeafPages++;
-            var newPage = new PostingListLeafPage(page);
+            var newPage = new PostingListLeafPage(_llt.AllocatePage(1));
             PostingListLeafPage.InitLeaf(newPage.Header);
+            _state.LeafPages++;
             long firstValue = extras[0].FirstValue;
             while (idx < extras.Count)
             {
@@ -532,8 +531,7 @@ namespace Voron.Data.PostingLists
                 }
                 _state.NumberOfEntries += newPage.Header->NumberOfEntries;
                 AddToParentPage(firstValue, newPage.Header->PageNumber);
-                page = _llt.AllocatePage(1);
-                newPage = new PostingListLeafPage(page);
+                newPage = new PostingListLeafPage(_llt.AllocatePage(1));
                 firstValue = cur.FirstValue;
                 PostingListLeafPage.InitLeaf(newPage.Header);
             }
@@ -580,13 +578,15 @@ namespace Voron.Data.PostingLists
         {
             ref var state = ref _stk[_pos];
 
+            // Create a new branch page to split the existing page
             var pageToSplit = new PostingListBranchPage(state.Page);
             var page = _llt.AllocatePage(1);
             var branch = new PostingListBranchPage(page);
             branch.Init();
             _state.BranchPages++;
             
-            // grow rightward
+            // grow rightward:
+            // If the key is greater than the last key in the page to split, add it to the new branch page
             if (key > pageToSplit.Last)
             {
                 if (branch.TryAdd(_llt, key, value) == false)
@@ -596,26 +596,17 @@ namespace Voron.Data.PostingLists
             }
 
             // grow leftward
-            if (key < pageToSplit.First)
+            //if (key < pageToSplit.First)
             {
-                long oldFirst = pageToSplit.First;
-                var cpy = page.PageNumber;
-                state.Page.AsSpan().CopyTo(page.AsSpan());
-                page.PageNumber = cpy;
-
-                cpy = state.Page.PageNumber;
-                state.Page.AsSpan().Clear();
-                state.Page.PageNumber = cpy;
-
-                var curPage = new PostingListBranchPage(state.Page);
-                curPage.Init();
-                if(curPage.TryAdd(_llt, key, value) == false)
-                    throw new InvalidOperationException("Failed to add to a newly initialized page? Should never happen");
-                AddToParentPage(oldFirst, page.PageNumber);
-                return;
+                // Here we add a key that is less than the first item in the current page
+                // We *could* optimize this by creating a new empty page left to the current one
+                // and write the details to it, but it is a rare scenario, we can just accept the
+                // split in this case and call it a day
+                
             }
 
             // split in half
+            // add the upper half of the entries to the new page 
             for (int i = pageToSplit.Header->NumberOfEntries / 2; i < pageToSplit.Header->NumberOfEntries; i++)
             {
                 var (k, v) = pageToSplit.GetByIndex(i);
