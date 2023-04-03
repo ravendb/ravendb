@@ -2,7 +2,7 @@
     <div class="row">
         <div class="col-lg-8 col-xl-6">
             <div class="panel padding padding-lg">
-                <img alt="info package" src="Content/img/info_package.png" class="img-responsive img-center" />
+                <img alt="info package" src="Content/img/info_package.svg" class="img-responsive img-center" width="240" />
                 <h2 class="text-center margin-top">Create Debug Package</h2>
                 <p class="description text-center">Generate a comprehensive package of diagnostic information to aid in troubleshooting and resolving issues.</p>
                 <ul class="info-package-items margin-top-lg margin-bottom-sm">
@@ -31,23 +31,23 @@
                         <span>and more</span>
                     </li>
                 </ul>
-                <div class="checkbox-list-group d-flex flex-grow align-items-start justify-content-center margin-bottom-lg">
+                <div class="checkbox-list-group d-flex flex-grow flex-vertical justify-content-center margin-bottom-lg">
                     <div class="checkbox-list d-flex flex-vertical justify-content-center align-items-center">
                         <small>Select data types</small>
-                        <div class="w-100 well d-flex flex-vertical align-items-start" data-bind="validationOptions: { insertMessages: false }">
-                            <div class="checkbox checkbox-inline">
+                        <div class="well d-flex flex-vertical align-items-start" data-bind="validationOptions: { insertMessages: false }">
+                            <div class="checkbox margin-bottom-sm">
                                 <input id="serverWide" class="styled" type="checkbox" value="ServerWide" data-bind="checked: model.types">
                                 <label for="serverWide">
                                     Server
                                 </label>
                             </div>
-                            <div class="checkbox checkbox-inline">
+                            <div class="checkbox margin-bottom-sm">
                                 <input id="databases" class="styled" type="checkbox" value="Databases" data-bind="checked: model.types">
                                 <label for="databases">
                                     Databases
                                 </label>
                             </div>
-                            <div class="checkbox checkbox-inline">
+                            <div class="checkbox">
                                 <input id="logFile" class="styled" type="checkbox" value="LogFile" data-bind="checked: model.types">
                                 <label for="logFile">
                                     Logs
@@ -60,16 +60,16 @@
                     </div>
                     <div class="checkbox-list d-flex flex-vertical justify-content-center align-items-center" data-bind="visible: model.types().includes('Databases')">
                         <small>Databases</small>
-                        <div class="w-100 well d-flex flex-vertical align-items-start">
+                        <div class="well">
                             <div class="toggle">
                                 <input id="toggleDatabases" type="checkbox" data-bind="checked: model.allDatabases">
                                 <label for="toggleDatabases">Select all</label>
                             </div>
-                            <div data-bind="foreach: databaseNames, visible: !model.allDatabases()">
-                                <div class="checkbox checkbox-inline" data-bind="validationOptions: { insertMessages: false }">
-                                    <input class="styled" type="checkbox" 
-                                           data-bind="attr: { id: 'database_info_' + $index() }, value: $data, checked: $root.model.databases" />
-                                    <label data-bind="attr: { for: 'database_info_' + $index() }, text: $data">
+                            <div data-bind="foreach: databaseNames, visible: !model.allDatabases()" class="d-flex flex-vertical w-100 databases-checkbox-list">
+                                <div class="checkbox margin-bottom-sm" data-bind="validationOptions: { insertMessages: false }">
+                                    <input class="styled" type="checkbox"
+                                        data-bind="attr: { id: 'database_info_' + $index() }, value: $data, checked: $root.model.databases" />
+                                    <label class="break-spaces" data-bind="attr: { for: 'database_info_' + $index() }, text: $data">
                                     </label>
                                 </div>
                             </div>

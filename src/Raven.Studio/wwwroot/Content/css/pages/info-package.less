@@ -5,16 +5,34 @@
         margin: 0 auto;
     }
     .checkbox-list-group {
-        gap: @grid-gutter-width;
+        gap: @gutter-sm;
         .checkbox-list {
-            flex-basis: 50%;
             .well {
-                padding: @grid-gutter-width;
+                width: 50%;
+            }
+            .databases-checkbox-list {
+                max-height: 260px;
+                overflow-y: auto;
+            } 
+            .checkbox {
+                display: flex;
+                margin-left: 0;
+                margin-right: @gutter-xs;
+                input {
+                    margin-right: @gutter-xs;
+                }
+                label {
+                    word-break: break-all;
+
+                }
+                input[type="checkbox"] {
+                    width: unset;
+                }
             }
         }
     }
     .well {
-        border-radius: @grid-gutter-width/2;
+        border-radius: @gutter-sm;
     }
     .create-package {
         width: 75%;
@@ -32,7 +50,7 @@
             width: 88px;
             text-align: center;
             line-height: 14px;
-            margin-bottom: @grid-gutter-width;
+            margin-bottom: @gutter-sm;
             .make-icon-color(replication, @color-1-1, @color-1-1);
             .make-icon-color(stats, @color-1-3, @color-1-3);
             .make-icon-color(io-test, @color-2-1, @color-2-1);
@@ -47,11 +65,11 @@
             width: 64px;
             height: 64px;
             color: @text-color;
-            border-radius: @grid-gutter-width/2;
+            border-radius: @gutter-sm;
             font-size: 24px;
             line-height: 64px;
             background: @well-bg;
-            margin-bottom: @grid-gutter-width/2;
+            margin-bottom: @gutter-sm;
         }
 
         span {
