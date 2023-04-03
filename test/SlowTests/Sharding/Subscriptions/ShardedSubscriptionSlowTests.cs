@@ -511,7 +511,7 @@ namespace SlowTests.Sharding.Subscriptions
                         record.Sharding.Prefixed = new List<PrefixedShardingSetting>
                         {
                             new PrefixedShardingSetting { Prefix = "people/", Shards = new List<int> { 0 } },
-                            new PrefixedShardingSetting { Prefix = "dogs/", Shards = new List<int> { 1, 2 } }
+                            new PrefixedShardingSetting { Prefix = "dogs/", Shards = new List<int> { 1, 12 } }
                         };
                     }
                 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Orders;
 using Raven.Client.Documents;
@@ -42,7 +43,7 @@ namespace SlowTests.Sharding.BucketMigration
                 }
 
                 var shard = await Sharding.GetShardNumberFor(store, "users/1");
-                var wrongShard = (shard + 1) % 2;
+                var wrongShard = ShardingTestBase.GetNextSortedShardNumber((await Sharding.GetShardingConfigurationAsync(store)).Shards, shard);
 
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(ShardHelper.ToShardName(store.Database, wrongShard));
                 db.ForTestingPurposesOnly().EnableWritesToTheWrongShard = true;
@@ -168,7 +169,7 @@ namespace SlowTests.Sharding.BucketMigration
                 }
 
                 var shard = await Sharding.GetShardNumberFor(store, "users/1");
-                var wrongShard = (shard + 1) % 2;
+                var wrongShard = ShardingTestBase.GetNextSortedShardNumber((await Sharding.GetShardingConfigurationAsync(store)).Shards, shard);
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
                 var dbTopology = record.Sharding.Shards[wrongShard];
@@ -216,7 +217,7 @@ namespace SlowTests.Sharding.BucketMigration
             }
 
             var shard = await Sharding.GetShardNumberFor(store, "users/1");
-            var wrongShard = (shard + 1) % 2;
+            var wrongShard = ShardingTestBase.GetNextSortedShardNumber((await Sharding.GetShardingConfigurationAsync(store)).Shards, shard);
 
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(ShardHelper.ToShardName(store.Database, wrongShard));
             db.ForTestingPurposesOnly().EnableWritesToTheWrongShard = true;
@@ -282,7 +283,7 @@ namespace SlowTests.Sharding.BucketMigration
                 }
 
                 var shard = await Sharding.GetShardNumberFor(source, "users/1");
-                var wrongShard = (shard + 1) % 2;
+                var wrongShard = ShardingTestBase.GetNextSortedShardNumber((await Sharding.GetShardingConfigurationAsync(source)).Shards, shard);
 
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(ShardHelper.ToShardName(source.Database, wrongShard));
                 db.ForTestingPurposesOnly().EnableWritesToTheWrongShard = true;
@@ -333,7 +334,7 @@ namespace SlowTests.Sharding.BucketMigration
                 }
 
                 var shard = await Sharding.GetShardNumberFor(source, "users/1");
-                var wrongShard = (shard + 1) % 2;
+                var wrongShard = ShardingTestBase.GetNextSortedShardNumber((await Sharding.GetShardingConfigurationAsync(source)).Shards, shard);
 
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(ShardHelper.ToShardName(source.Database, wrongShard));
                 db.ForTestingPurposesOnly().EnableWritesToTheWrongShard = true;
@@ -378,7 +379,7 @@ namespace SlowTests.Sharding.BucketMigration
                 }
 
                 var shard = await Sharding.GetShardNumberFor(source, "users/1");
-                var wrongShard = (shard + 1) % 2;
+                var wrongShard = ShardingTestBase.GetNextSortedShardNumber((await Sharding.GetShardingConfigurationAsync(source)).Shards, shard);
 
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(ShardHelper.ToShardName(source.Database, wrongShard));
                 db.ForTestingPurposesOnly().EnableWritesToTheWrongShard = true;
@@ -429,7 +430,7 @@ namespace SlowTests.Sharding.BucketMigration
                 }
 
                 var shard = await Sharding.GetShardNumberFor(source, "users/1");
-                var wrongShard = (shard + 1) % 2;
+                var wrongShard = ShardingTestBase.GetNextSortedShardNumber((await Sharding.GetShardingConfigurationAsync(source)).Shards, shard);
 
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(ShardHelper.ToShardName(source.Database, wrongShard));
                 db.ForTestingPurposesOnly().EnableWritesToTheWrongShard = true;
@@ -500,7 +501,7 @@ namespace SlowTests.Sharding.BucketMigration
                 }
 
                 var shard = await Sharding.GetShardNumberFor(store, "users/1");
-                var wrongShard = (shard + 1) % 2;
+                var wrongShard = ShardingTestBase.GetNextSortedShardNumber((await Sharding.GetShardingConfigurationAsync(store)).Shards, shard);
 
                 var dbName = ShardHelper.ToShardName(store.Database, wrongShard);
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(dbName);

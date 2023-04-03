@@ -298,7 +298,7 @@ public class PrefixedSharding : RavenTestBase
         shardingConfiguration.Prefixed.Add(new PrefixedShardingSetting
         {
             Prefix = "asia/",
-            Shards = new List<int> { 1, 2 }
+            Shards = new List<int> { 1, 12 }
         });
 
         Assert.Equal(4, shardingConfiguration.BucketRanges.Count);
@@ -444,7 +444,7 @@ public class PrefixedSharding : RavenTestBase
             databaseRecord.Sharding.Prefixed.Add(new PrefixedShardingSetting
             {
                 Prefix = "employees/",
-                Shards = new List<int> { 2 }
+                Shards = new List<int> { 12 }
             });
 
             await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(databaseRecord, replicationFactor: 1, databaseRecord.Etag));
@@ -483,7 +483,7 @@ public class PrefixedSharding : RavenTestBase
                     Assert.NotNull(doc);
                 }
             }
-            using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 2)))
+            using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 12)))
             {
                 for (int i = 0; i < 10; i++)
                 {
@@ -546,7 +546,7 @@ public class PrefixedSharding : RavenTestBase
                 var employeesPrefixSetting = newDatabaseRecord.Sharding.Prefixed[2];
                 Assert.Equal("employees/", employeesPrefixSetting.Prefix);
                 Assert.Equal(1, employeesPrefixSetting.Shards.Count);
-                Assert.Equal(2, employeesPrefixSetting.Shards[0]);
+                Assert.Equal(12, employeesPrefixSetting.Shards[0]);
                 Assert.Equal(ShardHelper.NumberOfBuckets * 3, employeesPrefixSetting.BucketRangeStart);
 
                 Assert.Equal(6, sharding.BucketRanges.Count);
@@ -608,7 +608,7 @@ public class PrefixedSharding : RavenTestBase
                     Assert.NotNull(order);
                 }
 
-                using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(restoredDatabaseName, 2)))
+                using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(restoredDatabaseName, 12)))
                 {
                     var employee = await session.LoadAsync<Employee>("employees/11");
                     Assert.NotNull(employee);
