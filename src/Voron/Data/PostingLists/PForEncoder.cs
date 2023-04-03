@@ -57,8 +57,8 @@ namespace Voron.Data.PostingLists
             _bufPos = 0;
             _bitPos = 0;
             _maxNumOfBits = output.Length * 8;
-            Last = 0;
-            First = 0;
+            Last = -1;
+            First = -1;
             SizeInBytes = -1;
             NumberOfAdditions = 0;
             _deltasBuffer = scratchBuffer;
