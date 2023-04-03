@@ -41,6 +41,7 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
         var cmd = base.GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, docsToResend);
         cmd.ShardName = ShardedDocumentDatabase.Name;
         cmd.DatabaseName = ShardedDocumentDatabase.ShardedDatabaseName;
+        cmd.LastKnownSubscriptionChangeVector = LastChangeVectorSent;
         return cmd;
     }
 

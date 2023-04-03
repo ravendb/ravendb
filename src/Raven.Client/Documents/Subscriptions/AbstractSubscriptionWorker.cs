@@ -538,54 +538,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             while (_processingCts.IsCancellationRequested == false)
             {
-                // start reading next batch from server on 1'st thread (can be before client started processing)
-                var readFromServer = ReadSingleSubscriptionBatchFromServerAsync(contextPool, tcpStreamCopy, buffer, batch);
-                try
-                {
-                    // wait for the subscriber to complete processing on 2'nd thread
-                    await notifiedSubscriber.ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    // if the subscriber errored, we shut down
-                    try
-                    {
-                        CloseTcpClient();
-                        using ((await readFromServer.ConfigureAwait(false)).ReturnContext)
-                        {
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // nothing to be done here
-                    }
-
-                    throw;
-                }
-
-                BatchFromServer incomingBatch = await readFromServer.ConfigureAwait(false); // wait for batch reading to end
-
-                try
-                {
-                    _processingCts.Token.ThrowIfCancellationRequested();
-
-                    await batch.InitializeAsync(incomingBatch).ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    try
-                    {
-                        using (incomingBatch.ReturnContext)
-                        {
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // nothing to be done here
-                    }
-
-                    throw;
-                }
+                var incomingBatch = await PrepareBatchAsync(contextPool, tcpStreamCopy, buffer, batch, notifiedSubscriber).ConfigureAwait(false);
 
                 notifiedSubscriber = Task.Run(async () => // the 2'nd thread
                 {
@@ -603,32 +556,80 @@ namespace Raven.Client.Documents.Subscriptions
                         {
                             if (_logger.IsInfoEnabled)
                             {
-                                _logger.Info(
-                                    $"Subscription '{_options.SubscriptionName}'. Subscriber threw an exception on document batch", ex);
+                                _logger.Info($"Subscription '{_options.SubscriptionName}'. Subscriber threw an exception on document batch", ex);
                             }
 
-                            if (_options.IgnoreSubscriberErrors == false)
-                                throw new SubscriberErrorException($"Subscriber threw an exception in subscription '{_options.SubscriptionName}'", ex);
+                            HandleSubscriberError(ex);
                         }
                     }
 
-                    try
-                    {
-                        if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
-                        {
-                            await SendAckAsync(batch.LastSentChangeVectorInBatch, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
-                        }
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        //if this happens, this means we are disposing, so don't care..
-                        //(this piece of code happens asynchronously to external using(tcpStream) statement)
-                    }
+                    await SendAckAsync(batch, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
                 });
             }
         }
 
-        internal async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServerAsync(JsonContextPool contextPool, Stream tcpStream,
+        protected virtual void HandleSubscriberError(Exception ex)
+        {
+            if (_options.IgnoreSubscriberErrors == false)
+                throw new SubscriberErrorException($"Subscriber threw an exception in subscription '{_options.SubscriptionName}'", ex);
+        }
+
+        internal virtual async Task<BatchFromServer> PrepareBatchAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer, TBatch batch, Task notifiedSubscriber)
+        {
+            // start reading next batch from server on 1'st thread (can be before client started processing)
+            var readFromServer = ReadSingleSubscriptionBatchFromServerAsync(contextPool, tcpStreamCopy, buffer, batch);
+
+            try
+            {
+                // wait for the subscriber to complete processing on 2'nd thread
+                await notifiedSubscriber.ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // if the subscriber errored, we shut down
+                try
+                {
+                    CloseTcpClient();
+                    using ((await readFromServer.ConfigureAwait(false)).ReturnContext)
+                    {
+                    }
+                }
+                catch (Exception)
+                {
+                    // nothing to be done here
+                }
+
+                throw;
+            }
+
+            BatchFromServer incomingBatch = await readFromServer.ConfigureAwait(false); // wait for batch reading to end
+
+            try
+            {
+                _processingCts.Token.ThrowIfCancellationRequested();
+
+                await batch.InitializeAsync(incomingBatch).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    using (incomingBatch.ReturnContext)
+                    {
+                    }
+                }
+                catch (Exception)
+                {
+                    // nothing to be done here
+                }
+
+                throw;
+            }
+
+            return incomingBatch;
+        }
+
+        internal virtual async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServerAsync(JsonContextPool contextPool, Stream tcpStream,
             JsonOperationContext.MemoryBuffer buffer, TBatch batch)
         {
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
@@ -746,19 +747,35 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        internal static async Task SendAckAsync(string lastReceivedChangeVector, Stream stream, JsonOperationContext context, CancellationToken token)
+        internal virtual async Task SendAckAsync(TBatch batch, Stream stream, JsonOperationContext context, CancellationToken token)
         {
-            var message = new SubscriptionConnectionClientMessage
+            try
             {
-                ChangeVector = lastReceivedChangeVector,
-                Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge
-            };
-
-            using (var messageJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(message, context))
+                await SendAckInternalAsync(batch, stream, context, token).ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException)
             {
-                await messageJson.WriteJsonToAsync(stream, token).ConfigureAwait(false);
+                //if this happens, this means we are disposing, so don't care..
+                //(this piece of code happens asynchronously to external using(tcpStream) statement)
+            }
+        }
 
-                await stream.FlushAsync(token).ConfigureAwait(false);
+        protected async Task SendAckInternalAsync(TBatch batch, Stream stream, JsonOperationContext context, CancellationToken token)
+        {
+            if (stream != null) //possibly prevent ObjectDisposedException
+            {
+                var message = new SubscriptionConnectionClientMessage
+                {
+                    ChangeVector = batch.LastSentChangeVectorInBatch, 
+                    Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge
+                };
+
+                using (var messageJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(message, context))
+                {
+                    await messageJson.WriteJsonToAsync(stream, token).ConfigureAwait(false);
+
+                    await stream.FlushAsync(token).ConfigureAwait(false);
+                }
             }
         }
 

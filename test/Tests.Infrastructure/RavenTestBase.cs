@@ -560,6 +560,14 @@ namespace FastTests
                 try
                 {
                     var currentVal = act();
+                    if (expectedVal == null)
+                    {
+                        if (currentVal == null)
+                            return default;
+
+                        continue;
+                    }
+
                     if (expectedVal.Equals(currentVal))
                     {
                         return currentVal;

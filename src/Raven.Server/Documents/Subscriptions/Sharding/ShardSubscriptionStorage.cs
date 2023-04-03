@@ -10,8 +10,11 @@ namespace Raven.Server.Documents.Subscriptions.Sharding;
 
 public class ShardSubscriptionStorage : SubscriptionStorage
 {
+    private readonly string _shardName;
+
     public ShardSubscriptionStorage(ShardedDocumentDatabase db, ServerStore serverStore, string name) : base(db, serverStore, name)
     {
+        _shardName = db.Name;
     }
 
     public override void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)
@@ -34,6 +37,14 @@ public class ShardSubscriptionStorage : SubscriptionStorage
                 }
 
                 var taskState = JsonDeserializationClient.SubscriptionState(taskStateRaw);
+
+                if (SubscriptionChangeVectorHasChanges(state, taskState))
+                {
+                    DropSubscriptionConnections(id, new SubscriptionClosedException(
+                        $"The subscription '{subscriptionName}' change vector was modified on shard '{_shardName}', connection must be restarted",
+                        canReconnect: true));
+                }
+               
                 var whoseTaskIsIt = GetSubscriptionResponsibleNode(databaseRecord, taskState);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
@@ -42,6 +53,34 @@ public class ShardSubscriptionStorage : SubscriptionStorage
                 }
             }
         }
+    }
+
+    protected override bool SubscriptionChangeVectorHasChanges(SubscriptionConnectionsState state, SubscriptionState taskStatus)
+    {
+        if (taskStatus.LastClientConnectionTime != null)
+            return false;
+
+        if (taskStatus.ShardingState == null)
+        {
+            if (state.LastChangeVectorSent == null)
+                return false;
+
+            return true;
+        }
+
+        if (taskStatus.ShardingState != null)
+        {
+            if (taskStatus.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(_shardName, out var cv) == false &&
+                state.LastChangeVectorSent == null)
+            {
+                return false;
+            }
+
+            if (cv == state.LastChangeVectorSent)
+                return false;
+        }
+
+        return true;
     }
 
     internal override void CleanupSubscriptions()

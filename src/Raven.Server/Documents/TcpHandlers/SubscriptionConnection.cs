@@ -426,9 +426,6 @@ namespace Raven.Server.Documents.TcpHandlers
             _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(
                 _subscriptionConnectionsState.LastChangeVectorSent,
                 lastChangeVectorSentInThisBatch);
-
-            _subscriptionConnectionsState.PreviouslyRecordedChangeVector =
-                ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.PreviouslyRecordedChangeVector, lastChangeVectorSentInThisBatch);
         }
 
         protected virtual void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)

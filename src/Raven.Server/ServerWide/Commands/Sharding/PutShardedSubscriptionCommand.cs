@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -25,20 +26,49 @@ public class PutShardedSubscriptionCommand : PutSubscriptionCommand
 
     protected override void HandleChangeVectorOnUpdate(ClusterOperationContext context, SubscriptionState existingSubscriptionState, long subscriptionId)
     {
+        var existingShardsCVs = existingSubscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard;
+
         if (InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
         {
             // use current change vectors saved in state
-            InitialChangeVectorPerShard = existingSubscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard;
+            InitialChangeVectorPerShard = existingShardsCVs;
             return;
         }
 
-        if (InitialChangeVectorPerShard == null || InitialChangeVectorPerShard.Count == 0)
+        if (InitialChangeVectorPerShard == null || InitialChangeVectorPerShard.Count == 0 || InitialChangeVectorPerShard.All(x => string.IsNullOrEmpty(x.Value)))
+        {
+            InitialChangeVectorPerShard = null;
             return;
+        }
 
-        // start from LastDocument (the CVs were validated in handler)
-        InitialChangeVectorPerShard = existingSubscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard;
+        // start from LastDocument (the CVs were validated in handler) or CV set by admin
+        if (CompareShardsChangeVectors(existingShardsCVs))
+        {
+            return;
+        }
+        
         // remove the old state from storage
         RemoveSubscriptionStateFromStorage(context, subscriptionId);
+    }
+
+    private bool CompareShardsChangeVectors(Dictionary<string, string> existingCVs)
+    {
+        if (InitialChangeVectorPerShard.Count != existingCVs.Count)
+            return false;
+
+        foreach (var key in InitialChangeVectorPerShard.Keys)
+        {
+            if (existingCVs.ContainsKey(key) == false)
+                return false;
+        }
+
+        foreach (var kvp in InitialChangeVectorPerShard)
+        {
+            if (kvp.Value != existingCVs[kvp.Key])
+                return false;
+        }
+
+        return true;
     }
 
     protected override void AssertValidChangeVector()
