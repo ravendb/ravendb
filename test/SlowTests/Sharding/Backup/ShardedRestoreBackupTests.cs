@@ -59,6 +59,7 @@ namespace SlowTests.Sharding.Backup
             var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
             using (var store = Sharding.GetDocumentStore(options))
             {
+                var record = await Sharding.GetShardingConfigurationAsync(store);
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 10; i++)
@@ -808,7 +809,7 @@ namespace SlowTests.Sharding.Backup
                 store.Maintenance.Server.Send(new UpdateDatabaseOperation(databaseRecord, replicationFactor: 1, databaseRecord.Etag));
 
                 var newLocation = await Sharding.GetShardNumberFor(store, id);
-                Assert.Equal(1, newLocation);
+                Assert.NotEqual(originalLocation, newLocation);
 
                 using (var session = store.OpenAsyncSession())
                 {

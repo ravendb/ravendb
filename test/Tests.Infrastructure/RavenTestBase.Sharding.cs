@@ -89,7 +89,7 @@ public partial class RavenTestBase
 
                     for (int shardNumber = 0; shardNumber < shards; shardNumber++)
                     {
-                        if (shardNumber == 0)
+                        if (shardNumber == 1)
                         {
                             r.Sharding.Shards[12] = new DatabaseTopology
                             {

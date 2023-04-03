@@ -768,7 +768,7 @@ namespace FastTests
                                 {
                                     {0, new DatabaseTopology()},
                                     {12, new DatabaseTopology()},
-                                    {2, new DatabaseTopology()}
+                                    {1, new DatabaseTopology()}
                                 }
                             };
                         };

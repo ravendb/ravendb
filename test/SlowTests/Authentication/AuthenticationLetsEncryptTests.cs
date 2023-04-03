@@ -233,9 +233,10 @@ namespace SlowTests.Authentication
             using (var store = Sharding.GetDocumentStore(options))
             {
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                Assert.Equal(1, record.Sharding.Shards[0].Members.Count);
-                Assert.Equal(1, record.Sharding.Shards[1].Members.Count);
-                Assert.Equal(1, record.Sharding.Shards[2].Members.Count);
+                foreach (var topology in record.Sharding.Shards.Values)
+                {
+                    Assert.Equal(1, topology.Members.Count);
+                }
 
                 var requestExecutor = store.GetRequestExecutor(databaseName);
 

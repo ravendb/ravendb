@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Documents.Sharding
+﻿using System.Linq;
+
+namespace Raven.Server.Documents.Sharding
 {
     public partial class ShardedDatabaseContext
     {
@@ -21,7 +23,8 @@
                 _databaseContext = databaseContext;
             }
 
-            internal int ModifyShardNumber(int shardNumber) => ++shardNumber % _databaseContext.ShardCount;
+            internal int ModifyShardNumber(int shardNumber) =>
+                _databaseContext.ShardsTopology.Keys.ElementAt(0) == shardNumber ? _databaseContext.ShardsTopology.Keys.ElementAt(1) : shardNumber;
         }
     }
 }

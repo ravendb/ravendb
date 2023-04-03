@@ -45,7 +45,7 @@ namespace SlowTests.Server.Documents.Replication
 
                 await SetupReplicationAsync(store1, store2);
 
-                int shardNumber = 0;
+                int shardNumber = (await Sharding.GetShardingConfigurationAsync(store1)).Shards.Keys.First();
                 int replicationIncoming = 0;
                 ReplicationPerformance replicationPerformance = null;
                 var dbs = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store2.Database);
