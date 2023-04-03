@@ -37,7 +37,7 @@ namespace FastTests.Voron.Sets
         public void CanAddAndRead(int size)
         {
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
-            PostingListLeafPage.InitLeaf(leaf.Header, 0);
+            PostingListLeafPage.InitLeaf(leaf.Header);
             var list = new List<long>();
             var buf = new int[] {12, 18};
             var start = 24;
@@ -65,7 +65,7 @@ namespace FastTests.Voron.Sets
         public void CanAddAndRemove(int size)
         {
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
-            PostingListLeafPage.InitLeaf(leaf.Header, 0);
+            PostingListLeafPage.InitLeaf(leaf.Header);
             var buf = new int[] {12, 18};
             var start = 24;
             var list = new long[size];
@@ -100,7 +100,7 @@ namespace FastTests.Voron.Sets
         public void CanHandleDuplicateValues(int size)
         {
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
-            PostingListLeafPage.InitLeaf(leaf.Header, 0);
+            PostingListLeafPage.InitLeaf(leaf.Header);
             var list = new List<long>();
             var buf = new int[] {12, 18};
             var start = 24;
