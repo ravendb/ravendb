@@ -121,5 +121,15 @@ namespace Raven.Client.Documents.Session.Tokens
             if (_descending) // we only add this if we have to, ASC is the default and reads nicer
                 writer.Append(" desc");
         }
+        
+        public OrderByToken AddAlias(string alias)
+        {
+            var aliasedName = $"{alias}.{_fieldName}";
+
+            if (_sorterName != null)
+                return new OrderByToken(aliasedName, _descending, _sorterName);
+            else
+                return new OrderByToken(aliasedName, _descending, _ordering);
+        }
     }
 }
