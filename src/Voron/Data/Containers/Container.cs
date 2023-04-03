@@ -106,7 +106,9 @@ namespace Voron.Data.Containers
 
         public static long Create(LowLevelTransaction llt)
         {
-            var page = AllocateContainerPage(llt);
+            var page = llt.AllocatePage(1);
+
+            InitializeContainerPage(page);
 
             var root = new Container(page);
             root.Header.NumberOfPages = 1;
@@ -142,16 +144,12 @@ namespace Voron.Data.Containers
             return page.PageNumber;
         }
 
-        private static Page AllocateContainerPage( LowLevelTransaction llt )
+        private static void InitializeContainerPage(Page page)
         {
-            var page = llt.AllocatePage(1);
-
             ref var header = ref MemoryMarshal.AsRef<ContainerPageHeader>(page.AsSpan());
             header.Flags = PageFlags.Single | PageFlags.Other;
             header.ContainerFlags = ExtendedPageType.Container;
             header.FloorOfData = Constants.Storage.PageSize;
-
-            return page;
         }
 
         // this is computed so this will fit exactly two items of max size in a container page. Beyond that, we'll have enough
@@ -291,7 +289,7 @@ namespace Voron.Data.Containers
                     freeList = Tree.Open(llt, llt.Transaction, FreePagesTreeName, (TreeRootHeader*)pSate);
                 }
                 var it = freeList.Iterate(prefetch:false);
-                if (it.MoveNext() == false)
+                if (it.Seek(Slices.BeforeAllKeys) == false)
                     break;
 
                 ValueReader readerForCurrent = it.CurrentKey.CreateReader();
@@ -318,14 +316,16 @@ namespace Voron.Data.Containers
                 return  maybe;
             }
 
-            // no existing pages remaining, allocate new one
-            var newPage = AllocateContainerPage(llt);
+            // no existing pages remaining, allocate a new one
+            
             rootContainer.Header.NumberOfPages++;
-            rootContainer.Header.NextFreePage = newPage.PageNumber;
-            
+            var newPage = llt.AllocatePage(1);
+            InitializeContainerPage(newPage);
             container = new Container(newPage);
-            
             AddPageToContainerFreeList(rootContainer, container);
+            ModifyMetadataList(llt, rootContainer, ContainerPageHeader.AllPagesOffset, add: true, newPage.PageNumber);
+
+            rootContainer.Header.NextFreePage = newPage.PageNumber;
 
             return container;
 
@@ -338,7 +338,7 @@ namespace Voron.Data.Containers
             void AddPageToContainerFreeList(Container parent, Container page)
             {
                 page.Header.OnFreeList = true;
-                ModifyMetadataList(llt, parent, ContainerPageHeader.AllPagesOffset, add: true, page.Header.PageNumber);
+                ModifyMetadataList(llt, parent, ContainerPageHeader.FreeListOffset, add: true, page.Header.PageNumber);
             }
         }
 
@@ -455,6 +455,7 @@ namespace Voron.Data.Containers
 
         private static void ModifyMetadataList(LowLevelTransaction llt, in Container rootContainer, int offset, bool add, long value)
         {
+            Debug.Assert(llt.IsDirtyPage(rootContainer._page.PageNumber));
             fixed (void* pState = rootContainer.GetItem(offset))
             {
                 Debug.Assert(llt.IsDirtyPage(rootContainer._page.PageNumber));
