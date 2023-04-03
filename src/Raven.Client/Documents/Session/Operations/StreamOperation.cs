@@ -389,7 +389,7 @@ namespace Raven.Client.Documents.Session.Operations
                 _parser.Dispose();
                 _returnBuffer.Dispose();
                 _peepingTomStream.Dispose();
-                _builder.Dispose();
+                _builder?.Dispose();
                 _builderReturnContext.Dispose();
                 _inputReturnContext?.Dispose();
             }
@@ -415,6 +415,8 @@ namespace Raven.Client.Documents.Session.Operations
 
                     return false;
                 }
+
+                EnsureBuilder(ref _builder);
 
                 _builder.Renew("readArray/singleResult", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
@@ -459,6 +461,8 @@ namespace Raven.Client.Documents.Session.Operations
                     return false;
                 }
 
+                EnsureBuilder(ref _builder);
+
                 _builder.Renew("readArray/singleResult", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                 if (_isTimeSeriesStream)
@@ -495,7 +499,6 @@ namespace Raven.Client.Documents.Session.Operations
 
                     _state = new JsonParserState();
                     _parser = new UnmanagedJsonParser(_inputContext, _state, "stream contents");
-                    _builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
                     _returnBuffer = _inputContext.GetMemoryBuffer(out _buffer);
 
                     if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
@@ -536,7 +539,6 @@ namespace Raven.Client.Documents.Session.Operations
 
                     _state = new JsonParserState();
                     _parser = new UnmanagedJsonParser(_inputContext, _state, "stream contents");
-                    _builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
                     _returnBuffer = _inputContext.GetMemoryBuffer(out _buffer);
 
                     if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
@@ -631,11 +633,9 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_builderContext.AllocatedMemory > 4 * 1024 * 1024 ||
                     _docsCountOnCachedRenewSession > _maxDocsCountOnCachedRenewSession)
                 {
-                    _builder.Dispose();
                     _builderContext.Reset();
                     _builderContext.Renew();
                     _docsCountOnCachedRenewSession = 0;
-                    _builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
                     return;
                 }
 
@@ -667,6 +667,15 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 if (_isAsync)
                     throw new InvalidOperationException("Cannot use synchronous operations in asynchronous enumerator");
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void EnsureBuilder(ref BlittableJsonDocumentBuilder builder)
+            {
+                if (builder != null)
+                    return;
+
+                builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
             }
         }
     }
