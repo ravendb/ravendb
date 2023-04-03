@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -49,7 +48,7 @@ namespace Voron.Data.PostingLists
         {
             var newPage = tx.AllocatePage(1);
             PostingListLeafPage postingListLeafPage = new PostingListLeafPage(newPage);
-            PostingListLeafPage.InitLeaf(postingListLeafPage.Header, 0);
+            PostingListLeafPage.InitLeaf(postingListLeafPage.Header);
             state.RootObjectType = RootObjectType.Set;
             state.Depth = 1;
             state.BranchPages = 0;
@@ -183,7 +182,7 @@ namespace Voron.Data.PostingLists
         public struct Iterator 
         {
             private readonly PostingList _parent;
-            private PostingListLeafPage.Iterator _it;
+            public PostingListLeafPage.Iterator It;
 
             public long Current;
 
@@ -192,14 +191,19 @@ namespace Voron.Data.PostingLists
                 _parent = parent;
                 Current = default;
 
+                SeekSmallest();
+            }
+
+            public bool SeekSmallest()
+            {
                 // We need to find the long.MinValue therefore the fastest way is to always
                 // take the left-most pointer on any branch node.
                 var state = _parent.FindSmallestValue();
 
                 var leafPage = new PostingListLeafPage(state->Page);
-                _it = leafPage.GetIterator();
+                It = leafPage.GetIterator();
+                return _parent.State.NumberOfEntries > 0;
             }
-
 
             public bool Seek(long from = long.MinValue)
             {
@@ -207,20 +211,20 @@ namespace Voron.Data.PostingLists
                 ref var state = ref _parent._stk[_parent._pos];
                 var leafPage = new PostingListLeafPage(state.Page);
 
-                _it = leafPage.GetIterator();
-                _it.Skip(from);
+                It = leafPage.GetIterator();
+                It.Skip(from);
                 return true;
             }
 
             public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
             {
                 // We will try to fill.
-                total = _it.TryFill(matches, pruneGreaterThanOptimization);
+                total = It.TryFill(matches, pruneGreaterThanOptimization);
                           
-                while(true)
+                while(total < matches.Length)
                 {
                     var tmp = matches.Slice(total);
-                    _it.Fill(tmp, out var read, out bool hasPrunedResults,  pruneGreaterThanOptimization);                                                                                      
+                    It.Fill(tmp, out var read, out bool hasPrunedResults,  pruneGreaterThanOptimization);                                                                                      
 
                     // We haven't read anything, but we are not getting a pruned result.
                     if (read == 0 && hasPrunedResults == false)
@@ -254,20 +258,18 @@ namespace Voron.Data.PostingLists
 
                             parent.PushPage(pageNum);
 
-                            if (header->SetFlags == ExtendedPageType.SetBranch)
+                            if (header->PostingListFlags == ExtendedPageType.PostingListBranch)
                             {
                                 // we'll increment on the next
                                 parent._stk[parent._pos].LastSearchPosition = -1;
                                 continue;
                             }
-                            _it = new PostingListLeafPage(page).GetIterator();
+                            It = new PostingListLeafPage(page).GetIterator();
                             break;
                         }
                     }                        
 
                     total += read;
-                    if (total == matches.Length)
-                        break; // We are done.  
 
                     // We have reached the end by prunning.
                     if (hasPrunedResults)
@@ -283,7 +285,7 @@ namespace Voron.Data.PostingLists
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
             {
-                if (_it.MoveNext(out Current))
+                if (It.MoveNext(out Current))
                     return true;
 
                 var parent = _parent;
@@ -294,7 +296,7 @@ namespace Voron.Data.PostingLists
                 
                 var llt = parent._llt;
 
-                var it = _it;
+                var it = It;
                 bool result = false;
                 while (true)
                 {
@@ -317,7 +319,7 @@ namespace Voron.Data.PostingLists
 
                     parent.PushPage(pageNum);
 
-                    if (header->SetFlags == ExtendedPageType.SetBranch)
+                    if (header->PostingListFlags == ExtendedPageType.PostingListBranch)
                     {
                         // we'll increment on the next
                         parent._stk[parent._pos].LastSearchPosition = -1;
@@ -331,7 +333,7 @@ namespace Voron.Data.PostingLists
                     }
                 }
 
-                _it = it;
+                It = it;
                 return result;
             }
 
@@ -351,7 +353,7 @@ namespace Voron.Data.PostingLists
             {
                 result.Add(p.PageNumber);
                 var state = new PostingListCursorState { Page = p, };
-                if (state.BranchHeader->SetFlags != ExtendedPageType.SetBranch)
+                if (state.BranchHeader->SetFlags != ExtendedPageType.PostingListBranch)
                     return;
                 
                 var branch = new PostingListBranchPage(state.Page);
@@ -392,20 +394,6 @@ namespace Voron.Data.PostingLists
                 ref var state = ref _stk[_pos];
                 state.Page = _llt.ModifyPage(state.Page.PageNumber);
                 var leafPage = new PostingListLeafPage(state.Page);
-                
-                long firstBaseline = first & int.MinValue;
-                if (state.LeafHeader->Baseline != firstBaseline) // wrong baseline, need new page
-                {
-                    if (state.LeafHeader->NumberOfCompressedRuns != 0)
-                    {
-                        var page = _llt.AllocatePage(1);
-                        var newPage = new PostingListLeafPage(page);
-                        PostingListLeafPage.InitLeaf(newPage.Header, firstBaseline);
-                        AddToParentPage(firstBaseline, page.PageNumber);
-                        continue;
-                    }
-                    leafPage.Header->Baseline = firstBaseline;
-                }
 
                 _state.NumberOfEntries -= leafPage.Header->NumberOfEntries;
 
@@ -430,16 +418,12 @@ namespace Voron.Data.PostingLists
 
                     var siblingPage = _llt.GetPage(siblingPageNum);
                     var siblingHeader = (PostingListLeafPageHeader*)siblingPage.Pointer;
-                    if (siblingHeader->SetFlags != ExtendedPageType.SetLeaf)
+                    if (siblingHeader->PostingListFlags != ExtendedPageType.PostingListLeaf)
                         continue;
                     
-                    if (siblingHeader->Baseline != leafPage.Header->Baseline)
-                        continue; // we cannot merge pages from different leafs
-
                     var sibling = new PostingListLeafPage(siblingPage);
                     if (sibling.SpaceUsed + leafPage.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
                         continue; // if the two pages together will be bigger than 75%, can skip merging
-
                     
                     PostingListLeafPage.Merge(_llt, 
                         leafPage.Header,
@@ -463,12 +447,12 @@ namespace Voron.Data.PostingLists
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
             
             var current = new PostingListBranchPage(state.Page);
-            Debug.Assert(current.Header->SetFlags == ExtendedPageType.SetBranch);
+            Debug.Assert(current.Header->SetFlags == ExtendedPageType.PostingListBranch);
             var (siblingKey, siblingPageNum) = current.GetByIndex(GetSiblingIndex(in state));
             var (leafKey, leafPageNum) = current.GetByIndex(state.LastSearchPosition);
 
             var siblingPageHeader = (PostingListLeafPageHeader*)_llt.GetPage(siblingPageNum).Pointer;
-            if (siblingPageHeader->SetFlags == ExtendedPageType.SetBranch)
+            if (siblingPageHeader->PostingListFlags == ExtendedPageType.PostingListBranch)
                 _state.BranchPages--;
             else
                 _state.LeafPages--;
@@ -512,7 +496,7 @@ namespace Voron.Data.PostingLists
             (_, siblingPageNum) = gp.GetByIndex(siblingIdx);
             var siblingPage = _llt.GetPage(siblingPageNum);
             var siblingHeader = (PostingListLeafPageHeader*)siblingPage.Pointer;
-            if (siblingHeader->SetFlags != ExtendedPageType.SetBranch)
+            if (siblingHeader->PostingListFlags != ExtendedPageType.PostingListBranch)
                 return;// cannot merge leaf & branch
             
             var sibling = new PostingListBranchPage(siblingPage);
@@ -535,8 +519,8 @@ namespace Voron.Data.PostingLists
             var page = _llt.AllocatePage(1);
             _state.LeafPages++;
             var newPage = new PostingListLeafPage(page);
-            PostingListLeafPage.InitLeaf(newPage.Header, leafPage.Header->Baseline);
-            long firstValue = leafPage.Header->Baseline | extras[0].FirstValue;
+            PostingListLeafPage.InitLeaf(newPage.Header);
+            long firstValue = extras[0].FirstValue;
             while (idx < extras.Count)
             {
                 var cur = extras[idx];
@@ -550,8 +534,8 @@ namespace Voron.Data.PostingLists
                 AddToParentPage(firstValue, newPage.Header->PageNumber);
                 page = _llt.AllocatePage(1);
                 newPage = new PostingListLeafPage(page);
-                firstValue = leafPage.Header->Baseline | cur.FirstValue;
-                PostingListLeafPage.InitLeaf(newPage.Header, leafPage.Header->Baseline);
+                firstValue = cur.FirstValue;
+                PostingListLeafPage.InitLeaf(newPage.Header);
             }
 
             _state.NumberOfEntries += newPage.Header->NumberOfEntries;
