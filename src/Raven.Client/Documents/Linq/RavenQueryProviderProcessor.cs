@@ -3148,7 +3148,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             FromAlias = RenameAliasIfNeeded(alias);
             DocumentQuery.AddFromAliasToWhereTokens(FromAlias);
-            DocumentQuery.AddAliasToOrderByTokens(FromAlias);
+            DocumentQuery.AddFromAliasToOrderByTokens(FromAlias);
         }
 
         private void AddAliasToIncludeTokensIfNeeded()

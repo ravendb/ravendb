@@ -1948,7 +1948,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
         }
 
-        public void AddAliasToOrderByTokens(string fromAlias)
+        public void AddFromAliasToOrderByTokens(string fromAlias)
         {
             if (string.IsNullOrEmpty(fromAlias))
                 throw new InvalidOperationException("Alias cannot be null or empty");

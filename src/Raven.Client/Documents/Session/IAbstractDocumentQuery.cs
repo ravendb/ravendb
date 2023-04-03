@@ -334,7 +334,7 @@ namespace Raven.Client.Documents.Session
 
         void AddFromAliasToWhereTokens(string fromAlias);
         
-        void AddAliasToOrderByTokens(string fromAlias);
+        void AddFromAliasToOrderByTokens(string fromAlias);
 
         string AddAliasToIncludesTokens(string fromAlias);
 
