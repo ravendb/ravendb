@@ -1459,8 +1459,7 @@ namespace Raven.Client.Http
 
                     await ExecuteAsync(nextNode.CurrentNode, nextNode.CurrentIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
 
-                    if (nodeIndex.HasValue)
-                        _nodeSelector.RestoreNodeIndex(nodeIndex.Value);
+                    _nodeSelector.RestoreNodeIndex(chosenNode);
 
                     return true;
 
@@ -1644,7 +1643,7 @@ namespace Raven.Client.Http
 
                 broadcastCts.Cancel(throwOnFirstException: false);
 
-                _nodeSelector.RestoreNodeIndex(tasks[completed].Index);
+                _nodeSelector.RestoreNodeIndex(tasks[completed].Node);
                 return tasks[completed].Command.Result;
             }
 
@@ -1737,17 +1736,22 @@ namespace Raven.Client.Http
             // In some cases, race conditions may occur with a recently changed topology and a failed node.
             // We still should check the node's health, and if healthy, remove its timer and restore its index.
             int nodeIndex;
+            ServerNode serverNode;
+            Lazy<NodeStatus> status;
+
             try
             {
-                nodeIndex = _nodeSelector.GetRequestedNode(nodeStatus.Node.ClusterTag).Index;
+                (nodeIndex, serverNode) = _nodeSelector.GetRequestedNode(nodeStatus.Node.ClusterTag);
             }
             catch (Exception e) when (e is DatabaseDoesNotExistException or RequestedNodeUnavailableException)
             {
-                return; // There are no nodes in the topology or could not find requested node. Nothing we can do here
+                // There are no nodes in the topology or could not find requested node. Nothing we can do here
+                if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
+                    status.Value.Dispose();
+
+                return;
             }
             
-            var copy = TopologyNodes;
-            var serverNode = copy.FirstOrDefault(x => x.ClusterTag.Equals(nodeStatus.Node.ClusterTag));
             if (serverNode == null)
                 return;
 
@@ -1755,7 +1759,6 @@ namespace Raven.Client.Http
             {
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    Lazy<NodeStatus> status;
                     try
                     {
                         await PerformHealthCheck(serverNode, nodeIndex, context).ConfigureAwait(false);
@@ -1774,7 +1777,7 @@ namespace Raven.Client.Http
                     if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
                         status.Value.Dispose();
 
-                    _nodeSelector?.RestoreNodeIndex(nodeIndex);
+                    _nodeSelector?.RestoreNodeIndex(serverNode);
                 }
             }
             catch (Exception e)
