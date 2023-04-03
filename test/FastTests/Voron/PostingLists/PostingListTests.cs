@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Tests.Infrastructure;
 using Voron;
@@ -189,9 +190,9 @@ namespace FastTests.Voron.Sets
         
         [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(73014, 35)]
-        public void CanDeleteAndInsertInRandomOrder(int seed, int size)
+        public void CanDeleteAndInsertInRandomOrder(int seed, int size, int iterations = 4)
         {
-            static void Shuffle(int[] list, Random rng)
+            static void Shuffle<T>(T[] list, Random rng)
             {
                 int n = list.Length;
                 while (n > 1)
@@ -204,13 +205,13 @@ namespace FastTests.Voron.Sets
 
             Random random = new Random(seed);
 
-            var uniqueKeys = new HashSet<int>();
-            var inTreeKeys = new HashSet<int>();
-            var removedKeys = new HashSet<int>();
+            var uniqueKeys = new HashSet<long>();
+            var inTreeKeys = new HashSet<long>();
+            var removedKeys = new HashSet<long>();
 
             int name = random.Next();
 
-            for (int iter = 0; iter < 4; iter++)
+            for (int iter = 0; iter < iterations; iter++)
             {
                 using (var wtx = Env.WriteTransaction())
                 {
@@ -218,9 +219,8 @@ namespace FastTests.Voron.Sets
                     for (int i = 0; i < size; i++)
                     {
                         var rname = (int)(uint)random.Next();
-                        if (!uniqueKeys.Contains(rname))
+                        if (uniqueKeys.Add(rname))
                         {
-                            uniqueKeys.Add(rname);
                             inTreeKeys.Add(rname);
                             set.Add(rname);
                         }
@@ -233,6 +233,7 @@ namespace FastTests.Voron.Sets
                 using (var rtx = Env.ReadTransaction())
                 {
                     var set = rtx.OpenPostingList($"Set({name})");
+           
                     Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
                 }
 
@@ -254,13 +255,13 @@ namespace FastTests.Voron.Sets
 
                 using (var rtx = Env.ReadTransaction())
                 {
-                    var matches = new long[size * 4];
+                    var matches = new long[inTreeKeys.Count];
                     var set = rtx.OpenPostingList($"Set({name})");
                     set.Iterate().Fill(matches, out int read);
                     Assert.Equal(inTreeKeys.Count, read);
                     for (int i = 0; i < read; i++)
                     {
-                        Assert.True(inTreeKeys.TryGetValue((int)matches[i], out var _));
+                        Assert.True(inTreeKeys.TryGetValue(matches[i], out var _), "Missing " + matches[i]);
                     }
                 }
             }
