@@ -245,9 +245,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         private void EnsureNotNullAttachmentStreams(Dictionary<int, ReplicationBatch> batches)
         {
-            for (int i = 0; i < batches.Values.Count; i++)
+            foreach(var batch in batches.Values)
             {
-                var batch = batches[i];
                 if (batch.AttachmentStreams != null)
                 {
                     List<Slice> itemsToRemove = null;

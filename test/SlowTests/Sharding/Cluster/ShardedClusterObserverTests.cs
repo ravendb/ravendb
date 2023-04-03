@@ -240,12 +240,13 @@ namespace SlowTests.Sharding.Cluster
                 ModifyDatabaseName = _ => database
             }))
             {
-                for (int i = 0; i < 3; i++)
+                var config = await Sharding.GetShardingConfigurationAsync(store);
+                foreach (var shardNumber in config.Shards.Keys)
                 {
-                    var add = new AddDatabaseNodeOperation(database, shardNumber: i);
+                    var add = new AddDatabaseNodeOperation(database, shardNumber: shardNumber);
                     await store.Maintenance.Server.SendAsync(add);
                 }
-
+                
                 await AssertWaitForValueAsync(async () =>
                 {
                     var shards = await ShardingCluster.GetShards(store);
