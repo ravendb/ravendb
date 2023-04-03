@@ -8,6 +8,7 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using Corax.Utils;
 using Sparrow.Compression;
+using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Data.Containers;
 
@@ -21,16 +22,14 @@ namespace Corax.Queries
         private readonly delegate*<ref TermMatch, Span<long>, Span<float>, float, void> _scoreFunc;
         private readonly delegate*<ref TermMatch, QueryInspectionNode> _inspectFunc;
 
+        private bool _returnedValue;
         private readonly long _totalResults;
-        private long _currentIdx;
-        private long _numOfReturnedItems;
-        private long _baselineIdx;
         private long _current;
         internal Bm25Relevance _bm25Relevance;
         private Container.Item _container;
         private PostingList.Iterator _set;
+        private PForDecoder.DecoderState _decoderState;
         private ByteStringContext _ctx;
-        private IndexSearcher _indexSearcher;
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
         
@@ -51,15 +50,11 @@ namespace Corax.Queries
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
-            _currentIdx = QueryMatch.Start;
-            _baselineIdx = QueryMatch.Start;
             _fillFunc = fillFunc;
             _andWithFunc = andWithFunc;
             _scoreFunc = scoreFunc;
             _inspectFunc = inspectFunc;
             _ctx = ctx;
-            _indexSearcher = indexSearcher;
-            _numOfReturnedItems = 0;
             _container = default;
             _set = default;
 #if DEBUG
@@ -71,14 +66,12 @@ namespace Corax.Queries
         {
             static int FillFunc(ref TermMatch term, Span<long> matches)
             {
-                term._currentIdx = QueryMatch.Invalid;
                 term._current = QueryMatch.Invalid;
                 return 0;
             }
 
             static int AndWithFunc(ref TermMatch term, Span<long> buffer, int matches)
             {
-                term._currentIdx = QueryMatch.Invalid;
                 term._current = QueryMatch.Invalid;
                 return 0;
             }
@@ -94,9 +87,7 @@ namespace Corax.Queries
 
             return new TermMatch(indexSearcher, ctx, 0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
-                _indexSearcher = indexSearcher
 #if DEBUG
-                ,
                 Term = "<empty>"
 #endif
             };
@@ -107,14 +98,13 @@ namespace Corax.Queries
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
             {
-                if (term._currentIdx == QueryMatch.Start)
+                if (term._returnedValue == false)
                 {
-                    term._currentIdx = term._current;
+                    term._returnedValue = true;
                     matches[0] = term._current;
                     return 1;
                 }
 
-                term._currentIdx = QueryMatch.Invalid;
                 return 0;
             }
 
@@ -167,12 +157,11 @@ namespace Corax.Queries
 
             return new TermMatch(indexSearcher, ctx, 1, &FillFunc, &AndWithFunc, scoreFunc: isBoosting ? &ScoreFunc : null, inspectFunc: &InspectFunc)
             {
-                _indexSearcher = indexSearcher,
                 _current = bm25Relevance is not null
                     ? current 
                     : EntryIdEncodings.DecodeAndDiscardFrequency(value), 
-                _currentIdx = QueryMatch.Start, 
-                _bm25Relevance = bm25Relevance
+                _bm25Relevance = bm25Relevance,
+                _returnedValue = false
             };
         }
 
@@ -181,94 +170,102 @@ namespace Corax.Queries
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc<TBoostingMode>(ref TermMatch term, Span<long> matches) where TBoostingMode : IBoostingMarker
             {
-                // Fill needs to store resume capability.
-
-                var stream = term._container.ToSpan();
-                if (term._currentIdx == QueryMatch.Invalid)
+                ref var it = ref term._set.It; // reusing the existing buffer for both set & small set
+                var results = 0;
+                fixed (long* buffer = it.Buffer)
                 {
-                    term._currentIdx = QueryMatch.Invalid;
+                    var rawMatches = matches;
+                    while (true)
+                    {
+                        var pendingItems = it.BufferLength - it.BufferIndex;
+                        if (pendingItems > 0)
+                        {
+                            int itemsToCopy = Math.Min(pendingItems, rawMatches.Length);
+                            new Span<long>(buffer + it.BufferIndex, itemsToCopy).CopyTo(rawMatches);
+                            results += itemsToCopy;
+                            it.BufferIndex += itemsToCopy;
+                            rawMatches = rawMatches[itemsToCopy..];
+                            if (rawMatches.Length == 0)
+                                break;
+                        }
+
+                        it.BufferIndex = 0;
+                        it.BufferLength = PForDecoder.Decode(ref term._decoderState, term._container.Address, term._container.Length, buffer, PForEncoder.BufferLen);
+                        Debug.Assert(term._decoderState.NumberOfReads <= term._totalResults);
+                        if (it.BufferLength == 0)
+                            break;
+                    }
+                }
+
+                if (results == 0)
                     return 0;
-                }
-
-                int i = 0;
-                for (; i < matches.Length && term._numOfReturnedItems < term._totalResults; i++)
-                {
-                    term._current += ZigZagEncoding.Decode<long>(stream, out var len, (int)term._currentIdx);
-                    term._currentIdx += len;
-                    matches[i] = term._current;
-                    term._numOfReturnedItems++;
-                }
-
+                
                 //Save the frequencies
                 if (typeof(TBoostingMode) == typeof(HasBoosting))
                 {
                     if (term._bm25Relevance.IsStored)
-                        term._bm25Relevance.Process(matches, i);
+                        term._bm25Relevance.Process(matches, results);
                     else
-                        EntryIdEncodings.DecodeAndDiscardFrequency(matches, i);
+                        EntryIdEncodings.DecodeAndDiscardFrequency(matches, results);
                 }
                 else
                 {
-                    EntryIdEncodings.DecodeAndDiscardFrequency(matches, i);
+                    EntryIdEncodings.DecodeAndDiscardFrequency(matches, results);
                 }
 
-                return i;
+                return results;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWithFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matches) where TBoostingMode : IBoostingMarker
             {
                 // AndWith has to start from the start.
-                // TODO: Support Seek for the small set in order to have better behavior.
-
                 var stream = term._container.ToSpan();
-
-                // need to seek from start
-                long current = 0;
-                int currentIdx = (int)term._baselineIdx;
-                var itemsScanned = 0L;
-
-                int i = 0;
-                int matchedIdx = 0;
-                while (itemsScanned < term._totalResults && i < matches)
+                Span<long> decodedMatches = stackalloc long[PForEncoder.BufferLen];
+                var decodeState = new PForDecoder.DecoderState(stream.Length);
+                int bufferIndex = 0;
+                int matchedIndex = 0;
+                while (bufferIndex < buffer.Length)
                 {
-                    current += ZigZagEncoding.Decode<long>(stream, out var len, currentIdx);
-                    currentIdx += len;
-                    itemsScanned++;
+                    var read = PForDecoder.Decode(ref decodeState, stream, decodedMatches);
+                    if (read == 0)
+                        break;
 
-                    long decodedEntryId;
-
-                    if (typeof(TBoostingMode) == typeof(HasBoosting))
-                        decodedEntryId = term._bm25Relevance.Add(current);
-                    else
-                        decodedEntryId = EntryIdEncodings.DecodeAndDiscardFrequency(current);
-                    
-                    while (buffer[i] < decodedEntryId)
+                    for (int decodedIndex = 0; decodedIndex < read && bufferIndex < buffer.Length; decodedIndex++)
                     {
-                        i++;
-                        if (i >= matches)
+                        long current = decodedMatches[decodedIndex];
+                        long decodedEntryId = typeof(TBoostingMode) == typeof(HasBoosting) ? 
+                            term._bm25Relevance.Add(current) : 
+                            EntryIdEncodings.DecodeAndDiscardFrequency(current);
+                        
+                        while (buffer[bufferIndex] < decodedEntryId)
                         {
-                            if (typeof(TBoostingMode) == typeof(HasBoosting))
+                            bufferIndex++;
+                            if (bufferIndex >= matches)
                             {
-                                //no match, we should discard last item.
-                                term._bm25Relevance.Remove();
-                            }
+                                if (typeof(TBoostingMode) == typeof(HasBoosting))
+                                {
+                                    //no match, we should discard last item.
+                                    term._bm25Relevance.Remove();
+                                }
                             
 
-                            goto End;
+                                goto End;
+                            }
+                            
                         }
-                    }
+                        // If there is a match we advance. 
+                        if (buffer[bufferIndex] == decodedEntryId)
+                        {
+                            buffer[matchedIndex++] = decodedEntryId;
+                            bufferIndex++;
+                        }
 
-                    // If there is a match we advance. 
-                    if (buffer[i] == decodedEntryId)
-                    {
-                        buffer[matchedIdx++] = decodedEntryId;
-                        i++;
                     }
                 }
 
                 End:
-                return matchedIdx;
+                return matchedIndex;
             }
 
             static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores, float boostFactor)
@@ -286,17 +283,25 @@ namespace Corax.Queries
                     });
             }
 
-            var itemsCount = ZigZagEncoding.Decode<int>(containerItem.ToSpan(), out var len);
+            var itemsCount = VariableSizeEncoding.Read<int>(containerItem.Address, out var offset);
+            containerItem = containerItem.IncrementOffset(offset);
+            var decoderState = new PForDecoder.DecoderState(containerItem.Length);
             return new TermMatch(indexSearcher, ctx, itemsCount, isBoosting? &FillFunc<HasBoosting> : &FillFunc<NoBoosting>, isBoosting ? &AndWithFunc<HasBoosting> : &AndWithFunc<NoBoosting>, inspectFunc: &InspectFunc, scoreFunc: isBoosting ? &ScoreFunc : null)
             {
-                _indexSearcher = indexSearcher,
                 _bm25Relevance = isBoosting 
                     ? Bm25Relevance.Small(indexSearcher, itemsCount, ctx, itemsCount, termRatioToWholeCollection) 
                     : default,
                 _container = containerItem,
-                _currentIdx = len,
-                _baselineIdx = len,
-                _current = 0
+                _decoderState = decoderState,
+                _current = 0,
+                _set =
+                {
+                    It =
+                    {
+                        BufferIndex = 0,
+                        BufferLength = 0
+                    }
+                }
             };
         }
         
@@ -588,7 +593,6 @@ namespace Corax.Queries
                 inspectFunc: &InspectFunc,
                 scoreFunc: isBoosting ? &ScoreFunc : null)
             {
-                _indexSearcher = indexSearcher, 
                 _set = postingList.Iterate(), 
                 _current = long.MinValue,
                 _bm25Relevance = bm25Relevance
@@ -624,5 +628,18 @@ namespace Corax.Queries
         }
 
         string DebugView => Inspect().ToString();
+
+        public List<long> GetResultsForDebug()
+        {
+            var list = new List<long>();
+            Span<long> buffer = stackalloc long[PForEncoder.BufferLen];
+            while (true)
+            {
+                var read = Fill(buffer);
+                if (read == 0)
+                    return list;
+                list.AddRange(buffer[0..read].ToArray());
+            }
+        }
     }
 }

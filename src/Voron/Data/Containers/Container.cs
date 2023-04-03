@@ -695,6 +695,11 @@ namespace Voron.Data.Containers
 
             public Span<byte> ToSpan() => new Span<byte>(Page.Pointer + Offset, Length);
             public UnmanagedSpan ToUnmanagedSpan() => new UnmanagedSpan(Page.Pointer + Offset, Length);
+
+            public Item IncrementOffset(int offset)
+            {
+                return new Item(Page, Offset + offset, Length - offset);
+            }
         }
     }
 }
