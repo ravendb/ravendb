@@ -1,47 +1,83 @@
-﻿.sample-data-main {
-    background-image: url('../../img/sample-data.png');
-    background-position:center;
-    height: 381px;
+﻿.sample-data {
+    flex-grow: 1;
+    position: relative;
+    background-color: var(--panel-bg-1);
+    background-position: center;
+    overflow: hidden;
+
+    .sample-data-bg {
+        position: absolute;
+        width: 100%;
+        min-width: 1600px;
+        top: 0%;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1;
+        pointer-events: none;
+
+        .st0 {
+            fill:#7F6C4C;
+        }
+        .st1 {
+            fill: #ED9C60;
+        }
+        .smoke-color {
+            fill: var(--bs-body-bg);
+        }
+        .smoke-color-2 {
+            fill: var(--panel-bg-1);
+        }
+    }
+
+    &::before {
+        content: '';
+        display: block;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        min-width: 1600px;
+        background-repeat: no-repeat;
+        background-image: url('../../img/documents.svg');
+        left: 50%;
+        transform: translateX(-50%);
+        background-clip: content-box;
+        top: 0;
+        background-size: 100% auto;
+        z-index: 2;
+        background-position: top;
+        pointer-events: none;
+    }
+
+    .scroll {
+        overflow: auto;
+        height: 100%;
+    }
 
     .center {
-        padding-top:60px;
-        width:320px;
-        margin:auto;
-        text-align:center;
+        margin: auto;
+        min-height: 100%;
+        padding-top: @gutter;
+        padding-bottom: @gutter;
+        max-width: 800px;
+        position: relative;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
 
-        .btn-lg {
-            font-size:30px;
-            padding:7px 54px;
+        p {
+            max-width: 40em;
+        }
 
-            &.btn-spinner:before {
-                width:22px;
-                height:22px;
-                top:0;
-            }
+        .panel {
+            border-radius: @gutter-sm;
+        }
+
+        pre {
+            height: unset;
+            border-radius: @gutter-xs;
         }
     }
 
-    .button-wrapper {
-        display:inline-block;
-        margin:45px 0 25px;
-    }
-
-    h1 {
-        font-size:48px;
-        margin-bottom:0;
-        font-weight:500;
-        color:@gray-lighter;
-    }
-
-    .csharplink {
-        display:inline-block;
-        font-size:20px;
-        color: @gray-lighter;
-        &:after {
-            margin-top:-8px;
-            content:'';
-            border-bottom:1px solid;
-            display:block;
-        }
-    }
 }
