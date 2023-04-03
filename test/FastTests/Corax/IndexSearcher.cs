@@ -366,6 +366,7 @@ namespace FastTests.Corax
 
 
         [Theory]
+        [InlineData(new object[] {10, 3})]
         [InlineData(new object[] {8000, 18})]
         [InlineData(new object[] {1000, 8})]
         [InlineData(new object[] {1020, 7})]
