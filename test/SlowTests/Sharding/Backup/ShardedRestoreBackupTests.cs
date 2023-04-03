@@ -1550,15 +1550,23 @@ namespace SlowTests.Sharding.Backup
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                     var sharding = await Sharding.GetShardingConfigurationAsync(store);
-
+                    var dirs = new HashSet<string>();
                     ShardedRestoreSettings settings;
+
                     using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, DefaultBackupConfiguration))
                     {
                         var objects = await googleCloudClient.ListObjectsAsync(googleCloudSettings.RemoteFolderName);
-                        var fileNames = objects.Select(item => item.Name).ToList();
-                        Assert.Equal(3, fileNames.Count);
+                        Assert.Equal(9, objects.Count);
 
-                        settings = Sharding.Backup.GenerateShardRestoreSettings(fileNames, sharding);
+                        foreach (var obj in objects)
+                        {
+                            var fileName = obj.Name;
+                            var dir = GetDirectoryName(fileName);
+                            dirs.Add(dir);
+                        }
+
+                        Assert.Equal(3, dirs.Count);
+                        settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
                     }
 
                     var client = store.GetRequestExecutor().HttpClient;
@@ -1618,6 +1626,15 @@ namespace SlowTests.Sharding.Backup
             {
                 await DeleteObjects(googleCloudSettings);
             }
+        }
+
+        private static string GetDirectoryName(string path)
+        {
+            var index = path.LastIndexOf('/');
+            if (index <= 0)
+                return string.Empty;
+
+            return path[..(index + 1)];
         }
 
         private S3Settings GetS3Settings([CallerMemberName] string caller = null)
