@@ -333,6 +333,8 @@ namespace Raven.Client.Documents.Session
         void AggregateUsing(string facetSetupDocumentId);
 
         void AddFromAliasToWhereTokens(string fromAlias);
+        
+        void AddAliasToOrderByTokens(string fromAlias);
 
         string AddAliasToIncludesTokens(string fromAlias);
 

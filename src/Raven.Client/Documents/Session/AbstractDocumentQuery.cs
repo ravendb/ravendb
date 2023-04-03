@@ -1892,6 +1892,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         {
             return FilterTokens;
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private LinkedList<QueryToken> GetCurrentOrderByTokens()
+        {
+            return OrderByTokens;
+        }
 
         protected void UpdateFieldsToFetchToken(FieldsToFetchToken fieldsToFetch)
         {
@@ -1937,6 +1943,21 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             while (current != null)
             {
                 if (current.Value is WhereToken w)
+                    current.Value = w.AddAlias(fromAlias);
+                current = current.Next;
+            }
+        }
+
+        public void AddAliasToOrderByTokens(string fromAlias)
+        {
+            if (string.IsNullOrEmpty(fromAlias))
+                throw new InvalidOperationException("Alias cannot be null or empty");
+
+            var tokens = GetCurrentOrderByTokens();
+            var current = tokens.First;
+            while (current != null)
+            {
+                if (current.Value is OrderByToken w)
                     current.Value = w.AddAlias(fromAlias);
                 current = current.Next;
             }
