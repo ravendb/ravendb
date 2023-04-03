@@ -9,7 +9,7 @@
 
 ### What's new
 RavenDB `v6.0` docker image has been adjusted to run under **a non-root user**, providing far better security.
-Containers are now using RavenDB *.deb package*. More information about how to deal with the breaking changes in the **migration from 5.4 image** section.
+Containers are now using RavenDB *.deb package*. More information about how to deal with the breaking changes in the [**migration from 5.4 image**](#what-migration-process-from-54-image-looks-like) section.
 
 
 ### Image tags
