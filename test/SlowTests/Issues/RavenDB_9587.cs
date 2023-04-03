@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                     {
                         Assert.Contains("Shard_0", keys);
                         Assert.Contains("Shard_1", keys);
-                        Assert.Contains("Shard_2", keys);
+                        Assert.Contains("Shard_12", keys);
                     }
                 }
             }
