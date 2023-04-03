@@ -46,7 +46,7 @@ namespace Voron.Data.PostingLists
             public int NumberOfReads;
 
             internal int _bitPos;
-            internal int _prevValue;
+            internal long _prevValue;
 
             public DecoderState(int bufferSize)
             {
@@ -60,27 +60,44 @@ namespace Voron.Data.PostingLists
         private static ReadOnlySpan<byte> NumberOfValues => new byte[] { 1, 32, 64, 128 };
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public static int Decode(ref DecoderState state, in ReadOnlySpan<byte> inputBuffer, in Span<int> outputBuffer)
+        public static int Decode(ref DecoderState state, in ReadOnlySpan<byte> inputBuffer, in Span<long> outputBuffer)
         {
             fixed (byte* inputBufferPtr = inputBuffer)
-            fixed (int* outputBufferPtr = outputBuffer)
+            fixed (long* outputBufferPtr = outputBuffer)
             {
                 return Decode(ref state, inputBufferPtr, inputBuffer.Length, outputBufferPtr, outputBuffer.Length);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static int Decode(ref DecoderState state, byte* inputBufferPtr, int inputBufferSize, int* outputBuffer, int outputBufferSize)
+        public static int Decode(ref DecoderState state, byte* inputBufferPtr, int inputBufferSize, long* outputBuffer, int outputBufferSize)
         {
             Debug.Assert(inputBufferSize == state.BufferSize);
 
             var stateBitPos = state._bitPos;
 
             var headerBits = Read2(stateBitPos, inputBufferPtr, out stateBitPos);
-            if (headerBits == 0b11)
+            if (headerBits == 0b11) // Extended value, now figure out which one...
             {
-                state._bitPos = stateBitPos;
-                return 0;
+                headerBits = Read2(stateBitPos, inputBufferPtr, out stateBitPos);
+                switch (headerBits)
+                {
+                    // end of entries marker
+                    case 0b00:
+                        // We found an end of stream marker, but we may be called on this again, so ensure that we always
+                        // return no results here by *not* updating the bit pos, so the next call would reach here too
+                        //state._bitPos = stateBitPos;
+                        return 0;
+                    case 0b10: // raw value, return directly
+                        var value = (long)Read(stateBitPos, inputBufferPtr, 63, out stateBitPos);
+                        state._prevValue = value;
+                        state._bitPos = stateBitPos;
+                        state.NumberOfReads++;
+                        outputBuffer[0] = value;
+                        return 1;
+                    default:
+                        throw new ArgumentOutOfRangeException(headerBits + " isn't a valid extended header marker");
+                }
             }
 
             if (headerBits >= 0b11)
@@ -93,7 +110,7 @@ namespace Voron.Data.PostingLists
             if (numOfBits == 0)
                 return 0;
 
-            int statePrevValue = state._prevValue;
+            long statePrevValue = state._prevValue;
             int numOfRepeatedValues = headerBits == 0b00 ? NumberOfValues[(int)(bits >> 5)] : (int)(bits >> 5);
             
             if (numOfRepeatedValues > outputBufferSize)
@@ -290,11 +307,11 @@ namespace Voron.Data.PostingLists
             }
         }
 
-        public static List<int> GetDebugOutput(Span<byte> buf)
+        public static List<long> GetDebugOutput(Span<byte> buf)
         {
-            Span<int> scratch = stackalloc int[128];
+            Span<long> scratch = stackalloc long[128];
             
-            var list = new List<int>();
+            var list = new List<long>();
             var state = new DecoderState(buf.Length);
             while (true)
             {
@@ -314,17 +331,17 @@ namespace Voron.Data.PostingLists
         {
             fixed (byte* p = output)
             {
-                BlittableJsonReaderBase.ReadVariableSizeIntInReverse(p, output.Length - 1, out byte pos);
+                BlittableJsonReaderBase.ReadVariableSizeLongInReverse(p, output.Length - 1, out byte pos);
                 int count = BlittableJsonReaderBase.ReadVariableSizeIntInReverse(p, output.Length - 1 - pos, out _);
                 return count;
             }
         }
         
-        public static int ReadLast(Span<byte> output)
+        public static long ReadLast(Span<byte> output)
         {
             fixed (byte* p = output)
             {
-                int len = BlittableJsonReaderBase.ReadVariableSizeIntInReverse(p, output.Length - 1, out _);
+                long len = BlittableJsonReaderBase.ReadVariableSizeLongInReverse(p, output.Length - 1, out _);
                 return len;
             }
         }
