@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
 
             var filePath = RavenServerBackupUtils.GetBackupTempPath(configuration, $"{Guid.NewGuid()}.snapshot-restore", out PathSetting basePath).FullPath;
-            Directory.CreateDirectory(basePath.FullPath);
+            IOExtensions.CreateDirectory(basePath.FullPath);
             var file = SafeFileStream.Create(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
                 32 * 1024, FileOptions.DeleteOnClose);
 
