@@ -159,8 +159,8 @@ public partial class RavenTestBase
             if (char.IsDigit(path[shardIndexPosition]) == false)
                 throw new ArgumentException($"Missing shard number after $ sign in backup path {path}. Expected a number but got '{path[shardIndexPosition]}'");
 
-            int shardNumberLength = 0;
-            while (int.TryParse(path.Substring(shardIndexPosition, shardNumberLength + 1), out _))
+            int shardNumberLength = 1;
+            while (char.IsDigit(path[shardIndexPosition + shardNumberLength]))
                 shardNumberLength++;
 
             return int.Parse(path.Substring(shardIndexPosition, shardNumberLength));
