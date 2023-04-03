@@ -2338,9 +2338,9 @@ namespace Raven.Client.Http
                 _requestExecutor = requestExecutor;
             }
 
-            internal int[] GetNodeSelectorFailures => _requestExecutor._nodeSelector.GetNodeSelectorFailures;
-            internal ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> GetFailedNodesTimers => _requestExecutor._failedNodesTimers;
-            internal (int Index, ServerNode Node) GetPreferredNode => _requestExecutor._nodeSelector.GetPreferredNode();
+            internal int[] NodeSelectorFailures => _requestExecutor._nodeSelector.NodeSelectorFailures;
+            internal ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> FailedNodesTimers => _requestExecutor._failedNodesTimers;
+            internal (int Index, ServerNode Node) PreferredNode => _requestExecutor._nodeSelector.GetPreferredNode();
         }
     }
 }
