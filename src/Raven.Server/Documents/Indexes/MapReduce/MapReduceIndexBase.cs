@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                var report = _indexStorage.Environment().GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);
+                var report = base.GenerateStorageReport(calculateExactSizes);
 
                 var treesToKeep = new List<TreeReport>();
 

@@ -17,6 +17,7 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Utils;
+using Sparrow.Server.Platform;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Containers;
@@ -398,6 +399,7 @@ namespace Corax
 
         private readonly long _postingListContainerId, _entriesContainerId;
         private IndexFieldsMapping _dynamicFieldsMapping;
+        private PostingList _largePostingListSet;
 
         public void UpdateDynamicFieldsMapping(IndexFieldsMapping current)
         {
@@ -1906,6 +1908,12 @@ namespace Corax
         private unsafe void AddNewTermToSet(ReadOnlySpan<long> additions, out long termId)
         {
             long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
+            
+            // we need to account for the size of the posting lists, once a term has been switch to a posting list
+            // it will always be in this model, so we don't need to do any cleanup
+            _largePostingListSet ??= Transaction.OpenPostingList(Constants.IndexWriter.LargePostingListsSetSlice);
+            _largePostingListSet.Add(setId); 
+
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             PostingList.Create(Transaction.LowLevelTransaction, ref postingListState);
 

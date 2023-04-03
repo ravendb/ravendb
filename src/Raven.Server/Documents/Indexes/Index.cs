@@ -14,6 +14,7 @@ using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Corax;
@@ -68,6 +69,8 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
+using Voron.Data.Containers;
+using Voron.Data.PostingLists;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -4941,12 +4944,33 @@ namespace Raven.Server.Documents.Indexes
                 : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(queryContext.Documents.Transaction.InnerTransaction, collection);
         }
 
-        public virtual DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
+        public virtual unsafe DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                return _environment.GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);
+                var detailedReportInput = _environment.CreateDetailedReportInput(tx.InnerTransaction, calculateExactSizes);
+                var llt = tx.InnerTransaction.LowLevelTransaction;
+                var generator = new StorageReportGenerator(llt);
+
+                generator.HandlePostingListDetails += (postingList, report) =>
+                {
+                    if (!Corax.Constants.IndexWriter.LargePostingListsSetSlice.Equals(postingList.Name))
+                        return;
+
+                    var it = postingList.Iterate();
+                    while (it.MoveNext())
+                    {
+                        var item = Container.Get(llt, it.Current);
+                        var state = (PostingListState*)item.Address;
+                        report.BranchPages += state->BranchPages;
+                        report.LeafPages += state->LeafPages;
+                        report.PageCount += state->BranchPages + state->LeafPages;
+                        report.AllocatedSpaceInBytes += StorageReportGenerator.PagesToBytes(state->BranchPages + state->LeafPages);
+                    }
+
+                };
+                return generator.Generate(detailedReportInput);
             }
         }
 
