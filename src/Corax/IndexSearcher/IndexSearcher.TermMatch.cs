@@ -165,7 +165,7 @@ public partial class IndexSearcher
     internal TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection)
     {
         TermMatch matches;
-        if ((containerId & (long)TermIdMask.Set) != 0)
+        if ((containerId & (long)TermIdMask.PostingList) != 0)
         {
             var setId = EntryIdEncodings.GetContainerId(containerId);
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
@@ -174,7 +174,7 @@ public partial class IndexSearcher
             var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
             matches = TermMatch.YieldSet(this, Allocator, set, termRatioToWholeCollection, field.HasBoost, IsAccelerated);
         }
-        else if ((containerId & (long)TermIdMask.Small) != 0)
+        else if ((containerId & (long)TermIdMask.SmallPostingList) != 0)
         {
             var smallSetId = EntryIdEncodings.GetContainerId(containerId);
             var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
@@ -240,7 +240,7 @@ public partial class IndexSearcher
         if (containerId == 0)
             return 0;
         
-        if ((containerId & (long)TermIdMask.Set) != 0)
+        if ((containerId & (long)TermIdMask.PostingList) != 0)
         {
             var setId = EntryIdEncodings.GetContainerId(containerId);
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
@@ -248,11 +248,11 @@ public partial class IndexSearcher
             return setState.NumberOfEntries;
         }
         
-        if ((containerId & (long)TermIdMask.Small) != 0)
+        if ((containerId & (long)TermIdMask.SmallPostingList) != 0)
         {
             var smallSetId = EntryIdEncodings.GetContainerId(containerId);
             var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
-            var itemsCount = ZigZagEncoding.Decode<int>(small.ToSpan(), out var len);
+            var itemsCount = VariableSizeEncoding.Read<int>(small.ToSpan(), out _);
 
             return itemsCount;
         }
