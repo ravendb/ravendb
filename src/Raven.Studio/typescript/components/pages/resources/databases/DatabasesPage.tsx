@@ -1,10 +1,10 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { DatabasePanel } from "./partials/DatabasePanel";
 import { DatabasesToolbarActions } from "./partials/DatabasesToolbarActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
 import { DatabaseSharedInfo } from "../../../models/databases";
-import { Col, Row } from "reactstrap";
+import { Row } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
     compactDatabase,
@@ -17,7 +17,6 @@ import {
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
-import { CheckboxTriple } from "components/common/CheckboxTriple";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -57,30 +56,6 @@ export function DatabasesPage(props: DatabasesPageProps) {
         }
     }, [selectedDatabaseNames, filteredDatabases]);
 
-    const toggleSelectAll = useCallback(() => {
-        const selectedCount = selectedDatabaseNames.length;
-
-        if (selectedCount > 0) {
-            setSelectedDatabaseNames([]);
-        } else {
-            setSelectedDatabaseNames(filteredDatabases.map((x) => x.name));
-        }
-    }, [selectedDatabaseNames, filteredDatabases]);
-
-    const databasesSelectionState = useMemo<checkbox>(() => {
-        const selectedCount = selectedDatabaseNames.length;
-        const dbsCount = filteredDatabases.length;
-        if (dbsCount > 0 && dbsCount === selectedCount) {
-            return "checked";
-        }
-
-        if (selectedCount > 0) {
-            return "some_checked";
-        }
-
-        return "unchecked";
-    }, [filteredDatabases, selectedDatabaseNames]);
-
     const toggleSelection = (db: DatabaseSharedInfo) => {
         if (selectedDatabaseNames.includes(db.name)) {
             setSelectedDatabaseNames((s) => s.filter((x) => x !== db.name));
@@ -109,20 +84,17 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 
+    // TODO: positioning create | select all | ...
+
     return (
         <div className="content-margin">
             <div id="dropdownContainer"></div> {/*fixes rendering order bug on hover animation */}
             <Row className="mb-4">
-                <Col sm="auto">
-                    <CheckboxTriple
-                        onChanged={toggleSelectAll}
-                        state={databasesSelectionState}
-                        title="Select all or none"
-                    />
-                </Col>
-                <Col>
-                    <DatabasesToolbarActions selectedDatabases={selectedDatabases} />
-                </Col>
+                <DatabasesToolbarActions
+                    selectedDatabases={selectedDatabases}
+                    filteredDatabases={filteredDatabases}
+                    setSelectedDatabaseNames={(x) => setSelectedDatabaseNames(x)}
+                />
             </Row>
             <DatabasesFilter />
             <div className="flex-grow scroll js-scroll-container">
