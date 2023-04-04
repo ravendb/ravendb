@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Sharding.Background
 
                             foreach (var bucketStats in bucketStatistics)
                             {
-                                if (bucketStats.NumberOfDocuments == 0)
+                                if (bucketStats.NumberOfDocuments <= 0)
                                     continue;
 
                                 bucket = bucketStats.Bucket;
