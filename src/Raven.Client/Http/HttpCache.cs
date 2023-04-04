@@ -56,11 +56,14 @@ namespace Raven.Client.Http
             public HttpCache Cache;
 
             private int _usages;
+            private int _internallyReleased;
+
+            internal int Usages => _usages;
 
             public HttpCacheItem()
             {
-                this._usages = 1;
-                this.LastServerUpdate = SystemTime.UtcNow;
+                _usages = 1;
+                LastServerUpdate = SystemTime.UtcNow;
             }
 
             public bool AddRef()
@@ -149,6 +152,7 @@ namespace Raven.Client.Http
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
                 old = oldItem;
+                ForTestingPurposes?.OnHttpCacheSetUpdate?.Invoke();
                 return httpCacheItem;
             });
             //We need to check if the cache is been disposed after the item was added otherwise we will run into another race condition
@@ -178,6 +182,7 @@ namespace Raven.Client.Http
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
                 old = oldItem;
+                ForTestingPurposes?.OnHttpCacheNotFoundUpdate?.Invoke();
                 return httpCacheItem;
             });
             //We need to check if the cache is been disposed after the item was added otherwise we will run into another race condition
@@ -193,7 +198,7 @@ namespace Raven.Client.Http
         public int Generation;
         private volatile bool _disposing;
 
-        private void FreeSpace()
+        internal void FreeSpace()
         {
             if (_isFreeSpaceRunning.Raise() == false)
                 return;
@@ -294,7 +299,7 @@ namespace Raven.Client.Http
 
             public void Dispose()
             {
-                this.Item?.ReleaseRef();
+                Item?.ReleaseRef();
             }
         }
 
@@ -359,6 +364,23 @@ namespace Raven.Client.Http
 
         public void LowMemoryOver()
         {
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public Action OnHttpCacheSetUpdate;
+
+            public Action OnHttpCacheNotFoundUpdate;
         }
     }
 }
