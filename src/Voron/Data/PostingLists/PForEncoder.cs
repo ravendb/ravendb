@@ -147,11 +147,11 @@ namespace Voron.Data.PostingLists
                    TryPushBits(0, BitsAvailableInCurrentByte);// align to byte boundary
         }
 
-        private bool TryFlush(Span<uint> buffer)
+        private bool TryFlush(uint* buffer, int len)
         {
-            if (buffer.Length == 0)
+            if (len == 0)
                 return true;
-            if (buffer.Length == 1)
+            if (len == 1)
             {
                 var bits = 32 - BitOperations.LeadingZeroCount(buffer[0]);
                 Debug.Assert(bits < 32); // we never encode 0
@@ -159,7 +159,7 @@ namespace Voron.Data.PostingLists
                 return TryPushBits(header, 9) && TryPushBits(buffer[0], bits);
             }
 
-            var (maxBits, identicalPrefix) = Analyze(buffer);
+            var (maxBits, identicalPrefix) = Analyze(buffer, len);
             Debug.Assert(identicalPrefix <= 256);
             if (identicalPrefix > 5) // enough to warrant a repeating header to save space
             {
@@ -167,10 +167,10 @@ namespace Voron.Data.PostingLists
                 if (TryPushBits(header, 15) == false ||
                     TryPushBits(buffer[0], maxBits) == false)
                     return false;
-                return TryFlush(buffer.Slice(identicalPrefix));
+                return TryFlush(buffer + identicalPrefix, len - identicalPrefix);
             }
 
-            ulong fixedSizeMarker = buffer.Length switch
+            ulong fixedSizeMarker = len switch
             {
                 32 => 0b01,
                 64 => 0b10,
@@ -179,46 +179,46 @@ namespace Voron.Data.PostingLists
             };
             if (fixedSizeMarker != 0)
             {
-                if (TryPartialCompression(buffer))
+                if (TryPartialCompression(buffer, len))
                     return true;
 
                 ulong header = 0b00_00_00000ul | fixedSizeMarker << 5 | (uint)maxBits;
                 if (TryPushBits(header, 9) == false)
                     return false;
-                return TryPushValues(buffer, maxBits);
+                return TryPushValues(buffer, len, maxBits);
             }
             else
             {
-                if (TryPartialCompression(buffer))
+                if (TryPartialCompression(buffer, len))
                     return true;
-                ulong header = 0b01_0000_0000_00000ul | (ulong)buffer.Length << 5 | (uint)maxBits;
+                ulong header = 0b01_0000_0000_00000ul | (ulong)len << 5 | (uint)maxBits;
                 if (TryPushBits(header, 15) == false)
                     return false;
-                return TryPushValues(buffer, maxBits);
+                return TryPushValues(buffer, len, maxBits);
             }
         }
 
-        private bool TryPartialCompression(Span<uint> buffer)
+        private bool TryPartialCompression(uint* buffer, int len)
         {
-            var half = buffer.Length / 2;
+            var half = len / 2;
             if (half < 32)
                 return false;
 
             // now need to figure out optimal partitioning scheme
-            int first = MaxBits(buffer.Slice(0, half)), second = MaxBits(buffer.Slice(half));
+            int first = MaxBits(buffer, half), second = MaxBits(buffer + half, len - half);
 
             if (first != second) // better to output them as two segments, then
             {
-                return TryFlush(buffer.Slice(0, half)) &&
-                       TryFlush(buffer.Slice(half));
+                return TryFlush(buffer, half) &&
+                       TryFlush(buffer + half, len - half);
             }
             return false;
         }
 
 
-        private bool TryPushValues(Span<uint> buffer, int maxBits)
+        private bool TryPushValues(uint* buffer, int len, int maxBits)
         {
-            for (int i = 0; i < buffer.Length; i++)
+            for (int i = 0; i < len; i++)
             {
                 if (TryPushBits(buffer[i], maxBits) == false)
                 {
@@ -233,13 +233,13 @@ namespace Voron.Data.PostingLists
         {
             var oldPos = _bufPos;
             _bufPos = 0;
-            return TryFlush(new Span<uint>(_deltasBuffer, oldPos));
+            return TryFlush(_deltasBuffer, oldPos);
         }
 
-        private static int MaxBits(Span<uint> buffer)
+        private static int MaxBits(uint* buffer, int len)
         {
             uint mask = 0;
-            for (int i = 0; i < buffer.Length; i++)
+            for (int i = 0; i < len; i++)
             {
                 mask |= buffer[i];
             }
@@ -249,12 +249,12 @@ namespace Voron.Data.PostingLists
             return maxBits;
         }
 
-        private static (int MaxNumberOfBits, int IdenticalPrefixLegnth) Analyze(Span<uint> buffer)
+        private static (int MaxNumberOfBits, int IdenticalPrefixLegnth) Analyze(uint* buffer, int len)
         {
             uint mask = buffer[0];
             int identicalPrefix = 1;
             bool identical = true;
-            for (int i = 1; i < buffer.Length; i++)
+            for (int i = 1; i < len; i++)
             {
                 mask |= buffer[i];
                 if (identical)
