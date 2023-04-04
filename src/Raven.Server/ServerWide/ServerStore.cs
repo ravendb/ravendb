@@ -3331,7 +3331,7 @@ namespace Raven.Server.ServerWide
 
                 using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
                 {
-                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, database, "Test-Connection", Server.Certificate.Certificate,
+                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(Server.WebUrl, url, database, "Test-Connection", Server.Certificate.Certificate,
                         cts.Token);
                 }
                 Task timeoutTask = await Task.WhenAny(timeout, connectionInfo);
