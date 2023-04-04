@@ -120,6 +120,19 @@ public class SubscriptionConnectionsStateOrchestrator : AbstractSubscriptionConn
         _databaseContext.SubscriptionsStorage.DropSubscriptionConnections(SubscriptionId, e);
     }
 
+    public override async Task HandleConnectionException(OrchestratedSubscriptionConnection connection, Exception e)
+    {
+        await base.HandleConnectionException(connection, e);
+        if (e is SubscriptionException se and not SubscriptionChangeVectorUpdateConcurrencyException and not SubscriptionInUseException)
+        {
+            DropSubscription(se);
+        }
+        else
+        {
+            DropSubscription(new SubscriptionClosedException("Got unexpected exception, dropping workers connections.", canReconnect: true, e));
+        }
+    }
+
     public override void Dispose()
     {
         DisposeWorkers();

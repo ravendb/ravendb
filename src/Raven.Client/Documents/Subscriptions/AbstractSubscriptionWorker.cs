@@ -629,7 +629,7 @@ namespace Raven.Client.Documents.Subscriptions
             return incomingBatch;
         }
 
-        internal virtual async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServerAsync(JsonContextPool contextPool, Stream tcpStream,
+        internal async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServerAsync(JsonContextPool contextPool, Stream tcpStream,
             JsonOperationContext.MemoryBuffer buffer, TBatch batch)
         {
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();

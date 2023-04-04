@@ -47,24 +47,17 @@ public class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJsonReade
     {
         SendBatchToClientTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         ConfirmFromShardSubscriptionConnectionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        
+
         ReturnContext = batch.ReturnContext;
         Context = batch.Context;
         batch.ReturnContext = null; // move the release responsibility to the OrchestratedSubscriptionProcessor
         batch.Context = null;
 
-        try
-        {
-            await InitializeDocumentIncludesAsync(batch);
-            await base.InitializeAsync(batch);
 
-            LastSentChangeVectorInBatch = null;
-        }
-        catch (Exception e)
-        {
-            SetException(e);
-            throw;
-        }
+        await InitializeDocumentIncludesAsync(batch);
+        await base.InitializeAsync(batch);
+
+        LastSentChangeVectorInBatch = null;
     }
 
     internal async ValueTask InitializeDocumentIncludesAsync(BatchFromServer batchFromServer)

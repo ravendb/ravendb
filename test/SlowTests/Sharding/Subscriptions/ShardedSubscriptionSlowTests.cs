@@ -211,8 +211,29 @@ namespace SlowTests.Sharding.Subscriptions
                     using (ctx.OpenReadTransaction())
                     {
                         var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
-                        return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState?.ShardingState
-                            ?.ChangeVectorForNextBatchStartingPointPerShard[db.Name];
+                        if (connectionState != null)
+                        {
+                            var connection = connectionState.GetConnections().FirstOrDefault();
+                            if (connection != null)
+                            {
+                                var subsState = connection.SubscriptionState;
+                                if (subsState.ShardingState != null)
+                                {
+                                    if (subsState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(db.Name, out string cv))
+                                    {
+                                        return cv;
+                                    }
+
+                                    return null;
+                                }
+
+                                return null;
+                            }
+
+                            return null;
+                        }
+
+                        return null;
                     }
                 }, newCv, interval: 333);
 
@@ -220,10 +241,24 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
-        public async Task CanUpdateSubscriptionToStartFromLastDocument()
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanUpdateSubscriptionToStartFromLastDocument(bool updateToSameCv)
         {
-            using (var store = Sharding.GetDocumentStore())
+            var ops = updateToSameCv
+                ? new Options
+                {
+                    ModifyDatabaseRecord = record =>
+                    {
+                        record.Sharding ??= new ShardingConfiguration()
+                        {
+                            Shards = new Dictionary<int, DatabaseTopology>() { { 0, new DatabaseTopology() }, { 1, new DatabaseTopology() } }
+                        };
+                    }
+                }
+                : null;
+            using (var store = Sharding.GetDocumentStore(ops))
             {
                 var count = 10;
                 store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
@@ -273,11 +308,36 @@ namespace SlowTests.Sharding.Subscriptions
                 };
 
                 var addedDocs = new List<User>();
+
+                if (updateToSameCv)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var id11 = Guid.NewGuid().ToString() + "$users2";
+                        var user11 = new User { Name = $"EGR_{123}", Age = 18 - 5 };
+                        session.Store(user11, id11);
+
+                        user11.Id = id11;
+                        addedDocs.Add(user11);
+                        session.SaveChanges();
+                    }
+                }
+
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < count; i++)
                     {
-                        var id = Guid.NewGuid().ToString();
+                        string id = null;
+
+                        if (updateToSameCv)
+                        {
+                            id = Guid.NewGuid().ToString() + "$users1";
+                        }
+                        else
+                        {
+                            id = Guid.NewGuid().ToString();
+                        }
+
                         var user = new User { Name = $"EGR_{i}", Age = 18 - i };
                         session.Store(user, id);
 
@@ -318,7 +378,15 @@ namespace SlowTests.Sharding.Subscriptions
                 var changeVectorsCollection =
                     (await shardExecutor.ExecuteParallelForAllAsync(
                         new ShardedLastChangeVectorForCollectionOperation(ctx.Request, "Users", result.DatabaseContext.DatabaseName))).LastChangeVectors;
-                Assert.Equal(3, changeVectorsCollection.Count);
+
+                if (updateToSameCv)
+                {
+                    Assert.Equal(2, changeVectorsCollection.Count);
+                }
+                else
+                {
+                    Assert.Equal(3, changeVectorsCollection.Count);
+                }
 
                 mre2.Set();
 

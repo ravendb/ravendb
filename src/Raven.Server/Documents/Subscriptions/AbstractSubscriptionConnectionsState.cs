@@ -574,7 +574,24 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
             DropSingleConnection(connection);
         }
     }
-        
+
+    public virtual async Task HandleConnectionException(TSubscriptionConnection connection, Exception e)
+    {
+        switch (e)
+        {
+            case SubscriptionChangeVectorUpdateConcurrencyException concurrencyException:
+                DropSubscription(concurrencyException);
+                await connection.ReportExceptionAsync(SubscriptionError.Error, concurrencyException);
+                break;
+            case SubscriptionInUseException _:
+                await connection.ReportExceptionAsync(SubscriptionError.ConnectionRejected, e);
+                break;
+            default:
+                await connection.ReportExceptionAsync(SubscriptionError.Error, e);
+                break;
+        }
+    }
+
     public override void Dispose()
     {
         try

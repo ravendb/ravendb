@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Subscriptions;
+﻿using System.Diagnostics;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
@@ -43,6 +44,7 @@ public class ShardSubscriptionStorage : SubscriptionStorage
                     DropSubscriptionConnections(id, new SubscriptionClosedException(
                         $"The subscription '{subscriptionName}' change vector was modified on shard '{_shardName}', connection must be restarted",
                         canReconnect: true));
+                    continue;
                 }
                
                 var whoseTaskIsIt = GetSubscriptionResponsibleNode(databaseRecord, taskState);
@@ -50,6 +52,7 @@ public class ShardSubscriptionStorage : SubscriptionStorage
                 {
                     DropSubscriptionConnections(id,
                         new SubscriptionDoesNotBelongToNodeException($"Shard subscription '{id}' operation was stopped, because it's now under a different server's responsibility"));
+                    continue;
                 }
             }
         }
@@ -60,13 +63,7 @@ public class ShardSubscriptionStorage : SubscriptionStorage
         if (taskStatus.LastClientConnectionTime != null)
             return false;
 
-        if (taskStatus.ShardingState == null)
-        {
-            if (state.LastChangeVectorSent == null)
-                return false;
-
-            return true;
-        }
+        Debug.Assert(taskStatus.ShardingState != null);
 
         if (taskStatus.ShardingState != null)
         {

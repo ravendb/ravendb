@@ -33,19 +33,6 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             };
         }
 
-        internal override async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServerAsync(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.MemoryBuffer buffer, ShardedSubscriptionBatch batch)
-        {
-            try
-            {
-                return await base.ReadSingleSubscriptionBatchFromServerAsync(contextPool, tcpStream, buffer, batch);
-            }
-            catch (Exception e)
-            {
-                batch.SetException(e);
-                throw;
-            }
-        }
-
         internal override async Task<BatchFromServer> PrepareBatchAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer,
             ShardedSubscriptionBatch batch, Task notifiedSubscriber)
         {
