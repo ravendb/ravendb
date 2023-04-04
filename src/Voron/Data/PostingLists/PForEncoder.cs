@@ -56,7 +56,8 @@ namespace Voron.Data.PostingLists
             _output[0] = 0; // do not assume the buffer is clean
             _bufPos = 0;
             _bitPos = 0;
-            _maxNumOfBits = output.Length * 8;
+            Debug.Assert(_output.Length > 1);
+            _maxNumOfBits = (output.Length - 1) * 8; 
             Last = -1;
             First = -1;
             SizeInBytes = -1;
@@ -142,9 +143,13 @@ namespace Voron.Data.PostingLists
 
         private bool TryCloseInternal()
         {
-            return TryFlush() &&
-                   TryPushBits(0b11_00, 4) &&
-                   TryPushBits(0, BitsAvailableInCurrentByte);// align to byte boundary
+            if (TryFlush() == false ||
+                TryPushBits(0b11_00, 4) == false)
+                return false;
+
+            var bitsToAlign = BitsAvailableInCurrentByte;
+            return bitsToAlign == 0 ||
+                TryPushBits(0, BitsAvailableInCurrentByte);// align to byte boundary
         }
 
         private bool TryFlush(uint* buffer, int len)
@@ -279,6 +284,8 @@ namespace Voron.Data.PostingLists
         // https://github.com/facebookarchive/beringei/blob/75c3002b179d99c8709323d605e7d4b53484035c/beringei/lib/BitUtil.cpp#L17
         public bool TryPushBits(ulong value, int bitsInValue)
         {
+            Debug.Assert(bitsInValue > 0);
+
             if (_bitPos + bitsInValue > _maxNumOfBits)
             {
                 return false;
@@ -323,7 +330,7 @@ namespace Voron.Data.PostingLists
 
         private int BitsAvailableInCurrentByte
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             get => (_bitPos & 0x7) != 0 ? 8 - (_bitPos & 0x7) : 0;
         }
     }
