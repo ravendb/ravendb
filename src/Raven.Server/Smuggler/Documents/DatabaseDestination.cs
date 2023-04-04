@@ -257,13 +257,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (item.Attachments != null)
                 {
-                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
-                    {
-                        progress.Attachments.ReadCount += item.Attachments.Count;
-                        progress.Attachments.SizeInBytes += item.Attachments.Sum(x => x.Stream.Length);
-
-                    }
-                    else
+                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
                         progress.Attachments.Skipped = true;
                 }
 
