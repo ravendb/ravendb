@@ -2,10 +2,13 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -67,6 +70,7 @@ namespace Raven.Server.Documents
 
                 HttpContext.Response.StatusCode = (int)statusCode;
 
+                var id ="";
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var json = new DynamicJsonValue
@@ -75,7 +79,11 @@ namespace Raven.Server.Documents
                     };
                     fillJson?.Invoke(json, result.Configuration, result.Index);
                     context.Write(writer, json);
+                    id = json["TaskId"] == null ? json["RaftCommandIndex"].ToString() : json["TaskId"].ToString();
+
                 }
+                DynamicJsonValue configuration = GetCustomConfigurationAuditJson(debug,result.Configuration);
+                LogTaskToAudit(debug, id, configuration);
             }
         }
 
@@ -156,6 +164,69 @@ namespace Raven.Server.Documents
         {
             if(ShouldAddPagingPerformanceHint(numberOfResults))
                 Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
+        }
+
+        protected DynamicJsonValue GetCustomConfigurationAuditJson(string name, BlittableJsonReaderObject configuration)
+        {
+            switch (name)
+            {
+                case "update-periodic-backup":
+                    return JsonDeserializationServer.BackupConfiguration(configuration).ToAuditJson();
+                case "etl-add":
+                    var etlType = EtlConfiguration<ConnectionString>.GetEtlType(configuration).ToString();
+                    if (etlType == "Raven")
+                        return JsonDeserializationClient.RavenEtlConfiguration(configuration).ToJson();
+                    if (etlType == "ElasticSearch")
+                        return JsonDeserializationClient.ElasticSearchEtlConfiguration(configuration).ToJson();
+                    if (etlType == "Queue")
+                        return JsonDeserializationClient.QueueEtlConfiguration(configuration).ToJson();
+                    if (etlType == "Sql")
+                        return JsonDeserializationClient.SqlEtlConfiguration(configuration).ToJson();
+                    if (etlType == "Olap")
+                        return JsonDeserializationClient.OlapEtlConfiguration(configuration).ToJson();
+                    break;
+                case "update_external_replication":
+                    return JsonDeserializationClient.ExternalReplication(configuration).ToJson();
+                case "update-hub-pull-replication":
+                    return JsonDeserializationClient.PullReplicationDefinition(configuration).ToAuditJson();
+                case "update-sink-pull-replication":
+                    return JsonDeserializationClient.PullReplicationAsSink(configuration).ToAuditJson();
+                case "put-connection-string":
+                    var connectionStringType = ConnectionString.GetConnectionStringType(configuration).ToString();
+                    if (connectionStringType == "Raven")
+                        return JsonDeserializationClient.RavenConnectionString(configuration).ToJson();
+                    if (connectionStringType == "ElasticSearch")
+                        return JsonDeserializationClient.ElasticSearchConnectionString(configuration).ToAuditJson();
+                    if (connectionStringType == "Queue")
+                        return JsonDeserializationClient.QueueConnectionString(configuration).ToJson();
+                    if (connectionStringType == "Sql")
+                        return JsonDeserializationClient.SqlConnectionString(configuration).ToJson();
+                    if (connectionStringType == "Olap")
+                        return JsonDeserializationClient.OlapConnectionString(configuration).ToJson();
+                    break;
+            }
+            return null;
+        }
+
+        protected void LogTaskToAudit(string description, string id, DynamicJsonValue conf)
+        {
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                var clientCert = GetCurrentCertificate();
+                var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
+                var line = $"Task: {description} with taskId: {id} executed by {clientCert?.Subject} {clientCert?.Thumbprint} ";
+
+                if (conf != null)
+                {
+                    var confString = "";
+                    using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                    {
+                        confString = ctx.ReadObject(conf, "conf").ToString();
+                    }
+                    line += ($"Configuration: {confString}");
+                }
+                auditLog.Info(line);
+            }
         }
     }
 }

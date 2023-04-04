@@ -50,7 +50,6 @@ using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
-using Raven.Server.Integrations.PostgreSQL.Handlers;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;

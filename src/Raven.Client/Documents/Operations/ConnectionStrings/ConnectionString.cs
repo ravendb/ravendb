@@ -40,6 +40,17 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
             return Name == connectionString.Name && Type == connectionString.Type;
         }
+
+        public static ConnectionStringType GetConnectionStringType(BlittableJsonReaderObject connectionStringConfiguration)
+        {
+            if (connectionStringConfiguration.TryGet("Type", out string type) == false)
+                throw new InvalidOperationException($"ConnectionString configuration must have {nameof(ConnectionStringType)} field");
+
+            if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
+                throw new NotSupportedException($"Unknown Connection string type: {connectionStringType}");
+            
+            return connectionStringType;
+        }
     }
 
     public enum ConnectionStringType

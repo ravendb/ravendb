@@ -80,6 +80,15 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 
             return json;
         }
+
+        public DynamicJsonValue ToAuditJson()
+        {
+            DynamicJsonValue json = base.ToJson();
+            json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
+            json[nameof(EnableCompatibilityMode)] = EnableCompatibilityMode;
+
+            return json;
+        }
     }
     
     public class Authentication

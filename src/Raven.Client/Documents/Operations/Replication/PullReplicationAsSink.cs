@@ -78,6 +78,22 @@ namespace Raven.Client.Documents.Operations.Replication
             return djv;
         }
 
+        public DynamicJsonValue ToAuditJson()
+        {
+            if (string.IsNullOrEmpty(HubName))
+                throw new ArgumentException("Must be not empty", nameof(HubName));
+
+            var djv = base.ToJson();
+
+            djv[nameof(Mode)] = Mode;
+            djv[nameof(HubName)] = HubName;
+            djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
+            djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
+            djv[nameof(AccessName)] = AccessName;
+
+            return djv;
+        }
+
         public override string GetDefaultTaskName()
         {
             return $"Replication Sink for {HubName}";
