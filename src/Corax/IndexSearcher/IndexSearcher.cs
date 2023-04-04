@@ -261,7 +261,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return disposable;
     }
     
-    public AllEntriesMatch AllEntries() => new AllEntriesMatch(this, _transaction);
+    public AllEntriesUnorderedMatch AllEntries() => new(this, _transaction);
    public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
 
     public long GetTermAmountInField(FieldMetadata field)

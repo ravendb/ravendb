@@ -21,6 +21,8 @@ namespace Corax.Queries
         private QueryCountConfidence _confidence;        
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
+        public bool IsOrdered => _inner.IsOrdered;
+
         public long Count => _totalResults;
 
         private readonly ByteStringContext _context;

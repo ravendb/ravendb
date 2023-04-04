@@ -10,9 +10,11 @@ namespace Corax.Queries
     {
         private MemoizationMatchProvider<TInner> _inner;
         private int _bufferCurrentIdx;
-        public bool IsAllEntries = typeof(TInner) == typeof(AllEntriesMatch);
+        public bool IsAllEntries = typeof(TInner) == typeof(AllEntriesUnorderedMatch);
 
         public bool IsBoosting => _inner.IsBoosting;
+        public bool IsOrdered => _inner.IsOrdered;
+
         public long Count => _inner.Count;
         public QueryCountConfidence Confidence => _inner.Confidence;
 

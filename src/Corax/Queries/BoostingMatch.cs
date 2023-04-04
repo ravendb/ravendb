@@ -43,6 +43,7 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => _inner.Confidence;
 
         public bool IsBoosting => true;
+        public bool IsOrdered => _inner.IsOrdered;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer, int matches) => _inner.AndWith(buffer, matches);

@@ -29,6 +29,9 @@ public class SpatialMatch : IQueryMatch
     private IDisposable _startsWithDisposeHandler;
     private HashSet<long> _alreadyReturned;
 
+    // TODO: Check if there is any way we can consider something ordered.
+    public bool IsOrdered => false;
+
     public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, FieldMetadata field, IShape shape,
         CompactTree tree,
         double errorInPercentage, Utils.Spatial.SpatialRelation spatialRelation)

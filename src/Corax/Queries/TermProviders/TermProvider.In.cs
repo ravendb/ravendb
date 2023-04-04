@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -12,15 +12,19 @@ namespace Corax.Queries
     {
         private readonly IndexSearcher _searcher;
         private readonly List<TTermsType> _terms;
-        private int _termIndex;
         private readonly FieldMetadata _field;
+        private readonly bool _areTermsOrdered;
+        private int _termIndex;
 
-        public InTermProvider(IndexSearcher searcher, FieldMetadata field, List<TTermsType> terms)
+        public bool IsOrdered => _areTermsOrdered;
+
+        public InTermProvider(IndexSearcher searcher, FieldMetadata field, List<TTermsType> terms, bool areTermsOrdered = false)
         {
             _field = field;
             _searcher = searcher;
             _terms = terms;
             _termIndex = -1;
+            _areTermsOrdered = areTermsOrdered;
         }
 
         public void Reset() => _termIndex = -1;

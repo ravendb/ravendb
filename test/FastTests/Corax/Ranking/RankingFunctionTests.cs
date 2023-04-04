@@ -160,6 +160,8 @@ public class RankingFunctionTests : StorageTest
         IndexEntries(list);
         using var indexSearcher = new IndexSearcher(Env, _mapping);
         var query = indexSearcher.StartWithQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "mac");
+        Assert.True(query.IsOrdered);
+
         Span<long> matches = stackalloc long[10];
         Span<float> scores = stackalloc float[10];
         scores.Fill(0);

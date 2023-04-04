@@ -23,6 +23,7 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => throw new NotSupportedException();
 
         public bool IsBoosting => _inner.IsBoosting;
+        public bool IsOrdered => true;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)

@@ -18,6 +18,8 @@ namespace Corax.Queries
 
         private CompactTree.Iterator _iterator;
 
+        public bool IsOrdered => true;
+
         public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, FieldMetadata field, CompactKey startWith)
         {
             _searcher = searcher;

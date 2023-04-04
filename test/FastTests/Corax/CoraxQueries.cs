@@ -120,6 +120,8 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
 
             var match1 = searcher.BetweenQuery(_longItemFieldMetadata, 95L, 212L);
+            Assert.True(match1.IsOrdered);
+
             var expectedList = _entries.Where(x => x.LongValue is >= 95 and <= 212).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -158,7 +160,10 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
 
             var match0 = searcher.AllEntries();
-            var match1 = searcher.UnaryQuery<AllEntriesMatch, long>(match0, _longItemFieldMetadata, 3, UnaryMatchOperation.GreaterThan);
+            Assert.False(match0.IsOrdered);
+            var match1 = searcher.UnaryQuery<AllEntriesUnorderedMatch, long>(match0, _longItemFieldMetadata, 3, UnaryMatchOperation.GreaterThan);
+            Assert.False(match1.IsOrdered);
+
             var expectedList = _entries.Where(x => x.LongValue > 3).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -177,8 +182,11 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             
             var match0 = searcher.AllEntries();
+            Assert.False(match0.IsOrdered);
             var comparers = new MultiUnaryItem[] {new(_longItemFieldMetadata, 3L, UnaryMatchOperation.GreaterThan), new(_doubleItemFieldMetadata, 20.5, UnaryMatchOperation.LessThan)};
             var match1 = searcher.CreateMultiUnaryMatch(match0, comparers);
+            Assert.False(match1.IsOrdered);
+
             var expectedList = _entries.Where(x => x.LongValue > 3 && x.DoubleValue < 20.5).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -198,6 +206,7 @@ namespace FastTests.Corax
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
             var match0 = searcher.TermQuery(_doubleItemFieldMetadata, 0.0D);
+            Assert.True(match0.IsOrdered);
             var ids = new long[16];
             Assert.Equal(1, match0.Fill(ids)); //match one doc
 
@@ -221,8 +230,12 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
 
             var match0 = searcher.TermQuery(_longItemFieldMetadata, "1");
+            Assert.True(match0.IsOrdered);
             var match1 = searcher.StartWithQuery("Id", "ent");
+            Assert.True(match1.IsOrdered);
             var multiTermTerm = searcher.And(match1, match0);
+            Assert.True(multiTermTerm.IsOrdered);
+
             var first = FetchFromCorax(ref multiTermTerm);
             Assert.Equal(1, first.Count);
 

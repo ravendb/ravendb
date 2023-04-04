@@ -31,6 +31,8 @@ namespace Corax.Queries
         private PForDecoder.DecoderState _decoderState;
         private ByteStringContext _ctx;
         public bool IsBoosting => _scoreFunc != null;
+        public bool IsOrdered => true;
+
         public long Count => _totalResults;
         
 #if DEBUG

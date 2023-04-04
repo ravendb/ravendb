@@ -62,6 +62,8 @@ namespace Corax.Queries
 
         public bool IsBoosting => _inner.IsBoosting || HasBoostingComparer;
 
+        public bool IsOrdered => true;
+
         internal SortingMultiMatch(
             IndexSearcher searcher, in TInner inner,
             in TComparer1 comparer1 = default,

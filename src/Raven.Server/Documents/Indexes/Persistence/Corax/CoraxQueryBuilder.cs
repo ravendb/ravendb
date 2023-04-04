@@ -44,7 +44,7 @@ internal static class CoraxQueryBuilder
         public readonly Dictionary<string, CoraxHighlightingTermIndex> HighlightingTerms;
         public readonly int Take;
         public readonly List<string> BuildSteps;
-        public readonly MemoizationMatchProvider<AllEntriesMatch> AllEntries;
+        public readonly MemoizationMatchProvider<AllEntriesUnorderedMatch> AllEntries;
         public readonly QueryMetadata Metadata;
         public readonly bool HasDynamics;
         public readonly Lazy<List<string>> DynamicFields;
@@ -489,7 +489,7 @@ internal static class CoraxQueryBuilder
         return null;
     }
 
-    private static bool TryMergeTwoNodesForAnd(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, ref IQueryMatch lhs, ref IQueryMatch rhs, out CoraxBooleanQueryBase merged, bool requiredMaterialization = false)
+    private static bool TryMergeTwoNodesForAnd(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesUnorderedMatch> allEntries, ref IQueryMatch lhs, ref IQueryMatch rhs, out CoraxBooleanQueryBase merged, bool requiredMaterialization = false)
     {
         merged = null;
         switch (lhs, rhs, requiredMaterialization)

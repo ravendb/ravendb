@@ -20,6 +20,8 @@ namespace Corax.Queries
         private TInner _inner;
 
         public bool IsBoosting => _inner.IsBoosting;
+        public bool IsOrdered => _inner.IsOrdered;
+
         public long Count => _inner.Count;
         public QueryCountConfidence Confidence => _inner.Confidence;
 

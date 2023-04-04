@@ -18,6 +18,8 @@ namespace Corax.Queries
             _functionTable = functionTable;
         }
 
+        public bool IsOrdered => true;
+
         public long TotalResults => _functionTable.TotalResultsFunc(ref this);
 
         public long Count => throw new NotSupportedException();

@@ -17,6 +17,8 @@ public struct RegexTermProvider : ITermProvider
 
     private CompactTree.Iterator _iterator;
 
+    public bool IsOrdered => true;
+
     public RegexTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Regex regex)
     {
         _searcher = searcher;

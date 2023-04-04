@@ -1195,7 +1195,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     mltQuery = mlt.Like(blittableJson);
             }
 
-            if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is AllEntriesMatch == false)
+            if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is AllEntriesUnorderedMatch == false)
             {
                 mltQuery = _indexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
             }

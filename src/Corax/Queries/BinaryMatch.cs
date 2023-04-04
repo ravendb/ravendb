@@ -19,8 +19,11 @@ namespace Corax.Queries
         private ByteStringContext _ctx;
         private readonly long _totalResults;
         private readonly QueryCountConfidence _confidence;
+        private readonly bool _isNotOr;
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
+
+        public bool IsOrdered => _inner.IsOrdered && _isNotOr;
 
         public long Count => _totalResults;
 
@@ -33,7 +36,8 @@ namespace Corax.Queries
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> andWithFunc,
             delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> inspectionFunc,
             long totalResults,
-            QueryCountConfidence confidence)
+            QueryCountConfidence confidence,
+            bool isOr = false)
         {
             _totalResults = totalResults;
 
@@ -45,6 +49,7 @@ namespace Corax.Queries
             _outer = outer;
             _confidence = confidence;
             _ctx = ctx;
+            _isNotOr = !isOr;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -14,6 +14,9 @@ namespace Corax.Queries
         private readonly CompactKey _term;
 
         private CompactTree.Iterator _iterator;
+
+        public bool IsOrdered => true;
+
         public ContainsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey term)
         {
             _tree = tree;

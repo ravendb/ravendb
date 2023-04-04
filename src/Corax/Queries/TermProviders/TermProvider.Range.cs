@@ -38,6 +38,8 @@ namespace Corax.Queries
         private readonly bool _skipHighCheck;
         private bool _skipLowCheck;
 
+        public bool IsOrdered => true;
+
         public TermRangeProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice low, Slice high)
         {
             _searcher = searcher;
@@ -135,6 +137,8 @@ namespace Corax.Queries
 
         private const int TermBufferSize = 32;
         private fixed byte _termsBuffer[TermBufferSize];
+
+        public bool IsOrdered => true;
 
         public TermNumericRangeProvider(IndexSearcher searcher, FixedSizeTree<TVal> set,
             CompactTree tree, FieldMetadata field, TVal low, TVal high)

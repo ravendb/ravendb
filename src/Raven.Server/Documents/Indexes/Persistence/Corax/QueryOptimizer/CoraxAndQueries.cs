@@ -14,7 +14,7 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
 {
     private readonly List<CoraxBooleanItem> _queryStack;
 
-    public CoraxAndQueries(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right) : base(indexSearcher)
+    public CoraxAndQueries(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesUnorderedMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right) : base(indexSearcher)
     {
         _queryStack = new List<CoraxBooleanItem>() {left, right};
     }

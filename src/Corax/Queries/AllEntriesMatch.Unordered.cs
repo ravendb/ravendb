@@ -12,7 +12,7 @@ using Voron.Impl;
 namespace Corax.Queries
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct AllEntriesMatch : IQueryMatch
+    public struct AllEntriesUnorderedMatch : IQueryMatch
     {
         private readonly Transaction _tx;
         private readonly long _count;
@@ -22,7 +22,9 @@ namespace Corax.Queries
         private Page _currentPage;
         private long _entriesContainerId;
 
-        public unsafe AllEntriesMatch(IndexSearcher searcher, Transaction tx)
+        public bool IsOrdered => false;
+
+        public unsafe AllEntriesUnorderedMatch(IndexSearcher searcher, Transaction tx)
         {
             _tx = tx;
             _count = searcher.NumberOfEntries;
@@ -100,7 +102,7 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode(nameof(AllEntriesMatch),
+            return new QueryInspectionNode(nameof(AllEntriesUnorderedMatch),
                 parameters: new Dictionary<string, string>()
                 {
                     { nameof(IsBoosting), IsBoosting.ToString() },

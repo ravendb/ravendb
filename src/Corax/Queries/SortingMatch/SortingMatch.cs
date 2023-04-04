@@ -34,6 +34,8 @@ namespace Corax.Queries
         internal int _bufferUsedCount;
         public long TotalResults;
 
+        public bool IsOrdered => true;
+
         public SortingMatch(IndexSearcher searcher, in TInner inner, in TComparer comparer, int take = -1)
         {
             _searcher = searcher;
