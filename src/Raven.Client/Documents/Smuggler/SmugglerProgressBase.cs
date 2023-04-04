@@ -310,7 +310,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
         public long ReadCount { get; set; }
         public bool Skipped { get; set; }
         public long ErroredCount { get; set; }
-        public long Size { get; set; }
+        public long SizeInBytes { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -321,7 +321,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
                 [nameof(ReadCount)] = ReadCount,
                 [nameof(Skipped)] = Skipped,
                 [nameof(ErroredCount)] = ErroredCount,
-                [nameof(Size)] = Size
+                [nameof(SizeInBytes)] = SizeInBytes
             };
         }
 
@@ -331,8 +331,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
             sb.Append($"Read: {ReadCount:#,#;;0}.");
             if (ErroredCount > 0) 
                 sb.Append($" Errored: {ErroredCount:#,#;;0}.");
-            if (Size > 0)
-                sb.Append($" Size: {new Size(Size).HumaneSize}.");
+            if (SizeInBytes > 0)
+                sb.Append($" Size: {new Size(SizeInBytes).HumaneSize}.");
 
             return sb.ToString();
         }

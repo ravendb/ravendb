@@ -260,7 +260,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
                     {
                         progress.Attachments.ReadCount += item.Attachments.Count;
-                        progress.Attachments.Size += item.Attachments.Sum(x => x.Stream.Length);
+                        progress.Attachments.SizeInBytes += item.Attachments.Sum(x => x.Stream.Length);
 
                     }
                     else

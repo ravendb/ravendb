@@ -408,7 +408,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     if (item.Document != null) 
-                        result.Documents.Size += item.Document.Data.Size;
+                        result.Documents.SizeInBytes += item.Document.Data.Size;
 
                     if (item.Attachments != null)
                     {
@@ -417,7 +417,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (attachment.Stream != null)
                             {
                                 result.Documents.Attachments.ReadCount++;
-                                result.Documents.Attachments.Size += attachment.Stream.Length;
+                                result.Documents.Attachments.SizeInBytes += attachment.Stream.Length;
                             }
                         }
                     }
@@ -511,7 +511,7 @@ namespace Raven.Server.Smuggler.Documents
                     result.RevisionDocuments.ReadCount++;
 
                     if (item.Document != null)
-                        result.RevisionDocuments.Size += item.Document.Data.Size;
+                        result.RevisionDocuments.SizeInBytes += item.Document.Data.Size;
 
                     if (item.Attachments != null)
                     {
@@ -520,7 +520,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (attachment.Stream != null)
                             {
                                 result.Documents.Attachments.ReadCount++;
-                                result.Documents.Attachments.Size += attachment.Stream.Length;
+                                result.Documents.Attachments.SizeInBytes += attachment.Stream.Length;
                             }
                         }
                     }
@@ -865,10 +865,10 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _token.ThrowIfCancellationRequested();
                     result.TimeSeries.ReadCount += ts.Segment.NumberOfEntries;
-                    result.TimeSeries.Size += ts.Segment.NumberOfBytes;
+                    result.TimeSeries.SizeInBytes += ts.Segment.NumberOfBytes;
 
                     if (result.TimeSeries.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Time series entries {result.TimeSeries}");
+                        AddInfoToSmugglerResult(result, $"Time Series entries {result.TimeSeries}");
 
                     result.TimeSeries.LastEtag = ts.Etag;
 
