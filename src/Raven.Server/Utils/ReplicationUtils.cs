@@ -7,7 +7,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
 
@@ -30,17 +29,38 @@ namespace Raven.Server.Utils
             return AsyncHelpers.RunSync(() => GetTcpInfoAsync(url, databaseName, tag, certificate, token));
         }
 
+        public static TcpConnectionInfo GetTcpInfo(string senderUrl, string url, string databaseName, string tag, X509Certificate2 certificate, CancellationToken token)
+        {
+            return AsyncHelpers.RunSync(() => GetTcpInfoAsync(senderUrl, url, databaseName, tag, certificate, token));
+        }
+
         public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string tag, X509Certificate2 certificate, CancellationToken token)
         {
             return await GetTcpInfoAsync(url, databaseName, null, default, tag, certificate, token);
         }
 
+        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string senderUrl, string url, string databaseName, string tag, X509Certificate2 certificate, CancellationToken token)
+        {
+            return await GetTcpInfoAsync(senderUrl, url, databaseName, null, default, tag, certificate, token);
+        }
+
         public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, CancellationToken token)
+        {
+            var getTcpInfoCommand = databaseId == null ? new GetTcpInfoCommand(tag, databaseName) : new GetTcpInfoCommand(tag, databaseName, databaseId, etag);
+            return await GetTcpInfoAsync(url, getTcpInfoCommand, certificate, token);
+        }
+
+        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string senderUrl, string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, CancellationToken token)
+        {
+            var getTcpInfoCommand = databaseId == null ? new GetTcpInfoCommand(senderUrl, tag, databaseName) : new GetTcpInfoCommand(senderUrl, tag, databaseName, databaseId, etag);
+            return await GetTcpInfoAsync(url, getTcpInfoCommand, certificate, token);
+        }
+
+        private static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, GetTcpInfoCommand getTcpInfoCommand, X509Certificate2 certificate, CancellationToken token)
         {
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
-                var getTcpInfoCommand = databaseId == null ? new GetTcpInfoCommand(tag, databaseName) : new GetTcpInfoCommand(tag, databaseName, databaseId, etag);
                 await requestExecutor.ExecuteAsync(getTcpInfoCommand, context, token: token);
 
                 var tcpConnectionInfo = getTcpInfoCommand.Result;

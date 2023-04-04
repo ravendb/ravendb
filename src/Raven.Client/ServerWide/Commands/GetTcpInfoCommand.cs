@@ -13,6 +13,7 @@ namespace Raven.Client.ServerWide.Commands
         private readonly string _dbId;
         private readonly long _etag;
         private readonly bool _fromReplication;
+        private readonly string _senderUrl;
 
         public GetTcpInfoCommand(string tag)
         {
@@ -25,11 +26,21 @@ namespace Raven.Client.ServerWide.Commands
             _dbName = dbName;
         }
 
+        internal GetTcpInfoCommand(string senderUrl, string tag, string dbName = null) : this(tag, dbName)
+        {
+            _senderUrl = senderUrl;
+        }
+
         internal GetTcpInfoCommand(string tag, string dbName, string dbId, long etag) : this(tag, dbName)
         {
             _dbId = dbId;
             _etag = etag;
             _fromReplication = true;
+        }
+
+        internal GetTcpInfoCommand(string senderUrl, string tag, string dbName, string dbId, long etag) : this(tag, dbName, dbId, etag)
+        { 
+            _senderUrl = senderUrl;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -46,6 +57,11 @@ namespace Raven.Client.ServerWide.Commands
                     url += $"&from-outgoing={_dbId}&etag={_etag}";
                 }
             }
+            if (_senderUrl != null)
+            {
+                url += $"&senderUrl={_senderUrl}";
+            }
+
             RequestedNode = node;
             var request = new HttpRequestMessage
             {
