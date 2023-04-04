@@ -46,6 +46,7 @@ namespace Raven.Client.Http
 
         public unsafe class HttpCacheItem : IDisposable
         {
+            internal string Url;
             public string ChangeVector;
             public byte* Ptr;
             public int Size;
@@ -118,18 +119,28 @@ namespace Raven.Client.Http
             {
                 ReleaseRefInternal();
             }
-#if !RELEASE
+
             ~HttpCacheItem()
             {
-                Allocation = null;
+                //Allocation = null;
 
                 // Hitting this on DEBUG and/or VALIDATE and getting a higher number than 0 means we have a leak.
-                // On release we will leak, but wont crash. 
-                if (_usages > 0)
-                    throw new LowMemoryException("Detected a leak on HttpCache when running the finalizer. See: https://issues.hibernatingrhinos.com/issue/RavenDB-9737");
+                // On release we will leak, but wont crash.
 
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    string document = null;
+                    if (Allocation != null)
+                    {
+                        var obj = Ptr != null ? new BlittableJsonReaderObject(Ptr, Size, context) : null;
+                        document = obj?.ToString();
+                    }
+
+                    if (_usages > 0)
+                        Console.WriteLine($"!!!!!!!!!! Detected a leak on HttpCache when running the finalizer, cache URL: {Url}, Document: {document} !!!!!!!!!!");
+                }
+                
             }
-#endif
         }
 
         /// <summary>
@@ -153,6 +164,7 @@ namespace Raven.Client.Http
 
             var httpCacheItem = new HttpCacheItem
             {
+                Url = url,
                 ChangeVector = changeVector,
                 Ptr = mem.Address,
                 Size = result.Size,
@@ -183,6 +195,7 @@ namespace Raven.Client.Http
             var flag = aggressivelyCached ? ItemFlags.AggressivelyCached : ItemFlags.None;
             var httpCacheItem = new HttpCacheItem
             {
+                Url = url,
                 ChangeVector = NotFoundResponse,
                 Ptr = null,
                 Size = 0,
