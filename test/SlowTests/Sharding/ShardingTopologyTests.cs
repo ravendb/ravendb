@@ -59,6 +59,74 @@ namespace SlowTests.Sharding
         }
 
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task NewShardShouldBeAddedToANodeThatIsMostFree()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options))
+            {
+                //add a new shard and check it is added to the free node
+                var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, replicationFactor: 1));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var nodeToInstanceCount = new Dictionary<string, int>();
+
+                foreach (var (shardNumber, topology) in sharding.Shards)
+                {
+                    foreach (var node in topology.Members)
+                    {
+                        nodeToInstanceCount[node] = nodeToInstanceCount.ContainsKey(node) ? nodeToInstanceCount[node] + 1 : 1;
+                    }
+                }
+
+                Assert.Equal(3, nodeToInstanceCount.Count);
+                foreach (var (node, count) in nodeToInstanceCount)
+                {
+                    Assert.Equal(1, count);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task EnsureCantAddShardReplicaWhenAllClusterNodesAreTaken()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 1, shardReplicationFactor: 3, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options))
+            {
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                Assert.Equal(3, sharding.Shards.First().Value.Count);
+
+                //try to add a new shard with a list of the same node twice
+                var error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    store.Maintenance.Server.Send(new AddDatabaseNodeOperation(store.Database, shardNumber: sharding.Shards.Keys.First()));
+                });
+                Assert.Contains("already exists on all the nodes of the cluster", error.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task EnsureAddingNewShardNodesListCantContainDuplicates()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 1, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options))
+            {
+                //try to add a new shard with a list of the same node twice
+                var error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, nodes: new[] { "A", "A" }));
+                });
+                Assert.Contains("The provided list of nodes contains duplicates", error.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task AddAndDeleteShardFromDatabase_ShardHasNoBucketsMapping()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
