@@ -50,7 +50,7 @@ namespace SlowTests.Sharding.Cluster
                 }
                 var after = DateTime.UtcNow;
 
-                var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, 12));
+                var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, 1));
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {

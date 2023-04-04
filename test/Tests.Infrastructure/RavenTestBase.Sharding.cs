@@ -56,8 +56,8 @@ public partial class RavenTestBase
                     r.Sharding.Shards = new Dictionary<int, DatabaseTopology>()
                     {
                         {0, new DatabaseTopology()},
-                        {12, new DatabaseTopology()},
                         {1, new DatabaseTopology()},
+                        {2, new DatabaseTopology()},
                     };
                 } else if (shards != null)
                 {
@@ -89,16 +89,6 @@ public partial class RavenTestBase
 
                     for (int shardNumber = 0; shardNumber < shards; shardNumber++)
                     {
-                        if (shardNumber == 1)
-                        {
-                            r.Sharding.Shards[12] = new DatabaseTopology
-                            {
-                                ReplicationFactor = shardReplicationFactor,
-                                DynamicNodesDistribution = dynamicNodeDistribution
-                            };
-                            continue;
-                        }
-
                         r.Sharding.Shards[shardNumber] = new DatabaseTopology
                         {
                             ReplicationFactor = shardReplicationFactor,

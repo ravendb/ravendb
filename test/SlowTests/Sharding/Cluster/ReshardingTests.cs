@@ -222,7 +222,7 @@ namespace SlowTests.Sharding.Cluster
                 //create new shard
                 var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database));
                 var newShardNumber = res.ShardNumber;
-                //Assert.Equal(2, newShardNumber);
+                Assert.Equal(2, newShardNumber);
                 Assert.Equal(2, res.ShardTopology.ReplicationFactor);
                 Assert.Equal(2, res.ShardTopology.AllNodes.Count());
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
