@@ -11,6 +11,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,10 +23,23 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void CanGetEmptyCollection()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void LuceneCanGetEmptyCollection(Options options) => CanGetEmptyCollection(options, list =>
         {
-            using (var store = GetDocumentStore())
+            Assert.Null(list.Single().Exemptions);
+        });
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void CoraxCanGetEmptyCollection(Options options) => CanGetEmptyCollection(options, list =>
+        {
+            Assert.Empty(list.Single().Exemptions);
+        });
+
+        private void CanGetEmptyCollection(Options options, Action<List<CasinosSuspensionsIndex.IndexResult>> assertion)
+        {
+            using (var store = GetDocumentStore(options))
             {
                 new CasinosSuspensionsIndex().Execute(store);
 
@@ -52,7 +66,7 @@ namespace SlowTests.MailingList
                     // note that suspensions[0].Exemptions will be null, because we don't have
                     // any values in the array, and we don't store empty arrays
                     Assert.NotEmpty(suspensions);
-                    Assert.Null(suspensions.Single().Exemptions);
+                    assertion(suspensions);
                 }
             }
         }

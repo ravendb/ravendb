@@ -11,6 +11,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,11 +23,12 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void GivenAListOfLogEntriesAndAPartialClientName_Search_Returns1Player()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void GivenAListOfLogEntriesAndAPartialClientName_Search_Returns1Player(Options options)
         {
             // Act.
-            using (var documentStore = CreateDocumentStore())
+            using (var documentStore = CreateDocumentStore(options))
             {
 
                 // Arrange.
@@ -39,11 +41,12 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void GivenAListOfLogEntriesAndAFullClientName_Search_Returns1Player()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void GivenAListOfLogEntriesAndAFullClientName_Search_Returns1Player(Options options)
         {
             // Act.
-            using (var documentStore = CreateDocumentStore())
+            using (var documentStore = CreateDocumentStore(options))
             {
                 // Arrange.
                 IList<LogEntries_Search.ReduceResult> result = Search(documentStore, "Jus");
@@ -55,11 +58,12 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void GivenAListOfLogEntriesAndAFullGuid_Search_Returns1PlayerWith3ClientNames()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void GivenAListOfLogEntriesAndAFullGuid_Search_Returns1PlayerWith3ClientNames(Options options)
         {
             // Act.
-            using (var documentStore = CreateDocumentStore())
+            using (var documentStore = CreateDocumentStore(options))
             {
 
                 // Arrange.
@@ -72,11 +76,12 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void GivenAListOfLogEntriesAndAPartialEndOfClientGuid_Search_Returns1PlayerWith3ClientNames()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void GivenAListOfLogEntriesAndAPartialEndOfClientGuid_Search_Returns1PlayerWith3ClientNames(Options options)
         {
             // Act.
-            using (var documentStore = CreateDocumentStore())
+            using (var documentStore = CreateDocumentStore(options))
             {
 
                 // Arrange.
@@ -156,9 +161,9 @@ namespace SlowTests.MailingList
             }
         }
 
-        private IDocumentStore CreateDocumentStore()
+        private IDocumentStore CreateDocumentStore(Options options)
         {
-            var documentStore = GetDocumentStore();
+            var documentStore = GetDocumentStore(options);
 
             // Wire up the index.
             new LogEntries_Search().Execute(documentStore);

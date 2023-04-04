@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries.Results
         public override unsafe Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
             BlittableJsonReaderObject result;
-            if (retrieverInput.LuceneDocument is null)
+            if (retrieverInput.IsLuceneDocument() == false)
             {
                 retrieverInput.CoraxEntry.GetFieldReaderFor(FieldsToFetch.IndexFields.Count + 1).Read(out var binaryValue);
                 fixed (byte* ptr = &binaryValue.GetPinnableReference())
@@ -87,15 +87,6 @@ namespace Raven.Server.Documents.Queries.Results
                     using var temp = new BlittableJsonReaderObject(ptr, binaryValue.Length, _context);
                     result = temp.Clone(_context);
                 }
-
-                //
-                // var allocation = _context.GetMemory(value.Length);
-                // var buffer = new UnmanagedWriteBuffer(_context, allocation);
-                //
-                // fixed (byte* ptr = value)
-                //     buffer.Write(ptr, value.Length);
-
-                //result = new BlittableJsonReaderObject(allocation.Address, value.Length, _context, buffer);
             }
             else
             {

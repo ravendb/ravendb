@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using System.Linq;
 using System.Threading.Tasks;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task TestIdQueryTest()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task TestIdQueryTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DocsIndex().Execute(store);
                 using (var session = store.OpenAsyncSession())

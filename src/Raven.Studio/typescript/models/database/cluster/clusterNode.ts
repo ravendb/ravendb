@@ -24,6 +24,7 @@ class clusterNode {
     osFullName: KnockoutComputed<string>;
     osTitle: KnockoutComputed<string>;
     osIcon: KnockoutComputed<string>;
+    memoryTitle: string;
 
     constructor(isPassive: KnockoutObservable<boolean>) {
         this.isPassive = isPassive;
@@ -62,6 +63,10 @@ class clusterNode {
         });
         
         this.osIcon = ko.pureComputed(() => clusterNode.osIcon(this.osInfo().Type));
+
+        this.memoryTitle =
+            `License limit on single node.<br> 
+             Doesn't apply to memory-mapped files managed by the OS.`;
     }
     
     static osIcon(type: Raven.Client.ServerWide.Operations.OSType) {

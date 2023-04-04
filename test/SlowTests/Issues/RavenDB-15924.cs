@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-20149")]
+        public void ShouldWork(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             new DocsIndex().Execute(store);
 
             using (var session = store.OpenSession())
@@ -29,7 +32,6 @@ namespace SlowTests.Issues
             }
 
             Indexes.WaitForIndexing(store);
-
             string Escape(string s)
             {
                 return s.Replace("\\", "\\\\").Replace("\"", "\\\"");

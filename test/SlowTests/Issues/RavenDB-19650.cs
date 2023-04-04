@@ -17,10 +17,11 @@ namespace SlowTests.Issues
           
         }
         
-        [RavenFact(RavenTestCategory.Querying)]
-        public void CanProjectDataFromBothIndexAndDocument()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanProjectDataFromBothIndexAndDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new Content_ByUrl());
 
@@ -144,10 +145,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Querying)]
-        public void CanLoadDocumentFromReferenceExistingOnlyInIndex()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanLoadDocumentFromReferenceExistingOnlyInIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

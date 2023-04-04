@@ -1,8 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +16,30 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrors()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrorsInCorax(Options options) => SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrors(
+            options,
+            simpleMapErrors =>
+            {
+                Assert.Equal(1, simpleMapErrors.Errors.Length);
+                Assert.True(simpleMapErrors.Errors.All(x => x.Error.Contains("that is neither indexed nor stored is useless because it cannot be searched or retrieved.")));
+            });
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrorsInLucene(Options options) => SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrors(
+            options,
+            simpleMapErrors =>
+            {
+                Assert.Equal(25, simpleMapErrors.Errors.Length);
+                Assert.True(simpleMapErrors.Errors.All(x => x.Error.Contains("it doesn't make sense to have a field that is neither indexed nor stored")));
+            });
+        
+        
+        private void SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrors(Options options, Action<IndexErrors> assertion)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SimpleMapIndexWithDefaultFields().Execute(store);
 
@@ -35,10 +57,11 @@ namespace SlowTests.Issues
                 Assert.Equal(1, errors.Length);
 
                 var simpleMapErrors = errors.Single(x => x.Name == new SimpleMapIndexWithDefaultFields().IndexName);
-                Assert.Equal(25, simpleMapErrors.Errors.Length);
-                Assert.True(simpleMapErrors.Errors.All(x => x.Error.Contains("it doesn't make sense to have a field that is neither indexed nor stored")));
+                assertion(simpleMapErrors);
             }
         }
+        
+        //A field `Name` that is neither indexed nor stored is useless because it cannot be searched or retrieved.
 
         private class SimpleMapIndexWithDefaultFields : AbstractIndexCreationTask<Company>
         {

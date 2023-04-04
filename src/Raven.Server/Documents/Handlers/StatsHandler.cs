@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task DetailedStats()
         {
             using (var processor = new StatsHandlerProcessorForGetDetailedDatabaseStatistics(this))
-                    await processor.ExecuteAsync();
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task DatabaseHealthCheck()
         {
+            Database.ForTestingPurposes?.HealthCheckHold?.WaitOne();
+
             using (var processor = new StatsHandlerProcessorForDatabaseHealthCheck(this))
                 await processor.ExecuteAsync();
         }

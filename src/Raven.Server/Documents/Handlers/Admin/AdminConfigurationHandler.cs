@@ -16,6 +16,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/record", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetDatabaseRecord()
         {
+            Database.ForTestingPurposes?.DatabaseRecordLoadHold?.WaitOne();
+
             using (var processor = new AdminConfigurationHandlerForGetDatabaseRecord(this))
                 await processor.ExecuteAsync();
         }

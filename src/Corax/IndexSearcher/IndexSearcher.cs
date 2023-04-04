@@ -24,6 +24,8 @@ namespace Corax;
 public sealed unsafe partial class IndexSearcher : IDisposable
 {
     private readonly Transaction _transaction;
+    private Dictionary<string, Slice> _dynamicFieldNameMapping;
+
     private readonly IndexFieldsMapping _fieldMapping;
     private Tree _persistedDynamicTreeAnalyzer;
 
@@ -371,6 +373,18 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         FieldIndexingMode fieldIndexingMode = default)
     {
         return FieldMetadata.Build(fieldName, default, fieldId, fieldIndexingMode, analyzer);
+    }
+
+    public Slice GetDynamicFieldName(string fieldName)
+    {
+        _dynamicFieldNameMapping ??= new();
+        if (_dynamicFieldNameMapping.TryGetValue(fieldName, out var sliceFieldName) == false)
+        {
+            Slice.From(Allocator, fieldName, ByteStringType.Immutable, out sliceFieldName);
+            _dynamicFieldNameMapping.Add(fieldName, sliceFieldName);
+        }
+
+        return sliceFieldName;
     }
 
     public void Dispose()

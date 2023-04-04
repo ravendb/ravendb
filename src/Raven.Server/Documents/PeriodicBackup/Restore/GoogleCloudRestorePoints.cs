@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -13,13 +14,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class GoogleCloudRestorePoints : RestorePointsBase
     {
-        private readonly Config.Categories.BackupConfiguration _configuration;
+        private readonly RavenConfiguration _configuration;
         private readonly RavenGoogleCloudClient _client;
 
-        public GoogleCloudRestorePoints(Config.Categories.BackupConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, GoogleCloudSettings client) : base(sortedList, context)
+        public GoogleCloudRestorePoints(RavenConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, GoogleCloudSettings client) : base(sortedList, context)
         {
             _configuration = configuration;
-            _client = new RavenGoogleCloudClient(client, configuration);
+            _client = new RavenGoogleCloudClient(client, configuration.Backup);
         }
 
         public override async Task FetchRestorePoints(string path)
@@ -57,8 +58,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<ZipArchive> GetZipArchive(string filePath)
         {
             Stream downloadObject = _client.DownloadObject(filePath);
-            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(downloadObject, _configuration.TempPath);
-            return new DeleteOnCloseZipArchive(downloadObject, ZipArchiveMode.Read);
+            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(downloadObject, _configuration);
+            return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override string GetFileName(string fullPath)

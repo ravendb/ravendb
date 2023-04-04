@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void CanQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new ItemsBySetIdIndex().Execute(store);
                 using (var session = store.OpenSession())

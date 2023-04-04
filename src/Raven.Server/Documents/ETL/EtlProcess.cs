@@ -317,7 +317,16 @@ namespace Raven.Server.Documents.ETL
         {
             using (var transformer = GetTransformer(context))
             {
-                transformer.Initialize(debugMode: _testMode != null);
+                try
+                {
+                    transformer.Initialize(debugMode: _testMode != null);
+                }
+                catch (JavaScriptParseException e)
+                {
+                    HandleTransformationScriptParseException(stats, e);
+
+                    return transformer.GetTransformedResults();
+                }
 
                 var batchSize = 0;
                 var extractedItemsSize = 0;
@@ -396,27 +405,7 @@ namespace Raven.Server.Documents.ETL
                         }
                         catch (JavaScriptParseException e)
                         {
-                            var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
-
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations(message, e);
-
-                            var alert = AlertRaised.Create(
-                                Database.Name,
-                                Tag,
-                                message,
-                                AlertType.Etl_InvalidScript,
-                                NotificationSeverity.Error,
-                                key: Name,
-                                details: new ExceptionDetails(e));
-
-                            Database.NotificationCenter.Add(alert);
-
-                            stats.RecordBatchTransformationCompleteReason(message);
-                            stats.RecordTransformationError();
-
-                            Stop(reason: message);
-
+                            HandleTransformationScriptParseException(stats, e);
                             break;
                         }
                         catch (Exception e)
@@ -440,6 +429,35 @@ namespace Raven.Server.Documents.ETL
 
                 return transformer.GetTransformedResults();
             }
+        }
+
+        private void HandleTransformationScriptParseException(TStatsScope stats, Exception e)
+        {
+            var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
+
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations(message, e);
+
+            var key = $"{Tag}/{Name}";
+            var details = new EtlErrorsDetails();
+
+            details.Errors.Enqueue(new EtlErrorInfo { Date = SystemTime.UtcNow, Error = e.ToString() });
+
+            var alert = AlertRaised.Create(
+                Database.Name,
+                Tag,
+                message,
+                AlertType.Etl_TransformationError,
+                NotificationSeverity.Error,
+                key: key,
+                details: details);
+
+            Database.NotificationCenter.Add(alert);
+
+            stats.RecordBatchTransformationCompleteReason(message);
+            stats.RecordTransformationError();
+
+            Stop(reason: message);
         }
 
         public bool Load(IEnumerable<TTransformed> items, DocumentsOperationContext context, TStatsScope stats)

@@ -125,8 +125,9 @@ namespace Raven.Client.Http
             var state = _state;
             var preferredNode = GetPreferredNodeInternal(state);
             return (preferredNode.Index, preferredNode.Node, state.Topology?.Etag??-2);
-            
         }
+
+        internal int[] NodeSelectorFailures => _state.Failures;
 
         private static ValueTuple<int, ServerNode> UnlikelyEveryoneFaultedChoice(NodeSelectorState state)
         {
@@ -176,12 +177,13 @@ namespace Raven.Client.Http
             return GetPreferredNode();
         }
 
-        public void RestoreNodeIndex(int nodeIndex)
+        public void RestoreNodeIndex(ServerNode node)
         {
             var state = _state;
-            if (state.Failures.Length <= nodeIndex)
-                return; // the state was changed and we no longer have it?
-
+            var nodeIndex = state.Nodes.IndexOf(node);
+            if (nodeIndex == -1)
+                return;
+            
             while (true)
             {
                 var stateFailure = state.Failures[nodeIndex];

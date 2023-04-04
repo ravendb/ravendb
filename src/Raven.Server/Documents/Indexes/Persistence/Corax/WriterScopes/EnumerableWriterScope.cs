@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
@@ -29,6 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         private int? _persistedId;
         
         private bool _hasNulls;
+        private bool _hasTuple = false;
         private readonly List<BlittableJsonReaderObject> _blittableJsonReaderObjects;
         private (int Strings, int Longs, int Doubles, int Raws, int Spatials) _count;
         
@@ -76,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _stringValues.Add(default);
             _longValues.Add(0);
             _doubleValues.Add(float.NaN);
-            _count.Strings++;
+            IncreaseCountersAsTuple();
             _hasNulls = true;
         }
 
@@ -85,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             if (_isDynamic)
                 FlushWhenNecessary(path, field, ref entryWriter);
             
-            if (_count.Longs != 0 || _count.Doubles != 0)
+            if (_hasTuple)
                 throw new InvalidOperationException("Cannot mix tuples writes with straightforward writes");
             
             // Copy the value to write into memory allocated and controlled by the scope.  
@@ -98,39 +100,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _doubleValues.Add(float.NaN);
         }
 
-        public void Write(string path, int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
-        {
-            if (_isDynamic)
-                FlushWhenNecessary(path, field, ref entryWriter);
-            
-            if (_count.Strings != _count.Longs || _count.Strings != _count.Doubles)
-                throw new InvalidOperationException("Cannot write a tuple with a different number of values than the previous tuple.");
-
-            // Copy the value to write into memory allocated and controlled by the scope.  
-            _allocator.Allocate(value.Length, out var buffer);
-            value.CopyTo(buffer.ToSpan());
-
-            _stringValues.Add(buffer);
-            _longValues.Add(longValue);
-            _doubleValues.Add(doubleValue);
-            _count.Strings++;
-            _count.Longs++;
-            _count.Doubles++;
-        }
-
-        public void Write(string path, int field, string value, ref IndexEntryWriter entryWriter)
-        {
-            if (_isDynamic)
-                FlushWhenNecessary(path, field, ref entryWriter);
-            
-            _allocator.Allocate(Encoding.UTF8.GetMaxByteCount(value.Length), out var buffer);
-
-            var length = Encoding.UTF8.GetBytes(value, buffer.ToSpan());
-            buffer.Truncate(length);
-            _stringValues.Add(buffer);
-            _count.Strings++;
-        }
-
         public void Write(string path, int field, string value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
         {
             if (_isDynamic)
@@ -141,8 +110,37 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _doubleValues.Add(doubleValue);
             _count.Longs++;
             _count.Doubles++;
+            _hasTuple = true;
         }
+        
+        public void Write(string path, int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
+        {
+            if (_isDynamic)
+                FlushWhenNecessary(path, field, ref entryWriter);
+            
+            // Copy the value to write into memory allocated and controlled by the scope.  
+            _allocator.Allocate(value.Length, out var buffer);
+            value.CopyTo(buffer.ToSpan());
 
+            _stringValues.Add(buffer);
+            _longValues.Add(longValue);
+            _doubleValues.Add(doubleValue);
+            IncreaseCountersAsTuple();
+            _hasTuple = true;
+        }
+        
+        public void Write(string path, int field, string value, ref IndexEntryWriter entryWriter)
+        {
+            if (_isDynamic)
+                FlushWhenNecessary(path, field, ref entryWriter);
+            
+            _allocator.Allocate(Encoding.UTF8.GetMaxByteCount(value.Length), out var buffer);
+            var length = Encoding.UTF8.GetBytes(value, buffer.ToSpan());
+            buffer.Truncate(length);
+            _stringValues.Add(buffer);
+            _count.Strings++;
+        }
+        
         public void Write(string path, int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
         {
             if (_isDynamic)
@@ -159,7 +157,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             
             _count.Spatials++;
             _spatialValues.Add(entry);
-
         }
         
         public void Finish(string path, int field, ref IndexEntryWriter entryWriter)
@@ -267,6 +264,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
             void ClearContainers()
             {
+                _hasTuple = false;
                 _hasNulls = false;
                 _count = (0, 0, 0, 0, 0);
                 _stringValues.Clear();
@@ -297,6 +295,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         {
             _isDynamic = true;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void IncreaseCountersAsTuple()
+        {
+            _count.Longs++;
+            _count.Doubles++;
+            _count.Strings++;
+        }
         
         private DataType GetDataType()
         {
@@ -306,12 +312,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                 type |= DataType.Strings;
             }
 
-            if (_count.Longs > 0)
+            if (_count.Longs > 0 && _hasTuple)
             {
                 type |= DataType.Longs;
             }
 
-            if (_count.Doubles > 0)
+            if (_count.Doubles > 0 && _hasTuple)
             {
                 type |= DataType.Doubles;
             }
@@ -332,13 +338,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
             if (type == DataType.Tuples)
             {
-                var isTuple = _count.Longs == _count.Strings && _count.Longs == _count.Doubles;
+                var isTuple = _count.Longs == _count.Strings && _count.Longs == _count.Doubles && _hasTuple;
                 if (isTuple == false)
                 {
                     type = DataType.Strings; //case when at least one item is only string. In such case lets write all data as strings.
                 }
             }
-
 
             return type;
         }

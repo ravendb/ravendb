@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Should_Be_Able_To_Project_Arrays_From_Stored_Index_Fields_Correctly()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Should_Be_Able_To_Project_Arrays_From_Stored_Index_Fields_Correctly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

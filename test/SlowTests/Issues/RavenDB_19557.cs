@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -41,10 +42,11 @@ public class RavenDB_19557 : RavenTestBase
         }
     }
 
-    [Fact]
-    public async Task TestCase()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task TestCase(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         await store.ExecuteIndexAsync(new Index());
 
@@ -60,7 +62,6 @@ public class RavenDB_19557 : RavenTestBase
         }
 
         Indexes.WaitForIndexing(store);
-
         using (var session = store.OpenAsyncSession())
         {
             var query = from r in session.Query<Index.Result, Index>()

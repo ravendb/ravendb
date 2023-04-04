@@ -587,6 +587,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CompareExchangeValue<object>));
 
             // debug
+            scripter.AddType(typeof(ServerWideDebugInfoPackageHandler.DebugInfoPackageContentType));
             scripter.AddType(typeof(ThreadsInfo));
             scripter.AddType(typeof(MemoryDebugHandler.MemoryInfo));
             scripter.AddType(typeof(TombstoneCleaner.TombstonesState));

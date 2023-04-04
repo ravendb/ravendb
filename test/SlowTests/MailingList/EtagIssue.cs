@@ -9,6 +9,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -234,10 +235,11 @@ namespace SlowTests.MailingList
 
         #endregion
 
-        [Fact]
-        public void ScriptedPatchShouldNotResultInConcurrencyExceptionForNewlyInsertedDocument()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ScriptedPatchShouldNotResultInConcurrencyExceptionForNewlyInsertedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UserProfileIndex().Execute(store);
 

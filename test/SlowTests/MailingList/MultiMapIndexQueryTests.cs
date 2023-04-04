@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,12 +16,14 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public async Task CanQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await Setup(store);
+               // WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     //ask
@@ -41,10 +44,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact] 
-        public async Task ShouldThrow()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ShouldThrow(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await Setup(store);
                 using (var session = store.OpenAsyncSession())

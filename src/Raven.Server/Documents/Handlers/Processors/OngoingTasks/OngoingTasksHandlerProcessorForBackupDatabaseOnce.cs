@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.NotificationCenter;
@@ -14,7 +14,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
@@ -35,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 OperationId = operationId,
                 BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
                 IsFullBackup = true,
-                TempBackupPath = BackupUtils.GetBackupTempPath(RequestHandler.Database.Configuration, "OneTimeBackupTemp"),
+                TempBackupPath = BackupUtils.GetBackupTempPath(RequestHandler.Database.Configuration, "OneTimeBackupTemp", out PathSetting _),
                 Name = backupName,
             };
 

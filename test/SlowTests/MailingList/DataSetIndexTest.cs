@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ namespace SlowTests.MailingList
 
         private const int MaxNumberOfItemsInDataSet = 50;
 
-        [Fact]
-        public void can_execute_query_default()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void can_execute_query_default(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DataSetIndex().Execute(store);
 
@@ -32,13 +34,13 @@ namespace SlowTests.MailingList
                     CreateDataSet(session, "stations/energy", "EX");
                 }
 
-                // WaitForUserToContinueTheTest(store);
+                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
                         .WaitForNonStaleResults()
-                        .AddOrder("Split_N1_D_Range", true)
+                        .AddOrder("Split_N1", true, OrderingType.Double)
                         .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
                         .Take(1024);
                     var result = query.ToList();
@@ -47,10 +49,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void can_execute_query_lazily()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void can_execute_query_lazily(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DataSetIndex().Execute(store);
 
@@ -66,7 +69,7 @@ namespace SlowTests.MailingList
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
                         .WaitForNonStaleResults()
-                        .AddOrder("Split_N1_D_Range", true)
+                        .AddOrder("Split_N1", true, OrderingType.Double)
                         .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
                         .Take(1024);
                     var result = query.ToList();
@@ -77,7 +80,7 @@ namespace SlowTests.MailingList
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
                                 .WaitForNonStaleResults()
-                                .AddOrder("Split_N1_D_Range", true)
+                                .AddOrder("Split_N1", true, OrderingType.Double)
                                 .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
                                 .Take(1024);
                     var result = query.Lazily().Value.ToList();

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
@@ -8,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,10 +24,75 @@ namespace SlowTests.Issues
         private char a = 'a';
         private char z = 'z';
 
-        [Fact]
-        public async Task Can_Export_raw_index_entries_in_Csv_Async()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public async Task Can_Export_raw_index_entries_in_Csv_Async_Corax(Options options) => await Can_Export_raw_index_entries_in_Csv_Async(options, csv =>
         {
-            using (var store = GetDocumentStore())
+            csv.Read();
+            csv.TryGetField(0, out string value);
+            Assert.Equal("id()", value);
+            csv.TryGetField(3, out value);
+            Assert.Equal("CoolCount", value);
+            csv.TryGetField(2, out value);
+            Assert.Equal("LastName", value);
+            csv.TryGetField(1, out value);
+            Assert.Equal("Name", value);
+            
+            var k = 0;
+            a = 'a';
+            z = 'z';
+            while (csv.Read())
+            {
+                csv.TryGetField(3, out value);
+                Assert.Equal($"{(k * 2)}", value);
+                csv.TryGetField(2, out value);
+                Assert.Equal($"{z}", value);
+                csv.TryGetField(1, out value);
+                Assert.Equal($"{a}", value);
+                csv.TryGetField(0, out value);
+                Assert.Equal($"user/{k}", value);
+                k++;
+                a++;
+                z--;
+            }
+        });
+        
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Can_Export_raw_index_entries_in_Csv_Async_Lucene(Options options) => await Can_Export_raw_index_entries_in_Csv_Async(options, csv =>
+        {
+            csv.Read();
+            csv.TryGetField(0, out string value);
+            Assert.Equal("CoolCount", value);
+            csv.TryGetField(1, out value);
+            Assert.Equal("LastName", value);
+            csv.TryGetField(2, out value);
+            Assert.Equal("Name", value);
+            csv.TryGetField(3, out value);
+            Assert.Equal("id()", value);
+
+            var k = 0;
+            a = 'a';
+            z = 'z';
+            while (csv.Read())
+            {
+                csv.TryGetField(0, out value);
+                Assert.Equal($"{(k * 2)}", value);
+                csv.TryGetField(1, out value);
+                Assert.Equal($"{z}", value);
+                csv.TryGetField(2, out value);
+                Assert.Equal($"{a}", value);
+                csv.TryGetField(3, out value);
+                Assert.Equal($"user/{k}", value);
+                k++;
+                a++;
+                z--;
+            }
+        });
+        
+        private async Task Can_Export_raw_index_entries_in_Csv_Async(Options options, Action<CsvReader> assertionOfFile)
+        {
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -70,41 +137,15 @@ namespace SlowTests.Issues
                     $"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Users/CoolCount\'&format=csv&debug=entries");
                 TextReader tr = new StreamReader(stream);
                 var csv = new CsvReader(tr, CultureInfo.InvariantCulture);
-
-                csv.Read();
-                csv.TryGetField(0, out string value);
-                Assert.Equal("CoolCount", value);
-                csv.TryGetField(1, out value);
-                Assert.Equal("LastName", value);
-                csv.TryGetField(2, out value);
-                Assert.Equal("Name", value);
-                csv.TryGetField(3, out value);
-                Assert.Equal("id()", value);
-
-                var k = 0;
-                a = 'a';
-                z = 'z';
-                while (csv.Read())
-                {
-                    csv.TryGetField(0, out value);
-                    Assert.Equal($"{(k * 2)}", value);
-                    csv.TryGetField(1, out value);
-                    Assert.Equal($"{z}", value);
-                    csv.TryGetField(2, out value);
-                    Assert.Equal($"{a}", value);
-                    csv.TryGetField(3, out value);
-                    Assert.Equal($"user/{k}", value);
-                    k++;
-                    a++;
-                    z--;
-                }
+                assertionOfFile(csv);
             }
         }
         // RavenDB-12337
-        [Fact]
-        public async Task Can_Export_stored_index_fields_only_in_Csv()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_Export_stored_index_fields_only_in_Csv(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

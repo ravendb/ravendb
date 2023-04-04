@@ -1083,7 +1083,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
             if (!(args[index] is Document doc))
             {
-                if (index == 0 && args[0] is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> tuple)
+                if (index == 0 && args[0] is Tuple<Document, RetrieverInput, Dictionary<string, IndexField>, bool?, ProjectionOptions> tuple)
                     doc = tuple.Item1;
                 else
                     return args[index];

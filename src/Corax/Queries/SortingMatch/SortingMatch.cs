@@ -125,6 +125,9 @@ namespace Corax.Queries
                         goto Failed;
 
                     var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    if (readX == false)
+                        goto Failed;
+                        
                     var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
 
                     storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -136,6 +139,9 @@ namespace Corax.Queries
                         goto Failed;
 
                     var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    if (readX == false)
+                        goto Failed;
+                    
                     var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
 
                     storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -144,6 +150,9 @@ namespace Corax.Queries
                 else if (typeof(TOut) == typeof(SequenceItem))
                 {
                     var readX = reader.GetFieldReaderFor(binding).Read(out var sv);
+                    if (readX == false)
+                        goto Failed;
+                    
                     fixed (byte* svp = sv)
                     {
                         storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
@@ -153,12 +162,18 @@ namespace Corax.Queries
                 else if (typeof(TOut) == typeof(NumericalItem<long>))
                 {
                     var readX = reader.GetFieldReaderFor(binding).Read<long>(out var value);
+                    if (readX == false)
+                        goto Failed;
+                    
                     storedValue = (TOut)(object)new NumericalItem<long>(value);
                     return readX;
                 }
                 else if (typeof(TOut) == typeof(NumericalItem<double>))
                 {
                     var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
+                    if (readX == false)
+                        goto Failed;
+                    
                     storedValue = (TOut)(object)new NumericalItem<double>(value);
                     return readX;
                 }
@@ -189,15 +204,20 @@ namespace Corax.Queries
                 var searcher = match._searcher;
                 var field = match._comparer.Field;
                 var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
+                var indexContainsField = false;
                 for (int i = 0; i < totalMatches; i++)
                 {
                     var read = Get(searcher, field, matches[i], out itemKeys[i].Value, match._comparer);
                     itemKeys[i].Key = read ? matches[i] : -matches[i];
+                    indexContainsField |= read;
                 }
 
                 // We sort the the set
-                var sorter = new Sorter<MatchComparer<TComparer, TOut>.Item, long, MatchComparer<TComparer, TOut>>(comparer);
-                sorter.Sort(itemKeys, matches[0..totalMatches]);
+                if (indexContainsField)
+                {
+                    var sorter = new Sorter<MatchComparer<TComparer, TOut>.Item, long, MatchComparer<TComparer, TOut>>(comparer);
+                    sorter.Sort(itemKeys, matches[0..totalMatches]);
+                }
 
                 // We have a take statement so we are only going to care about the highest priority elements. 
                 if (match._take > 0)

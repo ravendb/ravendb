@@ -135,6 +135,7 @@ public class RavenDB_18357 : RavenTestBase
             Map = inputs => from input in inputs
                 select new Input {Nested = new NestedItem {Name = input.Nested.Name + "Inside"}};
             Index(x => x.Nested, FieldIndexing.No);
+            Store(x => x.Nested, FieldStorage.Yes);
         }
     }
 }
