@@ -5,7 +5,7 @@ import useBoolean from "components/hooks/useBoolean";
 import { InputItem } from "components/models/common";
 import "./Toggles.scss";
 
-interface MultiCheckboxToggleProps<T = string> {
+interface MultiCheckboxToggleProps<T extends string | number = string> {
     inputItems: InputItem<T>[];
     selectedItems: T[];
     setSelectedItems: (x: T[]) => void;
@@ -14,7 +14,7 @@ interface MultiCheckboxToggleProps<T = string> {
     label?: string;
 }
 
-export function MultiCheckboxToggle<T = string>({
+export function MultiCheckboxToggle<T extends string | number = string>({
     inputItems,
     selectedItems,
     setSelectedItems,
@@ -61,13 +61,13 @@ export function MultiCheckboxToggle<T = string>({
                 {itemSelectAll && (
                     <div className="multi-toggle-item">
                         <input
-                            id={uniqueId + itemSelectAll.label}
+                            id={uniqueId + itemSelectAll.value}
                             type="checkbox"
-                            name={uniqueId + itemSelectAll.label}
+                            name={uniqueId + itemSelectAll.value}
                             checked={isSelectedAll}
                             onChange={onChangeSelectAll}
                         />
-                        <label htmlFor={uniqueId + itemSelectAll.label}>
+                        <label htmlFor={uniqueId + itemSelectAll.value}>
                             <span>
                                 {itemSelectAll.label}
                                 {itemSelectAll.count >= 0 && (
@@ -78,16 +78,16 @@ export function MultiCheckboxToggle<T = string>({
                     </div>
                 )}
                 {inputItems.map((inputItem) => (
-                    <div className="multi-toggle-item" key={uniqueId + inputItem.label}>
+                    <div className="multi-toggle-item" key={uniqueId + inputItem.value}>
                         {inputItem.verticalSeparatorLine && <div className="vr"></div>}
                         <input
-                            id={uniqueId + inputItem.label}
+                            id={uniqueId + inputItem.value}
                             type="checkbox"
-                            name={uniqueId + inputItem.label}
+                            name={uniqueId + inputItem.value}
                             checked={!isSelectedAll && selectedItems.includes(inputItem.value)}
                             onChange={(x) => toggleItem(x.currentTarget.checked, inputItem.value)}
                         />
-                        <label htmlFor={uniqueId + inputItem.label}>
+                        <label htmlFor={uniqueId + inputItem.value}>
                             <span>
                                 {inputItem.label}
                                 {inputItem.count >= 0 && (

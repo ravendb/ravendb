@@ -20,7 +20,7 @@ export interface perNodeTagLoadStatus {
     status: loadStatus;
 }
 
-export interface InputItem<T = string> {
+export interface InputItem<T extends string | number = string> {
     label: string;
     value: T;
     count?: number;

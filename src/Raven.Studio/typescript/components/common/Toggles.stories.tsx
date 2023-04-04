@@ -45,21 +45,21 @@ export function Toggles() {
                 inputItems={radioList}
                 label="Multi Radio Toggle"
                 selectedItem={radioSelectedItem}
-                setSelectedItem={setRadioSelectedItem}
+                setSelectedItem={(x) => setRadioSelectedItem(x)}
             />
             <MultiCheckboxToggle
                 className="p-4"
                 inputItems={checkboxList}
                 label="Multi Checkbox Toggle without select all"
                 selectedItems={checkboxWithoutAllSelectedItems}
-                setSelectedItems={setCheckboxWithoutAllSelectedItems}
+                setSelectedItems={(x) => setCheckboxWithoutAllSelectedItems(x)}
             />
             <MultiCheckboxToggle
                 className="p-4"
                 inputItems={checkboxList}
                 label="Multi Checkbox Toggle with select all"
                 selectedItems={checkboxWithAllSelectedItems}
-                setSelectedItems={setCheckboxWithAllSelectedItems}
+                setSelectedItems={(x) => setCheckboxWithAllSelectedItems(x)}
                 itemSelectAll={checkboxAllItem}
             />
         </Card>

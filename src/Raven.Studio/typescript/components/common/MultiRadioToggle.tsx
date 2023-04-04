@@ -4,7 +4,7 @@ import useId from "hooks/useId";
 import classNames from "classnames";
 import { InputItem } from "components/models/common";
 
-interface MultiRadioToggleProps<T = string> {
+interface MultiRadioToggleProps<T extends string | number = string> {
     inputItems: InputItem<T>[];
     selectedItem: T;
     setSelectedItem: (x: T) => void;
@@ -12,7 +12,7 @@ interface MultiRadioToggleProps<T = string> {
     label?: string;
 }
 
-export function MultiRadioToggle<T = string>({
+export function MultiRadioToggle<T extends string | number = string>({
     inputItems,
     selectedItem,
     setSelectedItem,
@@ -26,15 +26,15 @@ export function MultiRadioToggle<T = string>({
             {label && <div className="small-label ms-1 mb-1">{label}</div>}
             <div className="multi-toggle-list">
                 {inputItems.map((inputItem) => (
-                    <div className="multi-toggle-item" key={uniqueId + inputItem.label}>
+                    <div className="multi-toggle-item" key={uniqueId + inputItem.value}>
                         <input
-                            id={uniqueId + inputItem.label}
+                            id={uniqueId + inputItem.value}
                             type="radio"
-                            name={uniqueId + inputItem.label}
+                            name={uniqueId + inputItem.value}
                             checked={inputItem.value === selectedItem}
                             onChange={() => setSelectedItem(inputItem.value)}
                         />
-                        <label htmlFor={uniqueId + inputItem.label}>
+                        <label htmlFor={uniqueId + inputItem.value}>
                             <span>
                                 {inputItem.label}
                                 {inputItem.count >= 0 && (

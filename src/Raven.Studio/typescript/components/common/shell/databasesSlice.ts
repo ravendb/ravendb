@@ -166,7 +166,8 @@ const isDatabaseInFilterState = (
     return (
         (
             !filterStates.some((x) => ["Online", "Offline", "Error", "Disabled"].includes(x)) ||
-            filterStates.includes(databaseState)
+            filterStates.includes(databaseState) ||
+            databaseState === "Loading"
         ) &&
         (
             !filterStates.some((x) => ["Sharded", "NonSharded"].includes(x)) ||
