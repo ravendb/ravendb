@@ -709,7 +709,7 @@ class editDocument extends viewModelBase {
     }
     
     downloadDocument() {
-        fileDownloader.downloadAsJson(this.documentTextOrg(), this.document().getId());
+        fileDownloader.downloadAsTxt(this.documentTextOrg(), this.document().getId() + ".json");
     }
     
     viewRaw() {
