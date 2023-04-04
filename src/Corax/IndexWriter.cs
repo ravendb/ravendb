@@ -1618,7 +1618,7 @@ namespace Corax
             var state = new PForDecoder.DecoderState(smallSet.Length);
             var removals = entries.Removals;
             long freeSpace = entries.FreeSpace;
-            while (true)
+            while (true) 
             {
                 var read = PForDecoder.Decode(ref state, smallSet, buffer);
                 if (read == 0)
@@ -1671,13 +1671,9 @@ namespace Corax
                 return AddEntriesToTermResult.UpdateTermId;
             }
             
-            byte* buf = stackalloc byte[5];
-            var lenAdditions = VariableSizeEncoding.Write(buf, entries.TotalAdditions);
-
-            if (encoded.Length + lenAdditions <= mutableSpace.Length)
+            if (encoded.Length <= mutableSpace.Length)
             {
-                new Span<byte>(buf, lenAdditions).CopyTo(mutableSpace);
-                encoded.CopyTo(mutableSpace[lenAdditions..]);
+                encoded.CopyTo(mutableSpace);
 
                 // can update in place
                 termIdInTree = -1;
@@ -1686,17 +1682,16 @@ namespace Corax
 
             Container.Delete(llt, _postingListContainerId, containerId);
          
-            termIdInTree = AllocatedSpaceForSmallSet(encoded, lenAdditions, llt, out Span<byte> space);
+            termIdInTree = AllocatedSpaceForSmallSet(encoded,llt, out Span<byte> space);
 
-            new Span<byte>(buf, lenAdditions).CopyTo(space);
             encoded.CopyTo(space);
 
             return AddEntriesToTermResult.UpdateTermId;
         }
 
-        private long AllocatedSpaceForSmallSet(Span<byte> encoded, int lenAdditions, LowLevelTransaction llt, out Span<byte> space)
+        private long AllocatedSpaceForSmallSet(Span<byte> encoded, LowLevelTransaction llt, out Span<byte> space)
         {
-            var sizeToAlloc = encoded.Length + lenAdditions;
+            var sizeToAlloc = encoded.Length;
             var alignSize = 32 - sizeToAlloc % 32;
             var allocatedSize = sizeToAlloc + alignSize;
 
@@ -1869,7 +1864,8 @@ namespace Corax
         private unsafe bool TryEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
         {
             uint* scratch = stackalloc uint[PForEncoder.BufferLen];
-            var pForEncoder = new PForEncoder(tmpBuf, scratch);
+            var offset = VariableSizeEncoding.Write(tmpBuf, additions.Length);
+            var pForEncoder = new PForEncoder(tmpBuf[offset..], scratch);
 
             for (int i = 0; i < additions.Length; i++)
             {
@@ -1884,7 +1880,7 @@ namespace Corax
                 goto Fail;
             }
 
-            encoded = tmpBuf[..pForEncoder.SizeInBytes];
+            encoded = tmpBuf[..(pForEncoder.SizeInBytes+offset)];
             return true;
 
             Fail:
@@ -1914,11 +1910,8 @@ namespace Corax
                 return;
             }
 
-            var buf = stackalloc byte[5];
-            var lenAdditions = VariableSizeEncoding.Write(buf, entries.TotalAdditions);
-            termId = AllocatedSpaceForSmallSet(encoded, lenAdditions, Transaction.LowLevelTransaction, out Span<byte> space);
-            new Span<byte>(buf, lenAdditions).CopyTo(space);
-            encoded.CopyTo(space[lenAdditions..]);
+            termId = AllocatedSpaceForSmallSet(encoded,  Transaction.LowLevelTransaction, out Span<byte> space);
+            encoded.CopyTo(space);
         }
 
         private unsafe void AddNewTermToSet(ReadOnlySpan<long> additions, out long termId)
