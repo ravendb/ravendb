@@ -63,6 +63,8 @@ namespace SlowTests.Sharding.Queries
                 operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), tempFileName);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
+                await Indexes.WaitForIndexingAsync(store2);
+
                 using (var session = store2.OpenAsyncSession())
                 {
                     var result = await session.Query<User>(indexName)
