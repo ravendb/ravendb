@@ -345,7 +345,8 @@ namespace SlowTests.Sharding.Cluster
             }, 101);
 
             var expectedShard = await Sharding.GetShardNumberFor(store, "users/1-A");
-            for (int shard = 0; shard < 3; shard++)
+            var sharding = await Sharding.GetShardingConfigurationAsync(store);
+            foreach (var shard in sharding.Shards.Keys)
             {
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shard)))
                 {
@@ -423,7 +424,8 @@ namespace SlowTests.Sharding.Cluster
             }, 101);
 
             var expectedShard = await Sharding.GetShardNumberFor(store, "users/1-A");
-            for (int shard = 0; shard < 3; shard++)
+            var sharding = await Sharding.GetShardingConfigurationAsync(store);
+            foreach (var shard in sharding.Shards.Keys)
             {
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shard)))
                 {

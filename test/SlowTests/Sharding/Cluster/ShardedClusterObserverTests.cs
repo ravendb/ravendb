@@ -353,13 +353,13 @@ namespace SlowTests.Sharding.Cluster
                 }, true);
 
                 Assert.True(idle);
-
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
                 var idleInMem = await WaitForValueAsync(async () =>
                 {
                     var idleInMem = true;
-                    for (int i = 0; i < 3; i++)
+                    foreach (var shardNumber in sharding.Shards.Keys)
                     {
-                        db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, i), cluster.Nodes);
+                        db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shardNumber), cluster.Nodes);
                         autoIndex = db.IndexStore.GetIndexes().First();
                         idleInMem = idleInMem && IndexState.Idle == autoIndex.State;
                     }
@@ -382,12 +382,13 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 //wait for it to stop being idle on all shards
+                sharding = await Sharding.GetShardingConfigurationAsync(store);
                 var normalInMem = await WaitForValueAsync(async () =>
                 {
                     var normal = true;
-                    for (int i = 0; i < 3; i++)
+                    foreach (var shardNumber in sharding.Shards.Keys)
                     {
-                        db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, i), cluster.Nodes);
+                        db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shardNumber), cluster.Nodes);
                         autoIndex = db.IndexStore.GetIndexes().First();
                         normal = normal && (IndexState.Normal == autoIndex.State);
                     }
