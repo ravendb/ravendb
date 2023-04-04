@@ -61,19 +61,19 @@ namespace Raven.Client.Documents.Smuggler
             smugglerResult.Documents.SkippedCount += Documents.SkippedCount;
             smugglerResult.Documents.ReadCount += Documents.ReadCount;
             smugglerResult.Documents.ErroredCount += Documents.ErroredCount;
-            smugglerResult.Documents.Size += Documents.Size;
+            smugglerResult.Documents.SizeInBytes += Documents.SizeInBytes;
 
             smugglerResult.Documents.LastEtag = Math.Max(smugglerResult.Documents.LastEtag, Documents.LastEtag);
             smugglerResult.Documents.Attachments.ReadCount += Documents.Attachments.ReadCount;
-            smugglerResult.Documents.Attachments.Size += Documents.Attachments.Size;
+            smugglerResult.Documents.Attachments.SizeInBytes += Documents.Attachments.SizeInBytes;
 
             smugglerResult.RevisionDocuments.ReadCount += RevisionDocuments.ReadCount;
             smugglerResult.RevisionDocuments.ErroredCount += RevisionDocuments.ErroredCount;
-            smugglerResult.RevisionDocuments.Size += RevisionDocuments.Size;
+            smugglerResult.RevisionDocuments.SizeInBytes += RevisionDocuments.SizeInBytes;
             smugglerResult.RevisionDocuments.LastEtag = Math.Max(smugglerResult.RevisionDocuments.LastEtag, RevisionDocuments.LastEtag);
             smugglerResult.RevisionDocuments.Attachments = RevisionDocuments.Attachments;
             smugglerResult.RevisionDocuments.Attachments.ReadCount += RevisionDocuments.Attachments.ReadCount;
-            smugglerResult.RevisionDocuments.Attachments.Size += RevisionDocuments.Attachments.Size;
+            smugglerResult.RevisionDocuments.Attachments.SizeInBytes += RevisionDocuments.Attachments.SizeInBytes;
 
             smugglerResult.Counters.ReadCount += Counters.ReadCount;
             smugglerResult.Counters.ErroredCount += Counters.ErroredCount;
@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Smuggler
 
             smugglerResult.TimeSeries.ReadCount += TimeSeries.ReadCount;
             smugglerResult.TimeSeries.ErroredCount += TimeSeries.ErroredCount;
-            smugglerResult.TimeSeries.Size += TimeSeries.Size;
+            smugglerResult.TimeSeries.SizeInBytes += TimeSeries.SizeInBytes;
 
             smugglerResult.TimeSeries.LastEtag = Math.Max(smugglerResult.TimeSeries.LastEtag, TimeSeries.LastEtag);
 
