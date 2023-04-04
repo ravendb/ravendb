@@ -37,6 +37,7 @@ fi
 
 DEB_BUILD_ENV_IMAGE="ravendb-deb_ubuntu_$DEB_ARCHITECTURE"
 
+docker pull --platform $DOCKER_BUILDPLATFORM ubuntu:$DISTRO_VERSION
 docker build \
     --platform $DOCKER_BUILDPLATFORM \
     --build-arg "DISTRO_VERSION_NAME=$DISTRO_VERSION_NAME" \
