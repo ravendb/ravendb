@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -12,15 +13,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreFromGoogleCloud : IRestoreSource
     {
+        private readonly ServerStore _serverStore;
         private readonly RavenGoogleCloudClient _client;
         private readonly string _remoteFolderName;
-        private readonly PathSetting _tempPath;
 
-        public RestoreFromGoogleCloud(ServerStore serverStore, RestoreFromGoogleCloudConfiguration restoreFromConfiguration)
+        public RestoreFromGoogleCloud([NotNull] ServerStore serverStore, RestoreFromGoogleCloudConfiguration restoreFromConfiguration)
         {
+            _serverStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
             _client = new RavenGoogleCloudClient(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
-            _tempPath = serverStore.Configuration.Storage.TempPath;
         }
 
         public Task<Stream> GetStream(string path)
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             Stream stream = _client.DownloadObject(path);
-            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(stream, _tempPath);
+            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(stream, _serverStore.Configuration);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 

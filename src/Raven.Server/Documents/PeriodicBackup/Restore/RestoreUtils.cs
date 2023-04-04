@@ -6,12 +6,17 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Restore.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server.Exceptions;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -31,13 +36,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 case RestoreType.Local:
                     var localConfiguration = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
-                    configuration = localConfiguration; 
+                    configuration = localConfiguration;
                     restoreSource = new RestoreFromLocal(localConfiguration);
                     break;
 
                 case RestoreType.S3:
                     var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
-                    configuration = s3Configuration; 
+                    configuration = s3Configuration;
                     restoreSource = new RestoreFromS3(serverStore, s3Configuration);
                     break;
 
@@ -65,7 +70,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             if (configuration.ShardRestoreSettings?.Shards.Count > 0)
                 return new ShardedRestoreOrchestrationTask(serverStore, configuration, operationId, token);
-            
+
             var singleShardRestore = ShardHelper.IsShardName(configuration.DatabaseName);
 
             var filesToRestore = await GetOrderedFilesToRestoreAsync(restoreSource, configuration);
@@ -87,7 +92,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new RestoreBackupTask(serverStore, configuration, restoreSource, filesToRestore, token);
         }
 
-        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, PathSetting tempPath)
+        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, RavenConfiguration configuration)
         {
             if (stream.CanSeek)
                 return stream;
@@ -95,13 +100,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // This is meant to be used by ZipArchive, which will copy the data locally because is *must* be seekable.
             // To avoid reading everything to memory, we copy to a local file instead. Note that this also ensure that we
             // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
-            var basePath = tempPath?.FullPath ?? Path.GetTempPath();
-            var filePath = Path.Combine(basePath, $"{Guid.NewGuid()}.restore-local-file");
+            var filePath = BackupUtils.GetBackupTempPath(configuration, $"{Guid.NewGuid()}.snapshot-restore", out PathSetting basePath).FullPath;
+            IOExtensions.CreateDirectory(basePath.FullPath);
+
             var file = SafeFileStream.Create(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
                 32 * 1024, FileOptions.DeleteOnClose);
 
             try
             {
+                AssertFreeSpace(stream, basePath.FullPath);
+
                 await stream.CopyToAsync(file);
                 file.Seek(0, SeekOrigin.Begin);
 
@@ -152,6 +160,32 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             return filesToRestore;
+        }
+
+        private static void AssertFreeSpace(Stream stream, string basePath)
+        {
+            long streamLength;
+
+            try
+            {
+                streamLength = stream.Length;
+            }
+            catch (NotSupportedException)
+            {
+                // nothing we can do
+                return;
+            }
+
+            var spaceInfo = DiskUtils.GetDiskSpaceInfo(basePath);
+            if (spaceInfo == null)
+                return;
+
+            // + we need to download the snapshot
+            // + leave 1GB of free space
+            var freeSpaceNeeded = new Size(streamLength, SizeUnit.Bytes) + new Size(1, SizeUnit.Gigabytes);
+
+            if (freeSpaceNeeded > spaceInfo.TotalFreeSpace)
+                throw new DiskFullException($"There is not enough space on '{basePath}', we need at least {freeSpaceNeeded} in order to successfully copy the snapshot backup file locally. Currently available space is {spaceInfo.TotalFreeSpace}.");
         }
     }
 }
