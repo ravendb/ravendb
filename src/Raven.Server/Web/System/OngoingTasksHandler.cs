@@ -471,6 +471,8 @@ namespace Raven.Server.Web.System
 
                     var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger);
                     var threadName = $"Backup thread {backupName} for database '{Database.Name}'";
+                    
+                    LogTaskToAudit(backupParameters.Name, $"{operationId}", backupConfiguration.ToAuditJson());
 
                     var t = Database.Operations.AddOperation(
                         null,
@@ -1435,6 +1437,9 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
+
+            var description = (disable) ? "disable" : "enable";
+            LogTaskToAudit(description + $"-{typeStr}Task", $"{key}",null);
         }
 
         [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
@@ -1505,7 +1510,7 @@ namespace Raven.Server.Web.System
                     if (type == OngoingTaskType.Subscription)
                     {
                         Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(taskName);
-                }
+                    }
                 }
                 finally
                 {
@@ -1523,6 +1528,7 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
+            LogTaskToAudit($"delete-{typeStr}", $"{id}", null);
         }
 
         private static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString

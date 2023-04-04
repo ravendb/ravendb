@@ -149,6 +149,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     HttpContext.Abort();
                 }
+                LogTaskToAudit("exprot-data", $"{operationId}",null);
             }
         }
 
@@ -732,6 +733,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }, operationId, token: token).ConfigureAwait(false);
 
                 await WriteImportResultAsync(context, result, ResponseBodyStream());
+
+                LogTaskToAudit("import-data", $"{operationId}", null);
             }
         }
 
