@@ -15,8 +15,8 @@ namespace SlowTests.MailingList
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Include(Options options)
         {
             using (var documentStore = GetDocumentStore(options))

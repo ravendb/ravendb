@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -46,11 +47,12 @@ namespace SlowTests.MailingList
             }
         };
 
-        [Fact]
-        public void Physical_store_test()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Physical_store_test(Options options)
         {
             List<Car> cars;
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.Initialize();
 

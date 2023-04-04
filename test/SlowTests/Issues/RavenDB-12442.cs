@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue)]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString)]
-        public void Can_convert_stored_null_value_and_empty_string(string str)
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[] {Raven.Client.Constants.Documents.Indexing.Fields.NullValue})]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[] {Raven.Client.Constants.Documents.Indexing.Fields.EmptyString})]
+        public void Can_convert_stored_null_value_and_empty_string(Options options, string str)
         {
             using (var store = GetDocumentStore())
             {
@@ -63,12 +64,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue)]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString)]
-        public void Can_convert_store_and_get_null_value_and_empty_string(string str)
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[] {Raven.Client.Constants.Documents.Indexing.Fields.NullValue})]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[] {Raven.Client.Constants.Documents.Indexing.Fields.EmptyString})]
+        public void Can_convert_store_and_get_null_value_and_empty_string(Options options, string str)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

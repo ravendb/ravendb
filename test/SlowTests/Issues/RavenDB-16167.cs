@@ -15,10 +15,11 @@ public class RavenDB_16167: RavenTestBase
         
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
-    public void CheckIfSpreadOperatorWorksForJsIndex()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CheckIfSpreadOperatorWorksForJsIndex(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         using (var session = store.OpenSession())
         {

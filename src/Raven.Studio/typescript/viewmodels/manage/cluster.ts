@@ -39,6 +39,8 @@ class cluster extends viewModelBase {
     maxCores: KnockoutComputed<number>;
     totalServersCores: KnockoutComputed<number>;
 
+    clientVersion = viewModelBase.clientVersion;
+
     cssCores = ko.pureComputed(() => {
         if (this.utilizedCores() === this.maxCores()) {
             return "text-success";

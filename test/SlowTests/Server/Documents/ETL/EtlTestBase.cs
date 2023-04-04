@@ -66,27 +66,40 @@ namespace SlowTests.Server.Documents.ETL
 
         protected AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, bool pinToMentorNode = false)
         {
+            return AddEtl(src, dst, collections, script, applyToAllDocuments, disabled, mentor, pinToMentorNode, out _);
+        }
+
+        protected AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, out RavenEtlConfiguration configuration)
+        {
+            return AddEtl(src, dst, collections, script, false, false, null, false, out configuration);
+        }
+
+        protected AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments, bool disabled, string mentor, bool pinToMentorNode, out RavenEtlConfiguration configuration)
+        {
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}";
 
-            return AddEtl(src, new RavenEtlConfiguration()
+            var transformation = new Transformation
+            {
+                Name = $"ETL : {connectionStringName}",
+                Collections = new List<string>(collections),
+                Script = script,
+                ApplyToAllDocuments = applyToAllDocuments,
+                Disabled = disabled
+            };
+
+            configuration = new RavenEtlConfiguration
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,
                 Transforms =
-                    {
-                        new Transformation
-                        {
-                            Name = $"ETL : {connectionStringName}",
-                            Collections = new List<string>(collections),
-                            Script = script,
-                            ApplyToAllDocuments = applyToAllDocuments,
-                            Disabled = disabled
-                        }
-                    },
+                {
+                    transformation
+                },
                 MentorNode = mentor,
                 PinToMentorNode = pinToMentorNode
-                
-            },
+            };
+
+            return AddEtl(src, configuration,
                 new RavenConnectionString
                 {
                     Name = connectionStringName,
@@ -239,7 +252,7 @@ namespace SlowTests.Server.Documents.ETL
                 tag = QueueEtl<QueueItem>.QueueEtlTag;
             else
                 throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
-
+            
             var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_TransformationError);
 
             if (loadAlert.Errors.Count != 0)

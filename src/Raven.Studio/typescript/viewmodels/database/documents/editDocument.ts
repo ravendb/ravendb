@@ -731,7 +731,7 @@ class editDocument extends shardViewModelBase {
     }
     
     downloadDocument() {
-        fileDownloader.downloadAsJson(this.documentTextOrg(), this.document().getId());
+        fileDownloader.downloadAsTxt(this.documentTextOrg(), this.document().getId() + ".json");
     }
     
     viewRaw() {

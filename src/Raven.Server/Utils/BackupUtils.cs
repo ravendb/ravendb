@@ -289,9 +289,10 @@ internal static class BackupUtils
         }
     }
     
-    public static PathSetting GetBackupTempPath(RavenConfiguration configuration, string dir)
+    public static PathSetting GetBackupTempPath(RavenConfiguration configuration, string dir, out PathSetting basePath)
     {
-        return (configuration.Backup.TempPath ?? configuration.Storage.TempPath ?? configuration.Core.DataDirectory).Combine(dir);
+        basePath = configuration.Backup.TempPath ?? configuration.Storage.TempPath ?? configuration.Core.DataDirectory;
+        return basePath.Combine(dir);
     }
 
     public class NextBackupOccurrenceParameters

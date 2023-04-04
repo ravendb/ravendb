@@ -1973,6 +1973,9 @@ namespace Raven.Server.Documents
 
                 return new DisposableAction(() => Subscription_ActionToCallAfterRegisterSubscriptionConnection = null);
             }
+
+            internal ManualResetEvent DatabaseRecordLoadHold;
+            internal ManualResetEvent HealthCheckHold;
         }
     }
 

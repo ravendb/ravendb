@@ -5,6 +5,8 @@ using Corax;
 using Corax.Mappings;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Raven.Server.Documents.Indexes;
+using IndexSearcher = Lucene.Net.Search.IndexSearcher;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -18,8 +20,10 @@ namespace Raven.Server.Documents.Queries.Results
 
     }
 
-    public ref struct RetrieverInput
+    public struct RetrieverInput
     {
+        public bool IsLuceneDocument() => LuceneDocument != null;
+
         public IndexFieldsMapping KnownFields;
         
         public IndexEntryReader CoraxEntry;
@@ -32,26 +36,33 @@ namespace Raven.Server.Documents.Queries.Results
 
         public ScoreDoc Score;
 
+        public IndexFieldsPersistence IndexFieldsPersistence;
+
+        public Corax.IndexSearcher CoraxIndexSearcher;
+
         public RetrieverInput(Lucene.Net.Documents.Document luceneDocument, ScoreDoc score, IState state)
         {
             LuceneDocument = luceneDocument;
             State = state;
             Score = score;
+            
             KnownFields = null;
-
             CoraxEntry = default;
-            Unsafe.SkipInit(out DocumentId);
+            CoraxIndexSearcher = null;
+            IndexFieldsPersistence = null;
         }
 
-        public RetrieverInput(IndexFieldsMapping knownFields, IndexEntryReader coraxEntry, string id)
+        public RetrieverInput(Corax.IndexSearcher searcher, IndexFieldsMapping knownFields, IndexEntryReader coraxEntry, string id, IndexFieldsPersistence indexFieldsPersistence)
         {
             CoraxEntry = coraxEntry;
             KnownFields = knownFields;
             DocumentId = id;
+            IndexFieldsPersistence = indexFieldsPersistence;
+            CoraxIndexSearcher = searcher;
 
-            Unsafe.SkipInit(out LuceneDocument);
-            Unsafe.SkipInit(out State);
-            Unsafe.SkipInit(out Score);
+            State = null;
+            Score = null;
+            LuceneDocument = null;
         }
     }
 }

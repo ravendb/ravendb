@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using Sparrow.Server;
 using Voron;
 
@@ -9,6 +11,7 @@ namespace Corax.Mappings;
 public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>, IDisposable
 {
     private readonly Dictionary<Slice, IndexFieldBinding> _fields;
+    private readonly Dictionary<string, IndexFieldBinding> _fieldsByString;
     private readonly Dictionary<int, IndexFieldBinding> _fieldsById;
     private readonly ByteStringContext _mappingContext;
     public readonly Func<string, Analyzer> ExactAnalyzer;
@@ -28,6 +31,8 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>, IDisposable
         ExactAnalyzer = exactAnalyzer;
         MaximumOutputSize = maximumOutputSize;
         MaximumTokenSize = maximumTokenSize;
+
+        _fieldsByString = fields.ToDictionary(x => x.Key.ToString(), x => x.Value);
     }
    
     public bool TryGetByFieldName(ByteStringContext context, string fieldName, out IndexFieldBinding binding)
@@ -35,6 +40,10 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>, IDisposable
         using var _ = Slice.From(context, fieldName, out var slicedName);
         return TryGetByFieldName(slicedName, out binding);
     }
+
+    public bool TryGetByFieldName(string fieldName, out IndexFieldBinding binding) => _fieldsByString.TryGetValue(fieldName, out binding);
+
+    public bool ContainsField(string fieldName) => _fieldsByString.ContainsKey(fieldName);
     
     public bool TryGetByFieldName(Slice fieldName, out IndexFieldBinding binding) => _fields.TryGetValue(fieldName, out binding);
 

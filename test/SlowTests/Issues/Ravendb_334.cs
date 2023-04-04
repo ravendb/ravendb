@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,10 +41,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanGetUtcFromDate()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGetUtcFromDate(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 new FooIndex().Execute(documentStore);
 

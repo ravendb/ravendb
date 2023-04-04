@@ -45,7 +45,6 @@ public class SpatialMatch : IQueryMatch
             ? SpatialUtils.GetGeohashesForQueriesOutsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator() 
             : SpatialUtils.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
         GoNextMatch();
-        DebugStuff.RenderAndShow(tree);
     }
 
     private bool GoNextMatch()

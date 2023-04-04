@@ -353,7 +353,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     foreach (var id in distinctIds)
                     {
                         var coraxEntry = _searcher.GetReaderAndIdentifyFor(id, out var key);
-                        var retrieverInput = new RetrieverInput(_fieldsMapping, coraxEntry, key);
+                        var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, coraxEntry, key, _index.IndexFieldsPersistence);
                         var result = _retriever.Get(ref retrieverInput, token);
 
                         if (result.Document != null)
@@ -584,7 +584,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                     // actual data and apply the rest of the filters. 
                     Include:
-                    var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(indexEntryId, out var key), key);
+                    var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(indexEntryId, out var key), key, _index.IndexFieldsPersistence);
 
                     var filterResult = queryFilter.Apply(ref retrieverInput, key);
                     if (filterResult is not FilterResult.Accepted)
@@ -625,6 +625,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             yield return qr;
                         }
                     }
+                    else
+                    {
+                        skippedResults.Value++;
+                }
                 }
 
                 // No need to continue filling buffers as there are no more docs to load.
@@ -1190,7 +1194,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (ravenIds.Add(id) == false)
                         continue;
 
-                    var retrieverInput = new RetrieverInput(_fieldMappings, reader, id);
+                    var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, reader, id, _index.IndexFieldsPersistence);
                     var result = retriever.Get(ref retrieverInput, token);
                     if (result.Document != null)
                     {

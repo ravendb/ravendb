@@ -4,6 +4,7 @@ using System.Reflection;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -71,13 +72,14 @@ namespace SlowTests.MailingList
             };
         }
 
-        [Fact]
-        public void Failing_query_using_embedded_store_but_works_against_real_database()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Failing_query_using_embedded_store_but_works_against_real_database(Options options)
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Contract_ToContractListViewModel().Execute(store);
 
@@ -108,13 +110,14 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Failing_lucene_query_where_in()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Failing_lucene_query_where_in(Options options)
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Contract_ToContractListViewModel().Execute(store);
 
@@ -149,13 +152,14 @@ namespace SlowTests.MailingList
 
 
 
-        [Fact]
-        public void Failing_query_using_embedded_store1()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Failing_query_using_embedded_store1(Options options)
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Contract_ToContractListViewModel().Execute(store);
 
@@ -181,13 +185,14 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Failing_query_using_embedded_store2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Failing_query_using_embedded_store2(Options options)
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Contract_ToContractListViewModel().Execute(store);
 

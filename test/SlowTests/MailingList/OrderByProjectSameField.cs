@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -227,10 +228,11 @@ namespace SlowTests.MailingList
         private List<Product> Products { get; set; }
 
 
-        [Fact]
-        public void FindCategoryByName_Works()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void FindCategoryByName_Works(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new CategoryIndex().Execute(store);
 

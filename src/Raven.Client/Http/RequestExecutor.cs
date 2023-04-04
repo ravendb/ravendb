@@ -1480,8 +1480,7 @@ namespace Raven.Client.Http
 
                     await ExecuteAsync(nextNode.CurrentNode, nextNode.CurrentIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
 
-                    if (nodeIndex.HasValue)
-                        _nodeSelector.RestoreNodeIndex(nodeIndex.Value);
+                    _nodeSelector.RestoreNodeIndex(chosenNode);
 
                     return true;
 
@@ -1657,7 +1656,7 @@ namespace Raven.Client.Http
 
                 broadcastCts.Cancel(throwOnFirstException: false);
 
-                _nodeSelector.RestoreNodeIndex(tasks[completed].Index);
+                _nodeSelector.RestoreNodeIndex(tasks[completed].Node);
                 return tasks[completed].Command.Result;
             }
 
@@ -1747,21 +1746,35 @@ namespace Raven.Client.Http
 
         private async Task CheckNodeStatusCallback(NodeStatus nodeStatus)
         {
-            var copy = TopologyNodes;
-            if (nodeStatus.NodeIndex >= copy.Count)
-                return; // topology index changed / removed
-            var serverNode = copy[nodeStatus.NodeIndex];
-            if (ReferenceEquals(serverNode, nodeStatus.Node) == false)
-                return; // topology changed, nothing to check
+            // In some cases, race conditions may occur with a recently changed topology and a failed node.
+            // We still should check the node's health, and if healthy, remove its timer and restore its index.
+            int nodeIndex;
+            ServerNode serverNode;
+            Lazy<NodeStatus> status;
+
+            try
+            {
+                (nodeIndex, serverNode) = _nodeSelector.GetRequestedNode(nodeStatus.Node.ClusterTag);
+            }
+            catch (Exception e) when (e is DatabaseDoesNotExistException or RequestedNodeUnavailableException)
+            {
+                // There are no nodes in the topology or could not find requested node. Nothing we can do here
+                if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
+                    status.Value.Dispose();
+
+                return;
+            }
+            
+            if (serverNode == null)
+                return;
 
             try
             {
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    Lazy<NodeStatus> status;
                     try
                     {
-                        await PerformHealthCheck(serverNode, nodeStatus.NodeIndex, context).ConfigureAwait(false);
+                        await PerformHealthCheck(serverNode, nodeIndex, context).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -1777,7 +1790,7 @@ namespace Raven.Client.Http
                     if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
                         status.Value.Dispose();
 
-                    _nodeSelector?.RestoreNodeIndex(nodeStatus.NodeIndex);
+                    _nodeSelector?.RestoreNodeIndex(serverNode);
                 }
             }
             catch (Exception e)
@@ -2327,6 +2340,30 @@ namespace Raven.Client.Http
             {
                 return HashCode.Combine(_certificateThumbprint, _useHttpDecompression, _pooledConnectionLifetime, _pooledConnectionIdleTimeout, _pooledConnectionIdleTimeout, _httpClientType);
             }
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff(this);
+        }
+
+        internal class TestingStuff
+        {
+            private readonly RequestExecutor _requestExecutor;
+
+            internal TestingStuff(RequestExecutor requestExecutor)
+            {
+                _requestExecutor = requestExecutor;
+            }
+
+            internal int[] NodeSelectorFailures => _requestExecutor._nodeSelector.NodeSelectorFailures;
+            internal ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> FailedNodesTimers => _requestExecutor._failedNodesTimers;
+            internal (int Index, ServerNode Node) PreferredNode => _requestExecutor._nodeSelector.GetPreferredNode();
         }
     }
 }

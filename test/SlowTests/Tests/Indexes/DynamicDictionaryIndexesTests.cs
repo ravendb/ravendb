@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Tests.Indexes
         {
         }
 
-        [Fact]
-        public void IndexWithFirstOrDefaultOnDictionary()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithFirstOrDefaultOnDictionary(Options options)
         {
-            IndexWithDynamicSource<FirstOrDefaultOnDictionary_Index>();
+            IndexWithDynamicSource<FirstOrDefaultOnDictionary_Index>(options);
         }
         public class FirstOrDefaultOnDictionary_Index : AbstractIndexCreationTask<Item>
         {
@@ -33,10 +35,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithFirstOrDefaultOnDictionaryWithPredicate()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithFirstOrDefaultOnDictionaryWithPredicate(Options options)
         {
-            IndexWithDynamicSource<FirstOrDefaultOnDictionaryWithPredicate_Index>();
+            IndexWithDynamicSource<FirstOrDefaultOnDictionaryWithPredicate_Index>(options);
         }
         public class FirstOrDefaultOnDictionaryWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -50,10 +53,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithFirstOnDictionary()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithFirstOnDictionary(Options options)
         {
-            IndexWithDynamicSource<FirstOnDictionary_Index>();
+            IndexWithDynamicSource<FirstOnDictionary_Index>(options);
         }
         public class FirstOnDictionary_Index : AbstractIndexCreationTask<Item>
         {
@@ -67,10 +71,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithFirstOnDictionaryWithPredicate()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithFirstOnDictionaryWithPredicate(Options options)
         {
-            IndexWithDynamicSource<FirstOnDictionaryWithPredicate_Index>();
+            IndexWithDynamicSource<FirstOnDictionaryWithPredicate_Index>(options);
         }
         public class FirstOnDictionaryWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -84,10 +89,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithSingleOrDefaultOnDictionary()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithSingleOrDefaultOnDictionary(Options options)
         {
-            IndexWithDynamicSource<SingleOrDefaultOnDictionary_Index>(waitForErrors: true);
+            IndexWithDynamicSource<SingleOrDefaultOnDictionary_Index>(options, waitForErrors: true);
         }
         public class SingleOrDefaultOnDictionary_Index : AbstractIndexCreationTask<Item>
         {
@@ -101,10 +107,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithSingleOrDefaultOnDictionaryWithPredicate()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithSingleOrDefaultOnDictionaryWithPredicate(Options options)
         {
-            IndexWithDynamicSource<SingleOrDefaultOnDictionaryWithPredicate_Index>();
+            IndexWithDynamicSource<SingleOrDefaultOnDictionaryWithPredicate_Index>(options);
         }
         public class SingleOrDefaultOnDictionaryWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -118,10 +125,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithSingleOnDictionary()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithSingleOnDictionary(Options options)
         {
-            IndexWithDynamicSource<SingleOnDictionary_Index>(waitForErrors: true);
+            IndexWithDynamicSource<SingleOnDictionary_Index>(options, waitForErrors: true);
         }
         public class SingleOnDictionary_Index : AbstractIndexCreationTask<Item>
         {
@@ -135,10 +143,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithSingleOnDictionaryWithPredicate()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithSingleOnDictionaryWithPredicate(Options options)
         {
-            IndexWithDynamicSource<SingleOnDictionaryWithPredicate_Index>();
+            IndexWithDynamicSource<SingleOnDictionaryWithPredicate_Index>(options);
         }
         public class SingleOnDictionaryWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -152,10 +161,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithLastOrDefaultOnDictionary()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithLastOrDefaultOnDictionary(Options options)
         {
-            IndexWithDynamicSource<LastOrDefaultOnDictionary_Index>();
+            IndexWithDynamicSource<LastOrDefaultOnDictionary_Index>(options);
         }
         public class LastOrDefaultOnDictionary_Index : AbstractIndexCreationTask<Item>
         {
@@ -169,10 +179,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithLastOrDefaultOnDictionaryWithPredicate()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithLastOrDefaultOnDictionaryWithPredicate(Options options)
         {
-            IndexWithDynamicSource<LastOrDefaultOnDictionaryWithPredicate_Index>();
+            IndexWithDynamicSource<LastOrDefaultOnDictionaryWithPredicate_Index>(options);
         }
         public class LastOrDefaultOnDictionaryWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -186,10 +197,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithLastOnDictionary()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithLastOnDictionary(Options options)
         {
-            IndexWithDynamicSource<LastOnDictionary_Index>();
+            IndexWithDynamicSource<LastOnDictionary_Index>(options);
         }
         public class LastOnDictionary_Index : AbstractIndexCreationTask<Item>
         {
@@ -203,10 +215,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithLastOnDictionaryWithPredicate()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithLastOnDictionaryWithPredicate(Options options)
         {
-            IndexWithDynamicSource<LastOnDictionaryWithPredicate_Index>();
+            IndexWithDynamicSource<LastOnDictionaryWithPredicate_Index>(options);
         }
         public class LastOnDictionaryWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -220,10 +233,10 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public void IndexWithDynamicSource<T>(bool waitForErrors = false) where T : AbstractIndexCreationTask<Item>, new()
+        public void IndexWithDynamicSource<T>(Options options, bool waitForErrors = false) where T : AbstractIndexCreationTask<Item>, new()
         {
             var index = new T();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(index);
 

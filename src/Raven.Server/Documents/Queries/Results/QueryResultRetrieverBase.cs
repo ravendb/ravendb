@@ -13,9 +13,9 @@ using Jint.Runtime;
 using Lucene.Net.Documents;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Patch;
@@ -31,6 +31,8 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Voron;
 using Constants = Raven.Client.Constants;
+using IndexField = Raven.Server.Documents.Indexes.IndexField;
+using RangeType = Raven.Client.Documents.Indexes.RangeType;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -158,11 +160,11 @@ namespace Raven.Server.Documents.Queries.Results
 
                 Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
 
-                if (SearchEngineType == SearchEngineType.Lucene)
-                {
                     if (FieldsToFetch.ExtractAllFromIndex)
                     {
-                        fields = retrieverInput.LuceneDocument.GetFields()
+                    if (retrieverInput.IsLuceneDocument())
+                    {
+                        fields = retrieverInput.LuceneDocument!.GetFields()
                         .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
                                     && x.Name != Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
@@ -172,7 +174,19 @@ namespace Raven.Server.Documents.Queries.Results
                         .Distinct(UniqueFieldNames.Instance)
                         .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false, isTimeSeries: false));
                     }
+                    else
+                    {
+                        fields = retrieverInput.KnownFields.Where(i => i.FieldNameAsString.In(
+                                Constants.Documents.Indexing.Fields.DocumentIdFieldName,
+                                Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName,
+                                Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName,
+                                Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName,
+                                Constants.Documents.Indexing.Fields.ValueFieldName) == false)
+                            .ToDictionary(x => x.FieldNameAsString, x => new FieldsToFetch.FieldToFetch(x.FieldNameAsString, null, null, true
+                                , isDocumentId: false, isTimeSeries: false));
                 }
+                }
+
 
                 if (fields == null)
                 {
@@ -537,16 +551,21 @@ namespace Raven.Server.Documents.Queries.Results
 
         private bool CoraxTryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, ref RetrieverInput retrieverInput, DynamicJsonValue toFill)
         {
-            if (fieldToFetch.CanExtractFromIndex == false)
+            if (fieldToFetch.CanExtractFromIndex == false && fieldToFetch.IsDocumentId == false) //in case of ID we can always give it for user.
                 return false;
 
             var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
-            if (FieldsToFetch.IndexFields.ContainsKey(fieldToFetch.Name.Value) == false)
+            if (FieldsToFetch.IndexFields.ContainsKey(fieldToFetch.Name.Value) == false && retrieverInput.KnownFields.ContainsField(fieldToFetch.Name.Value) == false)
                 return false;
 
-            var id = FieldsToFetch.IndexFields[fieldToFetch.Name.Value].Id;
-            if (TryGetValueFromCoraxIndex(_context, name, id, ref retrieverInput, out var value) == false)
+            int fieldId = -1;
+            if (FieldsToFetch.IndexFields.TryGetValue(fieldToFetch.Name.Value, out var indexField))
+                fieldId = indexField.Id;
+            else if (fieldToFetch.Name.Value.Equals(Constants.Documents.Indexing.Fields.DocumentIdFieldName))
+                fieldId = 0;
+            
+            if (fieldId < 0 || TryGetValueFromCoraxIndex(_context, name, fieldId, ref retrieverInput, out var value) == false)
                 return false;
 
             toFill[name] = value;
@@ -606,10 +625,11 @@ namespace Raven.Server.Documents.Queries.Results
             value = null;
             switch (fieldType)
             {
-                
             case IndexEntryFieldType.Empty:
             case IndexEntryFieldType.Null:
-                value = fieldType == IndexEntryFieldType.Null ? null : string.Empty;;
+                value = fieldType == IndexEntryFieldType.Null 
+                    ? null :
+                    string.Empty;
                 break;
 
             case IndexEntryFieldType.TupleListWithNulls:
@@ -667,6 +687,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 break;
 
+            case IndexEntryFieldType.ListWithEmpty:
             case IndexEntryFieldType.ListWithNulls:
                 case IndexEntryFieldType.List:
                 if (fieldReader.TryReadMany(out iterator) == false)
@@ -780,7 +801,7 @@ namespace Raven.Server.Documents.Queries.Results
                     TryGetValue(fieldToFetch.FunctionArgs[i], document, ref retrieverInput, indexFields, anyDynamicIndexFields, out _, out args[i], token);
                     if (ReferenceEquals(args[i], document))
                     {
-                        args[i] = Tuple.Create(document, retrieverInput.LuceneDocument, retrieverInput.State, indexFields, anyDynamicIndexFields, FieldsToFetch.Projection);
+                        args[i] = Tuple.Create(document, retrieverInput, indexFields, anyDynamicIndexFields, FieldsToFetch.Projection);
                     }
                 }
                 value = GetFunctionValue(fieldToFetch, document.Id, args, token);
@@ -908,6 +929,14 @@ namespace Raven.Server.Documents.Queries.Results
                             {
                                 throw new InvalidDataException($"Field {fieldToFetch.QueryField.SourceAlias} not found in index");
                             }
+                            
+                            if (fieldValue is IEnumerable<object> enumerable)
+                            {
+                                foreach (var item in enumerable)
+                                    if (item != null)
+                                        _loadedDocumentIds.Add(item.ToString());
+                            }
+                            else
                             _loadedDocumentIds.Add(fieldValue?.ToString());
 
                             break;
