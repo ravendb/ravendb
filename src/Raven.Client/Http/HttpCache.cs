@@ -101,9 +101,22 @@ namespace Raven.Client.Http
                 }
             }
 
+            internal void ReleaseRefInternal()
+            {
+                if (Interlocked.CompareExchange(ref _internallyReleased, 1, 0) != 0)
+                {
+                    // when we create the HttpCacheItem object, the _usages is set to 1.
+                    // when we release it, we need to make sure that it's released by us only once.
+                    // we might try to release it twice because of a race condition between releasing an old object and the FreeSpace task.
+                    return;
+                }
+
+                ReleaseRef();
+            }
+
             public void Dispose()
             {
-                ReleaseRef();
+                ReleaseRefInternal();
             }
 #if !RELEASE
             ~HttpCacheItem()
@@ -160,9 +173,9 @@ namespace Raven.Client.Http
             if (_disposing)
             {
                 //We might have double release here but we have a protection for that.
-                httpCacheItem.ReleaseRef();
+                httpCacheItem.ReleaseRefInternal();
             }
-            old?.ReleaseRef();
+            old?.ReleaseRefInternal();
         }
 
         public void SetNotFound(string url, bool aggressivelyCached)
@@ -190,9 +203,9 @@ namespace Raven.Client.Http
             if (_disposing)
             {
                 //We might have double release here but we have a protection for that.
-                httpCacheItem.ReleaseRef();
+                httpCacheItem.ReleaseRefInternal();
             }
-            old?.ReleaseRef();
+            old?.ReleaseRefInternal();
         }
 
         public int Generation;
@@ -249,7 +262,7 @@ namespace Raven.Client.Http
                     // about.
 
                     numberOfClearedItems++;
-                    value.ReleaseRef();
+                    value.ReleaseRefInternal();
                     sizeCleared += value.Size;
                 }
 
