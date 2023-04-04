@@ -12,6 +12,32 @@ class downloader {
     reset() {
         this.$downloadFrame.attr("src", "");
     }
+    
+    static fillHiddenFields(object: any, targetForm: JQuery) {
+        targetForm.empty();
+        
+        const addField = (key: string, value: any) => {
+            if (typeof value === "undefined") {
+                return;
+            }
+            const $input = $("<input />")
+                .attr("type", "hidden")
+                .attr("name", key)
+                .val(value);
+            
+            targetForm.append($input);
+        }
+        
+        Object.keys(object).forEach(key => {
+            const value = object[key];
+            
+            if (_.isArray(value)) {
+                value.forEach(v => addField(key, v));
+            } else {
+                addField(key, value);
+            }
+        });
+    }
 }
 
 export = downloader
