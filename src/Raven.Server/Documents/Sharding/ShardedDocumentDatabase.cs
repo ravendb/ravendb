@@ -143,13 +143,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
                 // cleanup values
                 t = DeleteBucketAsync(process.Bucket, process.MigrationIndex, process.LastSourceChangeVector);
 
-                if (alreadyExist == false)
-                {
-                    t.ContinueWith(_ =>
-                    {
-                        _ = DocumentsMigrator.ExecuteMoveDocumentsAsync();
-                    });
-                }
+                t.ContinueWith(__ => DocumentsMigrator.ExecuteMoveDocumentsAsync());
             }
 
             if (t != null)
