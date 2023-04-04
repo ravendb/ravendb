@@ -1126,20 +1126,18 @@ namespace Raven.Server.Documents.Patch
                     return id;
 
                 var originalId = (args[1].AsObject() as BlittableObjectInstance)?.DocumentId;
-                if (originalId != null)
-                {
-                    var builder = new StringBuilder(id);
-                    var index = originalId.IndexOf('$');
-                    if (index != -1)
-                        originalId = originalId[index..originalId.Length];
-                    else
-                        builder.Append('$');
+                var builder = new StringBuilder(id);
+                var index = originalId.IndexOf('$');
+                if (index != -1)
+                    originalId = originalId[index..originalId.Length];
+                else
+                    builder.Append('$');
 
-                    builder.Append(originalId + '$' + _database.IdentityPartsSeparator);
-                    id = builder.ToString();
-                }
-                
-                return id;
+                builder.Append(originalId)
+                    .Append('$')
+                    .Append(_database.IdentityPartsSeparator);
+
+                return builder.ToString();
             }
 
             private static void AssertValidId()
