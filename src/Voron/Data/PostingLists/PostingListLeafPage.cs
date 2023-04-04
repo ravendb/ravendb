@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Impl;
@@ -264,13 +265,15 @@ public readonly unsafe struct PostingListLeafPage
     /// Additions and removals are *sorted* by the caller
     /// maxValidValue is the limit for the *next* page, so we won't consume entries from there
     /// </summary>
-    public List<ExtraSegmentDetails> Update(LowLevelTransaction tx, ref Span<long> additions, ref Span<long> removals, long maxValidValue)
+    public List<ExtraSegmentDetails> Update(LowLevelTransaction tx, ref long* additions, ref int additionsCount, ref long* removals, ref int removalsCount, long maxValidValue)
     {
-        var updater = new Updater(this, additions, removals, tx, maxValidValue);
+        var updater = new Updater(this, additions, additionsCount, removals, removalsCount, tx, maxValidValue);
         
         updater.Update();
-        additions = additions[updater.AdditionsIdx..];
-        removals = removals[updater.RemovalsIdx..];
+        additions += updater.AdditionsIdx;
+        additionsCount -= updater.AdditionsIdx;
+        removals += updater.RemovalsIdx;
+        removalsCount -= updater.RemovalsIdx;
         return updater.Extras;
     }
 
@@ -283,8 +286,10 @@ public readonly unsafe struct PostingListLeafPage
 
         private readonly PostingListLeafPage _parent;
         private readonly LowLevelTransaction _tx;
-        private readonly Span<long> _additions;
-        private readonly Span<long> _removals;
+        private readonly long* _additions;
+        private readonly int _additionsCount;
+        private readonly long* _removals;
+        private readonly int _removalsCount;
         private long _maxValidValue;
         private fixed long _uncompressed[PForEncoder.BufferLen];
         private fixed uint _scratch[PForEncoder.BufferLen];
@@ -303,7 +308,7 @@ public readonly unsafe struct PostingListLeafPage
         private int _uncompressedLen;
         private int _runIdx;
         
-        public Updater(PostingListLeafPage parent, Span<long> additions, Span<long> removals, LowLevelTransaction tx, long maxValidValue)
+        public Updater(PostingListLeafPage parent, long* additions, int additionsCount, long* removals, int removalsCount, LowLevelTransaction tx, long maxValidValue)
         {
             _parent = parent;
             _compressedCurrent = InvalidValue;
@@ -316,7 +321,9 @@ public readonly unsafe struct PostingListLeafPage
             _hasDecoder = false;
             _decoderState = default;
             _additions = additions;
+            _additionsCount = additionsCount;
             _removals = removals;
+            _removalsCount = removalsCount;
             _tx = tx;
             _maxValidValue = maxValidValue;
             Extras = null;
@@ -326,7 +333,7 @@ public readonly unsafe struct PostingListLeafPage
 
         public void Update()
         {
-            if (_additions.Length == 0 && _removals.Length == 0)
+            if (_additionsCount == 0 && _removalsCount == 0)
                 return; // nothing to do
 
             using var _ = _tx.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
@@ -385,7 +392,7 @@ public readonly unsafe struct PostingListLeafPage
 
                     if (_additionCurrent == InvalidValue)
                     {
-                        if (AdditionsIdx < _additions.Length && _additions[AdditionsIdx] < _maxValidValue)
+                        if (AdditionsIdx < _additionsCount && _additions[AdditionsIdx] < _maxValidValue)
                         {
                             _additionCurrent = _additions[AdditionsIdx++] ;
                             Debug.Assert(_additionCurrent != InvalidValue);
@@ -394,7 +401,7 @@ public readonly unsafe struct PostingListLeafPage
 
                     if (_removalCurrent == InvalidValue)
                     {
-                        if (RemovalsIdx < _removals.Length && _removals[RemovalsIdx] < _maxValidValue)
+                        if (RemovalsIdx < _removalsCount && _removals[RemovalsIdx] < _maxValidValue)
                         {
                             _removalCurrent = _removals[RemovalsIdx++];
                             Debug.Assert(_removalCurrent != InvalidValue);
@@ -404,7 +411,7 @@ public readonly unsafe struct PostingListLeafPage
                     if (_compressedCurrent == InvalidValue && _additionCurrent == InvalidValue)
                     {
                         // nothing to add, but may need to skip removals
-                        for (; RemovalsIdx < _removals.Length  && _removals[RemovalsIdx] < _maxValidValue; RemovalsIdx++)
+                        for (; RemovalsIdx < _removalsCount  && _removals[RemovalsIdx] < _maxValidValue; RemovalsIdx++)
                         {
                             if (_removals[RemovalsIdx] <= _maxValidValue)
                                 break;
@@ -516,13 +523,13 @@ public readonly unsafe struct PostingListLeafPage
 
         private void FindFirstRelevantRunAndCopyPreviousOnes(PostingListLeafPageHeader* newHeader)
         {
-            long first = 0;
-            if (_additions.Length > 0 && _additions[0] <= _maxValidValue)
+            long first = long.MaxValue;
+            if (_additionsCount > 0 && _additions[0] <= _maxValidValue)
             {
                 first = _additions[0];
             }
 
-            if (_removals.Length > 0 && _removals[0] <= _maxValidValue)
+            if (_removalsCount > 0 && _removals[0] <= _maxValidValue)
             {
                 first = Math.Min(_removals[0], first);
             }

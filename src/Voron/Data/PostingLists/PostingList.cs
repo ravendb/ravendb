@@ -131,6 +131,44 @@ namespace Voron.Data.PostingLists
             return state;
         }
 
+        public void Verify()
+        {
+            PostingListCursorState root = new (Llt.GetPage(_state.RootPage));
+            VerifyPage(root, long.MinValue, long.MaxValue);
+        }
+
+        private void VerifyPage(PostingListCursorState s, long min, long maxExclusive)
+        {
+            if (s.IsLeaf)
+            {
+                var values = new PostingListLeafPage(s.Page).GetDebugOutput();
+                ValidateValues(s.Page.PageNumber, min, maxExclusive, values);
+            }
+            else
+            {
+                var values = new PostingListBranchPage(s.Page).GetDebugOutput();
+                ValidateValues(s.Page.PageNumber, min, maxExclusive, values.Select(x=>x.Key).ToList());
+                for (int i = 0; i < values.Count; i++)
+                {
+                    var v = values[i];
+                    var max = i < values.Count - 1 ? values[i + 1].Key : maxExclusive;
+                    VerifyPage(new PostingListCursorState(Llt.GetPage(v.Page)), v.Key, max);
+                }
+            }
+        }
+
+        private static void ValidateValues(long pageNumber, long min, long maxExclusive, List<long> values)
+        {
+            var sorted = values.ToArray();
+            Array.Sort(sorted);
+            if (sorted.SequenceEqual(values) == false)
+                throw new InvalidOperationException("Page " + pageNumber + " is not sorted");
+            if (values[0] < min)                              
+                throw new InvalidOperationException("Page " + pageNumber + " first value is beyond its range: " + values[0] + " vs " + min);
+            if (values[^1] >= maxExclusive)                   
+                throw new InvalidOperationException("Page " + pageNumber + " last value is beyond its range: " + values[^1] + " vs " + maxExclusive);
+        }
+
         private void FindPageFor(long value)
         {
             _pos = -1;
@@ -375,21 +413,21 @@ namespace Voron.Data.PostingLists
 
         public void PrepareForCommit()
         {
-            Span<long> additions = _additions.Items;
-            Span<long> removals = _removals.Items;
-            if (additions.Length > 0)
-                Sort.Run(additions);
-            if (removals.Length > 0)
-                Sort.Run(removals);
+            _additions.Sort();
+            _removals.Sort();
+            var additionsCount = _additions.Count;
+            var removalsCount = _removals.Count;
+            var additions = _additions.RawItems;
+            var removals = _removals.RawItems;
 
-            while (additions.IsEmpty == false || removals.IsEmpty == false)
+            while (additionsCount != 0 || removalsCount != 0)
             {
-                bool hadRemovals = removals.IsEmpty == false;
+                bool hadRemovals = removalsCount == 0;
                 
                 long first = -1;
-                if (additions.IsEmpty == false)
+                if (additionsCount > 0)
                     first = additions[0];
-                if (removals.IsEmpty == false) 
+                if (removalsCount > 0) 
                     first = first == -1 ? removals[0] : Math.Min(removals[0], first);
             
                 FindPageFor(first);
@@ -400,7 +438,7 @@ namespace Voron.Data.PostingLists
 
                 _state.NumberOfEntries -= leafPage.Header->NumberOfEntries;
 
-                var extras = leafPage.Update(_llt, ref additions, ref removals, limit);
+                var extras = leafPage.Update(_llt, ref additions, ref additionsCount, ref removals, ref removalsCount, limit);
                 _state.NumberOfEntries += leafPage.Header->NumberOfEntries;
 
                 if (extras != null) // we overflow and need to split excess to additional pages
@@ -612,7 +650,7 @@ namespace Voron.Data.PostingLists
                     throw new InvalidOperationException("Failed to add half our capacity to a newly created page? Should never happen");
             }
 
-            pageToSplit.Header->NumberOfEntries /= 2;// truncate entries
+            pageToSplit.Header->NumberOfEntries = (ushort)rightMostSectionToMove;// truncate entries
             var success = pageToSplit.Last < key ?
                 branch.TryAdd(_llt, key, value) :
                 pageToSplit.TryAdd(_llt, key, value);

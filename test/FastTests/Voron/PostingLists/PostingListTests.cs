@@ -232,8 +232,16 @@ namespace FastTests.Voron.Sets
                 
                 using (var rtx = Env.ReadTransaction())
                 {
+                    var matches = new long[inTreeKeys.Count];
                     var set = rtx.OpenPostingList($"Set({name})");
-           
+
+                    set.Iterate().Fill(matches, out int read);
+                    Assert.Equal(inTreeKeys.Count, read);
+                    for (int i = 0; i < read; i++)
+                    {
+                        Assert.True(inTreeKeys.TryGetValue(matches[i], out var _), "Missing " + matches[i]);
+                    }
+             
                     Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
                 }
 
