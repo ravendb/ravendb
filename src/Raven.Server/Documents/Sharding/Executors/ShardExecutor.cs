@@ -70,7 +70,13 @@ namespace Raven.Server.Documents.Sharding.Executors
             }
         }
 
-        public override RequestExecutor GetRequestExecutorAt(int position) => _requestExecutors[position];
+        public override RequestExecutor GetRequestExecutorAt(int shardNumber)
+        {
+            if (_databaseRecord.Sharding.Shards.ContainsKey(shardNumber) == false)
+                throw new InvalidOperationException($"Cannot get request executor for shard because the shard number {shardNumber} doesn't exist.");
+
+            return _requestExecutors[shardNumber];
+        }
 
         protected override Memory<int> GetAllPositions() => new Memory<int>(_fullRange);
 

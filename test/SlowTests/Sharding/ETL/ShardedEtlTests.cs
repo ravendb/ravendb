@@ -1512,10 +1512,10 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                         foreach (var files in new [] {januaryFiles, februaryFiles})
                         {
                             var paths = files.FileInfoDetails.Select(f => f.FullPath).ToList();
-
-                            for (int i = 0; i < 3; i++)
+                            var record = await Sharding.GetShardingConfigurationAsync(store);
+                            foreach (var shardNumber in record.Shards.Keys)
                             {
-                                var shardName = $"{store.Database}${i}";
+                                var shardName = $"{store.Database}${shardNumber}";
                                 Assert.True(paths.Any(path => path.Contains(shardName)));
                             }
                         }
