@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
@@ -131,12 +132,14 @@ namespace Voron.Data.PostingLists
             return state;
         }
 
+        [Conditional("DEBUG")]
         public void Verify()
         {
             PostingListCursorState root = new (Llt.GetPage(_state.RootPage));
             VerifyPage(root, long.MinValue, long.MaxValue);
         }
 
+        [Conditional("DEBUG")]
         private void VerifyPage(PostingListCursorState s, long min, long maxExclusive)
         {
             if (s.IsLeaf)
@@ -422,8 +425,7 @@ namespace Voron.Data.PostingLists
 
             while (additionsCount != 0 || removalsCount != 0)
             {
-                bool hadRemovals = removalsCount == 0;
-                
+                bool hadRemovals = removalsCount > 0;
                 long first = -1;
                 if (additionsCount > 0)
                     first = additions[0];
