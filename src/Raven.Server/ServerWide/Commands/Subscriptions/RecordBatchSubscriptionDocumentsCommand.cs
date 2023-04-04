@@ -137,10 +137,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     shouldUpdateChangeVector = false;
                 }
 
-                if (string.IsNullOrEmpty(ShardName) == false)
-                {
-                }
-
                 CheckConcurrencyForBatchCv(subscriptionState, subscriptionName);
 
                 foreach (var deletedId in Deleted)

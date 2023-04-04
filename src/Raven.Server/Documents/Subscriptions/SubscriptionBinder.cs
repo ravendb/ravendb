@@ -109,18 +109,9 @@ public class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscri
                     _storage.ReleaseSubscriptionsSemaphore();
                 }
             }
-            catch (SubscriptionChangeVectorUpdateConcurrencyException e)
-            {
-                _subscriptionConnectionsState.DropSubscription(e);
-                await _connection.ReportExceptionAsync(SubscriptionError.Error, e);
-            }
-            catch (SubscriptionInUseException e)
-            {
-                await _connection.ReportExceptionAsync(SubscriptionError.ConnectionRejected, e);
-            }
             catch (Exception e)
             {
-                await _connection.ReportExceptionAsync(SubscriptionError.Error, e);
+                await _subscriptionConnectionsState.HandleConnectionException(_connection, e);
             }
             finally
             {
