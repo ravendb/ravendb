@@ -239,4 +239,19 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
         }
         aggregator.ThrowIfNeeded();
     }
+
+    public bool TryGetRunningSubscriptionConnectionsState(long subscriptionId, out TState connections)
+    {
+        connections = null;
+
+        if (_subscriptions.TryGetValue(subscriptionId, out var concurrentSubscription) == false)
+            return false;
+
+        if (concurrentSubscription == null)
+            return false;
+
+        connections = concurrentSubscription;
+
+        return true;
+    }
 }
