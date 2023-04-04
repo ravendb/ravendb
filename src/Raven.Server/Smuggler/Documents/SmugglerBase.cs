@@ -401,14 +401,13 @@ namespace Raven.Server.Smuggler.Documents
                     if (isPreV4Revision)
                     {
                         result.RevisionDocuments.ReadCount++;
+                        result.RevisionDocuments.SizeInBytes += item.Document.Data.Size;
                     }
                     else
                     {
                         result.Documents.ReadCount++;
-                    }
-
-                    if (item.Document != null) 
                         result.Documents.SizeInBytes += item.Document.Data.Size;
+                    }
 
                     if (item.Attachments != null)
                     {
@@ -416,8 +415,16 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (attachment.Stream != null)
                             {
-                                result.Documents.Attachments.ReadCount++;
-                                result.Documents.Attachments.SizeInBytes += attachment.Stream.Length;
+                                if (isPreV4Revision)
+                                {
+                                    result.RevisionDocuments.Attachments.ReadCount++;
+                                    result.RevisionDocuments.Attachments.SizeInBytes += attachment.Stream.Length;
+                                }
+                                else
+                                {
+                                    result.Documents.Attachments.ReadCount++;
+                                    result.Documents.Attachments.SizeInBytes += attachment.Stream.Length;
+                                }
                             }
                         }
                     }
@@ -519,8 +526,8 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (attachment.Stream != null)
                             {
-                                result.Documents.Attachments.ReadCount++;
-                                result.Documents.Attachments.SizeInBytes += attachment.Stream.Length;
+                                result.RevisionDocuments.Attachments.ReadCount++;
+                                result.RevisionDocuments.Attachments.SizeInBytes += attachment.Stream.Length;
                             }
                         }
                     }
