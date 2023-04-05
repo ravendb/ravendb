@@ -176,7 +176,7 @@ public class SpatialMatch : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode($"{nameof(StartWithTermProvider)}",
+        return new QueryInspectionNode($"{nameof(StartsWithTermProvider)}",
             parameters: new Dictionary<string, string>()
             {
                 {"Field", _field.ToString()},

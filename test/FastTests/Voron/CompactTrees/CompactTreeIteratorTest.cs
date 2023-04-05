@@ -71,7 +71,7 @@ namespace FastTests.Voron.CompactTrees
                 }
                 Assert.Equal(currentKeys.Count, i);
 
-                var backwardIterator = tree.ReverseIterate();
+                var backwardIterator = tree.Iterate<CompactTree.BackwardIterator>();
                 currentKeys.Reverse();
 
                 i = 0;

@@ -11,23 +11,56 @@ using Voron.Data.CompactTrees;
 
 namespace Corax.Queries
 {
+    public struct StartsWithTermProvider : ITermProvider
+    {
+        private StartsWithTermProvider<CompactTree.ForwardIterator> _inner;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith)
+        {
+            _inner = new StartsWithTermProvider<CompactTree.ForwardIterator>(searcher, tree, field, startWith);
+        }
+
+        public bool IsOrdered => _inner.IsOrdered;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Reset()
+        {
+            _inner.Reset();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Next(out TermMatch term)
+        {
+            return _inner.Next(out term);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public QueryInspectionNode Inspect()
+        {
+            return _inner.Inspect();
+        }
+    }
+
+
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct StartWithTermProvider : ITermProvider
+    public struct StartsWithTermProvider<TIterator> : ITermProvider
+        where TIterator : struct, ICompactTreeIterator
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
 
-        private CompactTree.Iterator _iterator;
+        private TIterator _iterator;
 
         public bool IsOrdered => true;
 
-        public StartWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith)
+        public StartsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey startWith)
         {
             _searcher = searcher;
             _field = field;
-            _iterator = tree.Iterate();
+            _iterator = tree.Iterate<TIterator>();
             _startWith = startWith;
             _tree = tree;
 
@@ -65,7 +98,7 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(StartWithTermProvider)}",
+            return new QueryInspectionNode($"{nameof(StartsWithTermProvider<TIterator>)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _field.ToString() },

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Sparrow;
 using Voron;
@@ -10,11 +11,49 @@ namespace Corax.Queries
 {
     public unsafe struct ExistsTermProvider : ITermProvider
     {
+        private ExistsTermProvider<CompactTree.ForwardIterator> _inner;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ExistsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field)
+        {
+            _inner = new ExistsTermProvider<CompactTree.ForwardIterator>(searcher, tree, field);
+        }
+
+        public bool IsOrdered => _inner.IsOrdered;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Reset()
+        {
+            _inner.Reset();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Next(out TermMatch term)
+        {
+            return _inner.Next(out term);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool GetNextTerm(out ReadOnlySpan<byte> term)
+        {
+            return _inner.GetNextTerm(out term);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public QueryInspectionNode Inspect()
+        {
+            return _inner.Inspect();
+        }
+    }
+
+    public unsafe struct ExistsTermProvider<TIterator> : ITermProvider
+        where TIterator : struct, ICompactTreeIterator
+    {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
 
-        private CompactTree.Iterator _iterator;
+        private TIterator _iterator;
 
         public bool IsOrdered => true;
 
@@ -23,13 +62,13 @@ namespace Corax.Queries
             _tree = tree;
             _field = field;
             _searcher = searcher;
-            _iterator = tree.Iterate();
+            _iterator = tree.Iterate<TIterator>();
             _iterator.Reset();
         }
 
         public void Reset()
         {            
-            _iterator = _tree.Iterate();
+            _iterator = _tree.Iterate<TIterator>();
             _iterator.Reset();
         }
 
@@ -69,7 +108,7 @@ namespace Corax.Queries
         
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(ExistsTermProvider)}",
+            return new QueryInspectionNode($"{nameof(ExistsTermProvider<TIterator>)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _field.ToString() }

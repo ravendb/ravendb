@@ -33,18 +33,18 @@ namespace Corax.Queries
         private readonly FieldMetadata _field;
         private readonly Slice _low, _high;
 
-        private CompactTree.Iterator _iterator;
+        private CompactTree.ForwardIterator _iterator;
 
         private readonly bool _skipHighCheck;
         private bool _skipLowCheck;
 
-        public bool IsOrdered => true;
+        public bool IsOrdered => false;
 
         public TermRangeProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice low, Slice high)
         {
             _searcher = searcher;
             _field = field;
-            _iterator = tree.Iterate();
+            _iterator = tree.Iterate<CompactTree.ForwardIterator>();
             _low = low;
             _high = high;
             _tree = tree;

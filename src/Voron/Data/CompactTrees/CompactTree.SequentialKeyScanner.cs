@@ -13,19 +13,19 @@ unsafe partial class CompactTree
     public struct SequentialKeyScanner : IReadOnlySpanEnumerator
     {
         private readonly CompactTree _tree;
-        private Iterator _iterator;
+        private ForwardIterator _forwardIterator;
 
         public SequentialKeyScanner(CompactTree tree)
         {
             _tree = tree;
-            _iterator = _tree.Iterate();
-            _iterator.Reset();
+            _forwardIterator = _tree.Iterate<ForwardIterator>();
+            _forwardIterator.Reset();
         }
 
         public bool MoveNext(out ReadOnlySpan<byte> key)
         {
             // Obtain the new key and return the corresponding span. 
-            bool operationResult = _iterator.MoveNext(out var scope, out long _);
+            bool operationResult = _forwardIterator.MoveNext(out var scope, out long _);
             key = operationResult ? scope.Key.Decoded() : ReadOnlySpan<byte>.Empty;
             scope.Dispose();
 
@@ -35,8 +35,8 @@ unsafe partial class CompactTree
 
         public void Reset()
         {
-            _iterator = _tree.Iterate();
-            _iterator.Reset();
+            _forwardIterator = _tree.Iterate<ForwardIterator>();
+            _forwardIterator.Reset();
         }
     }
 }

@@ -1,8 +1,9 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Corax.Mappings;
 using Corax.Queries;
 using Voron;
+using Voron.Data.CompactTrees;
 
 namespace Corax;
 
@@ -16,12 +17,12 @@ public partial class IndexSearcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch StartWithQuery(FieldMetadata field, string startWith, bool isNegated = false)
     {
-        return MultiTermMatchBuilder<StartWithTermProvider>(field, startWith, isNegated);
+        return MultiTermMatchBuilder<StartsWithTermProvider>(field, startWith, isNegated);
     }
     
     public MultiTermMatch StartWithQuery(FieldMetadata field, Slice startWith, bool isNegated = false)
     {
-        return MultiTermMatchBuilder<StartWithTermProvider>(field, startWith, isNegated);
+        return MultiTermMatchBuilder<StartsWithTermProvider>(field, startWith, isNegated);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Text.Unicode;
@@ -10,12 +11,44 @@ namespace Corax.Queries;
 
 public struct RegexTermProvider : ITermProvider
 {
+    private RegexTermProvider<CompactTree.ForwardIterator> _inner;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RegexTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Regex regex)
+    {
+        _inner = new RegexTermProvider<CompactTree.ForwardIterator>(searcher, tree, field, regex);
+    }
+
+    public bool IsOrdered => _inner.IsOrdered;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Reset()
+    {
+        _inner.Reset();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Next(out TermMatch term)
+    {
+        return _inner.Next(out term);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public QueryInspectionNode Inspect()
+    {
+        return _inner.Inspect();
+    }
+}
+
+public struct RegexTermProvider<TIterator> : ITermProvider
+    where TIterator : struct, ICompactTreeIterator
+{
     private readonly CompactTree _tree;
     private readonly IndexSearcher _searcher;
     private readonly FieldMetadata _field;
     private readonly Regex _regex;
 
-    private CompactTree.Iterator _iterator;
+    private TIterator _iterator;
 
     public bool IsOrdered => true;
 
@@ -24,7 +57,7 @@ public struct RegexTermProvider : ITermProvider
         _searcher = searcher;
         _regex = regex;
         _tree = tree;
-        _iterator = tree.Iterate();
+        _iterator = tree.Iterate<TIterator>();
         _iterator.Reset();
         _field = field;
     }
@@ -32,7 +65,7 @@ public struct RegexTermProvider : ITermProvider
 
     public void Reset()
     {
-        _iterator = _tree.Iterate();
+        _iterator = _tree.Iterate<TIterator>();
         _iterator.Reset();
     }
 
@@ -54,7 +87,7 @@ public struct RegexTermProvider : ITermProvider
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode($"{nameof(RegexTermProvider)}",
+        return new QueryInspectionNode($"{nameof(RegexTermProvider<TIterator>)}",
             parameters: new Dictionary<string, string>()
             {
                 { "Field", _field.ToString() },

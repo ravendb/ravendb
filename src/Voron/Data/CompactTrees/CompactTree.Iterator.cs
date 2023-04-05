@@ -1,16 +1,42 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Voron.Data.CompactTrees
 {
     partial class CompactTree
     {
-        public unsafe struct Iterator
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ICompactTreeIterator Iterate(bool forward = true)
+        {
+            // PERF: Even if we are returning ICompactTreeIterator instead, we are counting on the
+            //       caller to be able to do devirtualization if we don't have to store the reference. 
+            return forward ? new ForwardIterator(this) : new BackwardIterator(this);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public TDirection Iterate<TDirection>() where TDirection : struct, ICompactTreeIterator
+        {
+            if (typeof(TDirection) == typeof(ForwardIterator))
+            {
+                return (TDirection)(object)new ForwardIterator(this);
+            }
+            else if (typeof(TDirection) == typeof(BackwardIterator))
+            {
+                return (TDirection)(object)new BackwardIterator(this);
+            }
+            else
+            {
+                throw new ArgumentException($"The iterator type \'{typeof(TDirection).Name}\' is unknown.");
+            }
+        }
+
+        public unsafe struct ForwardIterator : ICompactTreeIterator
         {
             private readonly CompactTree _tree;
             private IteratorCursorState _cursor;
 
-            public Iterator(CompactTree tree)
+            public ForwardIterator(CompactTree tree)
             {
                 _tree = tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
@@ -105,18 +131,12 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        public Iterator Iterate()
-        {
-            return new Iterator(this);
-        }
-
-
-        public unsafe struct ReverseIterator
+        public unsafe struct BackwardIterator : ICompactTreeIterator
         {
             private readonly CompactTree _tree;
             private IteratorCursorState _cursor;
 
-            public ReverseIterator(CompactTree tree)
+            public BackwardIterator(CompactTree tree)
             {
                 _tree = tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
@@ -211,11 +231,6 @@ namespace Voron.Data.CompactTrees
 
                 return true;
             }
-        }
-
-        public ReverseIterator ReverseIterate()
-        {
-            return new ReverseIterator(this);
         }
     }
 }
