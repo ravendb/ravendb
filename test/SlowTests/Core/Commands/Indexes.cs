@@ -31,7 +31,7 @@ namespace SlowTests.Core.Commands
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanPutUpdateAndDeleteMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

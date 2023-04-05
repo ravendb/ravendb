@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
@@ -15,9 +15,28 @@ internal class ShardedIndexHandlerProcessorForGetAll : AbstractIndexHandlerProce
     {
     }
 
-    protected override bool SupportsCurrentNode => false;
+    protected override IndexDefinition[] GetIndexDefinitions(string indexName, int start, int pageSize)
+    {
+        IndexDefinition[] indexDefinitions;
+        if (string.IsNullOrEmpty(indexName))
+            indexDefinitions = RequestHandler.DatabaseContext.Indexes
+                .GetIndexes()
+                .OrderBy(x => x.Name)
+                .Skip(start)
+                .Take(pageSize)
+                .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
+                .ToArray();
+        else
+        {
+            var index = RequestHandler.DatabaseContext.Indexes.GetIndex(indexName);
+            if (index == null)
+                return null;
 
-    protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
+            indexDefinitions = new[] { index.Definition.GetOrCreateIndexDefinitionInternal() };
+        }
+
+        return indexDefinitions;
+    }
 
     protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexDefinition[]> command, OperationCancelToken token)
     {
