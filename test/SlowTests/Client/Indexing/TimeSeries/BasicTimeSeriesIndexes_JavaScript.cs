@@ -1207,8 +1207,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.JavaScript)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task BasicMultiMapIndex(Options options)
         {
             var now = DateTime.UtcNow.Date;
@@ -1233,7 +1233,7 @@ return ({
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1265,6 +1265,18 @@ return ({
                         .ToListAsync();
 
                     Assert.Equal(3, results.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var results = await session.Advanced.AsyncDocumentQuery<MyMultiMapTsIndex.Result, MyMultiMapTsIndex>()
+                        .OrderByDescending(x => x.HeartBeat)
+                        .ToListAsync();
+
+                    var orderedResults = results.OrderByDescending(x => x.HeartBeat);
+
+                    Assert.Equal(3, results.Count);
+                    Assert.Equal(orderedResults, results);
                 }
             }
         }

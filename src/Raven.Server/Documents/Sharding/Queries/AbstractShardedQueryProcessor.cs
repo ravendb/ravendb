@@ -47,8 +47,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     protected readonly ShardedDatabaseRequestHandler RequestHandler;
     protected readonly IndexQueryServerSide Query;
     protected readonly CancellationToken Token;
-    protected readonly bool IsMapReduceIndex;
     protected readonly bool IsAutoMapReduceQuery;
+    protected readonly IndexType IndexType;
+    protected readonly IndexSourceType IndexSourceType;
     protected readonly long? ExistingResultEtag;
     protected readonly bool MetadataOnly;
 
@@ -71,7 +72,13 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         Context = context;
         ExistingResultEtag = existingResultEtag;
 
-        IsMapReduceIndex = Query.Metadata.IndexName != null && (RequestHandler.DatabaseContext.Indexes.GetIndex(Query.Metadata.IndexName)?.Type.IsMapReduce() ?? false);
+        IndexInformationHolder index = null;
+        if (Query.Metadata.IndexName != null)
+            index = RequestHandler.DatabaseContext.Indexes.GetIndex(Query.Metadata.IndexName);
+
+        IndexType = index?.Type ?? IndexType.None;
+        IndexSourceType = index?.SourceType ?? IndexSourceType.None;
+
         IsAutoMapReduceQuery = Query.Metadata.IsDynamic && Query.Metadata.IsGroupBy;
 
         _raftUniqueRequestId = RequestHandler.GetRaftRequestIdFromQuery() ?? RaftIdGenerator.NewId();
@@ -118,7 +125,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     protected virtual QueryType GetQueryType()
     {
-        if (IsMapReduceIndex || IsAutoMapReduceQuery)
+        if (IndexType.IsMapReduce() || IsAutoMapReduceQuery)
             return QueryType.MapReduce;
 
         if (Query.Metadata.IsCollectionQuery)
@@ -128,9 +135,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     }
 
     protected bool IsProjectionFromMapReduceIndex =>
-        (IsMapReduceIndex == false && IsAutoMapReduceQuery == false
-        || (Query.Metadata.Query.Select == null || Query.Metadata.Query.Select.Count == 0)
-        && Query.Metadata.Query.SelectFunctionBody.FunctionText == null) == false;
+        (IndexType.IsMapReduce() == false && IsAutoMapReduceQuery == false
+         || (Query.Metadata.Query.Select == null || Query.Metadata.Query.Select.Count == 0)
+         && Query.Metadata.Query.SelectFunctionBody.FunctionText == null) == false;
 
     public virtual ValueTask InitializeAsync()
     {
@@ -242,7 +249,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         List<string> groupByFields = null;
 
-        if (IsMapReduceIndex || IsAutoMapReduceQuery)
+        if (IndexType.IsMapReduce() || IsAutoMapReduceQuery)
         {
             if (query.Filter != null)
                 queryChanges |= QueryChanges.RewriteForFilterInMapReduce;
@@ -295,7 +302,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
         else
         {
-            if (IsMapReduceIndex == false)
+            if (IndexType.IsMapReduce() == false)
                 queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
 
             if (IsAutoMapReduceQuery == false)
@@ -494,7 +501,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
         else
         {
-            Debug.Assert(IsMapReduceIndex, "Query isn't on a map-reduce index or an auto map reduce");
+            Debug.Assert(IndexType.IsMapReduce(), "Query isn't on a map-reduce index or an auto map reduce");
 
             var index = RequestHandler.DatabaseContext.Indexes.GetIndex(Query.Metadata.IndexName);
             if (index == null)
@@ -727,6 +734,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries);
 
         if (queryType == QueryType.IndexEntries)
+            return ConstantComparer.Instance;
+
+        if (IndexSourceType is IndexSourceType.Counters or IndexSourceType.TimeSeries)
             return ConstantComparer.Instance;
 
         if (query.Metadata.SelectFields is { Length: > 0 }) // projection
