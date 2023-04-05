@@ -67,9 +67,37 @@
     z-index: $zindex-popover;
 }
 
-//Fix caret margin for dropdowns with no text (no support on firefox)
+// Fix caret margin for dropdowns with no text (no support on firefox)
 .dropdown-toggle:has(.visually-hidden) {
     &::after {
         margin-left: 0;
     }
+}
+
+// Spinner with primary color gradient
+.spinner-gradient {
+    $spinner-width: 3px;
+    border: none;
+    background-image: conic-gradient(
+        rgba(112, 105, 238, 0) 30deg,
+        rgba(112, 105, 238, 0.33) 90deg,
+        rgba(112, 105, 238, 0.66) 150deg,
+        rgba(var(--bs-primary-rgb), 0.75) 240deg,
+        rgba(var(--bs-primary-rgb), 1) 360deg
+    );
+    -webkit-mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - ($spinner-width + 1px)),
+        #fff calc(100% - $spinner-width),
+        #fff calc(100% - 1px),
+        transparent 100%
+    );
+    mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - ($spinner-width + 1px)),
+        #fff calc(100% - $spinner-width),
+        #fff calc(100% - 1px),
+        transparent 100%
+    );
+    animation: spin 1.3s infinite cubic-bezier(0.85, 0.2, 0.2, 0.85);
 }
