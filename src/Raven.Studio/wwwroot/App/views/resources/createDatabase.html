@@ -470,7 +470,7 @@
             <input class="styled" type="checkbox" id="skip-indexes-import" data-bind="checked: skipIndexes">
             <label for="skip-indexes-import">Skip indexes</label>
         </div>
-        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint, visible: !enableSharding()">
+        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
             <div class="col-md-4">
                 <label class="control-label">Restore Point</label>
             </div>
@@ -497,6 +497,7 @@
                                         <div class="type">Backup Type</div>
                                         <div class="encryption">Encrypted</div>
                                         <div class="node">Node Tag</div>
+                                        <div data-bind="visible: $root.databaseModel.restore.enableSharding" class="node">Avaiable shards</div>
                                         <div class="files">Files to Restore</div>
                                     </div>
                                 </div>
@@ -511,6 +512,15 @@
                                                 <i class="icon-unsecure" data-bind="visible: !isEncrypted" title="Not encrypted"></i>
                                             </div>
                                             <div class="node" data-bind="text: nodeTag"></div>
+                                            <div
+                                                data-bind="visible: $root.databaseModel.restore.enableSharding"
+                                                class="files flex-horizontal"
+                                            >
+                                                <span data-bind="style: { 'color': avaiableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }">[ </span>
+                                                <span data-bind="text: avaiableShards.map(x => x.shardNumber).join(', '), style: { 'color': avaiableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"></span>
+                                                <span data-bind="style: { 'color': avaiableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"> ]</span>
+
+                                            </div>
                                             <div class="files" data-bind="text: filesToRestore.toLocaleString()"></div>
                                         </div>
                                     </a>
