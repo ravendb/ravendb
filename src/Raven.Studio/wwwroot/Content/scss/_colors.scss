@@ -75,6 +75,7 @@ $base-panel-bg-2: $panel-bg-2;
 $base-panel-bg-3: $panel-bg-3;
 
 $well-bg: $body-bg;
+$base-well-bg: $body-bg;
 
 $primary: $color-5;
 $success: $color-3;
@@ -129,6 +130,7 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $base-panel-bg-3: $gray-700;
 
     $well-bg: $gray-200;
+    $base-well-bg: $black;
 
     $link-color: $primary;
 
@@ -202,6 +204,7 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $base-panel-bg-3: $panel-bg-3;
 
     $well-bg: $gray-400;
+    $base-well-bg: $body-bg;
 
     $link-color: $primary;
 
@@ -278,6 +281,7 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $base-panel-bg-3: $panel-bg-3;
 
     $well-bg: $body-bg;
+    $base-well-bg: $body-bg;
 
     $success: $color-3;
     $info: $color-4;

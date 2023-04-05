@@ -34,8 +34,8 @@ export function DatabasesFilter() {
     };
 
     return (
-        <Row className="d-flex align-items-end mb-3">
-            <Col>
+        <div className="d-flex flex-wrap gap-3 mb-3">
+            <div className="d-flex flex-column flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <Input
                     type="text"
@@ -46,8 +46,8 @@ export function DatabasesFilter() {
                     onChange={onSearchNameChange}
                     className="filtering-input"
                 />
-            </Col>
-            <Col>
+            </div>
+            <div>
                 <MultiCheckboxToggle<DatabaseFilterByStateOption>
                     inputItems={filterByStateOptions}
                     label="Filter by state"
@@ -55,8 +55,7 @@ export function DatabasesFilter() {
                     setSelectedItems={(x) => dispatch(setSearchCriteriaStates(x))}
                     itemSelectAll={selectAllItem}
                 />
-            </Col>
-            <Col></Col>
-        </Row>
+            </div>
+        </div>
     );
 }
