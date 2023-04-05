@@ -137,7 +137,11 @@ namespace Raven.Client.Http
                     }
 
                     if (_usages > 0)
-                        Console.WriteLine($"!!!!!!!!!! Detected a leak on HttpCache when running the finalizer, cache URL: {Url}, Document: {document} !!!!!!!!!!");
+                    {
+                        var message = $"!!!!!!!!!! Detected a leak on HttpCache when running the finalizer, cache URL: {Url}, Document: {document} !!!!!!!!!!";
+                        Console.WriteLine(message);
+                        throw new LowMemoryException(message);
+                    }
                 }
                 
             }
