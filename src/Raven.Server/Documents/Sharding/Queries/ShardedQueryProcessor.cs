@@ -207,7 +207,7 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
         if (Query.Metadata.Query.Filter == null)
             return;
 
-        if (IsMapReduceIndex == false && IsAutoMapReduceQuery == false)
+        if (IndexType.IsMapReduce() == false && IsAutoMapReduceQuery == false)
             return;
 
         using (scope?.For(nameof(QueryTimingsScope.Names.Filter)))

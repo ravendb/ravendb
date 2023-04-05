@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Commands.Streaming;
 using Raven.Server.Documents.Queries;
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.Sharding.Queries
         {
             base.AssertQueryExecution();
 
-            if (IsAutoMapReduceQuery || IsMapReduceIndex)
+            if (IsAutoMapReduceQuery || IndexType.IsMapReduce())
                 throw new NotSupportedInShardingException("MapReduce is not supported in sharded streaming queries");
 
             if (Query.Metadata.HasIncludeOrLoad)

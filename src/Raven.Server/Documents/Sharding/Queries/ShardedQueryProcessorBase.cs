@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using NetTopologySuite.Algorithm;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Timings;
@@ -75,7 +76,7 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
 
     protected void ReduceResults(ref TCombinedResult result, QueryTimingsScope scope)
     {
-        if (IsMapReduceIndex == false && IsAutoMapReduceQuery == false)
+        if (IndexType.IsMapReduce() == false && IsAutoMapReduceQuery == false)
             return;
 
         using (scope?.For(nameof(QueryTimingsScope.Names.Reduce)))
