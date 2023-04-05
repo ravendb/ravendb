@@ -114,15 +114,16 @@ internal class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerP
                 [nameof(Name)] = Name,
                 [nameof(IsSharded)] = IsSharded,
                 [nameof(IsDisabled)] = IsDisabled,
-                [nameof(LockMode)] = LockMode,
-                [nameof(NodesTopology)] = NodesTopology?.ToJson(),
-                [nameof(Sharding)] = Sharding?.ToJson(),
+                [nameof(IsEncrypted)] = IsEncrypted,
+                [nameof(IndexesCount)] = IndexesCount,
                 [nameof(StudioEnvironment)] = StudioEnvironment,
                 [nameof(HasRevisionsConfiguration)] = HasRevisionsConfiguration,
                 [nameof(HasExpirationConfiguration)] = HasExpirationConfiguration,
                 [nameof(HasRefreshConfiguration)] = HasRefreshConfiguration,
                 [nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress),
-                [nameof(IndexesCount)] = IndexesCount
+                [nameof(LockMode)] = LockMode,
+                [nameof(NodesTopology)] = NodesTopology?.ToJson(),
+                [nameof(Sharding)] = Sharding?.ToJson(),
             };
         }
 
