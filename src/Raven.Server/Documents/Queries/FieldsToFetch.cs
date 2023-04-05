@@ -35,11 +35,10 @@ namespace Raven.Server.Documents.Queries
 
         public readonly ProjectionOptions Projection;
 
-        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition)
+        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition, SearchEngineType searchEngineType = SearchEngineType.None)
         {
             Projection = new ProjectionOptions(query);
-
-            Fields = GetFieldsToFetch(query.Metadata, query.ProjectionBehavior, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias, out AnyTimeSeries);
+            Fields = GetFieldsToFetch(query.Metadata, query.ProjectionBehavior, indexDefinition, searchEngineType, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias, out AnyTimeSeries);
             IsProjection = Fields != null && Fields.Count > 0;
             IndexFields = indexDefinition?.IndexFields;
             AnyDynamicIndexFields = indexDefinition != null && indexDefinition.HasDynamicFields;
@@ -60,6 +59,7 @@ namespace Raven.Server.Documents.Queries
             ProjectionBehavior? projectionBehavior,
             SelectField selectField,
             Dictionary<string, FieldToFetch> results,
+            SearchEngineType searchEngineType,
             out string selectFieldKey,
             ref bool anyExtractableFromIndex,
             ref bool extractAllStoredFields,
@@ -67,6 +67,9 @@ namespace Raven.Server.Documents.Queries
         {
             var mustExtractFromIndex = projectionBehavior.FromIndexOnly();
             var maybeExtractFromIndex = projectionBehavior.FromIndexOrDefault();
+            
+            //Since we always store field in Corax we can try to get it from index entry when performing projection. This is an alternative value for `canExtractFromIndex`.  
+            var isCorax = searchEngineType is SearchEngineType.Corax;
 
             selectFieldKey = selectField.Alias ?? selectField.Name;
             var selectFieldName = selectField.Name;
@@ -103,6 +106,7 @@ namespace Raven.Server.Documents.Queries
                         projectionBehavior,
                         selectField.FunctionArgs[j],
                         null,
+                        searchEngineType,
                         out _,
                         ref ignored,
                         ref ignored,
@@ -115,7 +119,7 @@ namespace Raven.Server.Documents.Queries
             if (selectField.IsCounter)
             {
                 var fieldToFetch = new FieldToFetch(selectField.Name, selectField, selectField.Alias ?? selectField.Name,
-                    canExtractFromIndex: false, isDocumentId: false, isTimeSeries: false);
+                    canExtractFromIndex: isCorax, isDocumentId: false, isTimeSeries: false);
                 if (selectField.FunctionArgs != null)
                 {
                     fieldToFetch.FunctionArgs = new FieldToFetch[0];
@@ -155,7 +159,7 @@ namespace Raven.Server.Documents.Queries
                     anyExtractableFromIndex = maybeExtractFromIndex;
                     
                     return new FieldToFetch(selectFieldName, selectField, selectField.Alias, 
-                        canExtractFromIndex: indexDefinition is MapReduceIndexDefinition or AutoMapReduceIndexDefinition, 
+                        canExtractFromIndex: (indexDefinition is MapReduceIndexDefinition or AutoMapReduceIndexDefinition) || isCorax, 
                         isDocumentId: true, isTimeSeries: false);
                 }
 
@@ -172,7 +176,7 @@ namespace Raven.Server.Documents.Queries
 
                         foreach (var kvp in indexDefinition.MapFields)
                         {
-                            var stored = kvp.Value.Storage == FieldStorage.Yes;
+                            var stored = isCorax || kvp.Value.Storage == FieldStorage.Yes;
                             if (stored == false)
                                 continue;
 
@@ -190,7 +194,7 @@ namespace Raven.Server.Documents.Queries
                     ? selectField.SourceAlias
                     : selectFieldName;
 
-            var extract = mustExtractFromIndex || (maybeExtractFromIndex && indexDefinition.MapFields.TryGetValue(key, out var value) && value.Storage == FieldStorage.Yes);
+            var extract = mustExtractFromIndex || (maybeExtractFromIndex && indexDefinition.MapFields.TryGetValue(key, out var value) && (isCorax || value.Storage == FieldStorage.Yes));
 
             if (extract)
                 anyExtractableFromIndex = true;
@@ -218,6 +222,7 @@ namespace Raven.Server.Documents.Queries
             QueryMetadata metadata,
             ProjectionBehavior? projectionBehavior,
             IndexDefinitionBaseServerSide indexDefinition,
+            SearchEngineType searchEngineType,
             out bool anyExtractableFromIndex,
             out bool extractAllStoredFields,
             out bool singleFieldNoAlias,
@@ -244,7 +249,7 @@ namespace Raven.Server.Documents.Queries
             for (var i = 0; i < metadata.SelectFields.Length; i++)
             {
                 var selectField = metadata.SelectFields[i];
-                var val = GetFieldToFetch(indexDefinition, metadata, projectionBehavior, selectField, result,
+                var val = GetFieldToFetch(indexDefinition, metadata, projectionBehavior, selectField, result, searchEngineType,
                     out var key, ref anyExtractableFromIndex, ref extractAllStoredFields, ref anyTimeSeries);
                 if (extractAllStoredFields)
                     return result;

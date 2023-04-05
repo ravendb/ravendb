@@ -560,18 +560,15 @@ namespace Raven.Server.Documents.Queries.Results
 
             var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
-            if (FieldsToFetch.IndexFields.ContainsKey(fieldToFetch.Name.Value) == false && retrieverInput.KnownFields.ContainsField(fieldToFetch.Name.Value) == false)
+            object value = null;
+            if (retrieverInput.KnownFields.TryGetByFieldName(name, out var binding) == false)
+            {
+                if (TryGetValueFromCoraxIndex(_context, name, Corax.Constants.IndexWriter.DynamicField, ref retrieverInput, out value) == false)
+                    return false;
+            }
+            else if (TryGetValueFromCoraxIndex(_context, name, binding.FieldId, ref retrieverInput, out value) == false)
                 return false;
-
-            int fieldId = -1;
-            if (FieldsToFetch.IndexFields.TryGetValue(fieldToFetch.Name.Value, out var indexField))
-                fieldId = indexField.Id;
-            else if (fieldToFetch.Name.Value.Equals(Constants.Documents.Indexing.Fields.DocumentIdFieldName))
-                fieldId = 0;
             
-            if (fieldId < 0 || TryGetValueFromCoraxIndex(_context, name, fieldId, ref retrieverInput, out var value) == false)
-                return false;
-
             toFill[name] = value;
             return true;
         }

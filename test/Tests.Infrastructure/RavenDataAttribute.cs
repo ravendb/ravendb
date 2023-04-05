@@ -75,6 +75,7 @@ public class RavenDataAttribute : DataAttribute
         if (mode.HasFlag(RavenSearchEngineMode.Corax))
         {
             var coraxOptions = options.Clone();
+            coraxOptions.SearchEngineMode = RavenSearchEngineMode.Corax;
 
             coraxOptions.ModifyDatabaseRecord += record =>
             {
