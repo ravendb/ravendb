@@ -596,8 +596,7 @@ describe("OngoingTasksPage", function () {
         });
 
         it("can render server wide", async () => {
-            const View = stories.ExternalReplicationServerWide;
-            const Story = composeStory(View, stories.default);
+            const Story = composeStory(stories.ExternalReplicationServerWide, stories.default);
 
             const { screen, fireClick } = rtlRender(<Story />);
             const detailsBtn = await screen.findByTitle(/Click for details/);

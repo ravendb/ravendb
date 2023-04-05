@@ -141,6 +141,17 @@ export const SubscriptionEnabled = boundCopy(SubscriptionTemplate, {
     disabled: false,
 });
 
+export const ShardedSubscription = boundCopy(SubscriptionTemplate, {
+    customizeTask: (x) => {
+        x.ChangeVectorForNextBatchStartingPoint = null;
+        x.ChangeVectorForNextBatchStartingPointPerShard = {
+            "1": "B:884-7YtyJhmi/k+as1eW7RRJWQ, A:856-TtyicrkQAUKtvYiwGx0yoA",
+            "0": "B:884-7YtyJhmi/k+as1eW7RRJWQ, A:856-TtyicrkQAUKtvYiwGx0yoA",
+            "2": "B:884-7YtyJhmi/k+as1eW7RRJWQ, A:856-TtyicrkQAUKtvYiwGx0yoA",
+        };
+    },
+});
+
 export const RavenEtlTemplate = (args: {
     disabled?: boolean;
     completed?: boolean;

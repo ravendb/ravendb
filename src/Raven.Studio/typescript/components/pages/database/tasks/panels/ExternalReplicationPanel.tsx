@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { OngoingTaskExternalReplicationInfo } from "../../../../models/tasks";
+import { OngoingTaskExternalReplicationInfo } from "components/models/tasks";
 import {
     RichPanel,
     RichPanelActions,
@@ -7,7 +7,7 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
-} from "../../../../common/RichPanel";
+} from "components/common/RichPanel";
 import {
     ConnectionStringItem,
     OngoingTaskActions,

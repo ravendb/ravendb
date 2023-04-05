@@ -19,11 +19,11 @@ import {
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlSharedInfo,
     OngoingTaskSubscriptionSharedInfo,
-} from "../../../../models/tasks";
+} from "components/models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import { produce } from "immer";
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
-import { databaseLocationComparator } from "../../../../utils/common";
+import { databaseLocationComparator } from "components/utils/common";
 import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
 import genUtils from "common/generalUtils";
 import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView;

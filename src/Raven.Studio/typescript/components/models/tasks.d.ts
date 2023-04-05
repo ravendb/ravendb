@@ -41,6 +41,8 @@ export interface OngoingEtlTaskNodeInfo<TNodeInfo extends OngoingTaskNodeInfoDet
     etlProgress: OngoingTaskNodeProgressDetails[];
 }
 
+export type OngoingSubscriptionTaskNodeInfo = OngoingTaskNodeInfo<OngoingTaskSubscriptionNodeInfoDetails>;
+
 export interface OngoingTaskSharedInfo {
     taskName: string;
     taskId: number;
