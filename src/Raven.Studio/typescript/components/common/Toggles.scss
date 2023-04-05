@@ -131,7 +131,6 @@ $toggle-knob-hover-scale: 0.9 !default;
         }
 
         &:first-of-type {
-
             //First radio is active
             &:checked {
                 & ~ .toggle-knob {
@@ -149,7 +148,6 @@ $toggle-knob-hover-scale: 0.9 !default;
         }
 
         &:last-of-type {
-
             //Second radio is active
             &:checked {
                 & ~ .toggle-knob {
@@ -198,10 +196,15 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
         border-radius: $multi-toggle-border-radius;
         border: sizes.$border-width solid colors.$panel-bg-3;
         display: inline-flex;
-        height: $multi-toggle-baseheight;
+        min-height: $multi-toggle-baseheight;
         color: $multi-toggle-knob-muted-color;
         //padding: sizes.$gutter-xxs * 0.5;
         font-weight: 700;
+        flex-wrap: wrap;
+
+        .vr {
+            margin: 0 1px 0 4px;
+        }
 
         .multi-toggle-item {
             display: flex;
@@ -215,14 +218,13 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
                 display: flex;
                 align-items: center;
                 color: $multi-toggle-knob-muted-color;
-
                 font-size: $multi-toggle-label-fontsize;
                 letter-spacing: 0.07em;
-                line-height: 1.1em;
-                padding: 0 sizes.$gutter-xs;
+                line-height: 1.1rem;
+                padding: 4px sizes.$gutter-xs;
                 position: relative;
                 transition: all 0.6s sizes.$global-easing;
-                margin: sizes.$gutter-xxs * 0.5;
+                margin: 4px;
                 white-space: nowrap;
 
                 span {

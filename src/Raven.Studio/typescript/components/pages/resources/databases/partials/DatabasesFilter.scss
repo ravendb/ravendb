@@ -12,4 +12,6 @@ $filtering-input-bg: $toggle-bg !default;
     border-radius: $filtering-input-border-radius !important;
     border: sizes.$border-width solid colors.$panel-bg-3 !important;
     height: $filtering-input-baseheight;
+    font-size: 0.8rem !important;
+    min-width: 140px;
 }

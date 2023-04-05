@@ -10,7 +10,7 @@
     --panel-bg-2: #{$base-panel-bg-2};
     --panel-bg-3: #{$base-panel-bg-3};
 
-    --well-bg: #{$well-bg};
+    --well-bg: #{$base-well-bg};
 
     --hover-filter: #{$hover-filter};
 }
@@ -28,6 +28,8 @@
     --panel-bg-1: #{$panel-bg-1};
     --panel-bg-2: #{$panel-bg-2};
     --panel-bg-3: #{$panel-bg-3};
+
+    --well-bg: #{$well-bg};
 
     color: var(--text-color);
 }
