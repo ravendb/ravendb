@@ -8,7 +8,7 @@ const tooltipContext = {
 };
 
 interface PopoverWithHoverProps extends PopoverProps {
-    rounded?: boolean;
+    rounded?: "true" | null;
     target: HTMLElement;
     children: JSX.Element | JSX.Element[];
 }

@@ -10,7 +10,7 @@ import {
     OngoingTaskStatus,
     useTasksOperations,
 } from "../shared";
-import { OngoingTaskElasticSearchEtlInfo } from "../../../../models/tasks";
+import { OngoingTaskElasticSearchEtlInfo } from "components/models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
@@ -20,7 +20,7 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
-} from "../../../../common/RichPanel";
+} from "components/common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse } from "reactstrap";
 

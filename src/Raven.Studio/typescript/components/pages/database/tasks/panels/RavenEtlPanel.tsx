@@ -7,7 +7,7 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
-} from "../../../../common/RichPanel";
+} from "components/common/RichPanel";
 import {
     ConnectionStringItem,
     EmptyScriptsWarning,
@@ -18,7 +18,7 @@ import {
     OngoingTaskStatus,
 } from "../shared";
 import { useAppUrls } from "hooks/useAppUrls";
-import { OngoingTaskRavenEtlInfo } from "../../../../models/tasks";
+import { OngoingTaskRavenEtlInfo } from "components/models/tasks";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../shared";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse } from "reactstrap";

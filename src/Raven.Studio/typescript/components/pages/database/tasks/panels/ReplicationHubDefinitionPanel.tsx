@@ -4,7 +4,7 @@ import {
     OngoingTaskHubDefinitionInfo,
     OngoingTaskReplicationHubInfo,
     OngoingTaskSharedInfo,
-} from "../../../../models/tasks";
+} from "components/models/tasks";
 import database from "models/resources/database";
 import {
     RichPanel,
@@ -13,7 +13,7 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
-} from "../../../../common/RichPanel";
+} from "components/common/RichPanel";
 import { useAppUrls } from "hooks/useAppUrls";
 import { useAccessManager } from "hooks/useAccessManager";
 import { ReplicationHubConnectedSinkPanel } from "./ReplicationHubConnectedSinkPanel";

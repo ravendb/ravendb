@@ -35,7 +35,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
     }
 
     return (
-        <PopoverWithHover rounded target={target} placement="top">
+        <PopoverWithHover rounded="true" target={target} placement="top">
             <div className="ongoing-tasks-details-tooltip">
                 {nodeInfo.etlProgress &&
                     nodeInfo.etlProgress.map((transformationScriptProgress) => {

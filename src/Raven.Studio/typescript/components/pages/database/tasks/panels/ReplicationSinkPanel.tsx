@@ -8,7 +8,7 @@ import {
     OngoingTaskStatus,
     useTasksOperations,
 } from "../shared";
-import { OngoingTaskReplicationSinkInfo } from "../../../../models/tasks";
+import { OngoingTaskReplicationSinkInfo } from "components/models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
@@ -18,7 +18,7 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
-} from "../../../../common/RichPanel";
+} from "components/common/RichPanel";
 import { Collapse } from "reactstrap";
 
 type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicationSinkInfo>;

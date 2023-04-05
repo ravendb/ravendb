@@ -1,19 +1,64 @@
 ﻿import React, { useState } from "react";
-import { DistributionItem, DistributionLegend, LocationDistribution } from "../../../../common/LocationDistribution";
+import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import classNames from "classnames";
-import { OngoingTaskInfo, OngoingTaskNodeInfo, OngoingTaskSubscriptionInfo } from "../../../../models/tasks";
-import { ProgressCircle } from "../../../../common/ProgressCircle";
+import {
+    OngoingSubscriptionTaskNodeInfo,
+    OngoingTaskInfo,
+    OngoingTaskNodeInfo,
+    OngoingTaskSubscriptionInfo,
+} from "components/models/tasks";
+import { PopoverWithHover } from "components/common/PopoverWithHover";
+import { ProgressCircle } from "components/common/ProgressCircle";
 import { Icon } from "components/common/Icon";
 
 interface OngoingEtlTaskDistributionProps {
     task: OngoingTaskSubscriptionInfo;
 }
 
+interface ItemWithTooltipProps {
+    nodeInfo: OngoingSubscriptionTaskNodeInfo;
+    sharded: boolean;
+    task: OngoingTaskSubscriptionInfo;
+}
+
+function ItemWithTooltip(props: ItemWithTooltipProps) {
+    const { nodeInfo, task, sharded } = props;
+
+    const shard = (
+        <div className="top shard">
+            {nodeInfo.location.shardNumber != null && (
+                <>
+                    <Icon icon="icon-shard" />
+                    {nodeInfo.location.shardNumber}
+                </>
+            )}
+        </div>
+    );
+
+    const hasError = !!nodeInfo.details?.error;
+    const [node, setNode] = useState<HTMLDivElement>();
+
+    return (
+        <div ref={setNode}>
+            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}>
+                {sharded && shard}
+                <div className={classNames("node", { top: !sharded })}>
+                    {!sharded && <i className="icon-node"></i>}
+
+                    {nodeInfo.location.nodeTag}
+                </div>
+                <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
+                <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
+                <SubscriptionTaskProgress task={task} nodeInfo={nodeInfo} />
+                {node && <SubscriptionTaskProgressTooltip target={node} nodeInfo={nodeInfo} task={task} />}
+            </DistributionItem>
+        </div>
+    );
+}
+
 export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionProps) {
     const { task } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
-
-    const [uniqueTaskId] = useState(() => _.uniqueId("task-id"));
 
     const visibleNodes = task.nodesInfo.filter(
         (x) => x.status !== "success" || x.details.taskConnectionStatus !== "NotOnThisNode"
@@ -22,66 +67,36 @@ export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionPr
     const items = (
         <>
             {visibleNodes.map((nodeInfo) => {
-                const shard = (
-                    <div className="top shard">
-                        {nodeInfo.location.shardNumber != null && (
-                            <>
-                                <Icon icon="shard" />
-                                {nodeInfo.location.shardNumber}
-                            </>
-                        )}
-                    </div>
-                );
-
                 const key = taskNodeInfoKey(nodeInfo);
-                const id = uniqueTaskId + key;
-
-                const hasError = !!nodeInfo.details?.error;
-
-                return (
-                    <DistributionItem
-                        loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}
-                        id={id}
-                        key={key}
-                    >
-                        {sharded && shard}
-                        <div className={classNames("node", { top: !sharded })}>
-                            {!sharded && <Icon icon="node" />}
-
-                            {nodeInfo.location.nodeTag}
-                        </div>
-                        <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
-                        <div>{hasError ? <Icon icon="warning" color="danger" margin="m-0" /> : "-"}</div>
-                        <SubscriptionTaskProgress task={task} nodeInfo={nodeInfo} />
-                        {/* TODO: <SubscriptionTaskProgressTooltip target={id} nodeInfo={nodeInfo} task={task} />*/}
-                    </DistributionItem>
-                );
+                return <ItemWithTooltip key={key} nodeInfo={nodeInfo} sharded={sharded} task={task} />;
             })}
         </>
     );
 
     return (
-        <LocationDistribution>
-            <DistributionLegend>
-                <div className="top"></div>
-                {sharded && (
-                    <div className="node">
-                        <Icon icon="node" /> Node
+        <div className="px-3 pb-2">
+            <LocationDistribution>
+                <DistributionLegend>
+                    <div className="top"></div>
+                    {sharded && (
+                        <div className="node">
+                            <i className="icon-node" /> Node
+                        </div>
+                    )}
+                    <div>
+                        <Icon icon="icon-connected" /> Status
                     </div>
-                )}
-                <div>
-                    <Icon icon="connected" /> Status
-                </div>
-                <div>
-                    <Icon icon="warning" /> Error
-                </div>
-                <div>
-                    <Icon icon="changes" />
-                    Status
-                </div>
-            </DistributionLegend>
-            {items}
-        </LocationDistribution>
+                    <div>
+                        <Icon icon="icon-warning" /> Error
+                    </div>
+                    <div>
+                        <i />
+                        Status
+                    </div>
+                </DistributionLegend>
+                {items}
+            </LocationDistribution>
+        </div>
     );
 }
 
@@ -105,18 +120,17 @@ export function SubscriptionTaskProgress(props: SubscriptionTaskProgressProps) {
         </ProgressCircle>
     );
 }
-/* TODO
+
 interface SubscriptionTaskProgressTooltipProps {
-    target: string;
+    target: HTMLElement;
     nodeInfo: OngoingTaskNodeInfo;
     task: OngoingTaskInfo;
 }
 
-
 function SubscriptionTaskProgressTooltip(props: SubscriptionTaskProgressTooltipProps) {
     const { target } = props;
     return (
-        <PopoverWithHover rounded target={target} placement="top" delay={100}>
+        <PopoverWithHover rounded="true" target={target} placement="top">
             <div className="ongoing-tasks-details-tooltip">
                 <ul>
                     <li>include clients details (ip port, Strategy, worker id?)</li>
@@ -125,7 +139,6 @@ function SubscriptionTaskProgressTooltip(props: SubscriptionTaskProgressTooltipP
         </PopoverWithHover>
     );
 }
- */
 
 const taskNodeInfoKey = (nodeInfo: OngoingTaskNodeInfo) =>
     nodeInfo.location.shardNumber + "__" + nodeInfo.location.nodeTag;

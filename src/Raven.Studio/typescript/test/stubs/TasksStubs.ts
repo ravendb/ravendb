@@ -360,7 +360,7 @@ export class TasksStubs {
             TaskType: "Subscription",
             Disabled: false,
             SubscriptionId: 101,
-            ChangeVectorForNextBatchStartingPoint: "A:5,B:3",
+            ChangeVectorForNextBatchStartingPoint: "B:884-7YtyJhmi/k+as1eW7RRJWQ, A:856-TtyicrkQAUKtvYiwGx0yoA",
             LastBatchAckTime: moment.utc().add(-1, "hours").toISOString(),
             Query: "from Orders",
             SubscriptionName: "NamedSubscription",

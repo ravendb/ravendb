@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
 import {
     RichPanel,
     RichPanelActions,
@@ -6,8 +6,8 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
-} from "../../../../common/RichPanel";
-import { OngoingTaskSubscriptionInfo } from "../../../../models/tasks";
+} from "components/common/RichPanel";
+import { OngoingTaskSubscriptionInfo, OngoingTaskSubscriptionSharedInfo } from "components/models/tasks";
 import {
     BaseOngoingTaskPanelProps,
     OngoingTaskActions,
@@ -22,9 +22,49 @@ import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
 import moment from "moment";
 import { Collapse } from "reactstrap";
+import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { Icon } from "components/common/Icon";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo>;
+
+interface ChangeVectorInfoProps {
+    info: OngoingTaskSubscriptionSharedInfo;
+}
+
+function ChangeVectorInfo(props: ChangeVectorInfoProps) {
+    const { info } = props;
+
+    /* TODO work on UI
+      for non-sharded dbs: we have single change vector for next batch
+      for sharded: we have change vector per each shard!
+     */
+
+    if (info.changeVectorForNextBatchStartingPoint) {
+        return <div>{info.changeVectorForNextBatchStartingPoint}</div>;
+    }
+
+    if (!info.changeVectorForNextBatchStartingPointPerShard) {
+        return <div>n/a</div>;
+    }
+
+    return (
+        <table>
+            <tr>
+                <th>Shard</th>
+                <th>Change vector</th>
+            </tr>
+            {Object.keys(info.changeVectorForNextBatchStartingPointPerShard).map((shard) => {
+                const vector = info.changeVectorForNextBatchStartingPointPerShard[shard];
+                return (
+                    <tr key={shard}>
+                        <td>Shard #{shard}</td>
+                        <td>{vector}</td>
+                    </tr>
+                );
+            })}
+        </table>
+    );
+}
 
 function Details(props: SubscriptionPanelProps) {
     const { data } = props;
@@ -37,15 +77,19 @@ function Details(props: SubscriptionPanelProps) {
         ? moment.utc(data.shared.lastClientConnectionTime).local().format(genUtils.dateFormat)
         : "N/A";
 
-    //TODO looks like server doesn't send those 2 times correctly
-    //TODO: tooltip for next change vector
+    const [changeVectorInfoElement, setChangeVectorInfoElement] = useState<HTMLElement>();
 
     return (
         <RichPanelDetails>
             <RichPanelDetailItem label="Last Batch Ack Time">{lastBatchAckTime}</RichPanelDetailItem>
             <RichPanelDetailItem label="Last Client Connection Time">{lastClientConnectionTime}</RichPanelDetailItem>
             <RichPanelDetailItem label="Change vector for next batch">
-                <Icon icon="info" color="info" margin="m-0" />
+                <i ref={setChangeVectorInfoElement} className="icon-info text-info"></i>
+                {changeVectorInfoElement && (
+                    <PopoverWithHover target={changeVectorInfoElement}>
+                        <ChangeVectorInfo info={data.shared} />
+                    </PopoverWithHover>
+                )}
             </RichPanelDetailItem>
         </RichPanelDetails>
     );
