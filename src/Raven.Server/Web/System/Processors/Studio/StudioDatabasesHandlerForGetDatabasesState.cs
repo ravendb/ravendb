@@ -11,6 +11,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -50,6 +51,15 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
             {
                 writer.WriteStartObject();
 
+                writer.WriteArray(context, nameof(StudioDatabasesState.Orchestrators), GetOrchestrators(items, RequestHandler.ServerStore.NodeTag), (w, _, record) =>
+                {
+                    var databaseName = record.DatabaseName;
+
+                    WriteStudioOrchestratorState(databaseName, context, w);
+                });
+
+                writer.WriteComma();
+
                 writer.WriteArray(context, nameof(StudioDatabasesState.Databases), items.SelectMany(x => x.AsShardsOrNormal(RequestHandler.ServerStore.NodeTag)), (w, _, record) =>
                 {
                     var databaseName = record.DatabaseName;
@@ -72,6 +82,54 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
         var pageSize = GetPageSize();
 
         return ValueTask.FromResult<RavenCommand<StudioDatabasesState>>(new GetStudioDatabasesStateCommand(start, pageSize, nodeTag));
+    }
+
+    private static IEnumerable<RawDatabaseRecord> GetOrchestrators([NotNull] List<RawDatabaseRecord> records, [NotNull] string nodeTag)
+    {
+        if (records == null)
+            throw new ArgumentNullException(nameof(records));
+        if (string.IsNullOrEmpty(nodeTag))
+            throw new ArgumentException("Value cannot be null or empty.", nameof(nodeTag));
+
+        foreach (var record in records)
+        {
+            if (record.IsSharded == false)
+                continue;
+
+            if (record.Sharding.Orchestrator.Topology.RelevantFor(nodeTag) == false)
+                continue;
+
+            yield return record;
+        }
+    }
+
+    private void WriteStudioOrchestratorState(string databaseName, JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
+    {
+        try
+        {
+            var online = ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(databaseName, out Task<ShardedDatabaseContext> dbTask);
+
+            // Check for exceptions
+            if (dbTask is { IsFaulted: true })
+            {
+                var exception = dbTask.Exception.ExtractSingleInnerException();
+                WriteFaultedOrchestratorState(databaseName, exception, context, writer);
+                return;
+            }
+
+            var databaseContext = online ? dbTask.Result : null;
+
+            var state = StudioOrchestratorState.From(databaseName, databaseContext);
+
+            context.Write(writer, state.ToJson());
+        }
+        catch (Exception e)
+        {
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Failed to get orchestrator info for '{databaseName}' database.", e);
+
+            WriteFaultedOrchestratorState(databaseName, e, context, writer);
+        }
     }
 
     private void WriteStudioDatabaseState(string databaseName, RawDatabaseRecord record, TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
@@ -99,7 +157,7 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
         catch (Exception e)
         {
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Failed to get database info for: {databaseName}", e);
+                Logger.Info($"Failed to get database info for '{databaseName}' database.", e);
 
             WriteFaultedDatabaseState(databaseName, e, context, writer);
         }
@@ -114,6 +172,20 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
         {
             [nameof(DatabaseInfo.Name)] = databaseName,
             [nameof(DatabaseInfo.LoadError)] = exception.Message
+        };
+
+        context.Write(writer, doc);
+    }
+
+    private static void WriteFaultedOrchestratorState(string databaseName,
+        Exception exception,
+        JsonOperationContext context,
+        AbstractBlittableJsonTextWriter writer)
+    {
+        var doc = new DynamicJsonValue
+        {
+            [nameof(StudioOrchestratorState.Name)] = databaseName,
+            [nameof(StudioOrchestratorState.LoadError)] = exception.Message
         };
 
         context.Write(writer, doc);
@@ -170,7 +242,40 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
 
     internal class StudioDatabasesState
     {
+        public List<StudioOrchestratorState> Orchestrators { get; set; }
+
         public List<StudioDatabaseState> Databases { get; set; }
+    }
+
+    internal class StudioOrchestratorState : IDynamicJson
+    {
+        public string Name { get; set; }
+        public long? Alerts { get; set; }
+        public long? PerformanceHints { get; set; }
+        public string LoadError { get; set; }
+
+        public static StudioOrchestratorState From([NotNull] string databaseName, ShardedDatabaseContext database)
+        {
+            if (databaseName == null)
+                throw new ArgumentNullException(nameof(databaseName));
+
+            return new StudioOrchestratorState
+            {
+                Name = database?.DatabaseName ?? databaseName,
+                PerformanceHints = database?.NotificationCenter.GetPerformanceHintCount(),
+                Alerts = database?.NotificationCenter.GetAlertCount()
+            };
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(Alerts)] = Alerts,
+                [nameof(PerformanceHints)] = PerformanceHints
+            };
+        }
     }
 
     internal class StudioDatabaseState : DatabaseState
