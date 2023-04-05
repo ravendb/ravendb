@@ -53,6 +53,9 @@ namespace RachisTests
                 };
 
                 var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
+
+                WaitForUserToContinueTheTest(store);
+
                 Assert.NotEqual(res.Topology.Members.First(), leader.ServerStore.NodeTag);
 
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
@@ -92,7 +95,7 @@ namespace RachisTests
                     var serverTagToBeDeleted = res.Topology.Members[0];
                     replicationFactor--;
                     var deleteResult = store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
-                    await WaitForDatabaseToBeDeleted(store,databaseName,TimeSpan.FromSeconds(30));
+                    await WaitForDatabaseToBeDeleted(store, databaseName, TimeSpan.FromSeconds(30));
                     await AssertNumberOfNodesContainingDatabase(deleteResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);
                 }
                 using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import configuration = require("configuration");
-import restorePoint = require("models/resources/creation/restorePoint");
+import restorePoint = require("./restorePoint");
 import clusterNode = require("models/database/cluster/clusterNode");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
@@ -15,9 +15,18 @@ import RestoreBackupConfigurationBase = Raven.Client.Documents.Operations.Backup
 import ShardedRestoreSettings = Raven.Client.Documents.Operations.Backups.Sharding.ShardedRestoreSettings;
 import RestoreBackupConfiguration = Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
 import shardingRestoreBackupDirectory from "models/resources/creation/shardingRestoreBackupDirectory";
+import RestorePoints = Raven.Server.Documents.PeriodicBackup.Restore.RestorePoints;
+import DatabaseUtils from "components/utils/DatabaseUtils";
+import moment from "moment";
 
 type shardTopologyItem = {
     replicas: KnockoutObservableArray<clusterNode>;
+}
+
+interface RestorePointsGroup {
+    databaseName: string;
+    databaseNameTitle: string;
+    restorePoints: restorePoint[];
 }
 
 class databaseCreationModel {
@@ -84,7 +93,7 @@ class databaseCreationModel {
         backupEncryptionKey: ko.observable<string>(),
         lastFailedFolderName: null as string,
 
-        restorePoints: ko.observable<Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }>>([]),
+        restorePoints: ko.observableArray<RestorePointsGroup>([]),
         restorePointsCount: ko.observable<number>(0),
         restorePointError: ko.observable<string>(),
         selectedRestorePoint: ko.observable<restorePoint>(),
@@ -125,23 +134,28 @@ class databaseCreationModel {
         setShardingDirectoryPath: (idx: number, directoryPath: string) => {
             this.restore.shardingBackupDirectories()[idx].directoryPath(directoryPath);
             
-            this.restoreSourceObject().getShardingFolderPathOptions(directoryPath)
+            this.restoreSourceObject().getFolderPathOptions(directoryPath)
                 .done((optionsList: string[]) => {
                     this.restore.shardingBackupDirectories()[idx].directoryPathOptions(optionsList);
-                })
+                });
+            
+            this.fetchShardingRestorePoints();
         },
         
         addShardingDirectoryPath: () => {
             this.restore.shardingBackupDirectories.push(new shardingRestoreBackupDirectory());
             
-            this.restoreSourceObject().getShardingFolderPathOptions("")
+            this.restoreSourceObject().getFolderPathOptions("")
                 .done((optionsList: string[]) => {
                     this.restore.shardingBackupDirectories()[this.restore.shardingBackupDirectories().length - 1].directoryPathOptions(optionsList);
-                })
+                });
+
+            this.fetchShardingRestorePoints();
         },
         
         removeShardingDirectoryPath: (idx: number) => {
             this.restore.shardingBackupDirectories.splice(idx, 1);
+            this.fetchShardingRestorePoints();
         }
     };
 
@@ -299,7 +313,15 @@ class databaseCreationModel {
             }
         });
 
-        this.restoreSourceObject().getShardingFolderPathOptions("")
+        this.restore.enableSharding.subscribe((toggleValue) => {
+            if (toggleValue) {
+                this.fetchShardingRestorePoints();
+            } else {
+                this.fetchRestorePoints();
+            }
+        });
+
+        this.restoreSourceObject().getFolderPathOptions("")
             .done((optionsList: string[]) => {
                 this.restore.shardingBackupDirectories()[0].directoryPathOptions(optionsList);
             })
@@ -374,6 +396,94 @@ class databaseCreationModel {
         // try to continue autocomplete flow
         this.path.dataPathHasFocus(true);
     }
+
+    // TODO: kalczur
+
+    getShardNumberFormLocationFolder(locationFolder: string): number {
+        const dollarIndex = locationFolder.indexOf("$");
+        const dashIndex = locationFolder.indexOf("-", dollarIndex);
+
+        return Number(locationFolder.substring(dollarIndex + 1, dashIndex));
+    }
+
+    getRestorePointGroup(groups: RestorePointsGroup[], databaseName: string): RestorePointsGroup {
+        return groups.find(x => x.databaseName === databaseName);
+    }
+
+    getRestorePoint(group: RestorePointsGroup, databaseName: string, date?: string): restorePoint {
+        const formatedDate = moment(date).format(generalUtils.dateFormat);
+
+        return group.restorePoints.find(x => DatabaseUtils.shardGroupKey(x.databaseName()) === databaseName && x.dateTime === formatedDate);
+    }
+
+    async fetchShardingRestorePoints() {
+        this.spinners.fetchingRestorePoints(true);
+        this.restore.restorePointError(null);
+        
+        const groups: RestorePointsGroup[] = [];
+        let direcotryPathShardNumber = 0;
+        const direcotryPaths = this.restore.shardingBackupDirectories().map(x => x.directoryPath());
+
+        for await (const direcotryPath of direcotryPaths) {
+            try {
+                const restorePoints: RestorePoints = await this.restoreSourceObject()
+                    .fetchRestorePointsCommand(direcotryPath) 
+                    .execute()
+
+                restorePoints.List.forEach(rp => {
+                    if (!rp.DatabaseName || !DatabaseUtils.isSharded(rp.DatabaseName)) {
+                        return;
+                    }
+
+                    const shardNumber = this.getShardNumberFormLocationFolder(rp.Location);
+
+                    if (shardNumber !== direcotryPathShardNumber) {
+                        return;
+                    }
+
+                    const databaseName = DatabaseUtils.shardGroupKey(rp.DatabaseName);
+                    
+                    if (!this.getRestorePointGroup(groups, databaseName)) {
+                        groups.push({ databaseName: databaseName, databaseNameTitle: "Database Name", restorePoints: [] });
+                    }
+
+                    const group = this.getRestorePointGroup(groups, databaseName);
+
+                    if (!this.getRestorePoint(group, databaseName, rp.DateTime)) {
+                        const newRestorePoint = new restorePoint(rp);
+                        newRestorePoint.fileName = newRestorePoint.location = null;
+                        
+                        group.restorePoints.push(newRestorePoint);
+                    }
+                    
+                    this.getRestorePoint(group, databaseName, rp.DateTime)
+                        .availableShards.push({
+                            shardNumber,
+                            folderName: rp.Location,
+                            lastFileNameToRestore: rp.FileName,
+                        });
+                });
+
+            } catch (response) {
+                const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
+                this.restore.restorePointError(generalUtils.trimMessage(messageAndOptionalException.message)); 
+                this.restore.lastFailedFolderName = this.restoreSourceObject().folderContent();
+                this.clearRestorePoints();
+                this.restore.backupEncryptionKey("");
+
+            } finally {
+                this.spinners.fetchingRestorePoints(false);
+                direcotryPathShardNumber++;
+            }
+        }
+
+        this.restore.restorePoints(groups);
+        this.restore.selectedRestorePoint(null);
+        this.restore.backupEncryptionKey("");
+        this.restore.restorePointError(null);
+        this.restore.lastFailedFolderName = null;
+        this.restore.restorePointsCount(groups.reduce((partialSum, group) => partialSum + group.restorePoints.length, 0));
+    }
     
     fetchRestorePoints() {
         if (!this.restoreSourceObject().isValid()) {
@@ -386,7 +496,7 @@ class databaseCreationModel {
 
         this.restoreSourceObject().fetchRestorePointsCommand() 
             .execute()
-            .done((restorePoints: Raven.Server.Documents.PeriodicBackup.Restore.RestorePoints) => {
+            .done((restorePoints: RestorePoints) => {
                 const groups: Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }> = [];
                 restorePoints.List.forEach(rp => {
                     const databaseName = rp.DatabaseName = rp.DatabaseName ? rp.DatabaseName : databaseCreationModel.unknownDatabaseName;
@@ -720,34 +830,6 @@ class databaseCreationModel {
         const dataDirectory = _.trim(this.path.dataPath()) || null;
         const encryptDb = this.getEncryptionConfigSection().enabled();
         
-        if (this.restore.enableSharding()) {
-
-            const shardRestoreSettings: ShardedRestoreSettings = {
-                Shards: Object.fromEntries(
-                    this.restore.shardingBackupDirectories().map((x, idx) => [
-                        idx,
-                        {
-                            ShardNumber: idx,
-                            FolderName: x.directoryPath(),
-                            NodeTag: x.nodeTag()
-                        }
-                    ])
-                )
-            };
-            
-            return {
-                DatabaseName: this.name(),
-                DisableOngoingTasks: this.restore.disableOngoingTasks(),
-                SkipIndexes: this.restore.skipIndexes(),
-                LastFileNameToRestore: null,
-                DataDirectory: dataDirectory,
-                EncryptionKey: encryptDb ? this.encryption.key() : null,
-                BackupEncryptionSettings: null,
-                ShardRestoreSettings: shardRestoreSettings,
-                BackupLocation: null
-            };
-        }
-        
         const restorePoint = this.restore.selectedRestorePoint();
         
         let encryptionSettings = null as Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings;
@@ -776,6 +858,34 @@ class databaseCreationModel {
             if (!restorePoint.isSnapshotRestore && encryptDb) {
                 databaseEncryptionKey = this.encryption.key();
             }
+        }
+
+        if (this.restore.enableSharding()) {
+            const shardRestoreSettings: ShardedRestoreSettings = {
+                Shards: Object.fromEntries(
+                    this.restore.shardingBackupDirectories().map((x, idx) => [
+                        idx,
+                        {
+                            ShardNumber: idx,
+                            FolderName: restorePoint.availableShards[idx]?.folderName || null,
+                            NodeTag: x.nodeTag(),
+                            LastFileNameToRestore: restorePoint.availableShards[idx]?.lastFileNameToRestore || null
+                        }
+                    ])
+                )
+            };
+            
+            return {
+                DatabaseName: this.name(),
+                DisableOngoingTasks: this.restore.disableOngoingTasks(),
+                SkipIndexes: this.restore.skipIndexes(),
+                LastFileNameToRestore: null,
+                DataDirectory: dataDirectory,
+                EncryptionKey: databaseEncryptionKey,
+                BackupEncryptionSettings: encryptionSettings,
+                ShardRestoreSettings: shardRestoreSettings,
+                BackupLocation: null
+            };
         }
 
         const baseConfiguration: RestoreBackupConfigurationBase = {

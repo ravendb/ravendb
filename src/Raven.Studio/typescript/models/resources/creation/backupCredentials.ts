@@ -13,14 +13,13 @@ export abstract class restoreSettings {
     mandatoryFieldsText: string;
 
     folderContent: KnockoutComputed<string>;
-    fetchRestorePointsCommand: () => commandBase;
+    fetchRestorePointsCommand: (backupDirectory?: string) => commandBase;
 
-    abstract getFolderPathOptions(): JQueryPromise<string[]>;
-    abstract getShardingFolderPathOptions(backupDirectory: string): JQueryPromise<string[]>;
+    abstract getFolderPathOptions(backupDirectory?: string): JQueryPromise<string[]>;
     
     abstract getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                                 backupLocation: string): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase
-    abstract isValid(): boolean;
+    abstract isValid(backupDirectory?: string): boolean;
     
     abstract onCredentialsChange(onChange: () => void): void;
 
@@ -42,16 +41,12 @@ export class localServerCredentials extends restoreSettings {
     backupDirectory = ko.observable<string>();
     folderContent = ko.pureComputed(() => this.backupDirectory());
 
-    fetchRestorePointsCommand = () => getRestorePointsCommand.forServerLocal(this.backupDirectory(), true);
+    fetchRestorePointsCommand = (backupDirectory: string = this.backupDirectory()) => getRestorePointsCommand.forServerLocal(backupDirectory, true);
 
-    getFolderPathOptions() {
-        return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forServerLocal(this.backupDirectory(), true))
-    }
-
-    getShardingFolderPathOptions(backupDirectory: string) {
+    getFolderPathOptions(backupDirectory: string = this.backupDirectory()) {
         return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forServerLocal(backupDirectory, true))
     }
-    
+
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                        backupLocation: string) {
         const localConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
@@ -60,8 +55,8 @@ export class localServerCredentials extends restoreSettings {
         return localConfiguration;
     }
 
-    isValid(): boolean {
-        return !!_.trim(this.backupDirectory());
+    isValid(backupDirectory: string = this.backupDirectory()): boolean {
+        return !!_.trim(backupDirectory);
     }
 
     onCredentialsChange(onChange: () => void) {
@@ -138,10 +133,6 @@ export class amazonS3Credentials extends restoreSettings {
         return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "S3"));
     }
 
-    getShardingFolderPathOptions(): JQueryPromise<string[]> {
-        throw new Error("Amazon S3 is currently not supported for sharded database restore");
-    }
-
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                        backupLocation: string) {
         const amazonS3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
@@ -216,10 +207,6 @@ export class azureCredentials extends restoreSettings {
     getFolderPathOptions() {
         return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "Azure"))
     }
-
-    getShardingFolderPathOptions(): JQueryPromise<string[]> {
-        throw new Error("Azure is currently not supported for sharded database restore");
-    }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                        backupLocation: string) {
@@ -279,10 +266,6 @@ export class googleCloudCredentials extends restoreSettings {
 
     getFolderPathOptions() {
         return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "GoogleCloud"))
-    }
-
-    getShardingFolderPathOptions(): JQueryPromise<string[]> {
-        throw new Error("Google is currently not supported for sharded database restore");
     }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
@@ -407,10 +390,6 @@ export class ravenCloudCredentials extends restoreSettings {
     getFolderPathOptions() {
         // Folder options are not relevant when source is the 'RavenDB Cloud Link'.. 
         return $.Deferred<string[]>().reject();
-    }
-
-    getShardingFolderPathOptions(): JQueryPromise<string[]> {
-        throw new Error("Raven cloud is currently not supported for sharded database restore");
     }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
