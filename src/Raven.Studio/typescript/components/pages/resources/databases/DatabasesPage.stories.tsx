@@ -8,6 +8,7 @@ import { mockHooks } from "test/mocks/hooks/MockHooks";
 import { mockServices } from "test/mocks/services/MockServices";
 import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+import { globalDispatch } from "components/storeCompat";
 
 export default {
     title: "Pages/Databases",
@@ -16,8 +17,8 @@ export default {
 } as ComponentMeta<typeof DatabasesPage>;
 
 function commonInit() {
-    const { useClusterTopologyManager } = mockHooks;
-    useClusterTopologyManager.with_Cluster();
+    const { cluster } = mockStore;
+    cluster.with_Cluster();
 
     const { accessManager } = mockStore;
     accessManager.with_securityClearance("ClusterAdmin");

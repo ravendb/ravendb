@@ -14,9 +14,9 @@ import {
     selectFilteredDatabases,
     syncDatabaseDetails,
 } from "components/common/shell/databasesSlice";
-import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
+import { selectClusterNodeTags } from "components/common/shell/clusterSlice";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -34,7 +34,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const dispatch = useAppDispatch();
 
-    const { nodeTags } = useClusterTopologyManager();
+    const nodeTags = useAppSelector(selectClusterNodeTags);
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
 

@@ -1,8 +1,9 @@
 ﻿import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import { globalDispatch } from "components/storeCompat";
-import { activeDatabaseChanged, databasesLoaded, localNodeTagChanged } from "components/common/shell/databasesSlice";
+import { activeDatabaseChanged, databasesLoaded } from "components/common/shell/databasesSlice";
 import databasesManager from "common/shell/databasesManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import { localNodeTagLoaded, nodeTagsLoaded } from "components/common/shell/clusterSlice";
 
 let initialized = false;
 
@@ -23,6 +24,20 @@ export function initRedux() {
     databasesManager.default.onUpdateCallback = throttledUpdateReduxStore;
     activeDatabaseTracker.default.database.subscribe((db) => globalDispatch(activeDatabaseChanged(db?.name ?? null)));
 
-    // TODO: create seprate slice for cluster info
-    clusterTopologyManager.default.localNodeTag.subscribe((nodeTag) => globalDispatch(localNodeTagChanged(nodeTag)));
+    clusterTopologyManager.default.localNodeTag.subscribe((tag) => {
+        globalDispatch(localNodeTagLoaded(tag));
+    });
+
+    const onClusterTopologyChanged = () => {
+        const nodes =
+            clusterTopologyManager.default
+                .topology()
+                ?.nodes()
+                .map((x) => x.tag()) ?? [];
+        globalDispatch(nodeTagsLoaded(nodes));
+    };
+
+    clusterTopologyManager.default.topology.subscribe((topology) => {
+        topology.nodes.subscribe(onClusterTopologyChanged);
+    });
 }

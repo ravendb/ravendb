@@ -4,7 +4,6 @@ import { ManageDatabaseGroupPage } from "components/pages/resources/manageDataba
 import React from "react";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import licenseModel from "models/auth/licenseModel";
-import { mockHooks } from "test/mocks/hooks/MockHooks";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { ClusterStubs } from "test/stubs/ClusterStubs";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -19,8 +18,8 @@ function commonInit() {
     const { accessManager } = mockStore;
     accessManager.with_securityClearance("ClusterAdmin");
 
-    const { useClusterTopologyManager } = mockHooks;
-    useClusterTopologyManager.with_Single();
+    const { cluster } = mockStore;
+    cluster.with_Single();
 
     licenseModel.licenseStatus({
         HasDynamicNodesDistribution: true,
@@ -43,9 +42,9 @@ export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = (
 
     commonInit();
 
-    const { useClusterTopologyManager } = mockHooks;
+    const { cluster } = mockStore;
+    cluster.with_Cluster();
 
-    useClusterTopologyManager.with_Cluster();
     mockStore.databases.with_Single();
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
@@ -66,10 +65,10 @@ export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
 export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    const { useClusterTopologyManager } = mockHooks;
+    const { cluster } = mockStore;
+    cluster.with_Cluster();
 
     mockStore.databases.with_Sharded();
-    useClusterTopologyManager.with_Cluster();
 
     const db = DatabasesStubs.shardedDatabase();
 
