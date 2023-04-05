@@ -86,22 +86,7 @@ class clientConfigurationModel {
            }
         });
         
-        this.isDefined.subscribe((changesList) => {
-            const change = changesList[0];
-            
-            if (_.includes(this.isDefined(), "readBalanceBehavior")) {
-                if (change.status === "added" && change.value === "useSessionContextForLoadBehavior") {
-                    _.remove(this.isDefined(), x => x === "readBalanceBehavior");
-                }
-            }
-
-            if (_.includes(this.isDefined(), "useSessionContextForLoadBehavior")) {
-                if (change.status === "added" && change.value === "readBalanceBehavior") {
-                    _.remove(this.isDefined(), x => x === "useSessionContextForLoadBehavior");
-                    this.setLoadBalanceSeed(false);
-                }
-            }
-
+        this.isDefined.subscribe(() => {
             if (!_.includes(this.isDefined(), "useSessionContextForLoadBehavior")) {
                 this.setLoadBalanceSeed(false);
             }
