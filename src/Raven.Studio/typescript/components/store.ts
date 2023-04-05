@@ -5,6 +5,7 @@ import { BaseThunkAPI } from "@reduxjs/toolkit/dist/createAsyncThunk";
 import { databasesSlice } from "components/common/shell/databasesSlice";
 import { services } from "hooks/useServices";
 import { accessManagerSlice } from "components/common/shell/accessManagerSlice";
+import { clusterSlice } from "components/common/shell/clusterSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -16,6 +17,7 @@ export function createStoreConfiguration() {
             statistics: statisticsSlice.reducer,
             databases: databasesSlice.reducer,
             accessManager: accessManagerSlice.reducer,
+            cluster: clusterSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({

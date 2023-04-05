@@ -30,10 +30,10 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseLocationComparator } from "components/utils/common";
 import disableIndexingToggleConfirm from "viewmodels/resources/disableIndexingToggleConfirm";
 import notificationCenter from "common/notifications/notificationCenter";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import assertUnreachable from "components/utils/assertUnreachable";
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 import { addAppListener } from "components/storeUtils";
+import { selectClusterNodeTags, selectLocalNodeTag } from "components/common/shell/clusterSlice";
 
 interface DatabasesState {
     /**
@@ -50,7 +50,6 @@ interface DatabasesState {
     localDatabaseDetailedLoadStatus: EntityState<perNodeTagLoadStatus>;
     activeDatabase: string;
     searchCriteria: DatabaseFilterCriteria;
-    localNodeTag: string;
 }
 
 const databasesAdapter = createEntityAdapter<DatabaseSharedInfo>({
@@ -82,7 +81,6 @@ const initialState: DatabasesState = {
         name: "",
         states: [],
     },
-    localNodeTag: "",
 };
 
 const sliceName = "databases";
@@ -137,6 +135,8 @@ export const selectFilterByStateOptions = (store: RootState): InputItem<Database
         }
     });
 
+    const localNodeTag = selectLocalNodeTag(store);
+
     return [
         { value: "Online", label: "Online", count: online },
         { value: "Offline", label: "Offline", count: offline },
@@ -146,7 +146,7 @@ export const selectFilterByStateOptions = (store: RootState): InputItem<Database
         { value: "NonSharded", label: "Non Sharded", count: nonSharded },
         {
             value: "Local",
-            label: `Local (Node ${store.databases.localNodeTag})`,
+            label: `Local (Node ${localNodeTag})`,
             count: local,
             verticalSeparatorLine: true,
         },
@@ -340,9 +340,6 @@ export const databasesSlice = createSlice({
             //TODO: update in shallow mode?
             databasesAdapter.setAll(state.databases, action.payload);
         },
-        localNodeTagChanged: (state, action: PayloadAction<string>) => {
-            state.localNodeTag = action.payload;
-        },
         setSearchCriteriaName: (state, action: PayloadAction<string>) => {
             state.searchCriteria.name = action.payload;
         },
@@ -441,14 +438,8 @@ function toLocalInfo(db: StudioDatabaseState, nodeTag: string): DatabaseLocalInf
     };
 }
 
-export const {
-    activeDatabaseChanged,
-    databasesLoaded,
-    localNodeTagChanged,
-    initDetails,
-    setSearchCriteriaName,
-    setSearchCriteriaStates,
-} = databasesSlice.actions;
+export const { activeDatabaseChanged, databasesLoaded, initDetails, setSearchCriteriaName, setSearchCriteriaStates } =
+    databasesSlice.actions;
 
 export const loadDatabasesDetails = (nodeTags: string[]) => async (dispatch: AppDispatch) => {
     dispatch(initDetails(nodeTags));
@@ -458,26 +449,17 @@ export const loadDatabasesDetails = (nodeTags: string[]) => async (dispatch: App
     await Promise.all(tasks);
 };
 
-export const reloadDatabaseDetails = (databaseName: string) => async (dispatch: AppDispatch) => {
-    //TODO: read from redux!
-    const nodeTags =
-        clusterTopologyManager.default
-            .topology()
-            ?.nodes()
-            ?.map((x) => x.tag()) ?? [];
+export const reloadDatabaseDetails =
+    (databaseName: string): AppAsyncThunk =>
+    async (dispatch: AppDispatch, getState) => {
+        const nodeTags = selectClusterNodeTags(getState());
+        const tasks = nodeTags.map((nodeTag) => dispatch(fetchDatabase({ nodeTag, databaseName })));
+        await Promise.all(tasks);
+    };
 
-    const tasks = nodeTags.map((nodeTag) => dispatch(fetchDatabase({ nodeTag, databaseName })));
-
-    await Promise.all(tasks);
-};
-
-export const reloadDatabasesDetails = async (dispatch: AppDispatch) => {
-    //TODO: read from redux!
-    const nodeTags =
-        clusterTopologyManager.default
-            .topology()
-            ?.nodes()
-            ?.map((x) => x.tag()) ?? [];
+export const reloadDatabasesDetails: AppAsyncThunk = async (dispatch: AppDispatch, getState) => {
+    const state = getState();
+    const nodeTags = selectClusterNodeTags(state);
 
     const tasks = nodeTags.map((nodeTag) => dispatch(fetchDatabases(nodeTag)));
 
