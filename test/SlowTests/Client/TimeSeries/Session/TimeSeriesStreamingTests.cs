@@ -30,7 +30,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     var ts = session.TimeSeriesFor("karmel", "heartrate");
                     for (int i = 0; i < 10; i++)
                     {
-                        ts.Append(baseline.AddMinutes(i), i,"stream");
+                        ts.Append(baseline.AddMinutes(i), i, "stream");
                     }
                     session.SaveChanges();
                 }
@@ -69,7 +69,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     var ts = session.TimeSeriesFor("karmel", "heartrate");
                     for (int i = 0; i < 10; i++)
                     {
-                        ts.Append(baseline.AddMinutes(i), i,"stream");
+                        ts.Append(baseline.AddMinutes(i), i, "stream");
                     }
                     session.SaveChanges();
                 }
@@ -108,7 +108,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     var ts = session.TimeSeriesFor<TimeSeriesTypedSessionTests.HeartRateMeasure>("karmel");
                     for (int i = 0; i < 10; i++)
                     {
-                        ts.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure {HeartRate = i}, "stream");
+                        ts.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure { HeartRate = i }, "stream");
                     }
 
                     session.SaveChanges();
@@ -149,8 +149,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     var ts2 = session.TimeSeriesFor<TimeSeriesTypedSessionTests.HeartRateMeasure>("karmel2");
                     for (int i = 0; i < 10; i++)
                     {
-                        ts.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure {HeartRate = i}, "stream");
-                        ts2.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure {HeartRate = i * 2}, "stream");
+                        ts.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure { HeartRate = i }, "stream");
+                        ts2.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure { HeartRate = i * 2 }, "stream");
                     }
 
                     session.SaveChanges();
@@ -200,10 +200,11 @@ select last()
             }
         }
 
-        [Fact]
-        public async Task CanStreamRawQueryAsync()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CanStreamRawQueryAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenSession())
@@ -215,8 +216,8 @@ select last()
                     var ts2 = session.TimeSeriesFor<TimeSeriesTypedSessionTests.HeartRateMeasure>("karmel2");
                     for (int i = 0; i < 10; i++)
                     {
-                        ts.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure {HeartRate = i}, "stream");
-                        ts2.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure {HeartRate = i * 2}, "stream");
+                        ts.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure { HeartRate = i }, "stream");
+                        ts2.Append(baseline.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure { HeartRate = i * 2 }, "stream");
                     }
 
                     session.SaveChanges();
@@ -255,13 +256,14 @@ select last()
             }
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesUsingDocumentQuery()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryTimeSeriesUsingDocumentQuery(Options options)
         {
             using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
-                store.TimeSeries.Register<User>("Heartrate", new[] {"BPM"});
+                store.TimeSeries.Register<User>("Heartrate", new[] { "BPM" });
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User
@@ -302,7 +304,7 @@ select min(), max(), avg()
                         {
                             var result = streamResults.Current.Result;
                             var stream = result.Stream;
-                            
+
                             Assert.True(stream.MoveNext());
                             var entry = stream.Current;
                             Assert.Equal(69, entry.Max[0]);
@@ -314,7 +316,7 @@ select min(), max(), avg()
                             Assert.Equal(169, entry.Max[0]);
                             Assert.Equal(169, entry.Min[0]);
                             Assert.Equal(169, entry.Average[0]);
-                            
+
                             Assert.False(stream.MoveNext());
                         }
                     }
