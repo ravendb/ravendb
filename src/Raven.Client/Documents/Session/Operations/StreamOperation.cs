@@ -334,7 +334,7 @@ namespace Raven.Client.Documents.Session.Operations
                 _isQueryStream = isQueryStream;
                 _isAsync = isAsync;
                 _streamQueryStatistics = streamQueryStatistics;
-                _maxDocsCountOnCachedRenewSession = 1024;
+                _maxDocsCountOnCachedRenewSession = 16 * 1024;
                 _token = token;
                 _isTimeSeriesStream = isTimeSeriesStream;
             }
