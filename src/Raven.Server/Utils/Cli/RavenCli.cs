@@ -1136,7 +1136,7 @@ namespace Raven.Server.Utils.Cli
             WriteText($"ImportDir for database {args[0]} from dir `{args[1]}` to {cli._server.ServerStore.GetNodeHttpServerUrl()}", ConsoleColor.Yellow, cli);
 
             var url = $"{cli._server.ServerStore.GetNodeHttpServerUrl()}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
-            using (var client = new HttpClient())
+            using (var client = new RavenHttpClient())
             {
                 WriteText("Sending at " + DateTime.UtcNow, TextColor, cli);
                 var result = client.GetAsync(url).Result;

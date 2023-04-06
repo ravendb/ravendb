@@ -10,12 +10,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
     public abstract class RavenStorageClient : IDisposable
     {
-        private readonly List<HttpClient> _clients = new List<HttpClient>();
+        private readonly List<RavenHttpClient> _clients = new();
         protected readonly CancellationToken CancellationToken;
         protected readonly Progress Progress;
         protected const int MaxRetriesForMultiPartUpload = 5;
@@ -28,14 +29,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             CancellationToken = cancellationToken ?? CancellationToken.None;
         }
 
-        protected HttpClient GetClient(TimeSpan? timeout = null)
+        protected RavenHttpClient GetClient(TimeSpan? timeout = null)
         {
             var handler = new HttpClientHandler
             {
                 AutomaticDecompression = System.Net.DecompressionMethods.None
             };
 
-            var client = new HttpClient(handler)
+            var client = new RavenHttpClient(handler)
             {
                 Timeout = timeout ?? TimeSpan.FromSeconds(120)
             };

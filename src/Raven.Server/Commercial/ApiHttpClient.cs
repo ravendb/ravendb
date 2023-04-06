@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Commercial
 {
@@ -23,25 +24,14 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static HttpClient Instance;
+        public static RavenHttpClient Instance;
 
         static ApiHttpClient()
         {
-            Instance = new HttpClient
+            Instance = new RavenHttpClient
             {
                 BaseAddress = new Uri(ApiRavenDbNet)
             };
-
-            var userAgent = $"RavenDB/{ServerVersion.Version} (" +
-                            $"{RuntimeInformation.OSDescription};" +
-                            $"{RuntimeInformation.OSArchitecture};" +
-                            $"{RuntimeInformation.FrameworkDescription};" +
-                            $"{RuntimeInformation.ProcessArchitecture};" +
-                            $"{CultureInfo.CurrentCulture.Name};" +
-                            $"{CultureInfo.CurrentUICulture.Name};" +
-                            $"{ServerVersion.FullVersion})";
-
-            Instance.DefaultRequestHeaders.Add("User-Agent", userAgent);
         }
     }
 }
