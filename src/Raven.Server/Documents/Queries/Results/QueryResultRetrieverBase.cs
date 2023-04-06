@@ -558,18 +558,19 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldToFetch.CanExtractFromIndex == false && fieldToFetch.IsDocumentId == false) //in case of ID we can always give it for user.
                 return false;
 
-            var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
             object value = null;
-            if (retrieverInput.KnownFields.TryGetByFieldName(name, out var binding) == false)
+            if (retrieverInput.KnownFields.TryGetByFieldName(fieldToFetch.Name.Value, out var binding) == false)
             {
-                if (TryGetValueFromCoraxIndex(_context, name, Corax.Constants.IndexWriter.DynamicField, ref retrieverInput, out value) == false)
+                if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, Corax.Constants.IndexWriter.DynamicField, ref retrieverInput, out value) == false)
                     return false;
             }
-            else if (TryGetValueFromCoraxIndex(_context, name, binding.FieldId, ref retrieverInput, out value) == false)
+            else if (TryGetValueFromCoraxIndex(_context, fieldToFetch.Name.Value, binding.FieldId, ref retrieverInput, out value) == false)
                 return false;
             
+            var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
             toFill[name] = value;
+            
             return true;
         }
 
