@@ -175,7 +175,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_project_when_mixed_stored_options_in_index(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -228,7 +228,7 @@ namespace SlowTests.Issues
                     session.Delete(userId);
                     await session.SaveChangesAsync();
                 }
-WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.Query<User, UserIndexPartialStore>()
@@ -237,7 +237,8 @@ WaitForUserToContinueTheTest(store);
                         .Select(user => new
                         {
                             user.Name, // stored field
-                            user.LastName // not stored field
+                            user.LastName, // not stored field
+                            user.AddressId //made-up field for corax, has no impact on lucene projection
                         })
                         .ToListAsync();
 
