@@ -18,7 +18,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
 using CoraxLib = global::Corax;
-
+using JavaScriptFieldName = Raven.Client.Constants.Documents.Indexing.Fields.JavaScript;
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public sealed class CoraxJintDocumentConverter : CoraxJintDocumentConverterBase
@@ -35,11 +35,7 @@ public sealed class CoraxJintDocumentConverter : CoraxJintDocumentConverterBase
 public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBase
 {
     private readonly IndexFieldOptions _allFields;
-    private const string ValuePropertyName = "$value";
-    private const string OptionsPropertyName = "$options";
-    private const string NamePropertyName = "$name";
-    private const string SpatialPropertyName = "$spatial";
-    private const string BoostPropertyName = "$boost";
+
 
     protected CoraxJintDocumentConverterBase(Index index, IndexDefinition definition, bool storeValue, int numberOfBaseFields, string keyFieldName,
         string storeValueFieldName, ICollection<IndexField> fields = null, bool canContainSourceDocumentId = false) :
@@ -150,10 +146,10 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             value = JsValue.Undefined;
             boost = null;
 
-            if (valueToCheck.TryGetValue(BoostPropertyName, out var boostValue) == false)
+            if (valueToCheck.TryGetValue(JavaScriptFieldName.BoostPropertyName, out var boostValue) == false)
                 return false;
 
-            if (valueToCheck.TryGetValue(ValuePropertyName, out var valueValue) == false)
+            if (valueToCheck.TryGetValue(JavaScriptFieldName.ValuePropertyName, out var valueValue) == false)
                 return false;
 
             if (boostValue.IsNumber() == false)
@@ -188,7 +184,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), field, indexingScope);
                 if (val != null)
                 {
-                    if (val.IsObject() && val.AsObject().TryGetValue(SpatialPropertyName, out _))
+                    if (val.IsObject() && val.AsObject().TryGetValue(JavaScriptFieldName.SpatialPropertyName, out _))
                     {
                         actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
                     }
@@ -211,7 +207,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 }
 
                 var objectValue = actualValue.AsObject();
-                if (objectValue.HasOwnProperty(SpatialPropertyName) && objectValue.TryGetValue(SpatialPropertyName, out var inner))
+                if (objectValue.HasOwnProperty(JavaScriptFieldName.SpatialPropertyName) && objectValue.TryGetValue(JavaScriptFieldName.SpatialPropertyName, out var inner))
                 {
                     SpatialField spatialField;
                     IEnumerable<object> spatial;
@@ -284,7 +280,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         var valueAsObject = iterator.Current.AsObject();
 
         return TryDetectDynamicFieldCreation(propertyAsString, valueAsObject, field, indexingScope) is not null
-               || valueAsObject.HasOwnProperty(SpatialPropertyName);
+               || valueAsObject.HasOwnProperty(JavaScriptFieldName.SpatialPropertyName);
     }
 
     private void StoreValue(JsonOperationContext indexContext, ref CoraxLib.IndexEntryWriter entryWriter, SingleEntryWriterScope scope, ObjectInstance documentToProcess)
@@ -305,16 +301,16 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
     private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field, CurrentIndexingScope scope)
     {
         //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
-        if (!valueAsObject.HasOwnProperty(ValuePropertyName))
+        if (!valueAsObject.HasOwnProperty(JavaScriptFieldName.ValuePropertyName))
             return null;
 
-        var value = valueAsObject.GetOwnProperty(ValuePropertyName).Value;
-        PropertyDescriptor nameProperty = valueAsObject.GetOwnProperty(NamePropertyName);
+        var value = valueAsObject.GetOwnProperty(JavaScriptFieldName.ValuePropertyName).Value;
+        PropertyDescriptor nameProperty = valueAsObject.GetOwnProperty(JavaScriptFieldName.NamePropertyName);
         if (nameProperty != null)
         {
             var fieldNameObj = nameProperty.Value;
             if (fieldNameObj.IsString() == false)
-                throw new ArgumentException($"Dynamic field {property} is expected to have a string {NamePropertyName} property but got {fieldNameObj}");
+                throw new ArgumentException($"Dynamic field {property} is expected to have a string {JavaScriptFieldName.NamePropertyName} property but got {fieldNameObj}");
 
             field.Name = fieldNameObj.AsString();
             field.Id = CoraxLib.Constants.IndexWriter.DynamicField;
@@ -324,13 +320,13 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             field.Name = property;
         }
 
-        if (valueAsObject.HasOwnProperty(OptionsPropertyName))
+        if (valueAsObject.HasOwnProperty(JavaScriptFieldName.OptionsPropertyName))
         {
-            var options = valueAsObject.GetOwnProperty(OptionsPropertyName).Value;
+            var options = valueAsObject.GetOwnProperty(JavaScriptFieldName.OptionsPropertyName).Value;
             if (options.IsObject() == false)
             {
                 throw new ArgumentException($"Dynamic field {property} is expected to contain an object with three properties " +
-                                            $"{OptionsPropertyName}, {NamePropertyName} and {OptionsPropertyName} the later should be a valid IndexFieldOptions object.");
+                                            $"{JavaScriptFieldName.OptionsPropertyName}, {JavaScriptFieldName.NamePropertyName} and {JavaScriptFieldName.OptionsPropertyName} the later should be a valid IndexFieldOptions object.");
             }
 
             var optionObj = options.AsObject();
