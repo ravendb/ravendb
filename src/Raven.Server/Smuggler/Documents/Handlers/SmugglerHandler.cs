@@ -47,7 +47,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 {
     public class SmugglerHandler : DatabaseRequestHandler
     {
-        private static readonly HttpClient HttpClient = new HttpClient();
+        private static readonly RavenHttpClient HttpClient = new();
 
         [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostValidateOptions()
@@ -740,7 +740,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             DynamicJsonValue djv = null;
 
             if (blittableJson.TryGet(nameof(DatabaseSmugglerOptions.OperateOnTypes), out string operateOnTypes) &&
-                operateOnTypes != null && 
+                operateOnTypes != null &&
                 Enum.TryParse(typeof(DatabaseItemType), operateOnTypes, out _) == false)
             {
                 CheckClientVersion(operateOnTypes, nameof(DatabaseSmugglerOptions.OperateOnTypes));
@@ -763,7 +763,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
 
             if (blittableJson.TryGet(nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes), out string operateOnDatabaseRecordTypes) &&
-                operateOnDatabaseRecordTypes != null && 
+                operateOnDatabaseRecordTypes != null &&
                 Enum.TryParse(typeof(DatabaseRecordItemType), operateOnDatabaseRecordTypes, out _) == false)
             {
                 CheckClientVersion(operateOnDatabaseRecordTypes, nameof(DatabaseSmugglerOptions.OperateOnDatabaseRecordTypes));

@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Raven.Server.Extensions;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Smuggler.Migration.ApiKey
 {
@@ -39,7 +40,7 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
                 if (skipServerCertificateValidation)
                     handler.ServerCertificateCustomValidationCallback = (message, certificate2, arg3, arg4) => true;
 
-                using (var httpClient = new HttpClient(handler))
+                using (var httpClient = new RavenHttpClient(handler))
                 {
                     httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
                     httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "UTF-8" });
@@ -114,7 +115,7 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
 
         public static async Task<string> GetLegacyOAuthToken(string oauthSource, string apiKey, bool enableBasicAuthenticationOverUnsecuredHttp)
         {
-            using (var httpClient = new HttpClient(new HttpClientHandler()))
+            using (var httpClient = new RavenHttpClient(new HttpClientHandler()))
             {
                 httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
                 httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "UTF-8" });

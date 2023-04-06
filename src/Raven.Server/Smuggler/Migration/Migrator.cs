@@ -28,7 +28,7 @@ namespace Raven.Server.Smuggler.Migration
         public const string MigrationStateKeyBase = "Raven/Migration/Status/";
 
         private readonly string _serverUrl;
-        private readonly HttpClient _httpClient;
+        private readonly RavenHttpClient _httpClient;
         private readonly ServerStore _serverStore;
         private readonly string _apiKey;
         private readonly bool _enableBasicAuthenticationOverUnsecuredHttp;
@@ -67,7 +67,7 @@ namespace Raven.Server.Smuggler.Migration
                     domain);
             }
 
-            _httpClient = new HttpClient(httpClientHandler);
+            _httpClient = new RavenHttpClient(httpClientHandler);
         }
 
         public async Task UpdateBuildInfoIfNeeded()
