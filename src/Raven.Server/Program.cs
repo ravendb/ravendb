@@ -112,7 +112,7 @@ namespace Raven.Server
 
             InitializeThreadPoolThreads(configuration);
 
-            MultiSourceNuGetFetcher.Instance.Initialize(configuration.Indexing.NuGetPackagesPath, configuration.Indexing.NuGetPackageSourceUrl);
+            MultiSourceNuGetFetcher.Instance.Initialize(configuration.Indexing.NuGetPackagesPath, configuration.Indexing.NuGetPackageSourceUrl, configuration.Indexing.NuGetAllowPreleasePackages);
 
             LatestVersionCheck.Instance.Initialize(configuration.Updates);
 

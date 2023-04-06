@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Config.Settings;
@@ -16,11 +15,13 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
         private readonly ConcurrentDictionary<string, Lazy<NuGetFetcher>> _fetchers = new ConcurrentDictionary<string, Lazy<NuGetFetcher>>(StringComparer.OrdinalIgnoreCase);
         public string DefaultPackageSourceUrl { get; private set; }
 
+        private bool _allowPreleasePackages;
+
         private MultiSourceNuGetFetcher()
         {
         }
 
-        public void Initialize(PathSetting rootPath, string packageSourceUrl)
+        public void Initialize(PathSetting rootPath, string packageSourceUrl, bool allowPreleasePackages)
         {
             if (rootPath is null)
                 throw new ArgumentNullException(nameof(rootPath));
@@ -33,6 +34,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
             _rootPath = rootPath;
             DefaultPackageSourceUrl = packageSourceUrl;
             _initialized = true;
+            _allowPreleasePackages = allowPreleasePackages;
         }
 
         public async Task<NuGetFetcher.NuGetPackage> DownloadAsync(string packageName, string packageVersion, string packageSourceUrl, CancellationToken token = default)
@@ -55,7 +57,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
                 throw;
             }
 
-            return await fetcher.DownloadAsync(packageName, packageVersion, token);
+            return await fetcher.DownloadAsync(packageName, packageVersion, _allowPreleasePackages, token);
         }
 
         private void AssertInitialized()

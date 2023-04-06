@@ -85,6 +85,26 @@ namespace SlowTests.Issues
         }
 
         [RetryFact(delayBetweenRetriesMs: 1000)]
+        public void AdditionalAssemblies_NuGet_With_Prerelease_Dependency()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Name = "XmlIndex",
+                    Maps =
+                    {
+                        "from c in docs.Companies select new { Name = typeof(NPOI.OpenXml4Net.Util.XmlHelper).Name }"
+                    },
+                    AdditionalAssemblies =
+                    {
+                        AdditionalAssembly.FromNuGet("NPOI", "2.6.0"),
+                    }
+                }));
+            }
+        }
+
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public void AdditionalAssemblies_NuGet_InvalidName()
         {
             using (var store = GetDocumentStore())
