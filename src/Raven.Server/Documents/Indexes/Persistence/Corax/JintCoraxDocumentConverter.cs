@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Jint;
 using Jint.Native;
@@ -68,14 +67,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 singleEntryWriterScope.Write(string.Empty, 0, key.AsSpan(), ref entryWriter);
 
             if (sourceDocumentId != null && fieldMapping.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var keyBinding))
-            {
                 singleEntryWriterScope.Write(string.Empty, keyBinding.FieldId, sourceDocumentId.AsSpan(), ref entryWriter);
-            }
-            
-            // if (sourceDocumentId != null)
-            // {
-            //     singleEntryWriterScope.Write(string.Empty, 0, sourceDocumentId.AsSpan(), ref entryWriter);
-            // }
 
             if (TryGetBoostedValue(documentToProcess, out var boostedValue, out documentBoost))
                 documentToProcess = boostedValue.AsObject();
