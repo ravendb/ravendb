@@ -2,13 +2,18 @@
 import { RichPanelDetailItem, RichPanelDetails } from "components/common/RichPanel";
 import React from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { openNotificationCenterForDatabase, selectDatabaseState } from "components/common/shell/databasesSlice";
+import {
+    openNotificationCenterForDatabase,
+    selectDatabaseState,
+    selectTopLevelState,
+} from "components/common/shell/databasesSlice";
 import { sumBy } from "lodash";
 import genUtils from "common/generalUtils";
 import appUrl from "common/appUrl";
 import { withPreventDefault } from "components/utils/common";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
+import { selectLocalNodeTag } from "components/common/shell/clusterSlice";
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
@@ -30,6 +35,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const { db } = props;
 
     const dbState = useAppSelector(selectDatabaseState(db.name));
+    const topLevelState = useAppSelector(selectTopLevelState(db.name));
+
+    const localNodeTag = useAppSelector(selectLocalNodeTag);
 
     const dispatch = useAppDispatch();
 
@@ -38,11 +46,19 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         .map((x) => x.data)
         .filter((x) => x);
 
+    const nonEmptyTopLevelState = topLevelState
+        .filter((x) => x.status === "success" && !x.data.loadError)
+        .map((x) => x.data)
+        .filter((x) => x);
+
     const indexingErrors = sumBy(nonEmptyDbState, (x) => x?.indexingErrors ?? 0);
-    const alerts = sumBy(nonEmptyDbState, (x) => x?.alerts ?? 0);
-    const performanceHints = sumBy(nonEmptyDbState, (x) => x?.performanceHints ?? 0);
+    const alerts = sumBy(nonEmptyTopLevelState, (x) => x?.alerts ?? 0);
+    const performanceHints = sumBy(nonEmptyTopLevelState, (x) => x?.performanceHints ?? 0);
     const indexingPaused = nonEmptyDbState.some((x) => x?.indexingStatus === "Paused");
     const indexingDisabled = nonEmptyDbState.some((x) => x?.indexingStatus === "Disabled");
+
+    const localPerformanceHints = nonEmptyTopLevelState.find((x) => x.nodeTag === localNodeTag)?.performanceHints ?? 0;
+    const localAlerts = nonEmptyTopLevelState.find((x) => x.nodeTag === localNodeTag)?.alerts ?? 0;
 
     const maxSizes = genUtils.maxByShard(
         nonEmptyDbState,
@@ -88,6 +104,20 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     const backupInfo = findLatestBackup(nonEmptyDbState);
     const backupStatus = DatabaseUtils.computeBackupStatus(backupInfo);
+
+    const alertSection = (
+        <React.Fragment>
+            <i className="icon-warning me-1" /> {alerts.toLocaleString()} Alerts
+            {localAlerts !== alerts ? <span> ({localAlerts} local)</span> : null}
+        </React.Fragment>
+    );
+
+    const performanceHintsSection = (
+        <React.Fragment>
+            <i className="icon-rocket me-1" /> {performanceHints.toLocaleString()} Performance hints
+            {localPerformanceHints !== performanceHints ? <span> ({localPerformanceHints} local)</span> : null}
+        </React.Fragment>
+    );
 
     return (
         <RichPanelDetails className="flex-wrap pb-1">
@@ -168,12 +198,10 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                 href="#"
                                 onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
                             >
-                                <i className="icon-warning me-1" /> {alerts.toLocaleString()} Alerts
+                                {alertSection}
                             </a>
                         ) : (
-                            <>
-                                <i className="icon-warning me-1" /> {alerts.toLocaleString()} Alerts
-                            </>
+                            alertSection
                         )}
                     </RichPanelDetailItem>
                 )}
@@ -188,12 +216,10 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                 href="#"
                                 onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
                             >
-                                <i className="icon-rocket me-1" /> {performanceHints.toLocaleString()} Performance hints
+                                {performanceHintsSection}
                             </a>
                         ) : (
-                            <>
-                                <i className="icon-rocket me-1" /> {performanceHints.toLocaleString()} Performance hints
-                            </>
+                            performanceHintsSection
                         )}
                     </RichPanelDetailItem>
                 )}

@@ -940,6 +940,7 @@ interface PopoverUtilsOptions extends PopoverOptions {
 
 interface StudioDatabasesResponse {
     Databases: StudioDatabaseInfo[];
+    Orchestrators: StudioOrchestratorState[];
 }
 
 interface ReactInKnockoutOptions<T> {

@@ -107,17 +107,8 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
     {
         try
         {
-            var online = ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(databaseName, out Task<ShardedDatabaseContext> dbTask);
-
-            // Check for exceptions
-            if (dbTask is { IsFaulted: true })
-            {
-                var exception = dbTask.Exception.ExtractSingleInnerException();
-                WriteFaultedOrchestratorState(databaseName, exception, context, writer);
-                return;
-            }
-
-            var databaseContext = online ? dbTask.Result : null;
+            var searchResult = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(databaseName);
+            var databaseContext = searchResult.DatabaseContext;
 
             var state = StudioOrchestratorState.From(databaseName, databaseContext);
 
@@ -250,20 +241,22 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
     internal class StudioOrchestratorState : IDynamicJson
     {
         public string Name { get; set; }
-        public long? Alerts { get; set; }
-        public long? PerformanceHints { get; set; }
+        public long Alerts { get; set; }
+        public long PerformanceHints { get; set; }
         public string LoadError { get; set; }
 
-        public static StudioOrchestratorState From([NotNull] string databaseName, ShardedDatabaseContext database)
+        public static StudioOrchestratorState From([NotNull] string databaseName, [NotNull] ShardedDatabaseContext database)
         {
             if (databaseName == null)
                 throw new ArgumentNullException(nameof(databaseName));
+            if (database == null) 
+                throw new ArgumentNullException(nameof(database));
 
             return new StudioOrchestratorState
             {
-                Name = database?.DatabaseName ?? databaseName,
-                PerformanceHints = database?.NotificationCenter.GetPerformanceHintCount(),
-                Alerts = database?.NotificationCenter.GetAlertCount()
+                Name = database.DatabaseName ?? databaseName,
+                PerformanceHints = database.NotificationCenter.GetPerformanceHintCount(),
+                Alerts = database.NotificationCenter.GetAlertCount()
             };
         }
 

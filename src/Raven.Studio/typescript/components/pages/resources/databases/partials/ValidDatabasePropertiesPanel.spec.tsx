@@ -1,6 +1,6 @@
 ﻿import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { findLatestBackup } from "components/pages/resources/databases/partials/ValidDatabasePropertiesPanel";
-import { toLocalInfo } from "components/common/shell/databasesSlice";
+import { toDatabaseLocalInfo } from "components/common/shell/databasesSlice";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 
 describe("findLatestBackup", () => {
@@ -11,7 +11,7 @@ describe("findLatestBackup", () => {
             DatabasesStubs.studioDatabaseState("db1"),
         ];
 
-        const localInfos = rawStates.map((x) => toLocalInfo(x, "A"));
+        const localInfos = rawStates.map((x) => toDatabaseLocalInfo(x, "A"));
 
         localInfos[0].backupInfo = null;
         localInfos[1].backupInfo = stubBackupInfo("2022-04-03T12:12:13.6136291Z");
