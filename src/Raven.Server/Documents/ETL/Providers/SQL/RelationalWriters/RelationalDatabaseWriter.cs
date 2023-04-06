@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using MySql.Data.MySqlClient;
 using NpgsqlTypes;
 using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -410,6 +409,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             {
                 case "SqlClientFactory":
                 case "MySqlClientFactory":
+                case "MySqlConnectorFactory":
                     return "@" + paramName;
 
                 case "OracleClientFactory":
@@ -417,7 +417,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     return ":" + paramName;
 
                 default:
-                    throw new NotImplementedException();
+                    throw new NotSupportedException($"Unhandled provider factory: {_providerFactory.GetType().Name}");
             }
         }
 
@@ -505,12 +505,20 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                                         if (colParam is Npgsql.NpgsqlParameter || colParam is SqlParameter)
                                             colParam.Value = guid;
 
-                                        if (colParam is MySqlParameter mySqlParameter)
+                                        if (colParam is MySql.Data.MySqlClient.MySqlParameter mySqlParameter)
                                         {
                                             var arr = guid.ToByteArray();
                                             mySqlParameter.Value = arr;
-                                            mySqlParameter.MySqlDbType = MySqlDbType.Binary;
+                                            mySqlParameter.MySqlDbType = MySql.Data.MySqlClient.MySqlDbType.Binary;
                                             mySqlParameter.Size = arr.Length;
+                                            break;
+                                        }
+                                        if (colParam is MySqlConnector.MySqlParameter mySqlConnectorParameter)
+                                        {
+                                            var arr = guid.ToByteArray();
+                                            mySqlConnectorParameter.Value = arr;
+                                            mySqlConnectorParameter.MySqlDbType = MySqlConnector.MySqlDbType.Binary;
+                                            mySqlConnectorParameter.Size = arr.Length;
                                             break;
                                         }
                                     }
@@ -534,8 +542,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                                             ((Npgsql.NpgsqlParameter)colParam).NpgsqlDbType = npgsqlType;
                                             break;
                                         case SqlProvider.MySqlClient:
-                                            MySqlDbType mySqlDbType = ParseProviderSpecificParameterType<MySqlDbType>(dbTypeString);
-                                            ((MySqlParameter)colParam).MySqlDbType = mySqlDbType;
+                                            MySql.Data.MySqlClient.MySqlDbType mySqlDbType = ParseProviderSpecificParameterType<MySql.Data.MySqlClient.MySqlDbType>(dbTypeString);
+                                            ((MySql.Data.MySqlClient.MySqlParameter)colParam).MySqlDbType = mySqlDbType;
+                                            break;
+                                        case SqlProvider.MySqlConnectorFactory:
+                                            MySqlConnector.MySqlDbType mySqlConnectorDbType = ParseProviderSpecificParameterType<MySqlConnector.MySqlDbType>(dbTypeString);
+                                            ((MySqlConnector.MySqlParameter)colParam).MySqlDbType = mySqlConnectorDbType;
                                             break;
                                         case SqlProvider.OracleClient:
                                             OracleDbType oracleDbType = ParseProviderSpecificParameterType<OracleDbType>(dbTypeString);

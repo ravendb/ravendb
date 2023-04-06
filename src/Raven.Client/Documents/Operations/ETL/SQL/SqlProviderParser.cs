@@ -22,6 +22,8 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     return SqlProvider.OracleClient;
                 case "MySql.Data.MySqlClient":
                     return SqlProvider.MySqlClient;
+                case "MySqlConnector.MySqlConnectorFactory":
+                    return SqlProvider.MySqlConnectorFactory;
                 case "System.Data.SqlServerCe.3.5":
                     throw new NotImplementedException($"Factory '{factoryName}' is not implemented yet");
                     //return SqlProvider.SqlServerCe_3_5;

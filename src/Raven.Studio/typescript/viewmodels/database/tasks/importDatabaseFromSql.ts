@@ -413,7 +413,8 @@ class importDatabaseFromSql extends viewModelBase {
         switch (this.model.databaseType()) {
             case "MsSQL":
                 return "ace/mode/sqlserver";
-            case "MySQL":
+            case "MySQL_MySql_Data":
+            case "MySQL_MySqlConnector":
                 return "ace/mode/mysql";
             case "NpgSQL":
                 return "ace/mode/sql";

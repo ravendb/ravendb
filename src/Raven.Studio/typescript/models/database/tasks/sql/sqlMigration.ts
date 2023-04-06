@@ -6,8 +6,8 @@ import sqlColumn = require("models/database/tasks/sql/sqlColumn");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 class sqlMigration {
-    
-    static possibleProviders: Raven.Server.SqlMigration.MigrationProvider[] = ["MsSQL", "MySQL", "NpgSQL", "Oracle"];
+
+    static possibleProviders: Raven.Server.SqlMigration.MigrationProvider[] = ["MsSQL", "MySQL_MySql_Data", "MySQL_MySqlConnector", "NpgSQL", "Oracle"];
     
     databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MsSQL");
     binaryToAttachment = ko.observable<boolean>(true);
@@ -152,8 +152,10 @@ class sqlMigration {
         switch (type) {
             case "MsSQL":
                 return "Microsoft SQL Server (System.Data.SqlClient)";
-            case "MySQL":
+            case "MySQL_MySql_Data":
                 return "MySQL Server (MySql.Data.MySqlClient)";
+            case "MySQL_MySqlConnector":
+                return "MySQL Server (MySqlConnector.MySqlConnectorFactory)";
             case "NpgSQL":
                 return "PostgreSQL (Npgsql)";
             case "Oracle":
@@ -288,8 +290,10 @@ class sqlMigration {
 
     getFactoryName() {
         switch (this.databaseType()) {
-            case "MySQL":
+            case "MySQL_MySql_Data":
                 return "MySql.Data.MySqlClient";
+            case "MySQL_MySqlConnector":
+                return "MySqlConnector.MySqlConnectorFactory";
             case "MsSQL":
                 return "System.Data.SqlClient";
             case "NpgSQL":
@@ -308,7 +312,8 @@ class sqlMigration {
         }
         
         switch (this.databaseType()) {
-            case "MySQL":
+            case "MySQL_MySql_Data":
+            case "MySQL_MySqlConnector":
                 return this.mySql.connectionString();
                 
             case "MsSQL":
@@ -377,7 +382,8 @@ class sqlMigration {
 
     getValidationGroup(): KnockoutValidationGroup {
         switch (this.databaseType()) {
-            case "MySQL":
+            case "MySQL_MySql_Data":
+            case "MySQL_MySqlConnector":
                 return this.mySqlValidationGroup;
 
             case "MsSQL":
