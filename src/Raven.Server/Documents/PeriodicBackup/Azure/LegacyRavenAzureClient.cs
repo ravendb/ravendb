@@ -23,6 +23,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Exceptions.PeriodicBackup;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Size = Raven.Client.Util.Size;
@@ -230,7 +231,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        private void PutBlock(Stream baseStream, HttpClient client, string url, long length, int retryCount)
+        private void PutBlock(Stream baseStream, RavenHttpClient client, string url, long length, int retryCount)
         {
             // saving the position if we need to retry
             var position = baseStream.Position;
@@ -289,7 +290,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             PutBlock(baseStream, client, url, length, retryCount);
         }
 
-        private void PutBlockList(string baseUrl, HttpClient client, List<string> blockIds, Dictionary<string, string> metadata)
+        private void PutBlockList(string baseUrl, RavenHttpClient client, List<string> blockIds, Dictionary<string, string> metadata)
         {
             var url = GetUrl(baseUrl, "comp=blocklist");
             var now = SystemTime.UtcNow;
@@ -821,7 +822,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return containersList;
         }
 
-        private void SetAuthorizationHeader(HttpClient httpClient, HttpMethod httpMethod, string url, HttpHeaders httpHeaders, HttpHeaders httpContentHeaders = null)
+        private void SetAuthorizationHeader(RavenHttpClient httpClient, HttpMethod httpMethod, string url, HttpHeaders httpHeaders, HttpHeaders httpContentHeaders = null)
         {
             if (_hasSasToken)
             {

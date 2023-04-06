@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Server.Utils;
 using Sparrow.Platform;
 
 namespace Raven.Server.Commercial
@@ -26,9 +27,9 @@ namespace Raven.Server.Commercial
             Formatting = Formatting.Indented
         };
 
-        private static Dictionary<string, HttpClient> _cachedClients = new Dictionary<string, HttpClient>(StringComparer.OrdinalIgnoreCase);
+        private static Dictionary<string, RavenHttpClient> _cachedClients = new(StringComparer.OrdinalIgnoreCase);
 
-        private static HttpClient GetCachedClient(string url)
+        private static RavenHttpClient GetCachedClient(string url)
         {
             if (_cachedClients.TryGetValue(url, out var value))
             {
@@ -42,12 +43,12 @@ namespace Raven.Server.Commercial
                     return value;
                 }
 
-                value = new HttpClient
+                value = new RavenHttpClient
                 {
                     BaseAddress = new Uri(url)
                 };
 
-                _cachedClients = new Dictionary<string, HttpClient>(_cachedClients, StringComparer.OrdinalIgnoreCase)
+                _cachedClients = new Dictionary<string, RavenHttpClient>(_cachedClients, StringComparer.OrdinalIgnoreCase)
                 {
                     [url] = value
                 };
@@ -70,7 +71,7 @@ namespace Raven.Server.Commercial
         private string _nonce;
         private RSACryptoServiceProvider _accountKey;
         private RegistrationCache _cache;
-        private HttpClient _client;
+        private RavenHttpClient _client;
         private Directory _directory;
         private List<AuthorizationChallenge> _challenges = new List<AuthorizationChallenge>();
         private Order _currentOrder;

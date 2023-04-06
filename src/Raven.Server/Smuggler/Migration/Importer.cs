@@ -18,6 +18,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Migration
@@ -227,7 +228,7 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public static async Task<List<string>> GetDatabasesToMigrate(string serverUrl, HttpClient httpClient, CancellationToken cancelToken)
+        public static async Task<List<string>> GetDatabasesToMigrate(string serverUrl, RavenHttpClient httpClient, CancellationToken cancelToken)
         {
             var url = $"{serverUrl}/databases?namesOnly=true";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
