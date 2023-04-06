@@ -130,13 +130,13 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public override bool TryGetKey(ref RetrieverInput retrieverInput, out string key)
+        public override bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key)
         {
             key = null;
             return false;
         }
         
-        public override bool CoraxTryGetKey(IndexSearcher searcher, long id, out UnmanagedSpan key)
+        public override bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key)
         {
             key = default;
             return false;
