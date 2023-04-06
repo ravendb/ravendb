@@ -26,7 +26,8 @@ describe("databasesManager", () => {
     
     it("can handle non-sharded database", async () => {
         const response: StudioDatabasesResponse = { 
-            Databases: [ DatabasesStubs.nonShardedSingleNodeDatabaseDto() ]
+            Databases: [ DatabasesStubs.nonShardedSingleNodeDatabaseDto() ],
+            Orchestrators: []
         }
         
         mockResponse(response);
@@ -47,7 +48,8 @@ describe("databasesManager", () => {
     
     it("can handle sharded database", async () => {
         const response: StudioDatabasesResponse = {
-            Databases: [DatabasesStubs.shardedDatabaseDto()]
+            Databases: [DatabasesStubs.shardedDatabaseDto()],
+            Orchestrators: []
         }
 
         mockResponse(response);
@@ -86,7 +88,8 @@ describe("databasesManager", () => {
     
     it("can get single shard by name", async () => {
         const response: StudioDatabasesResponse = {
-            Databases: [DatabasesStubs.shardedDatabaseDto()]
+            Databases: [DatabasesStubs.shardedDatabaseDto()],
+            Orchestrators: []
         }
 
         mockResponse(response);
@@ -114,7 +117,8 @@ describe("databasesManager", () => {
 
     it("can get sharded database by name", async () => {
         const response: StudioDatabasesResponse = {
-            Databases: [DatabasesStubs.shardedDatabaseDto()]
+            Databases: [DatabasesStubs.shardedDatabaseDto()],
+            Orchestrators: []
         }
 
         mockResponse(response);
@@ -136,7 +140,8 @@ describe("databasesManager", () => {
     
     it("can update manager after db was deleted", async () => {
         const response: StudioDatabasesResponse = {
-            Databases: [DatabasesStubs.shardedDatabaseDto()]
+            Databases: [DatabasesStubs.shardedDatabaseDto()],
+            Orchestrators: []
         }
 
         mockResponse(response);
@@ -145,7 +150,8 @@ describe("databasesManager", () => {
         await manager.init();
 
         mockResponse({
-            Databases: []
+            Databases: [],
+            Orchestrators: []
         });
         
         await manager.refreshDatabases();
@@ -156,7 +162,8 @@ describe("databasesManager", () => {
 
     it("can update manager after single shard was deleted", async () => {
         const response: StudioDatabasesResponse = {
-            Databases: [DatabasesStubs.shardedDatabaseDto()]
+            Databases: [DatabasesStubs.shardedDatabaseDto()], 
+            Orchestrators: []
         }
 
         mockResponse(response);

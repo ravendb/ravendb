@@ -320,11 +320,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
         }
     };
 
-    //TODO: add hover on RichPanelHeader
-
     return (
         <RichPanel
-            hover
+            hover={db.currentNode.relevant}
             className={classNames("flex-row", "with-status", {
                 active: activeDatabase === db.name,
                 relevant: true,

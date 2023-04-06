@@ -1,6 +1,5 @@
 ﻿import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import DatabasePromotionStatus = Raven.Client.ServerWide.DatabasePromotionStatus;
-import IndexingStatus = Raven.Client.Documents.Indexes.IndexingStatus;
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 
 export interface NodeInfo {
@@ -25,6 +24,22 @@ export interface DatabaseLocalInfo {
     totalSize: Raven.Client.Util.Size;
     upTime?: string;
     backupInfo: Raven.Client.ServerWide.Operations.BackupInfo;
+}
+
+export interface OrchestratorLocalInfo {
+    name: string;
+    nodeTag: string;
+    alerts: number;
+    loadError: string;
+    performanceHints: number;
+}
+
+export interface TopLevelDatabaseInfo {
+    name: string;
+    nodeTag: string;
+    alerts: number;
+    loadError: string;
+    performanceHints: number;
 }
 
 export type DatabaseState = "Loading" | "Error" | "Offline" | "Disabled" | "Online";

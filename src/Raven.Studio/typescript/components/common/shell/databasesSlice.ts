@@ -11,7 +11,9 @@ import {
     DatabaseFilterCriteria,
     DatabaseLocalInfo,
     DatabaseSharedInfo,
+    OrchestratorLocalInfo,
     ShardedDatabaseSharedInfo,
+    TopLevelDatabaseInfo,
 } from "components/models/databases";
 import genUtils from "common/generalUtils";
 import { AppAsyncThunk, AppDispatch, AppThunk, RootState } from "components/store";
@@ -34,6 +36,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 import { addAppListener } from "components/storeUtils";
 import { selectClusterNodeTags, selectLocalNodeTag } from "components/common/shell/clusterSlice";
+import StudioOrchestratorState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioOrchestratorState;
 
 interface DatabasesState {
     /**
@@ -45,9 +48,13 @@ interface DatabasesState {
      */
     localDatabaseDetailedInfo: EntityState<DatabaseLocalInfo>;
     /**
-     * Data loading status per each node
+     * holds orchestrator info specific for given node (alert count, performance hints count etc)
      */
-    localDatabaseDetailedLoadStatus: EntityState<perNodeTagLoadStatus>;
+    localOrchestratorDetailedInfo: EntityState<OrchestratorLocalInfo>;
+    /**
+     * Data loading status per each node (applies to both db and orchestrator info)
+     */
+    localDetailedLoadStatus: EntityState<perNodeTagLoadStatus>;
     activeDatabase: string;
     searchCriteria: DatabaseFilterCriteria;
 }
@@ -60,8 +67,14 @@ const databasesAdapter = createEntityAdapter<DatabaseSharedInfo>({
 const selectDatabaseInfoId = (dbName: string, location: databaseLocationSpecifier) =>
     dbName + "_$$$_" + genUtils.formatLocation(location);
 
+const selectOrchestratorInfoId = (dbName: string, nodeTag: string) => dbName + "_$$$_" + nodeTag;
+
 const localDatabaseInfoAdapter = createEntityAdapter<DatabaseLocalInfo>({
     selectId: (x) => selectDatabaseInfoId(x.name, x.location),
+});
+
+const localOrchestratorInfoAdapter = createEntityAdapter<OrchestratorLocalInfo>({
+    selectId: (x) => selectOrchestratorInfoId(x.name, x.nodeTag),
 });
 
 const localDatabaseDetailedLoadStatusAdapter = createEntityAdapter<perNodeTagLoadStatus>({
@@ -71,11 +84,13 @@ const localDatabaseDetailedLoadStatusAdapter = createEntityAdapter<perNodeTagLoa
 const databasesSelectors = databasesAdapter.getSelectors();
 const localDatabaseDetailedLoadStatusSelectors = localDatabaseDetailedLoadStatusAdapter.getSelectors();
 const localDatabaseDetailedInfoSelectors = localDatabaseInfoAdapter.getSelectors();
+const localOrchestratorDetailedInfoSelectors = localOrchestratorInfoAdapter.getSelectors();
 
 const initialState: DatabasesState = {
     databases: databasesAdapter.getInitialState(),
     localDatabaseDetailedInfo: localDatabaseInfoAdapter.getInitialState(),
-    localDatabaseDetailedLoadStatus: localDatabaseDetailedLoadStatusAdapter.getInitialState(),
+    localDetailedLoadStatus: localDatabaseDetailedLoadStatusAdapter.getInitialState(),
+    localOrchestratorDetailedInfo: localOrchestratorInfoAdapter.getInitialState(),
     activeDatabase: null,
     searchCriteria: {
         name: "",
@@ -224,6 +239,50 @@ export function selectDatabaseByName(name: string) {
     };
 }
 
+function selectOrchestratorState(name: string) {
+    return (store: RootState) => {
+        const db = selectDatabaseByName(name)(store);
+
+        return db.nodes.map((nodeInfo): locationAwareLoadableData<OrchestratorLocalInfo> => {
+            const nodeTag = nodeInfo.tag;
+            const loadState = localDatabaseDetailedLoadStatusSelectors.selectById(
+                store.databases.localDetailedLoadStatus,
+                nodeTag
+            ) || {
+                status: "idle",
+                nodeTag,
+            };
+
+            switch (loadState.status) {
+                case "idle":
+                case "loading":
+                case "failure":
+                    return {
+                        status: loadState.status,
+                        location: {
+                            nodeTag,
+                        },
+                        data: null,
+                    };
+                case "success": {
+                    const data = localOrchestratorDetailedInfoSelectors.selectById(
+                        store.databases.localOrchestratorDetailedInfo,
+                        selectOrchestratorInfoId(name, nodeTag)
+                    );
+
+                    return {
+                        location: {
+                            nodeTag,
+                        },
+                        status: data ? "success" : "idle",
+                        data,
+                    };
+                }
+            }
+        });
+    };
+}
+
 export function selectDatabaseState(name: string) {
     return (store: RootState) => {
         const db = selectDatabaseByName(name)(store);
@@ -232,7 +291,7 @@ export function selectDatabaseState(name: string) {
 
         return locations.map((location): locationAwareLoadableData<DatabaseLocalInfo> => {
             const loadState = localDatabaseDetailedLoadStatusSelectors.selectById(
-                store.databases.localDatabaseDetailedLoadStatus,
+                store.databases.localDetailedLoadStatus,
                 location.nodeTag
             ) || {
                 status: "idle",
@@ -242,13 +301,9 @@ export function selectDatabaseState(name: string) {
             switch (loadState.status) {
                 case "idle":
                 case "loading":
-                    return {
-                        status: loadState.status,
-                        location,
-                    };
                 case "failure":
                     return {
-                        status: "failure",
+                        status: loadState.status,
                         location,
                     };
                 case "success": {
@@ -257,22 +312,49 @@ export function selectDatabaseState(name: string) {
                         selectDatabaseInfoId(name, location)
                     );
 
-                    if (!data) {
-                        // where was change and we don't have yet new data
-                        // TODO: start fetching?
-                        return {
-                            location,
-                            status: "idle",
-                        };
-                    }
-
                     return {
                         location,
-                        status: "success",
+                        status: data ? "success" : "idle",
                         data,
                     };
                 }
             }
+        });
+    };
+}
+
+/*
+  For sharded databases it returns orchestrators state
+  For non-sharded it return state from all nodes
+ */
+export function selectTopLevelState(name: string) {
+    return (store: RootState): locationAwareLoadableData<TopLevelDatabaseInfo>[] => {
+        const db = selectDatabaseByName(name)(store);
+
+        if (db.sharded) {
+            const state = selectOrchestratorState(db.name)(store);
+
+            return state.map((orchestratorState) => {
+                const { data, location, ...rest } = orchestratorState;
+
+                return {
+                    data: data ? localOrchestratorInfoIntoTopLevelDatabaseInfo(data, location.nodeTag) : null,
+                    location,
+                    ...rest,
+                };
+            });
+        }
+
+        const state = selectDatabaseState(db.name)(store);
+
+        return state.map((dbState) => {
+            const { data, location, ...rest } = dbState;
+
+            return {
+                data: data ? localDatabaseInfoIntoTopLevelDatabaseInfo(data, location.nodeTag) : null,
+                location,
+                ...rest,
+            };
         });
     };
 }
@@ -349,7 +431,7 @@ export const databasesSlice = createSlice({
         initDetails: {
             reducer: (state, action: PayloadAction<{ nodeTags: string[] }>) => {
                 localDatabaseDetailedLoadStatusAdapter.setAll(
-                    state.localDatabaseDetailedLoadStatus,
+                    state.localDetailedLoadStatus,
                     action.payload.nodeTags.map((tag) => ({
                         nodeTag: tag,
                         status: "idle",
@@ -369,8 +451,21 @@ export const databasesSlice = createSlice({
         builder.addCase(fetchDatabase.fulfilled, (state, action) => {
             const { nodeTag } = action.meta.arg;
 
+            action.payload.Orchestrators.forEach((orchestrator) => {
+                const newEntity = toOrchestratorLocalInfo(orchestrator, nodeTag);
+
+                const existingInfo = localOrchestratorDetailedInfoSelectors.selectById(
+                    state.localOrchestratorDetailedInfo,
+                    localOrchestratorInfoAdapter.selectId(newEntity)
+                );
+
+                if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
+                    localOrchestratorInfoAdapter.setOne(state.localOrchestratorDetailedInfo, newEntity);
+                }
+            });
+
             action.payload.Databases.forEach((db) => {
-                const newEntity = toLocalInfo(db, nodeTag);
+                const newEntity = toDatabaseLocalInfo(db, nodeTag);
 
                 const existingInfo = localDatabaseDetailedInfoSelectors.selectById(
                     state.localDatabaseDetailedInfo,
@@ -385,7 +480,7 @@ export const databasesSlice = createSlice({
         builder.addCase(fetchDatabases.fulfilled, (state, action) => {
             const nodeTag = action.meta.arg;
 
-            const loadStatusEntities = state.localDatabaseDetailedLoadStatus.entities;
+            const loadStatusEntities = state.localDetailedLoadStatus.entities;
 
             if (loadStatusEntities[nodeTag]) {
                 loadStatusEntities[nodeTag].status = "success";
@@ -396,8 +491,21 @@ export const databasesSlice = createSlice({
                 };
             }
 
+            action.payload.Orchestrators.forEach((orchestrator) => {
+                const newEntity = toOrchestratorLocalInfo(orchestrator, nodeTag);
+
+                const existingInfo = localOrchestratorDetailedInfoSelectors.selectById(
+                    state.localOrchestratorDetailedInfo,
+                    localOrchestratorInfoAdapter.selectId(newEntity)
+                );
+
+                if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
+                    localOrchestratorInfoAdapter.setOne(state.localOrchestratorDetailedInfo, newEntity);
+                }
+            });
+
             action.payload.Databases.forEach((db) => {
-                const newEntity = toLocalInfo(db, nodeTag);
+                const newEntity = toDatabaseLocalInfo(db, nodeTag);
 
                 const existingInfo = localDatabaseDetailedInfoSelectors.selectById(
                     state.localDatabaseDetailedInfo,
@@ -410,7 +518,7 @@ export const databasesSlice = createSlice({
         });
 
         builder.addCase(fetchDatabases.rejected, (state, action) => {
-            localDatabaseDetailedLoadStatusAdapter.setOne(state.localDatabaseDetailedLoadStatus, {
+            localDatabaseDetailedLoadStatusAdapter.setOne(state.localDetailedLoadStatus, {
                 nodeTag: action.meta.arg,
                 status: "failure",
             });
@@ -418,7 +526,43 @@ export const databasesSlice = createSlice({
     },
 });
 
-export function toLocalInfo(db: StudioDatabaseState, nodeTag: string): DatabaseLocalInfo {
+export function localDatabaseInfoIntoTopLevelDatabaseInfo(
+    localInfo: DatabaseLocalInfo,
+    nodeTag: string
+): TopLevelDatabaseInfo {
+    return {
+        name: localInfo.name,
+        nodeTag,
+        alerts: localInfo.alerts,
+        loadError: localInfo.loadError,
+        performanceHints: localInfo.performanceHints,
+    };
+}
+
+function localOrchestratorInfoIntoTopLevelDatabaseInfo(
+    localInfo: OrchestratorLocalInfo,
+    nodeTag: string
+): TopLevelDatabaseInfo {
+    return {
+        name: localInfo.name,
+        nodeTag,
+        alerts: localInfo.alerts,
+        loadError: localInfo.loadError,
+        performanceHints: localInfo.performanceHints,
+    };
+}
+
+function toOrchestratorLocalInfo(state: StudioOrchestratorState, nodeTag: string): OrchestratorLocalInfo {
+    return {
+        name: state.Name,
+        nodeTag,
+        alerts: state.Alerts,
+        performanceHints: state.PerformanceHints,
+        loadError: state.LoadError,
+    };
+}
+
+export function toDatabaseLocalInfo(db: StudioDatabaseState, nodeTag: string): DatabaseLocalInfo {
     return {
         name: DatabaseUtils.shardGroupKey(db.Name),
         location: {

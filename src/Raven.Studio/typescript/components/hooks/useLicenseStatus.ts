@@ -1,6 +1,4 @@
 ﻿import { useEffect, useState } from "react";
-import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
-import database from "models/resources/database";
 import licenseModel from "models/auth/licenseModel";
 
 export function useLicenseStatus() {

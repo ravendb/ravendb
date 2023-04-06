@@ -38,6 +38,7 @@ export function initRedux() {
     };
 
     clusterTopologyManager.default.topology.subscribe((topology) => {
+        onClusterTopologyChanged();
         topology.nodes.subscribe(onClusterTopologyChanged);
     });
 }
