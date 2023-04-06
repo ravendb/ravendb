@@ -16,6 +16,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 using TypeConverter = Raven.Server.Utils.TypeConverter;
+using JavaScriptFieldName = Raven.Client.Constants.Documents.Indexing.Fields.JavaScript;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -42,13 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             indexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
         }
-
-        private const string ValuePropertyName = "$value";
-        private const string OptionsPropertyName = "$options";
-        private const string NamePropertyName = "$name";
-        private const string SpatialPropertyName = "$spatial";
-        private const string BoostPropertyName = "$boost";
-
+        
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext,
             IWriteOperationBuffer writeBuffer, object sourceDocument)
         {
@@ -163,7 +158,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         var val = TryDetectDynamicFieldCreation(propertyAsString, actualValue.AsObject(), field);
                         if (val != null)
                         {
-                            if (val.IsObject() && val.AsObject().TryGetValue(SpatialPropertyName, out _))
+                            if (val.IsObject() && val.AsObject().TryGetValue(JavaScriptFieldName.SpatialPropertyName, out _))
                             {
                                 actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
                             }
@@ -189,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         }
 
                         var objectValue = actualValue.AsObject();
-                        if (objectValue.HasOwnProperty(SpatialPropertyName) && objectValue.TryGetValue(SpatialPropertyName, out var inner))
+                        if (objectValue.HasOwnProperty(JavaScriptFieldName.SpatialPropertyName) && objectValue.TryGetValue(JavaScriptFieldName.SpatialPropertyName, out var inner))
                         {
                             SpatialField spatialField;
                             IEnumerable<AbstractField> spatial;
@@ -255,7 +250,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var valueAsObject = iterator.Current.AsObject();
 
                 return TryDetectDynamicFieldCreation(propertyAsString, valueAsObject, field) is not null
-                       || valueAsObject.HasOwnProperty(SpatialPropertyName);
+                       || valueAsObject.HasOwnProperty(JavaScriptFieldName.SpatialPropertyName);
                 }
 
             static bool IsObject(JsValue value)
@@ -290,10 +285,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             value = JsValue.Undefined;
             boost = null;
 
-            if (valueToCheck.TryGetValue(BoostPropertyName, out var boostValue) == false)
+            if (valueToCheck.TryGetValue(JavaScriptFieldName.BoostPropertyName, out var boostValue) == false)
                 return false;
 
-            if (valueToCheck.TryGetValue(ValuePropertyName, out var valueValue) == false)
+            if (valueToCheck.TryGetValue(JavaScriptFieldName.ValuePropertyName, out var valueValue) == false)
                 return false;
 
             if (boostValue.IsNumber() == false)
@@ -308,16 +303,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
         {
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
-            if (!valueAsObject.HasOwnProperty(ValuePropertyName))
+            if (!valueAsObject.HasOwnProperty(JavaScriptFieldName.ValuePropertyName))
                 return null;
 
-            var value = valueAsObject.GetOwnProperty(ValuePropertyName).Value;
-            PropertyDescriptor nameProperty = valueAsObject.GetOwnProperty(NamePropertyName);
+            var value = valueAsObject.GetOwnProperty(JavaScriptFieldName.ValuePropertyName).Value;
+            PropertyDescriptor nameProperty = valueAsObject.GetOwnProperty(JavaScriptFieldName.NamePropertyName);
             if (nameProperty != null)
             {
                 var fieldNameObj = nameProperty.Value;
                 if (fieldNameObj.IsString() == false)
-                    throw new ArgumentException($"Dynamic field {property} is expected to have a string {NamePropertyName} property but got {fieldNameObj}");
+                    throw new ArgumentException($"Dynamic field {property} is expected to have a string {JavaScriptFieldName.NamePropertyName} property but got {fieldNameObj}");
 
                 field.Name = fieldNameObj.AsString();
             }
@@ -326,13 +321,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 field.Name = property;
             }
 
-            if (valueAsObject.HasOwnProperty(OptionsPropertyName))
+            if (valueAsObject.HasOwnProperty(JavaScriptFieldName.OptionsPropertyName))
             {
-                var options = valueAsObject.GetOwnProperty(OptionsPropertyName).Value;
+                var options = valueAsObject.GetOwnProperty(JavaScriptFieldName.OptionsPropertyName).Value;
                 if (options.IsObject() == false)
                 {
                     throw new ArgumentException($"Dynamic field {property} is expected to contain an object with three properties " +
-                                                $"{OptionsPropertyName}, {NamePropertyName} and {OptionsPropertyName} the later should be a valid IndexFieldOptions object.");
+                                                $"{JavaScriptFieldName.OptionsPropertyName}, {JavaScriptFieldName.NamePropertyName} and {JavaScriptFieldName.OptionsPropertyName} the later should be a valid IndexFieldOptions object.");
                 }
 
                 var optionObj = options.AsObject();
