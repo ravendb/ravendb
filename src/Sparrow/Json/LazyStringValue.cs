@@ -323,6 +323,15 @@ namespace Sparrow.Json
             return Convert.FromBase64String(valueAsString);
         }
 
+        public static explicit operator decimal(LazyStringValue self)
+        {
+            var valueAsString = (string)self;
+            if (decimal.TryParse(valueAsString, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal result))
+                return result;
+
+            throw new InvalidCastException($"Couldn't convert {valueAsString} (LazyStringValue) to decimal");
+        }
+
         public static explicit operator double(LazyStringValue self)
         {
             var valueAsString = (string)self;
