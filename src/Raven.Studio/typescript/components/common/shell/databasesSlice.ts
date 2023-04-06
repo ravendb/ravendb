@@ -421,7 +421,7 @@ export const databasesSlice = createSlice({
     },
 });
 
-function toLocalInfo(db: StudioDatabaseState, nodeTag: string): DatabaseLocalInfo {
+export function toLocalInfo(db: StudioDatabaseState, nodeTag: string): DatabaseLocalInfo {
     return {
         name: DatabaseUtils.shardGroupKey(db.Name),
         location: {

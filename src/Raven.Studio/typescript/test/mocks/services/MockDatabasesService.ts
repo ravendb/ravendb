@@ -15,25 +15,7 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
             const dbs = databaseListProvider(tag);
 
             const dtos = dbs.map((db): StudioDatabaseState => {
-                const state: StudioDatabaseState = {
-                    Name: db,
-                    UpTime: "00:05:00",
-                    IndexingStatus: "Running",
-                    LoadError: null,
-                    BackupInfo: null,
-                    DocumentsCount: 1024,
-                    Alerts: 1,
-                    PerformanceHints: 2,
-                    IndexingErrors: 3,
-                    TotalSize: {
-                        SizeInBytes: 5,
-                        HumaneSize: "5 Bytes",
-                    },
-                    TempBuffersSize: {
-                        SizeInBytes: 2,
-                        HumaneSize: "2 Bytes",
-                    },
-                };
+                const state = DatabasesStubs.studioDatabaseState(db);
 
                 if ((options.loadError || []).includes(tag)) {
                     return {

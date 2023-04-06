@@ -14,13 +14,14 @@ interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
 }
 
-function findOldestBackup(localInfos: DatabaseLocalInfo[]): BackupInfo {
-    if (localInfos.some((x) => !x.backupInfo || !x.backupInfo.LastBackup)) {
+export function findLatestBackup(localInfos: DatabaseLocalInfo[]): BackupInfo {
+    const nonEmptyBackups = localInfos.filter((x) => x.backupInfo && x.backupInfo.LastBackup);
+    if (nonEmptyBackups.length === 0) {
         return null;
     }
 
-    const backupInfos = localInfos.map((x) => x.backupInfo);
-    backupInfos.sort((a, b) => a.LastBackup.localeCompare(b.LastBackup));
+    const backupInfos = nonEmptyBackups.map((x) => x.backupInfo);
+    backupInfos.sort((a, b) => -1 * a.LastBackup.localeCompare(b.LastBackup));
 
     return backupInfos[0];
 }
@@ -85,7 +86,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     const linksTarget = db.currentNode.relevant ? undefined : "_blank";
 
-    const backupInfo = findOldestBackup(nonEmptyDbState);
+    const backupInfo = findLatestBackup(nonEmptyDbState);
     const backupStatus = DatabaseUtils.computeBackupStatus(backupInfo);
 
     return (

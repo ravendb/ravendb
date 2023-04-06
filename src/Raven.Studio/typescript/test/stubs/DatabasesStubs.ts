@@ -4,6 +4,7 @@ import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDa
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
 import DatabaseGroupNodeStatus = Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;
+import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -195,6 +196,28 @@ export class DatabasesStubs {
             CountOfCounterEntries: 1_453,
             CountOfConflicts: 83,
             Indexes: [],
+        };
+    }
+
+    static studioDatabaseState(dbName: string): StudioDatabaseState {
+        return {
+            Name: dbName,
+            UpTime: "00:05:00",
+            IndexingStatus: "Running",
+            LoadError: null,
+            BackupInfo: null,
+            DocumentsCount: 1024,
+            Alerts: 1,
+            PerformanceHints: 2,
+            IndexingErrors: 3,
+            TotalSize: {
+                SizeInBytes: 5,
+                HumaneSize: "5 Bytes",
+            },
+            TempBuffersSize: {
+                SizeInBytes: 2,
+                HumaneSize: "2 Bytes",
+            },
         };
     }
 
