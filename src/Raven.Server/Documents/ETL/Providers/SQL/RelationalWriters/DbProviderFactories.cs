@@ -1,7 +1,6 @@
 using System;
 using System.Data.Common;
 using System.Data.SqlClient;
-using MySql.Data.MySqlClient;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -19,7 +18,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 case SqlProvider.Npgsql:
                     return NpgsqlFactory.Instance;
                 case SqlProvider.MySqlClient:
-                    return MySqlClientFactory.Instance;
+                    return MySql.Data.MySqlClient.MySqlClientFactory.Instance;
+                case SqlProvider.MySqlConnectorFactory:
+                    return MySqlConnector.MySqlConnectorFactory.Instance;
                 case SqlProvider.OracleClient:
                     return OracleClientFactory.Instance;
                 default:

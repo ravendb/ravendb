@@ -29,6 +29,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                         server += $":{postgrePort}";
                     break;
                 case SqlProvider.MySqlClient:
+                case SqlProvider.MySqlConnectorFactory:
                     database = GetConnectionStringValue(connectionString, new[] { "Database", "Initial Catalog" });
 
                     if (database == null)

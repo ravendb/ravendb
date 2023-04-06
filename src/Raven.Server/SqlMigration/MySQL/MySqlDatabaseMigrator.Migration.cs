@@ -4,10 +4,12 @@ namespace Raven.Server.SqlMigration.MySQL
 {
     internal partial class MySqlDatabaseMigrator : GenericDatabaseMigrator
     {
-        protected override string FactoryName => "MySql.Data.MySqlClient";
+        private readonly string _factoryName;
+        protected override string FactoryName => _factoryName;
 
-        public MySqlDatabaseMigrator(string connectionString) : base(connectionString)
+        public MySqlDatabaseMigrator(string connectionString, string factoryName) : base(connectionString)
         {
+            _factoryName = factoryName;
         }
 
         protected override string QuoteColumn(string columnName)
