@@ -7,6 +7,7 @@ using Sparrow.Logging;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -33,7 +34,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
         private readonly ConcurrentSet<WeakReference<ServerStore>> _serverStores = new ConcurrentSet<WeakReference<ServerStore>>();
 
-        private static readonly HttpClient ApiRavenDbClient = new HttpClient
+        private static readonly RavenHttpClient ApiRavenDbClient = new()
         {
             BaseAddress = new Uri(ApiRavenDbNet)
         };

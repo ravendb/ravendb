@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Smuggler.Migration
 {
@@ -34,7 +35,7 @@ namespace Raven.Server.Smuggler.Migration
 
     public class MigratorParameters
     {
-        public HttpClient HttpClient { get; set; }
+        public RavenHttpClient HttpClient { get; set; }
 
         public SmugglerResult Result { get; set; }
 

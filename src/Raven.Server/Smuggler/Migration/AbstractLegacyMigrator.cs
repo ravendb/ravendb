@@ -67,7 +67,7 @@ namespace Raven.Server.Smuggler.Migration
 
         public static async Task<List<string>> GetResourcesToMigrate(
             string serverUrl,
-            HttpClient httpClient,
+            RavenHttpClient httpClient,
             bool isRavenFs,
             string apiKey,
             bool enableBasicAuthenticationOverUnsecuredHttp,
@@ -145,7 +145,7 @@ namespace Raven.Server.Smuggler.Migration
             string serverUrl,
             bool enableBasicAuthenticationOverUnsecuredHttp,
             bool skipServerCertificateValidation,
-            HttpClient httpClient,
+            RavenHttpClient httpClient,
             Reference<bool> isLegacyOAuthToken = null)
         {
             if (string.IsNullOrWhiteSpace(apiKey))
@@ -210,7 +210,7 @@ namespace Raven.Server.Smuggler.Migration
             return await Authenticator.GetOAuthToken(serverUrl, oauthSource, apiKey, skipServerCertificateValidation);
         }
 
-        private static void SetAuthorization(HttpClient httpClient, string oAuthToken)
+        private static void SetAuthorization(RavenHttpClient httpClient, string oAuthToken)
         {
             try
             {
