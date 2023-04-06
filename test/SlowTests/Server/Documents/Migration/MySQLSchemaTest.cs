@@ -13,9 +13,8 @@ namespace SlowTests.Server.Documents.Migration
         {
         }
 
-        [RequiresMySqlFact]
-        [InlineData(MigrationProvider.MySQL_MySql_Data)]
-        [InlineData(MigrationProvider.MySQL_MySqlConnector)]
+        [Theory]
+        [RequiresMySqlInlineData]
         public void CanFetchSchema(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, includeData: false))
