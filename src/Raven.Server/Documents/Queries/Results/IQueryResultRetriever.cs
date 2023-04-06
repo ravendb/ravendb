@@ -16,9 +16,9 @@ namespace Raven.Server.Documents.Queries.Results
     {
         (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
-        bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
+        bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key);
 
-        bool CoraxTryGetKey(Corax.IndexSearcher searcher, long id, out UnmanagedSpan key);
+        bool TryGetKeyCorax(Corax.IndexSearcher searcher, long id, out UnmanagedSpan key);
 
         Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
 
