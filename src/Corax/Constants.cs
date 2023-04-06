@@ -9,9 +9,10 @@ namespace Corax
         public const string NullValue = "NULL_VALUE";
         public const string EmptyString = "EMPTY_STRING";
         public const string IndexMetadata = "@index_metadata";
+        public const string IndexTimeFields = "@index_time_fields";
         public const string DocumentBoost = "@document_boost";
         
-        public static readonly Slice NullValueSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice;
+        public static readonly Slice NullValueSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice, IndexTimeFieldsSlice;
 
         static Constants()
         {
@@ -21,6 +22,7 @@ namespace Corax
                 Slice.From(ctx, EmptyString, ByteStringType.Immutable, out EmptyStringSlice);
                 Slice.From(ctx, IndexMetadata, ByteStringType.Immutable, out IndexMetadataSlice);
                 Slice.From(ctx, DocumentBoost, ByteStringType.Immutable, out DocumentBoostSlice);
+                Slice.From(ctx, IndexTimeFields, ByteStringType.Immutable, out IndexTimeFieldsSlice);
             }
         }
         
@@ -44,7 +46,7 @@ namespace Corax
         public static class IndexWriter
         {
             // This is the schema version for the indexes. 
-            public const long SchemaVersion = 54_005;
+            public const long SchemaVersion = 54_006;
             
             
             public static ReadOnlySpan<byte> DoubleTreeSuffix => DoubleTreeSuffixBytes.AsSpan();
@@ -54,7 +56,7 @@ namespace Corax
             private static readonly byte[] LongTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'L' };
 
             
-            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice, DynamicFieldsAnalyzersSlice, TimeFieldsSlice, NumberOfTermsInIndex;
+            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice, DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex;
             public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const short ShortKnownFieldMask = unchecked((short)0x8000);
             public const byte ByteKnownFieldMask = unchecked((byte)0x80);
@@ -70,7 +72,6 @@ namespace Corax
                     Slice.From(ctx, "SuggestionFields", ByteStringType.Immutable, out SuggestionsFieldsSlice);
                     Slice.From(ctx, "IndexVersion", ByteStringType.Immutable, out IndexVersionSlice);
                     Slice.From(ctx, "DynamicFieldsAnalyzers", ByteStringType.Immutable, out DynamicFieldsAnalyzersSlice);
-                    Slice.From(ctx, "TimeFieldsSlice", ByteStringType.Immutable, out TimeFieldsSlice);
                     Slice.From(ctx, "NumberOfTermsInIndex", ByteStringType.Immutable, out NumberOfTermsInIndex);
                 }
             }

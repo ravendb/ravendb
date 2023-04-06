@@ -14,18 +14,12 @@ public static class TimeFields
     {
         var fieldsNames = new HashSet<string>();
 
-        var metadataTree = tx.ReadTree(Constants.IndexMetadata);
-        if (metadataTree != null)
+        var timeFieldsTree = tx.ReadTree(Constants.IndexTimeFieldsSlice);
+        if (timeFieldsTree != null)
         {
-            using var iterator = metadataTree.MultiRead(Constants.IndexWriter.TimeFieldsSlice);
-            if (iterator.Seek(Slices.BeforeAllKeys))
-            {
-                do
-                {
-                    fieldsNames.Add(iterator.CurrentKey.ToString());
-                } while (iterator.MoveNext());
-            }
-                
+            using var iterator = timeFieldsTree.MultiRead(Constants.IndexTimeFieldsSlice);
+            while (iterator.MoveNext())
+                fieldsNames.Add(iterator.CurrentKey.ToString());
         }
 
         return fieldsNames;
@@ -35,13 +29,12 @@ public static class TimeFields
     {
         if (tx.IsWriteTransaction == false)
             throw new InvalidDataException("Tried to write fields names but got non write transaction.");
-        
+
         if (fieldsNames == null || fieldsNames.Count == 0)
             return;
 
-        using var metadataTree = tx.CreateTree(Constants.IndexMetadata);
-        
+        using var indexTimeFieldsTree = tx.CreateTree(Constants.IndexTimeFieldsSlice);
         foreach (var field in fieldsNames)
-            metadataTree.MultiAdd(Constants.IndexWriter.TimeFieldsSlice, field);
+            indexTimeFieldsTree.MultiAdd(Constants.IndexTimeFieldsSlice, field);
     }
 }

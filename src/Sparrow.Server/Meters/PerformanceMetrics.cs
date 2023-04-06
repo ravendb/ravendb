@@ -29,10 +29,10 @@ namespace Sparrow.Server.Meters
         }
 
         protected readonly MeterItem[] Buffer;
-        protected int BufferPos = -1;
+        protected long BufferPos = -1;
 
         private readonly SummerizedItem[] _summerizedBuffer;
-        private int _summerizedPos = -1;
+        private long _summerizedPos = -1;
 
         protected DatabasePerformanceMetrics.MetricType Type;
 

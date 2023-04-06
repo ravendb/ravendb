@@ -23,7 +23,7 @@ namespace Sparrow.Server.Meters
             };
 
             var pos = Interlocked.Increment(ref BufferPos);
-            var adjustedTail = pos % Buffer.Length;
+            var adjustedTail = (int)(pos % Buffer.Length);
 
             if (Interlocked.CompareExchange(ref Buffer[adjustedTail], meterItem, null) == null)
                 return;
