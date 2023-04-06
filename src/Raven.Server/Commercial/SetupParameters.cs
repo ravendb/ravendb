@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow.Platform;
 
@@ -10,22 +11,22 @@ namespace Raven.Server.Commercial
 {
     public class SetupParameters
     {
-        public int? FixedServerPortNumber { get;set; }
-        public int? FixedServerTcpPortNumber { get;set; }
-        
+        public int? FixedServerPortNumber { get; set; }
+        public int? FixedServerTcpPortNumber { get; set; }
+
         public bool IsDocker { get; set; }
         public string DockerHostname { get; set; }
 
-        
+
         public bool IsAws { get; set; }
         public bool IsAzure { get; set; }
-        
+
         public bool RunningOnPosix { get; set; }
         public bool RunningOnMacOsx { get; set; }
 
         private const string AzureUrl = "http://169.254.169.254/metadata/instance?api-version=2017-04-02";
         private const string AwsUrl = "http://instance-data.ec2.internal";
-        private static readonly Lazy<HttpClient> HttpClient = new Lazy<HttpClient>(() => new HttpClient
+        private static readonly Lazy<RavenHttpClient> HttpClient = new(() => new RavenHttpClient
         {
             Timeout = TimeSpan.FromSeconds(5)
         });
@@ -45,7 +46,7 @@ namespace Raven.Server.Commercial
                 result.IsAzure = await DetectIfRunningInAzure();
 
             result.RunningOnPosix = PlatformDetails.RunningOnPosix;
-            
+
             return result;
         }
 
@@ -70,7 +71,7 @@ namespace Raven.Server.Commercial
                 {
                     Method = HttpMethod.Get,
                     RequestUri = new Uri(AzureUrl),
-                    Headers = {{ "Metadata", "true" }}
+                    Headers = { { "Metadata", "true" } }
                 };
 
                 var response = await HttpClient.Value.SendAsync(request).ConfigureAwait(false);
@@ -95,7 +96,7 @@ namespace Raven.Server.Commercial
                 result.FixedServerPortNumber = uri.Port;
             }
         }
-        
+
         private static void DetermineFixedTcpPortNumber(ServerStore serverStore, SetupParameters result)
         {
             var serverUrlKey = RavenConfiguration.GetKey(x => x.Core.TcpServerUrls);

@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Server.Config;
 using Raven.Server.Https;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Platform;
 
@@ -46,8 +47,8 @@ public class LetsEncryptSimulationHelper
             });
         }
     }
-     public static async Task SimulateRunningServer(ServerStore serverStore, X509Certificate2 serverCertificate, string serverUrl, string nodeTag,
-        IPEndPoint[] addresses, int port, string settingsPath, SetupMode setupMode, CancellationToken token)
+    public static async Task SimulateRunningServer(ServerStore serverStore, X509Certificate2 serverCertificate, string serverUrl, string nodeTag,
+       IPEndPoint[] addresses, int port, string settingsPath, SetupMode setupMode, CancellationToken token)
     {
         var configuration = RavenConfiguration.CreateForServer(null, settingsPath);
         configuration.Initialize();
@@ -125,7 +126,7 @@ public class LetsEncryptSimulationHelper
                 if (PlatformDetails.RunningOnMacOsx == false)
                 {
                     httpMessageHandler.ServerCertificateCustomValidationCallback += (_, certificate2, _, _) =>
-                        // we want to verify that we get the same thing back
+                    // we want to verify that we get the same thing back
                     {
                         if (certificate2.Thumbprint != serverCertificate.Thumbprint)
                             throw new InvalidOperationException("Expected to get " + serverCertificate.FriendlyName + " with thumbprint " +
@@ -135,7 +136,7 @@ public class LetsEncryptSimulationHelper
                     };
                 }
 
-                using (var client = new HttpClient(httpMessageHandler) {BaseAddress = new Uri(serverUrl),})
+                using (var client = new RavenHttpClient(httpMessageHandler) { BaseAddress = new Uri(serverUrl) })
                 {
                     HttpResponseMessage response = null;
                     string result = null;

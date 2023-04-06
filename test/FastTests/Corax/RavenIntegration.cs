@@ -489,4 +489,59 @@ public class RavenIntegration : RavenTestBase
         }
     }
 
+    private class User
+    {
+
+        public string Id { get; set; }
+        public string Name { get; set; }
+        
+        public Dictionary<string, string> Dict { get; set; }
+    }
+    
+
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanUpdateDynamicFields(Options options)
+    {
+        using var store = GetDocumentStore();
+        var user = new User() {Name = "TestDoc", Dict = new Dictionary<string, string>() {{"secret_field", "maciej"}}};   
+        using (var session = store.OpenSession())
+        {
+            session.Store(user);  
+            session.SaveChanges();
+        }
+
+        var index = new DynamicFieldIndex();
+        index.Execute(store);
+        Indexes.WaitForIndexing(store);
+        
+        using (var session = store.OpenSession())
+        {
+            var count = session.Query<User, DynamicFieldIndex>().ToDocumentQuery().WhereEquals("secret_field", "maciej").Count();
+            Assert.Equal(1, count);
+
+            var loadDoc = session.Load<User>(user.Id);
+            loadDoc.Dict["secret_field"] = "jan";
+            session.Store(loadDoc);
+            session.SaveChanges();
+        }
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            var count = session.Query<User, DynamicFieldIndex>().ToDocumentQuery().WhereEquals("secret_field", "maciej").Count();
+            Assert.Equal(0, count);
+            count = session.Query<User, DynamicFieldIndex>().ToDocumentQuery().WhereEquals("secret_field", "jan").Count();
+            Assert.Equal(1, count);
+        }
+
+    }
+
+    private class DynamicFieldIndex : AbstractIndexCreationTask<User>
+    {
+        public DynamicFieldIndex()
+        {
+            Map = users => users.Select(u => new {_ = u.Dict.Select(d => CreateField(d.Key, d.Value))});
+        }   
+    }
 }

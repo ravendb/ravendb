@@ -45,6 +45,7 @@
     <Compile Include="..\..\src\Raven.Server\Utils\Features\FeaturesAvailability.cs" Link="Server\Utils\Features\FeaturesAvailability.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\IOExtensions.cs" Link="Server\Utils\IOExtensions.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Pipes.cs" Link="Server\Utils\Pipes.cs" />
+    <Compile Include="..\..\src\Raven.Server\Utils\RavenHttpClient.cs" Link="Server\Utils\RavenHttpClient.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\UrlUtil.cs" Link="Server\Utils\UrlUtil.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\JsonStringHelper.cs" Link="Server\Utils\JsonStringHelper.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Cli\WelcomeMessage.cs" Link="Server\Utils\Cli\WelcomeMessage.cs" />

@@ -56,11 +56,14 @@ namespace Raven.Client.Http
             public HttpCache Cache;
 
             private int _usages;
+            private int _internallyReleased;
+
+            internal int Usages => _usages;
 
             public HttpCacheItem()
             {
-                this._usages = 1;
-                this.LastServerUpdate = SystemTime.UtcNow;
+                _usages = 1;
+                LastServerUpdate = SystemTime.UtcNow;
             }
 
             public bool AddRef()
@@ -98,9 +101,22 @@ namespace Raven.Client.Http
                 }
             }
 
+            internal void ReleaseRefInternal()
+            {
+                if (Interlocked.CompareExchange(ref _internallyReleased, 1, 0) != 0)
+                {
+                    // when we create the HttpCacheItem object, the _usages is set to 1.
+                    // when we release it, we need to make sure that it's released by us only once.
+                    // we might try to release it twice because of a race condition between releasing an old object and the FreeSpace task.
+                    return;
+                }
+
+                ReleaseRef();
+            }
+
             public void Dispose()
             {
-                ReleaseRef();
+                ReleaseRefInternal();
             }
 #if !RELEASE
             ~HttpCacheItem()
@@ -149,6 +165,7 @@ namespace Raven.Client.Http
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
                 old = oldItem;
+                ForTestingPurposes?.OnHttpCacheSetUpdate?.Invoke();
                 return httpCacheItem;
             });
             //We need to check if the cache is been disposed after the item was added otherwise we will run into another race condition
@@ -156,9 +173,9 @@ namespace Raven.Client.Http
             if (_disposing)
             {
                 //We might have double release here but we have a protection for that.
-                httpCacheItem.ReleaseRef();
+                httpCacheItem.ReleaseRefInternal();
             }
-            old?.ReleaseRef();
+            old?.ReleaseRefInternal();
         }
 
         public void SetNotFound(string url, bool aggressivelyCached)
@@ -178,6 +195,7 @@ namespace Raven.Client.Http
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
                 old = oldItem;
+                ForTestingPurposes?.OnHttpCacheNotFoundUpdate?.Invoke();
                 return httpCacheItem;
             });
             //We need to check if the cache is been disposed after the item was added otherwise we will run into another race condition
@@ -185,15 +203,15 @@ namespace Raven.Client.Http
             if (_disposing)
             {
                 //We might have double release here but we have a protection for that.
-                httpCacheItem.ReleaseRef();
+                httpCacheItem.ReleaseRefInternal();
             }
-            old?.ReleaseRef();
+            old?.ReleaseRefInternal();
         }
 
         public int Generation;
         private volatile bool _disposing;
 
-        private void FreeSpace()
+        internal void FreeSpace()
         {
             if (_isFreeSpaceRunning.Raise() == false)
                 return;
@@ -244,7 +262,7 @@ namespace Raven.Client.Http
                     // about.
 
                     numberOfClearedItems++;
-                    value.ReleaseRef();
+                    value.ReleaseRefInternal();
                     sizeCleared += value.Size;
                 }
 
@@ -294,7 +312,7 @@ namespace Raven.Client.Http
 
             public void Dispose()
             {
-                this.Item?.ReleaseRef();
+                Item?.ReleaseRef();
             }
         }
 
@@ -359,6 +377,23 @@ namespace Raven.Client.Http
 
         public void LowMemoryOver()
         {
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public Action OnHttpCacheSetUpdate;
+
+            public Action OnHttpCacheNotFoundUpdate;
         }
     }
 }

@@ -35,12 +35,14 @@ public class RavenDB_18357 : RavenTestBase
         }
 
         using var session = store.OpenSession();
+
         var exception = Assert.ThrowsAny<Exception>(() =>
         {
+            var values1 = session.Query<Input>().Statistics(out var statistics).Where(w => w.Nested == new NestedItem() {Name = "Matt"}).ToList();
+            var errors = Indexes.WaitForIndexingErrors(store, new[] {statistics.IndexName}, errorsShouldExists: true);
+            Assert.Equal(1, errors[0].Errors.Length);
             // there is some race between the indexing and query: https://issues.hibernatingrhinos.com/issue/RavenDB-19228/SlowTests.Issues.RavenDB18357.AutoIndexShouldThrowWhenTryingToIndexComplexObjecoptions-DatabaseMode-Single-SearchEngineMode
             // this is why we want to perform two queries using the same autoindex (and make sure the exception will occur).
-            var values1 = session.Query<Input>().Customize(i => i.WaitForNonStaleResults()).Where(w => w.Nested == new NestedItem() {Name = "Matt"}).ToList();
-            Indexes.WaitForIndexing(store, allowErrors: true);
             var values2 = session.Query<Input>().Customize(i => i.WaitForNonStaleResults()).Where(w => w.Nested == new NestedItem() {Name = "zyz"}).ToList();
         });
 
@@ -70,7 +72,16 @@ public class RavenDB_18357 : RavenTestBase
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void StaticIndexShouldThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereExplicitlySetInDefinition(Options options)
     {
-        using var store = GetDocumentStore(options);
+        var modifiedOptions = new Options()
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                options.ModifyDatabaseRecord(record);
+                record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
+            }
+        };
+
+        using var store = GetDocumentStore(modifiedOptions);
         {
             using var s = store.OpenSession();
             s.Store(new Input {Nested = new NestedItem {Name = "Matt"}});
@@ -79,8 +90,8 @@ public class RavenDB_18357 : RavenTestBase
         var index = new InputIndex(setSearchOption: true);
 
         index.Execute(store);
-        Indexes.WaitForIndexing(store);
-        var errors = Indexes.WaitForIndexingErrors(store);
+        Indexes.WaitForIndexing(store, allowErrors: true);
+        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
         Assert.NotEmpty(errors);
         Assert.NotEmpty(errors[0].Errors);
     }

@@ -866,7 +866,7 @@ namespace Raven.Server
 
                     // Using the server certificate as a client certificate to test if we can talk to ourselves
                     httpMessageHandler.ClientCertificates.Add(certificateCertificate);
-                    using (var client = new HttpClient(httpMessageHandler)
+                    using (var client = new RavenHttpClient(httpMessageHandler)
                     {
                         BaseAddress = new Uri(url),
                         Timeout = TimeSpan.FromSeconds(15)
@@ -894,7 +894,7 @@ namespace Raven.Server
                         httpMessageHandler.SslProtocols = TcpUtils.SupportedSslProtocols;
                         httpMessageHandler.ClientCertificates.Add(certificateCertificate);
 
-                        using (var client = new HttpClient(httpMessageHandler)
+                        using (var client = new RavenHttpClient(httpMessageHandler)
                         {
                             BaseAddress = new Uri(url),
                             Timeout = TimeSpan.FromSeconds(15)
