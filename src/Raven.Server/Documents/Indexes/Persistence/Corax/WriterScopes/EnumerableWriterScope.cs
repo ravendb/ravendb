@@ -324,16 +324,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
             if (_count.Spatials > 0)
             {
-                type |= _count.Spatials == 1 
-                    ? DataType.SingleSpatial 
-                    : DataType.Spatials;
+                type |= DataType.Spatials;
             }
 
             if (_count.Raws > 0)
             {
-                type |= _count.Raws == 1 
-                    ? DataType.SingleRaw 
-                    : DataType.Raws;
+                type |= DataType.Raws;
             }
 
             if (type == DataType.Tuples)
