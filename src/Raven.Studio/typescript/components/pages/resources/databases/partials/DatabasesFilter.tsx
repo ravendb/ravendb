@@ -2,17 +2,17 @@
 import { DatabaseFilterByStateOption, DatabaseFilterCriteria } from "components/models/databases";
 import { Input } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
-import {
-    selectAllDatabasesCount,
-    selectDatabaseSearchCriteria,
-    selectFilterByStateOptions,
-    setSearchCriteriaName,
-    setSearchCriteriaStates,
-} from "components/common/shell/databasesSlice";
+
 import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 import "./DatabasesFilter.scss";
 import { shallowEqual } from "react-redux";
 import { InputItem } from "components/models/common";
+import {
+    selectAllDatabasesCount,
+    selectDatabaseSearchCriteria,
+    selectFilterByStateOptions,
+} from "components/common/shell/databaseSliceSelectors";
+import { setSearchCriteriaName, setSearchCriteriaStates } from "components/common/shell/databaseSliceActions";
 
 type FilterByStateOptions = InputItem<DatabaseFilterByStateOption>[];
 

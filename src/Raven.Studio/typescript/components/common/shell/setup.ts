@@ -1,9 +1,9 @@
 ﻿import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import { globalDispatch } from "components/storeCompat";
-import { activeDatabaseChanged, databasesLoaded } from "components/common/shell/databasesSlice";
 import databasesManager from "common/shell/databasesManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { localNodeTagLoaded, nodeTagsLoaded } from "components/common/shell/clusterSlice";
+import { activeDatabaseChanged, databasesLoaded } from "components/common/shell/databaseSliceActions";
 
 let initialized = false;
 

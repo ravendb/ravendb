@@ -15,9 +15,9 @@ import { FlexGrow } from "components/common/FlexGrow";
 import app from "durandal/app";
 import addNewShardToDatabaseGroup from "viewmodels/resources/addNewShardToDatabaseGroup";
 import { StickyHeader } from "components/common/StickyHeader";
-import { selectDatabaseByName } from "components/common/shell/databasesSlice";
 import { useAppSelector } from "components/store";
 import { ShardedDatabaseSharedInfo } from "components/models/databases";
+import { selectDatabaseByName } from "components/common/shell/databaseSliceSelectors";
 
 interface ManageDatabaseGroupPageProps {
     db: database;

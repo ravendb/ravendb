@@ -1,6 +1,12 @@
 ﻿import React, { useCallback, useMemo, useState } from "react";
 import { useAccessManager } from "hooks/useAccessManager";
 import { Button, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import { useAppDispatch } from "components/store";
+import { DatabaseSharedInfo } from "components/models/databases";
+import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
+import { useEventsCollector } from "hooks/useEventsCollector";
+import { ButtonGroupWithLabel } from "components/common/ButtonGroupWithLabel";
+import { CheckboxTriple } from "components/common/CheckboxTriple";
 import {
     changeDatabasesLockMode,
     confirmDeleteDatabases,
@@ -10,13 +16,7 @@ import {
     openCreateDatabaseDialog,
     openCreateDatabaseFromRestoreDialog,
     toggleDatabases,
-} from "components/common/shell/databasesSlice";
-import { useAppDispatch } from "components/store";
-import { DatabaseSharedInfo } from "components/models/databases";
-import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import { useEventsCollector } from "hooks/useEventsCollector";
-import { ButtonGroupWithLabel } from "components/common/ButtonGroupWithLabel";
-import { CheckboxTriple } from "components/common/CheckboxTriple";
+} from "components/common/shell/databaseSliceActions";
 
 interface DatabasesToolbarActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
