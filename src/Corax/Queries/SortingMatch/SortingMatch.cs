@@ -117,14 +117,19 @@ namespace Corax.Queries
             private static bool Get<TIn>(IndexSearcher searcher, FieldMetadata binding, long entryId, out TOut storedValue, in TIn comparer)
                 where TIn : IMatchComparer
             {
-                var reader = searcher.GetEntryReaderFor(entryId);
+                var fieldReader = searcher
+                    .GetEntryReaderFor(entryId)
+                    .GetFieldReaderFor(binding);
+                
+                if (fieldReader.Type is IndexEntryFieldType.Null)
+                    goto Failed;
 
                 if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
                 {
                     if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
                         goto Failed;
 
-                    var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    var readX = fieldReader.Read(out (double lat, double lon) coordinates);
                     if (readX == false)
                         goto Failed;
                         
@@ -138,7 +143,7 @@ namespace Corax.Queries
                     if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
                         goto Failed;
 
-                    var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    var readX = fieldReader.Read(out (double lat, double lon) coordinates);
                     if (readX == false)
                         goto Failed;
                     
@@ -149,7 +154,7 @@ namespace Corax.Queries
                 }
                 else if (typeof(TOut) == typeof(SequenceItem))
                 {
-                    var readX = reader.GetFieldReaderFor(binding).Read(out var sv);
+                    var readX = fieldReader.Read(out var sv);
                     if (readX == false)
                         goto Failed;
                     
@@ -161,8 +166,8 @@ namespace Corax.Queries
                 }
                 else if (typeof(TOut) == typeof(NumericalItem<long>))
                 {
-                    var readX = reader.GetFieldReaderFor(binding).Read<long>(out var value);
-                    if (readX == false)
+                    var readX = fieldReader.Read<long>(out var value);
+                    if (fieldReader.Type is not IndexEntryFieldType.Tuple || readX == false)
                         goto Failed;
                     
                     storedValue = (TOut)(object)new NumericalItem<long>(value);
@@ -170,8 +175,8 @@ namespace Corax.Queries
                 }
                 else if (typeof(TOut) == typeof(NumericalItem<double>))
                 {
-                    var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
-                    if (readX == false)
+                    var readX = fieldReader.Read<double>(out var value);
+                    if (fieldReader.Type is not IndexEntryFieldType.Tuple || readX == false)
                         goto Failed;
                     
                     storedValue = (TOut)(object)new NumericalItem<double>(value);
