@@ -171,7 +171,7 @@ public static class EntryIdEncodings
         if (ArmBase.Arm64.IsSupported)
             ArmLzcntFrequencyQuantization(frequency);
         
-        return ClassicFrequencyQuantization(frequency);
+        return FrequencyQuantizationWithoutAcceleration(frequency);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -180,8 +180,8 @@ public static class EntryIdEncodings
         if (frequency < 16)
             return frequency;
 
-        var leadingZeros = ArmBase.Arm64.LeadingZeroCount((uint)frequency);
-        var level = (28 - leadingZeros + (leadingZeros & 0b1)) >> 1;
+        var leadingZeros = ArmBase.Arm64.LeadingZeroCount((long)frequency);
+        var level = (60 - leadingZeros + (leadingZeros & 0b1)) >> 1;
         var mod = (frequency - Step[level - 1]) / LevelSizeInStep[level];
         Debug.Assert((long)mod < 16);
         return ((long)(level << 4)) | (long)mod;
@@ -200,7 +200,7 @@ public static class EntryIdEncodings
         return ((long)(level << 4)) | (long)mod;
     }
 
-    private static long ClassicFrequencyQuantization(short frequency)
+    public static long FrequencyQuantizationWithoutAcceleration(short frequency)
     {
         if (frequency < 16) //shortcut
             return frequency;
