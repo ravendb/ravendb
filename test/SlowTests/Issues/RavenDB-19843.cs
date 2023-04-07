@@ -15,14 +15,15 @@ public class RavenDB_19843 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void CheckIfNullDatesAreReturnedLastWithConfigOptionEnabled(bool configEnabled)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[] {true})]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[] {false})]
+    public void CheckIfNullDatesAreReturnedLastWithConfigOptionEnabled(Options options, bool configEnabled)
     {
         using (var store = GetDocumentStore(new Options
                {
                    ModifyDatabaseRecord = r =>
                    {
+                       options.ModifyDatabaseRecord(r);
                        r.Settings[RavenConfiguration.GetKey(x => x.Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved)] = configEnabled.ToString();
                    }
                }))
@@ -44,7 +45,7 @@ public class RavenDB_19843 : RavenTestBase
                 var results = session.Query<DtoWithDate>()
                     .OrderByDescending(x => x.CreationTime).ToList();
                 
-                if(configEnabled)
+                if (options.SearchEngineMode is RavenSearchEngineMode.Lucene && configEnabled)
                     Assert.Equal(null, results[2].CreationTime);
                 else
                     Assert.Equal(null, results[0].CreationTime);
