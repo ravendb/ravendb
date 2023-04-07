@@ -21,6 +21,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Indexes.Test;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
@@ -293,41 +294,56 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return instance;
         }
 
-        public static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase database, bool isIndexReset = false)
+        public static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false)
+            where TStaticIndex : MapReduceIndex
+        {
+            return CreateNew<TStaticIndex>(definition, documentDatabase, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
+        }
+        
+        private static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration, bool isIndexReset = false)
             where TStaticIndex : MapReduceIndex
         {
             TStaticIndex instance;
             if (typeof(TStaticIndex) == typeof(MapReduceIndex))
-                instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex>(definition, database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)CreateIndexInstance<MapReduceIndex>(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceIndex(staticMapIndexDefinition, staticIndex));
             else if (typeof(TStaticIndex) == typeof(MapReduceTimeSeriesIndex))
-                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex>(definition, database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceTimeSeriesIndex>(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceTimeSeriesIndex(staticMapIndexDefinition, staticIndex));
             else if (typeof(TStaticIndex) == typeof(MapReduceCountersIndex))
-                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceCountersIndex>(definition, database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceCountersIndex(staticMapIndexDefinition, staticIndex));
+                instance = (TStaticIndex)(MapReduceIndex)CreateIndexInstance<MapReduceCountersIndex>(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, (staticMapIndexDefinition, staticIndex) => new MapReduceCountersIndex(staticMapIndexDefinition, staticIndex));
             else
                 throw new NotSupportedException($"Not supported index type {typeof(TStaticIndex).Name}");
 
             ValidateReduceResultsCollectionNameAsync(
                 definition,
                 instance._compiled,
-                () => database.IndexStore.GetIndexes().Select(x => x.ToIndexInformationHolder()),
+                () => documentDatabase.IndexStore.GetIndexes().Select(x => x.ToIndexInformationHolder()),
                 collection =>
                 {
-                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
-                        return ValueTask.FromResult(database.DocumentsStorage.GetCollection(collection, context).Count);
+                        return ValueTask.FromResult(documentDatabase.DocumentsStorage.GetCollection(collection, context).Count);
                 },
                 checkIfCollectionEmpty: isIndexReset == false)
                 .AsTask()
                 .Wait();
 
-            instance.Initialize(database,
-                new SingleIndexConfiguration(definition.Configuration, database.Configuration),
-                database.Configuration.PerformanceHints);
+            instance.Initialize(documentDatabase,
+                configuration,
+                documentDatabase.Configuration.PerformanceHints);
 
             var staticIndex = instance._compiled;
-            staticIndex.CheckDepthOfStackInOutputMap(definition, database);
+            staticIndex.CheckDepthOfStackInOutputMap(definition, documentDatabase);
             
             return instance;
+        }
+        
+        public static MapReduceIndex CreateNewForTest<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, DocumentsOperationContext context, bool isIndexReset = false)
+            where TStaticIndex : MapReduceIndex
+        {
+            var index = CreateNew<TStaticIndex>(definition, documentDatabase, new TestIndexConfiguration(definition.Configuration, context.DocumentDatabase.Configuration));
+            index.InitializeTestIndex(context);
+            
+            return index;
         }
 
         public static void Update(Index index, IndexDefinition definition, DocumentDatabase documentDatabase)
