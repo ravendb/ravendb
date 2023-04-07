@@ -4,6 +4,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Client.TimeSeries.Issues
 
 
 
-        [Fact]
-        public void CanFillGaps_LastRangeValue_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_LastRangeValue_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -96,10 +98,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_LastRangeValue2_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_LastRangeValue2_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -173,10 +176,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_NextRangeValue_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_NextRangeValue_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -253,10 +257,11 @@ select timeseries(
         }
 
 
-        [Fact]
-        public void CanFillGaps_NextRangeValue2_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_NextRangeValue2_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -331,10 +336,11 @@ select timeseries(
         }
 
 
-        [Fact]
-        public void CanFillGaps_LastRangeValue_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_LastRangeValue_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -407,10 +413,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_NextRangeValue_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_NextRangeValue_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";

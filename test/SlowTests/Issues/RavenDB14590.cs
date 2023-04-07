@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -57,10 +58,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanGetUpdatesTimeSeriesValuesUsingInclude_UsingQuery()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanGetUpdatesTimeSeriesValuesUsingInclude_UsingQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var s = store.OpenAsyncSession())
             {

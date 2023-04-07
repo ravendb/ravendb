@@ -24,7 +24,8 @@ public class QuantizationTest : RavenTestBase
         for (short value = 1; value < short.MaxValue; ++value)
         {
             var quantized = EntryIdEncodings.FrequencyQuantization(value);
-
+            var quantizedByClassic = EntryIdEncodings.FrequencyQuantizationWithoutAcceleration(value);
+            Assert.Equal(quantizedByClassic, quantized);
             Assert.True(quantized <= byte.MaxValue); //In range
 
             var decoded = EntryIdEncodings.FrequencyReconstructionFromQuantization(quantized);

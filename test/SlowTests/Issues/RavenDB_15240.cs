@@ -5,6 +5,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CanCalculateTombstoneCleanerStateCorrectly()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanCalculateTombstoneCleanerStateCorrectly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MyTsIndex().Execute(store);
                 new MyCounterIndex().Execute(store);

@@ -7,7 +7,6 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -356,6 +355,12 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string NuGetPackageSourceUrl { get; set; }
+
+        [Description("Allow installation of NuGet prerelease packages")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.NuGetAllowPreleasePackages", ConfigurationEntryScope.ServerWideOnly)]
+        public bool NuGetAllowPreleasePackages { get; set; }
         
         [Description("Number of index history revisions to keep per index")]
         [DefaultValue(10)]

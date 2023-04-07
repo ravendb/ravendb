@@ -17,6 +17,7 @@ using NuGet.Packaging.PackageExtraction;
 using NuGet.Packaging.Signing;
 using NuGet.ProjectManagement;
 using NuGet.Protocol.Core.Types;
+using NuGet.Resolver;
 using NuGet.Versioning;
 using Sparrow.Platform;
 
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
             }
         }
 
-        public async Task<NuGetPackage> DownloadAsync(string package, string version, CancellationToken token = default)
+        public async Task<NuGetPackage> DownloadAsync(string package, string version, bool allowPreleasePackages, CancellationToken token = default)
         {
             var resource = await _sourceRepository.GetResourceAsync<PackageMetadataResource>(token);
             var identity = new PackageIdentity(package, NuGetVersion.Parse(version));
@@ -76,12 +77,12 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
                 foreach (var depPkg in dependencies.Packages)
                 {
                     var key = (depPkg.Id, depPkg.VersionRange.MinVersion.ToString());
-                    var task = _pendingPackages.GetOrAdd(key, _ => new Lazy<Task<NuGetPackage>>(() => DownloadAsync(depPkg.Id, depPkg.VersionRange.MinVersion.ToString(), token)));
+                    var task = _pendingPackages.GetOrAdd(key, _ => new Lazy<Task<NuGetPackage>>(() => DownloadAsync(depPkg.Id, depPkg.VersionRange.MinVersion.ToString(), allowPreleasePackages, token)));
                     dependencyTasks.Add(task.Value);
                 }
             }
 
-            var packageTask = DownloadPackageAsync(metadata.Identity, token);
+            var packageTask = DownloadPackageAsync(metadata.Identity, allowPreleasePackages, token);
 
             await Task.WhenAll(dependencyTasks);
             await packageTask;
@@ -98,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
 
                 pckg.Dependencies.Add(dependency);
             }
-                
+
             return pckg;
         }
 
@@ -111,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
             return NuGetFramework.Parse(frameworkName);
         }
 
-        private async Task<NuGetPackage> DownloadPackageAsync(PackageIdentity identity, CancellationToken token)
+        private async Task<NuGetPackage> DownloadPackageAsync(PackageIdentity identity, bool allowPreleasePackages, CancellationToken token)
         {
             var settings = Settings.LoadDefaultSettings(_rootPath);
             var packageSourceProvider = new PackageSourceProvider(settings);
@@ -122,7 +123,12 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
                 PackagesFolderNuGetProject = project
             };
 
-            ResolutionContext resolutionContext = new ResolutionContext();
+            ResolutionContext resolutionContext = new ResolutionContext(
+                DependencyBehavior.Lowest,
+                includePrelease: allowPreleasePackages,
+                includeUnlisted: true,
+                versionConstraints: VersionConstraints.None);
+
             var downloadContext = new PackageDownloadContext(resolutionContext.SourceCacheContext,
                 _rootPath, resolutionContext.SourceCacheContext.DirectDownload);
 
@@ -234,9 +240,12 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != GetType()) return false;
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
+                if (obj.GetType() != GetType())
+                    return false;
                 return Equals((NuGetPackage)obj);
             }
 

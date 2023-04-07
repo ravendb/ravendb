@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected readonly string _storeValueFieldName;
         protected readonly int _numberOfBaseFields;
 
-        public ConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
+        protected ConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
             string storeValueFieldName, ICollection<IndexField> fields = null)
         {
             _index = index ?? throw new ArgumentNullException(nameof(index));

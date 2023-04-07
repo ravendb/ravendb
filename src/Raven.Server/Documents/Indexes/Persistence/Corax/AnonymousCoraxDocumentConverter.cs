@@ -8,16 +8,23 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
 using Constants = Raven.Client.Constants;
 using Sparrow.Server;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
+public sealed class AnonymousCoraxDocumentConverter : AnonymousCoraxDocumentConverterBase
+{
+    public AnonymousCoraxDocumentConverter(Index index, bool storeValue = false) : base(index, numberOfBaseFields: 1, storeValue: storeValue)
+    {
+    }
+}
+
+public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConverterBase
 {
     private readonly bool _isMultiMap;
     private IPropertyAccessor _propertyAccessor;
 
-    public AnonymousCoraxDocumentConverter(Index index, bool storeValue = false)
-        : base(index, storeValue, index.Configuration.IndexEmptyEntries, true, 1, null, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+    public AnonymousCoraxDocumentConverterBase(Index index, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, bool canContainSourceDocumentId = false) : base(index, storeValue, index.Configuration.IndexEmptyEntries, true, 1, keyFieldName, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, canContainSourceDocumentId)
     {
         _isMultiMap = index.IsMultiMap;
     }
@@ -84,7 +91,10 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
                 return default;
             }
 
-            id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
+            id = key ?? throw new InvalidParameterException("Cannot find any identifier of the document.");
+            if (sourceDocumentId != null && knownFields.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var documentSourceField))
+                scope.Write(string.Empty, documentSourceField.FieldId, sourceDocumentId.AsSpan(), ref entryWriter);
+            
             scope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
             return entryWriter.Finish(out output);
         }

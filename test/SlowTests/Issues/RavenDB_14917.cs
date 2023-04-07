@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseSegmentSummaryInIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

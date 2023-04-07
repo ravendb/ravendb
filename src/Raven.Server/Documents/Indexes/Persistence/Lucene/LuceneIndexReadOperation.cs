@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             document = _searcher.Doc(scoreDoc.Doc, _state);
 
                         var retrieverInput = new RetrieverInput(document, scoreDoc, _state);
-                        if (retriever.TryGetKey(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
+                        if (retriever.TryGetKeyLucene(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                         {
                             // If either there is no valid projection or we have already seen this document before, we are skipping. 
                             skippedResults.Value++;
@@ -481,7 +481,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var document = _searcher.Doc(indexResult.LuceneId, _state);
 
                     var retrieverInput = new RetrieverInput(document, new ScoreDoc(indexResult.LuceneId, indexResult.Score), _state);
-                    if (retriever.TryGetKey(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
+                    if (retriever.TryGetKeyLucene(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                     {
                         skippedResults.Value++;
                         skippedResultsInCurrentLoop++;

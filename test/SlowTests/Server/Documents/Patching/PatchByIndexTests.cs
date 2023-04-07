@@ -1,25 +1,15 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using MySqlX.XDevAPI;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
 

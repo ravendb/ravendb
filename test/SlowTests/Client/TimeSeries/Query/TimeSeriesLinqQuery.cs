@@ -79,7 +79,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLinq(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -140,7 +140,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanQueryTimeSeriesAggregation_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -201,7 +201,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_WithFromAndToDates(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -266,7 +266,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_NoAlias(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -327,7 +327,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void MaxCanGoNegative(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -378,7 +378,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereTagIn(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -438,7 +438,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanQueryTimeSeriesAggregation_WhereInOnLoadedTag(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -514,7 +514,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_FromLoadedDocument(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -581,7 +581,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanQueryTimeSeriesAggregation_WhereOnLoadedTag(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -657,7 +657,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_StronglyTypedGroupBy(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -718,7 +718,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_SimpleProjectionToAnonymousClass(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -788,7 +788,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_SimpleMemberInitProjection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -859,7 +859,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_MultipleSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -956,7 +956,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanQueryTimeSeriesAggregation_DifferentNumberOfValues(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1033,7 +1033,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanQueryTimeSeriesAggregation_DifferentNumberOfValues2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1082,7 +1082,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereOnVariable(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1145,7 +1145,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_WithNameVariable(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1205,7 +1205,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereOr(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1263,7 +1263,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_WhereAnd(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1332,7 +1332,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_SelectSingleCall(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1386,7 +1386,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldUseQueryParameters(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1465,7 +1465,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_WithSelectSum(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1509,7 +1509,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_GroupByWithoutSelect(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1560,7 +1560,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldThrowOnMultipleCalls(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1600,10 +1600,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void ShouldThrowOnBadReturnType()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldThrowOnBadReturnType(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var msg = $"Time Series query expressions must return type '{nameof(TimeSeriesRawResult)}' or " +
                           $"'{nameof(TimeSeriesAggregationResult)}'. Did you forget to call 'ToList'?";
@@ -1743,7 +1744,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_UsingLinq(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1813,7 +1814,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanQueryTimeSeriesRaw_Async(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1875,7 +1876,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_WithFromAndToDates(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1940,7 +1941,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_WhereTagIn(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1999,7 +2000,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_WithNullTag(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2037,7 +2038,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_FromLoadedDocument(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2101,7 +2102,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanQueryTimeSeriesRaw_WhereOnLoadedTag(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2173,7 +2174,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanQueryTimeSeriesRaw_WhereInOnLoadedTag(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2249,7 +2250,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_WhereOnVariable(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2306,7 +2307,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_MultipleSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2381,7 +2382,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_WhereOnValue(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2434,7 +2435,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_SelectWithoutGroupBy(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2479,7 +2480,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_WithOffset(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2602,7 +2603,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_WithNegativeOffset(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2710,7 +2711,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_WithOffset(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2791,7 +2792,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_WithOffset_BetweenDateTimeMinAndDateTimeMax(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2920,7 +2921,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_Seconds(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2965,7 +2966,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_Minutes(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3015,7 +3016,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_UsingLast_Hour(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3066,7 +3067,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_Hour(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3145,7 +3146,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_Day(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3195,7 +3196,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingLast_WithFilter(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3249,7 +3250,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_UsingLast_WithOffset(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3349,7 +3350,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_Seconds(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3399,7 +3400,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_Minutes(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3454,7 +3455,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_UsingFirst_Hour(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3502,7 +3503,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_Hour(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3579,7 +3580,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_Day(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3635,7 +3636,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingFirst_WithFilter(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3694,7 +3695,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_UsingFirst_WithOffset(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3747,7 +3748,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldThrowOnUsingLastAndBetweenInTheSameTimeSeriesQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3785,7 +3786,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldThrowOnUsingFirstAndBetweenInTheSameTimeSeriesQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3823,7 +3824,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldThrowOnUsingFirstAndLastInTheSameTimeSeriesQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -3862,7 +3863,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanQueryTimeSeriesUsingNamedValues(Options options)
         {
             var seriesName = "StockPrices";
@@ -3927,7 +3928,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanQueryTimeSeriesAggregationUsingNamedValues(Options options)
         {
             var seriesName = "StockPrices";
@@ -3995,7 +3996,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_UsingScale(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -4053,7 +4054,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesAggregation_UsingScale(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -4123,7 +4124,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesRaw_UsingScaleAndOffset(Options options)
         {
             using (var store = GetDocumentStore(options))

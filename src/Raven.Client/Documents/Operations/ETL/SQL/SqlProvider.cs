@@ -8,6 +8,7 @@
         OracleClient,
         MySqlClient,
         SqlServerCe_4_0,
-        SqlServerCe_3_5
+        SqlServerCe_3_5,
+        MySqlConnectorFactory,
     }
 }

@@ -102,7 +102,7 @@ namespace Raven.Server.Utils
                 arrays.Add(token);
             }
 
-            var set = new HashSet<Tuple<object, BlittableJsonToken>>();
+            var set = new HashSet<(object, BlittableJsonToken)>();
             var lastLength = arrays[0].Length;
             var sameSize = true;
             foreach (var arr in arrays)

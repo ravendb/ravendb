@@ -12,6 +12,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,10 +24,11 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
-        public async Task TimeSeriesCollectionQueryWithNamedValues_ShouldNotThrowOnDocumentsWithoutTimeSeries()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task TimeSeriesCollectionQueryWithNamedValues_ShouldNotThrowOnDocumentsWithoutTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

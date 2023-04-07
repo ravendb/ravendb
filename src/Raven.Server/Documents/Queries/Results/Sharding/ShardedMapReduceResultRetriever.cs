@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Corax;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Timings;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -22,7 +24,12 @@ public class ShardedMapReduceResultRetriever : QueryResultRetrieverBase
         throw new NotImplementedException();
     }
 
-    public override bool TryGetKey(ref RetrieverInput retrieverInput, out string key)
+    public override bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key)
     {
         throw new NotImplementedException();
     }

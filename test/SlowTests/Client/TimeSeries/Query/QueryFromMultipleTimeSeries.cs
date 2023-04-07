@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Client.TimeSeries.Query
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void TimeValueMultipleTest()
         {
             var second = TimeValue.FromSeconds(1);
@@ -43,10 +44,11 @@ namespace SlowTests.Client.TimeSeries.Query
             Assert.False((3 * day).IsMultiple(7 * day));
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -122,10 +124,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_SelectSyntax()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_SelectSyntax(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -201,10 +204,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_WithAliasNotation()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_WithAliasNotation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -283,10 +287,11 @@ select out(u)
             }
         }
 
-        [Fact]
-        public async Task CanQueryAverageFromRollup()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryAverageFromRollup(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -358,10 +363,11 @@ select out(u)
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_UsingJsFunctionAsArgumentOfTimeSeriesFunction()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_UsingJsFunctionAsArgumentOfTimeSeriesFunction(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -443,10 +449,11 @@ select out(u)
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_ShouldReturnValidResults()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_ShouldReturnValidResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
                 var p = new TimeSeriesPolicy("By1Day", TimeSpan.FromHours(24), raw.RetentionTime * 5);
@@ -529,10 +536,11 @@ select out(u)
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_PartialRange()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_PartialRange(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -609,10 +617,11 @@ select out('Heartrate')
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeries_WithAverage()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeries_WithAverage(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -678,10 +687,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollupWithMonthly()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollupWithMonthly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -745,10 +755,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollup()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollup(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -808,10 +819,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollup2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollup2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -875,10 +887,11 @@ select out()
             }
         }
 
-         [Fact]
-        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollup3()
+         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollup3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -963,10 +976,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_NoRetention()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_NoRetention(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -1051,10 +1065,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task RavenDB_18384()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task RavenDB_18384(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
                 var p1 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1));
@@ -1133,10 +1148,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_UsingLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -1211,10 +1227,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_RawQuery_UsingJsProjection()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_RawQuery_UsingJsProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -1288,10 +1305,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_UsingJsProjection()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_UsingJsProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -1402,10 +1420,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_WithFilterByValue()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_WithFilterByValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -1489,10 +1508,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_WithFilterByValues()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_WithFilterByValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -1644,10 +1664,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollupDat31()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollupDat31(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -1700,10 +1721,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollupfor29InFeb()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollupfor29InFeb(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 

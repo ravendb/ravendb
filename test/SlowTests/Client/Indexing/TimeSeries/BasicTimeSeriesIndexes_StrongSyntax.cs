@@ -310,8 +310,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -471,8 +471,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapIndexWithLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -632,8 +632,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -814,8 +814,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapReduceIndexWithLoad(Options options)
         {
             {
@@ -964,8 +964,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeriesFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1111,8 +1111,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1303,8 +1303,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMultiMapIndex(Options options)
         {
             var now = DateTime.UtcNow.Date;
@@ -1407,7 +1407,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
                     record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
-                
+
             }))
             {
                 var timeSeriesIndex = new MyTsIndex_WithSpace();
@@ -1517,8 +1517,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void TimeSeriesNamesFor(Options options)
         {
             var now = DateTime.UtcNow.Date;
@@ -1542,10 +1542,12 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names", null));
                 Assert.Equal(0, terms.Length);
 
-                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
-                Assert.Equal(1, terms.Length);
-                Assert.Contains("true", terms);
-
+                if (options.SearchEngineMode == RavenSearchEngineMode.Lucene)
+                {
+                    terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("true", terms);
+                }
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
@@ -1564,14 +1566,17 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 Assert.Contains("heartrate", terms);
                 Assert.Contains("heartrate2", terms);
 
-                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
-                Assert.Equal(1, terms.Length);
-                Assert.Contains("true", terms);
+                if (options.SearchEngineMode is RavenSearchEngineMode.Lucene)
+                {
+                    terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("true", terms);
+                }
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanCalculateNumberOfReferencesCorrectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1668,8 +1673,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldUseOriginalTimeSeriesName(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1713,9 +1718,9 @@ namespace SlowTests.Client.Indexing.TimeSeries
             {
                 AddMap<User>(
                     $"TimeSeries",
-                    timeSeriesSegments => 
+                    timeSeriesSegments =>
                         from seriesSegment in timeSeriesSegments
-                        select new { Value = seriesSegment.Entries.Average(e => e.Value) });   
+                        select new { Value = seriesSegment.Entries.Average(e => e.Value) });
             }
         }
 
@@ -1729,20 +1734,20 @@ namespace SlowTests.Client.Indexing.TimeSeries
             public ProgressTestTimeSeriesMapReduceIndex()
             {
                 AddMap($"TimeSeries",
-                    timeSeriesSegments => 
+                    timeSeriesSegments =>
                         from timeSeriesSegment in timeSeriesSegments
                         let max = timeSeriesSegment.Entries.Max(e => e.Value)
                         select new
                         {
                             Max = max,
-                            IsBig = max > 20 
+                            IsBig = max > 20
                         });
 
                 Reduce = results =>
                     from result in results
-                    group result by new {result.IsBig}
+                    group result by new { result.IsBig }
                     into g
-                    select new {IsBig = g.Key, Max = g.Max(r => r.Max)};
+                    select new { IsBig = g.Key, Max = g.Max(r => r.Max) };
             }
         }
 
@@ -1750,17 +1755,17 @@ namespace SlowTests.Client.Indexing.TimeSeries
         public static IEnumerable<object[]> ProgressTestIndexes =>
             new[]
             {
-                new object[] {new ProgressTestTimeSeriesIndex()}, 
+                new object[] {new ProgressTestTimeSeriesIndex()},
                 new object[] {new ProgressTestTimeSeriesMapReduceIndex()},
             };
-        
+
         [Theory]
         [MemberData(nameof(ProgressTestIndexes))]
         public async Task TimeSeriesIndexProgress_WhenMapMultipleSegment_ShouldDisplayNumberOfSegmentToMap(AbstractTimeSeriesIndexCreationTask index)
         {
             const string timeSeries = "TimeSeries";
             const int numberOfTimeSeries = 500 * 1000;
-            
+
             using var store = GetDocumentStore();
 
             await index.ExecuteAsync(store);
@@ -1785,12 +1790,12 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.TimeSeriesFor(user.Id, timeSeries).Append(baseTime.AddMilliseconds(i), 12);
                 }
                 await session.SaveChangesAsync();
-                
+
                 var progress = await GetProgressAsync(store);
                 Assert.True(progress.NumberOfItemsToProcess > 1);
                 Assert.True(progress.TotalNumberOfItems > 1);
             }
-            
+
             await store.Maintenance.SendAsync(new StartIndexingOperation());
             Indexes.WaitForIndexing(store);
             await store.Maintenance.SendAsync(new StopIndexingOperation());
@@ -1799,7 +1804,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 await session.StoreAsync(user);
                 session.TimeSeriesFor(user.Id, timeSeries).Delete(baseTime, baseTime.AddMilliseconds(numberOfTimeSeries));
                 await session.SaveChangesAsync();
-                
+
                 var progress = await GetProgressAsync(store);
                 Assert.True(progress.NumberOfItemsToProcess > 1);
                 Assert.True(progress.TotalNumberOfItems > 1);

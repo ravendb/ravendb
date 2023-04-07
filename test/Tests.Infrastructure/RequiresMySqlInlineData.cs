@@ -20,7 +20,7 @@ namespace Tests.Infrastructure
 
         public override IEnumerable<object[]> GetData(MethodInfo testMethod)
         {
-            return new[] { new object[] { MigrationProvider.MySQL } };
+            return new[] { new object[] { MigrationProvider.MySQL_MySql_Data }, new object[] { MigrationProvider.MySQL_MySqlConnector } };
         }
     }
 }

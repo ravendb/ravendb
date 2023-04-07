@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public abstract class CoraxDocumentConverterBase : ConverterBase
 {
+    private readonly bool _canContainSourceDocumentId;
     private static readonly Memory<byte> _trueLiteral = new(Encoding.UTF8.GetBytes("true"));
     private static ReadOnlySpan<byte> TrueLiteral => _trueLiteral.Span;
 
@@ -62,11 +63,11 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
         out ByteString output, out float? documentBoost);
-
-    protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
-        string storeValueFieldName, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
+    
+    protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName, string storeValueFieldName, bool canContainSourceDocumentId, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
         keyFieldName, storeValueFieldName, fields)
     {
+        _canContainSourceDocumentId = canContainSourceDocumentId;
         Allocator = new ByteStringContext(SharedMultipleUseFlag.None);       
         
         Scope = new();
@@ -74,7 +75,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         {
             try
             {
-                return CoraxIndexingHelpers.CreateMappingWithAnalyzers(Allocator, _index, _index.Definition, _keyFieldName, storeValue, storeValueFieldName, true);
+                return CoraxIndexingHelpers.CreateMappingWithAnalyzers(Allocator, _index, _index.Definition, _keyFieldName, storeValue, storeValueFieldName, true, _canContainSourceDocumentId);
             }
             catch (Exception e)
             {
@@ -91,7 +92,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         {
             try
             {
-                KnownFieldsForWriter = CoraxIndexingHelpers.CreateMappingWithAnalyzers(Allocator, _index, _index.Definition, _keyFieldName, _storeValue, _storeValueFieldName, false);
+                KnownFieldsForWriter = CoraxIndexingHelpers.CreateMappingWithAnalyzers(Allocator, _index, _index.Definition, _keyFieldName, _storeValue, _storeValueFieldName, false, _canContainSourceDocumentId);
             }
             catch (Exception e)
             {

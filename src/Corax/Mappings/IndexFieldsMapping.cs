@@ -66,4 +66,7 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>, IDisposable
     {
         _mappingContext?.Dispose();
     }
+
+    // This is stored as last "known" field always..
+    public int StoredJsonPropertyOffset => _fields.Count - 1;
 }

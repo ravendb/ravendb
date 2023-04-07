@@ -16,8 +16,8 @@ namespace SlowTests.Client.TimeSeries.Session
         {
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanStream(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -55,8 +55,8 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanStreamAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -94,8 +94,8 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanStreamTyped(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -133,8 +133,8 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanStreamRawQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -200,8 +200,8 @@ select last()
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.TimeSeries)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanStreamRawQueryAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -256,11 +256,11 @@ select last()
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.TimeSeries)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryTimeSeriesUsingDocumentQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 store.TimeSeries.Register<User>("Heartrate", new[] { "BPM" });
