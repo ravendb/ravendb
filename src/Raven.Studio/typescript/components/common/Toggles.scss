@@ -44,7 +44,7 @@ $toggle-knob-hover-scale: 0.9 !default;
         border-radius: $toggle-baseheight;
         height: $toggle-baseheight;
         width: $toggle-baseheight * $toggle-width-scale;
-        border: sizes.$border-width solid colors.$panel-bg-3;
+        border: sizes.$border-width solid colors.$border-color-light-var;
 
         i {
             position: relative;
@@ -194,7 +194,7 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
     .multi-toggle-list {
         background: $multi-toggle-bg;
         border-radius: $multi-toggle-border-radius;
-        border: sizes.$border-width solid colors.$panel-bg-3;
+        border: sizes.$border-width solid colors.$border-color-light-var;
         display: inline-flex;
         min-height: $multi-toggle-baseheight;
         color: $multi-toggle-knob-muted-color;
@@ -249,7 +249,8 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
 
                 .multi-toggle-item-count {
                     margin-left: sizes.$gutter-xxs;
-                    background-color: colors.$panel-bg-3;
+                    background-color: colors.$panel-bg-2-var;
+                    color: colors.$text-color-var;
                     border-radius: sizes.$border-radius-lg;
                     padding: 0 sizes.$gutter-xxs;
                 }

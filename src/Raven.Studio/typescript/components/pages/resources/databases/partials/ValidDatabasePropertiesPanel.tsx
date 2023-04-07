@@ -148,9 +148,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem title="Click to navigate to Backups view" className="text-danger">
-                <a href={backupUrl} target={linksTarget}>
-                    <i className="icon-backup me-1" />{" "}
-                    <span className={"text-" + backupStatus.color}>{backupStatus.text}</span>
+                <a href={backupUrl} target={linksTarget} className={"text-" + backupStatus.color}>
+                    <i className="icon-backup me-1" />
+                    {backupStatus.text}
                 </a>
             </RichPanelDetailItem>
 

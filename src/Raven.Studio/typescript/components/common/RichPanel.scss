@@ -4,12 +4,15 @@
 $status-border-radius: bs5variables.$gutter-xs;
 
 .rich-panel-item {
-    transition: box-shadow 0.25s bs5variables.$global-easing;
+    $default-panel-transitions: box-shadow 0.25s bs5variables.$global-easing;
+
+    transition: $default-panel-transitions;
 
     &.rich-panel-hover {
-        transition: filter 0.3s ease-in-out;
+        transition: $default-panel-transitions, filter 0.3s ease-in-out;
+
         &:hover {
-            transition: none;
+            transition: $default-panel-transitions;
             filter: bs5variables.$hover-filter-var;
         }
     }

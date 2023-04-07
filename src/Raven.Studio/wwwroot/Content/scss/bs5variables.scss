@@ -210,7 +210,7 @@ $body-text-align: null !default;
 $link-color: $primary !default;
 $link-decoration: none !default;
 $link-shade-percentage: 20 !default;
-$link-hover-color: tint-color($link-color, $link-shade-percentage) !default;
+$link-hover-color: none !default;
 $link-hover-decoration: none !default;
 
 $stretched-link-pseudo-element: after !default;

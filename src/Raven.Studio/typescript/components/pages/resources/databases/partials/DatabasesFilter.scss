@@ -2,16 +2,18 @@
 @use "Content/scss/colors";
 
 $filtering-input-baseheight: 35px !default;
-$filtering-input-bg: colors.$well-bg !default;
+$filtering-input-bg: colors.$well-bg-var !default;
 $filtering-input-border-radius: $filtering-input-baseheight !default;
 $filtering-input-bg: $toggle-bg !default;
 
 // Text inputs for filtering that will go in pair with multi-toggle component
-.filtering-input {
+.form-control.filtering-input {
     background: $filtering-input-bg;
-    border-radius: $filtering-input-border-radius !important;
-    border: sizes.$border-width solid colors.$panel-bg-3 !important;
+    border-radius: $filtering-input-border-radius;
+    border: sizes.$border-width solid colors.$border-color-light-var;
     height: $filtering-input-baseheight;
-    font-size: 0.8rem !important;
+    font-size: 0.8rem;
     min-width: 140px;
+    padding-left: sizes.$gutter-sm;
+    padding-right: sizes.$gutter-sm;
 }

@@ -28,11 +28,6 @@
     font-size: 120%;
     vertical-align: -0.175em;
 
-    & + span {
-        margin-left: @grid-gutter-width/4;
-    }
-
-
     &::after {
         position: absolute;
         bottom: 8%;
@@ -58,8 +53,14 @@
     }
 }
 
-[class*=" icon-addon-"],
-[class^="icon-addon-"] {
+.bs3 {
+    .icon-style,
+    [class*=" icon-"],
+    [class^="icon-"] {
+        & + span {
+            margin-left: @grid-gutter-width/4;
+        }
+    }
 }
 
 .icon-lg {
