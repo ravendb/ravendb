@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -57,6 +58,10 @@ namespace SlowTests.Issues
                     session.Advanced.WaitForIndexesAfterSaveChanges(indexes: new[] { nameof(DocumentIndex) });
                     session.SaveChanges();
                 }
+                
+                var idComparer = options.SearchEngineMode is RavenSearchEngineMode.Corax 
+                    ? StringComparer.OrdinalIgnoreCase 
+                    : StringComparer.Ordinal;
 
                 using (var session = store.OpenSession())
                 {
@@ -69,7 +74,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, docs.Count);
                     Assert.NotNull(docs[0]);
-                    Assert.Equal(doc.Id, docs[0].Id);
+                    Assert.Equal(doc.Id, docs[0].Id, comparer: idComparer);
                     Assert.Null(docs[0].Name);
                 }
 
@@ -84,7 +89,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, docs.Count);
                     Assert.NotNull(docs[0]);
-                    Assert.Equal(doc.Id, docs[0].Id);
+                    Assert.Equal(doc.Id, docs[0].Id, comparer: idComparer);
                     Assert.Null(docs[0].Name);
                 }
             }

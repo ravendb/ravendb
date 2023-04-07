@@ -555,7 +555,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         private bool CoraxTryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, ref RetrieverInput retrieverInput, DynamicJsonValue toFill)
         {
-            if (fieldToFetch.CanExtractFromIndex == false && fieldToFetch.IsDocumentId == false) //in case of ID we can always give it for user.
+            // We can always perform projection of ID from Index.
+            if (fieldToFetch.CanExtractFromIndex == false && fieldToFetch.IsDocumentId == false)
                 return false;
 
 

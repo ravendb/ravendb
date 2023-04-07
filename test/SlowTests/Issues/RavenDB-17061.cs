@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -54,7 +55,11 @@ namespace SlowTests.Issues
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(0, stats.SkippedResults);
                     Assert.Equal(1, users.Count);
-                    Assert.Equal(userId, users[0]);
+                    
+                    var idComparer = options.SearchEngineMode is RavenSearchEngineMode.Corax 
+                        ? StringComparer.OrdinalIgnoreCase 
+                        : StringComparer.Ordinal;
+                    Assert.Equal(userId, users[0], comparer: idComparer);
                 }
 
                 await store.Maintenance.SendAsync(new StopIndexOperation(stats.IndexName));
@@ -74,8 +79,9 @@ namespace SlowTests.Issues
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(1, stats.SkippedResults);
-                    Assert.Equal(0, users.Count);
+                    //Corax only: This is not valid since Corax's AutoIndexes are stored. 
+                    Assert.Equal(options.SearchEngineMode is RavenSearchEngineMode.Corax ? 0 : 1, stats.SkippedResults);
+                    Assert.Equal(options.SearchEngineMode is RavenSearchEngineMode.Corax ? 1 : 0, users.Count);
                 }
             }
         }
@@ -106,6 +112,11 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
+                var isCorax = options.SearchEngineMode is RavenSearchEngineMode.Corax;
+                var idComparer = isCorax
+                    ? StringComparer.OrdinalIgnoreCase 
+                    : StringComparer.Ordinal;
+                
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.Query<User, UserIndex>()
@@ -117,7 +128,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(0, stats.SkippedResults);
                     Assert.Equal(1, users.Count);
-                    Assert.Equal(userId, users[0]);
+                    Assert.Equal(userId, users[0], comparer: idComparer);
                 }
 
                 await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
@@ -139,7 +150,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(0, stats.SkippedResults);
                     Assert.Equal(1, users.Count);
-                    Assert.Equal(name, users[0]);
+                    Assert.Equal(name, users[0], idComparer);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -149,10 +160,10 @@ namespace SlowTests.Issues
                         .Where(x => x.Name == name)
                         .Select(x => x.Id) // projected from the document
                         .ToListAsync();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(1, stats.SkippedResults);
-                    Assert.Equal(0, users.Count);
+                    Assert.Equal(isCorax ? 0 : 1, stats.SkippedResults);
+                    Assert.Equal(isCorax ? 1 : 0, users.Count);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -168,8 +179,8 @@ namespace SlowTests.Issues
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(1, stats.SkippedResults);
-                    Assert.Equal(0, users.Count);
+                    Assert.Equal(isCorax ? 0 : 1, stats.SkippedResults);
+                    Assert.Equal(isCorax ? 1 : 0, users.Count);
                 }
             }
         }
