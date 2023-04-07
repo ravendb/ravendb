@@ -3,7 +3,6 @@ import { DatabasePanel } from "./partials/DatabasePanel";
 import { DatabasesToolbarActions } from "./partials/DatabasesToolbarActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { DatabaseSharedInfo } from "../../../models/databases";
 import { Row } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
@@ -11,12 +10,13 @@ import {
     loadDatabasesDetails,
     openCreateDatabaseFromRestoreDialog,
     selectAllDatabases,
-    selectFilteredDatabases,
+    selectFilteredDatabaseNames,
     syncDatabaseDetails,
 } from "components/common/shell/databasesSlice";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
 import { selectClusterNodeTags } from "components/common/shell/clusterSlice";
+import { shallowEqual } from "react-redux";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -38,29 +38,27 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
 
-    const filteredDatabases = useAppSelector(selectFilteredDatabases);
+    const filteredDatabaseNames = useAppSelector(selectFilteredDatabaseNames, shallowEqual);
 
     useEffect(() => {
         dispatch(loadDatabasesDetails(nodeTags));
     }, [dispatch, nodeTags]);
 
-    useEffect(() => {
-        return dispatch(syncDatabaseDetails());
-    }, [dispatch]);
+    useEffect(() => dispatch(syncDatabaseDetails()), [dispatch]);
 
     useEffect(() => {
-        const visibleNames = filteredDatabases.map((x) => x.name);
+        const visibleNames = filteredDatabaseNames;
         const nonVisibleSelection = selectedDatabaseNames.filter((x) => !visibleNames.includes(x));
         if (nonVisibleSelection.length) {
             setSelectedDatabaseNames((prev) => prev.filter((x) => !nonVisibleSelection.includes(x)));
         }
-    }, [selectedDatabaseNames, filteredDatabases]);
+    }, [selectedDatabaseNames, filteredDatabaseNames]);
 
-    const toggleSelection = (db: DatabaseSharedInfo) => {
-        if (selectedDatabaseNames.includes(db.name)) {
-            setSelectedDatabaseNames((s) => s.filter((x) => x !== db.name));
+    const toggleSelection = (dbName: string) => {
+        if (selectedDatabaseNames.includes(dbName)) {
+            setSelectedDatabaseNames((s) => s.filter((x) => x !== dbName));
         } else {
-            setSelectedDatabaseNames((s) => s.concat(db.name));
+            setSelectedDatabaseNames((s) => s.concat(dbName));
         }
     };
 
@@ -84,27 +82,25 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 
-    // TODO: positioning create | select all | ...
-
     return (
         <div className="content-margin">
             <div id="dropdownContainer"></div> {/*fixes rendering order bug on hover animation */}
             <Row className="mb-4">
                 <DatabasesToolbarActions
+                    databaseNames={filteredDatabaseNames}
                     selectedDatabases={selectedDatabases}
-                    filteredDatabases={filteredDatabases}
-                    setSelectedDatabaseNames={(x) => setSelectedDatabaseNames(x)}
+                    setSelectedDatabaseNames={setSelectedDatabaseNames}
                 />
             </Row>
             <DatabasesFilter />
             <div className="flex-grow scroll js-scroll-container">
                 <div>
-                    {filteredDatabases.map((db) => (
+                    {filteredDatabaseNames.map((dbName) => (
                         <DatabasePanel
-                            key={db.name}
-                            selected={selectedDatabaseNames.includes(db.name)}
-                            toggleSelection={() => toggleSelection(db)}
-                            db={db}
+                            key={dbName}
+                            databaseName={dbName}
+                            selected={selectedDatabaseNames.includes(dbName)}
+                            toggleSelection={() => toggleSelection(dbName)}
                         />
                     ))}
 

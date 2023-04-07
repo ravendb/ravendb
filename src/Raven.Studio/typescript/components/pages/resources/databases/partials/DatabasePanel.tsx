@@ -1,8 +1,7 @@
-﻿import React, { useState, MouseEvent } from "react";
-import { DatabaseLocalInfo, DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+﻿import React, { MouseEvent, useState } from "react";
+import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
-import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import {
     Button,
     ButtonGroup,
@@ -23,7 +22,6 @@ import {
     RichPanelSelect,
     RichPanelStatus,
 } from "components/common/RichPanel";
-import { NodeSet, NodeSetItem, NodeSetLabel } from "components/common/NodeSet";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
     changeDatabasesLockMode,
@@ -36,6 +34,7 @@ import {
     deleteDatabases,
     reloadDatabaseDetails,
     selectActiveDatabase,
+    selectDatabaseByName,
     selectDatabaseState,
     toggleDatabases,
     toggleIndexing,
@@ -45,17 +44,18 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import useBoolean from "hooks/useBoolean";
 import { DatabaseDistribution } from "components/pages/resources/databases/partials/DatabaseDistribution";
 import { ValidDatabasePropertiesPanel } from "components/pages/resources/databases/partials/ValidDatabasePropertiesPanel";
-import { DatabaseNodeSetItem } from "components/pages/resources/databases/partials/DatabaseNodeSetItem";
 import { locationAwareLoadableData } from "components/models/common";
 import { useAccessManager } from "hooks/useAccessManager";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import assertUnreachable from "components/utils/assertUnreachable";
 import { selectEffectiveDatabaseAccessLevel } from "components/common/shell/accessManagerSlice";
 import genUtils from "common/generalUtils";
 import databasesManager from "common/shell/databasesManager";
+import { AccessIcon } from "components/pages/resources/databases/partials/AccessIcon";
+import { DatabaseTopology } from "components/pages/resources/databases/partials/DatabaseTopology";
+import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 
 interface DatabasePanelProps {
-    db: DatabaseSharedInfo;
+    databaseName: string;
     selected: boolean;
     toggleSelection: () => void;
 }
@@ -85,110 +85,9 @@ function badgeText(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<
     return state;
 }
 
-interface DatabaseTopologyProps {
-    db: DatabaseSharedInfo;
-}
-
-export function AccessIcon(props: { dbAccess: databaseAccessLevel }) {
-    const { dbAccess } = props;
-    switch (dbAccess) {
-        case "DatabaseAdmin":
-            return (
-                <span title="Admin Access">
-                    <i className="icon-access-admin" />
-                </span>
-            );
-        case "DatabaseReadWrite":
-            return (
-                <span title="Read/Write Access">
-                    <i className="icon-access-read-write" />
-                </span>
-            );
-        case "DatabaseRead":
-            return (
-                <span title="Read-only Access">
-                    <i className="icon-access-read" />
-                </span>
-            );
-        default:
-            assertUnreachable(dbAccess);
-    }
-}
-
-function DatabaseTopology(props: DatabaseTopologyProps) {
-    const { db } = props;
-
-    if (db.sharded) {
-        const shardedDb = db as ShardedDatabaseSharedInfo;
-        return (
-            <div>
-                <NodeSet color="orchestrator" className="m-1">
-                    <NodeSetLabel color="orchestrator" icon="orchestrator">
-                        Orchestrators
-                    </NodeSetLabel>
-                    {db.nodes.map((node) => (
-                        <DatabaseNodeSetItem key={node.tag} node={node} />
-                    ))}
-                </NodeSet>
-
-                {shardedDb.shards.map((shard) => {
-                    return (
-                        <React.Fragment key={shard.name}>
-                            <NodeSet color="shard" className="m-1">
-                                <NodeSetLabel color="shard" icon="shard">
-                                    #{DatabaseUtils.shardNumber(shard.name)}
-                                </NodeSetLabel>
-                                {shard.nodes.map((node) => (
-                                    <DatabaseNodeSetItem key={node.tag} node={node} />
-                                ))}
-                                {shard.deletionInProgress.map((node) => {
-                                    return (
-                                        <NodeSetItem
-                                            key={"deletion-" + node}
-                                            icon="trash"
-                                            color="warning"
-                                            title="Deletion in progress"
-                                            extraIconClassName="pulse"
-                                        >
-                                            {node}
-                                        </NodeSetItem>
-                                    );
-                                })}
-                            </NodeSet>
-                        </React.Fragment>
-                    );
-                })}
-            </div>
-        );
-    } else {
-        return (
-            <div>
-                <NodeSet className="m-1">
-                    <NodeSetLabel icon="database">Nodes</NodeSetLabel>
-                    {db.nodes.map((node) => {
-                        return <DatabaseNodeSetItem key={node.tag} node={node} />;
-                    })}
-                    {db.deletionInProgress.map((node) => {
-                        return (
-                            <NodeSetItem
-                                key={"deletion-" + node}
-                                icon="trash"
-                                color="warning"
-                                title="Deletion in progress"
-                                extraIconClassName="pulse"
-                            >
-                                {node}
-                            </NodeSetItem>
-                        );
-                    })}
-                </NodeSet>
-            </div>
-        );
-    }
-}
-
 export function DatabasePanel(props: DatabasePanelProps) {
-    const { db, selected, toggleSelection } = props;
+    const { databaseName, selected, toggleSelection } = props;
+    const db = useAppSelector(selectDatabaseByName(databaseName));
     const activeDatabase = useAppSelector(selectActiveDatabase);
     const dbState = useAppSelector(selectDatabaseState(db.name));
     const { appUrl } = useAppUrls();

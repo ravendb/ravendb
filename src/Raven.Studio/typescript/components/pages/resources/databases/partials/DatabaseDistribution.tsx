@@ -1,12 +1,12 @@
 ﻿import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
-import React, { useRef } from "react";
-import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
+import React from "react";
+import { DatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
 import { selectDatabaseState } from "components/common/shell/databasesSlice";
 import genUtils from "common/generalUtils";
-import { PopoverWithHover } from "components/common/PopoverWithHover";
-import { UncontrolledTooltip } from "reactstrap";
+import { SizeOnDisk } from "components/pages/resources/databases/partials/SizeOnDisk";
+import { DatabaseLoadError } from "components/pages/resources/databases/partials/DatabaseLoadError";
 
 interface DatabaseDistributionProps {
     db: DatabaseSharedInfo;
@@ -101,43 +101,3 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
     );
 }
 
-function SizeOnDisk(props: { info: DatabaseLocalInfo }) {
-    const { info } = props;
-
-    const divRef = useRef<HTMLDivElement>();
-
-    if (!info) {
-        return null;
-    }
-    const tempBufferSize = info.tempBuffersSize?.SizeInBytes ?? 0;
-    const totalSize = info.totalSize?.SizeInBytes ?? 0;
-    const grandTotalSize = tempBufferSize + totalSize;
-
-    return (
-        <div>
-            <div ref={divRef}>{genUtils.formatBytesToSize(grandTotalSize)}</div>
-            {divRef.current && (
-                <UncontrolledTooltip target={divRef.current}>
-                    Data: <strong>{genUtils.formatBytesToSize(totalSize)}</strong>
-                    <br />
-                    Temp: <strong>{genUtils.formatBytesToSize(tempBufferSize)}</strong>
-                    <br />
-                    Total: <strong>{genUtils.formatBytesToSize(grandTotalSize)}</strong>
-                </UncontrolledTooltip>
-            )}
-        </div>
-    );
-}
-
-function DatabaseLoadError(props: { error: string }) {
-    const tooltipRef = useRef<HTMLElement>();
-
-    return (
-        <strong className="text-danger" ref={tooltipRef}>
-            <i className="icon-exclamation" /> Load error
-            <PopoverWithHover target={tooltipRef.current} placement="top">
-                <div className="p-2">Unable to load database: {props.error}</div>
-            </PopoverWithHover>
-        </strong>
-    );
-}

@@ -1,9 +1,9 @@
 ﻿import React, { ChangeEvent } from "react";
-import { DatabaseFilterByStateOption, DatabaseFilterCriteria, DatabaseSharedInfo } from "components/models/databases";
-import { Col, Input, Row } from "reactstrap";
+import { DatabaseFilterByStateOption, DatabaseFilterCriteria } from "components/models/databases";
+import { Input } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
-    selectAllDatabases,
+    selectAllDatabasesCount,
     selectDatabaseSearchCriteria,
     selectFilterByStateOptions,
     setSearchCriteriaName,
@@ -19,7 +19,7 @@ type FilterByStateOptions = InputItem<DatabaseFilterByStateOption>[];
 export function DatabasesFilter() {
     const dispatch = useAppDispatch();
 
-    const allDatabases: DatabaseSharedInfo[] = useAppSelector(selectAllDatabases);
+    const allDatabasesCount = useAppSelector(selectAllDatabasesCount);
     const searchCriteria: DatabaseFilterCriteria = useAppSelector(selectDatabaseSearchCriteria, shallowEqual);
     const filterByStateOptions: FilterByStateOptions = useAppSelector(selectFilterByStateOptions);
 
@@ -30,7 +30,7 @@ export function DatabasesFilter() {
     const selectAllItem: InputItem = {
         label: "All",
         value: "All",
-        count: allDatabases.length,
+        count: allDatabasesCount,
     };
 
     return (

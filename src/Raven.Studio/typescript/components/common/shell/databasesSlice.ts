@@ -102,6 +102,8 @@ const sliceName = "databases";
 
 export const selectAllDatabases = (store: RootState) => databasesSelectors.selectAll(store.databases.databases);
 
+export const selectAllDatabasesCount = (store: RootState) => databasesSelectors.selectTotal(store.databases.databases);
+
 export const selectDatabaseSearchCriteria = (store: RootState) => store.databases.searchCriteria;
 
 export const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterByStateOption>[] => {
@@ -197,12 +199,12 @@ const isDatabaseInFilterState = (
     );
 };
 
-export const selectFilteredDatabases = (store: RootState): DatabaseSharedInfo[] => {
+export const selectFilteredDatabaseNames = (store: RootState): string[] => {
     const criteria = selectDatabaseSearchCriteria(store);
     const allDatabases = selectAllDatabases(store);
 
     if (!(criteria.name || criteria.states?.length > 0)) {
-        return allDatabases;
+        return allDatabases.map((x) => x.name);
     }
 
     let filteredDatabases = allDatabases;
@@ -217,7 +219,7 @@ export const selectFilteredDatabases = (store: RootState): DatabaseSharedInfo[] 
         filteredDatabases = filteredDatabases.filter((db) => isDatabaseInFilterState(store, db, criteria.states));
     }
 
-    return filteredDatabases;
+    return filteredDatabases.map((x) => x.name);
 };
 
 export const selectActiveDatabase = (store: RootState) => store.databases.activeDatabase;
