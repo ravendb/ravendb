@@ -323,6 +323,33 @@ namespace Sparrow.Json
             return Convert.FromBase64String(valueAsString);
         }
 
+        public static explicit operator short(LazyStringValue self)
+        {
+            var valueAsString = (string)self;
+            if (short.TryParse(valueAsString, NumberStyles.Any, CultureInfo.InvariantCulture, out short result))
+                return result;
+
+            throw new InvalidCastException($"Couldn't convert {valueAsString} (LazyStringValue) to int16");
+        }
+
+        public static explicit operator int(LazyStringValue self)
+        {
+            var valueAsString = (string)self;
+            if (int.TryParse(valueAsString, NumberStyles.Any, CultureInfo.InvariantCulture, out int result))
+                return result;
+
+            throw new InvalidCastException($"Couldn't convert {valueAsString} (LazyStringValue) to int32");
+        }
+
+        public static explicit operator long(LazyStringValue self)
+        {
+            var valueAsString = (string)self;
+            if (long.TryParse(valueAsString, NumberStyles.Any, CultureInfo.InvariantCulture, out long result))
+                return result;
+
+            throw new InvalidCastException($"Couldn't convert {valueAsString} (LazyStringValue) to int64");
+        }
+
         public static explicit operator decimal(LazyStringValue self)
         {
             var valueAsString = (string)self;
