@@ -101,3 +101,10 @@
     );
     animation: spin 1.3s infinite cubic-bezier(0.85, 0.2, 0.2, 0.85);
 }
+
+.form-control {
+    &::placeholder {
+        color: $text-muted-color;
+        opacity: 0.8;
+    }
+}

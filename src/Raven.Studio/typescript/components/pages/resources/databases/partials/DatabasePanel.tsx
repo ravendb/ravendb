@@ -55,6 +55,7 @@ import {
     toggleIndexing,
     togglePauseIndexing,
 } from "components/common/shell/databaseSliceActions";
+import { Icon } from "components/common/Icon";
 
 interface DatabasePanelProps {
     databaseName: string;
@@ -251,25 +252,17 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         target={db.currentNode.relevant ? undefined : "_blank"}
                                         title={db.name}
                                     >
-                                        <i
-                                            className={classNames(
-                                                { "icon-database": !db.sharded },
-                                                { "icon-sharding": db.sharded },
-                                                { "icon-addon-home": db.currentNode.relevant }
-                                            )}
-                                        ></i>
-                                        <span>{db.name}</span>
+                                        <Icon
+                                            icon={db.sharded ? "sharding" : "database"}
+                                            addon={db.currentNode.relevant ? "home" : null}
+                                            className="me-2"
+                                        />
+                                        {db.name}
                                     </a>
                                 ) : (
                                     <span title="Database is disabled">
-                                        <i
-                                            className={
-                                                db.currentNode.relevant
-                                                    ? "icon-database icon-addon-home"
-                                                    : "icon-database"
-                                            }
-                                        ></i>
-                                        <span>{db.name}</span>
+                                        <Icon icon="database" addon={db.currentNode.relevant ? "home" : null} />
+                                        {db.name}
                                     </span>
                                 )}
                             </RichPanelName>
@@ -286,7 +279,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 className="ms-1"
                                 disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
                             >
-                                <i className="icon-dbgroup icon-addon-settings me-2" />
+                                <Icon icon="dbgroup" addon="settings" className="me-2" />
                                 Manage group
                             </Button>
 
@@ -297,13 +290,11 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                             <Button onClick={onToggleDatabase}>
                                                 {db.disabled ? (
                                                     <span>
-                                                        <i className="icon-database-cutout icon-addon-play2 me-1" />{" "}
-                                                        Enable
+                                                        <Icon icon="database" addon="play2" className="me-1" /> Enable
                                                     </span>
                                                 ) : (
                                                     <span>
-                                                        <i className="icon-database-cutout icon-addon-cancel me-1" />{" "}
-                                                        Disable
+                                                        <Icon icon="database" addon="cancel" className="me-1" /> Disable
                                                     </span>
                                                 )}
                                             </Button>
@@ -314,29 +305,29 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     <DropdownMenu end container="dropdownContainer">
                                         {canPauseAnyIndexing && (
                                             <DropdownItem onClick={() => onTogglePauseIndexing(true)}>
-                                                <i className="icon-pause me-1" /> Pause indexing
+                                                <Icon icon="pause" className="me-1" /> Pause indexing
                                             </DropdownItem>
                                         )}
                                         {canResumeAnyPausedIndexing && (
                                             <DropdownItem onClick={() => onTogglePauseIndexing(false)}>
-                                                <i className="icon-play me-1" /> Resume indexing
+                                                <Icon icon="play" className="me-1" /> Resume indexing
                                             </DropdownItem>
                                         )}
                                         {canDisableIndexing && (
                                             <DropdownItem onClick={() => onToggleDisableIndexing(true)}>
-                                                <i className="icon-stop me-1" /> Disable indexing
+                                                <Icon icon="stop" className="me-1" /> Disable indexing
                                             </DropdownItem>
                                         )}
                                         {canEnableIndexing && (
                                             <DropdownItem onClick={() => onToggleDisableIndexing(false)}>
-                                                <i className="icon-play me-1" /> Enable indexing
+                                                <Icon icon="play" className="me-1" /> Enable indexing
                                             </DropdownItem>
                                         )}
                                         {isOperatorOrAbove() && (
                                             <>
                                                 <DropdownItem divider />
                                                 <DropdownItem onClick={onCompactDatabase}>
-                                                    <i className="icon-compact me-1" /> Compact database
+                                                    <Icon icon="compact" className="me-1" /> Compact database
                                                 </DropdownItem>
                                             </>
                                         )}
@@ -358,12 +349,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                             disabled={db.lockMode !== "Unlock"}
                                         >
                                             {lockChanges && <Spinner size="sm" />}
-                                            {!lockChanges && db.lockMode === "Unlock" && <i className="icon-trash" />}
+                                            {!lockChanges && db.lockMode === "Unlock" && <Icon icon="trash" />}
                                             {!lockChanges && db.lockMode === "PreventDeletesIgnore" && (
-                                                <i className="icon-trash-cutout icon-addon-cancel" />
+                                                <Icon icon="trash" addon="cancel" />
                                             )}
                                             {!lockChanges && db.lockMode === "PreventDeletesError" && (
-                                                <i className="icon-trash-cutout icon-addon-exclamation" />
+                                                <Icon icon="trash" addon="exclamation" />
                                             )}
                                         </Button>
                                         <DropdownToggle
@@ -377,20 +368,20 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                             onClick={() => onChangeLockMode("Unlock")}
                                             title="Allow to delete database"
                                         >
-                                            <i className="icon-trash-cutout icon-addon-check" /> Allow database delete
+                                            <Icon icon="trash" addon="check" className="me-1" /> Allow database delete
                                         </DropdownItem>
                                         <DropdownItem
                                             onClick={() => onChangeLockMode("PreventDeletesIgnore")}
                                             title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database."
                                         >
-                                            <i className="icon-trash-cutout icon-addon-cancel" /> Prevent database
+                                            <Icon icon="trash" addon="cancel" className="me-1" /> Prevent database
                                             delete
                                         </DropdownItem>
                                         <DropdownItem
                                             onClick={() => onChangeLockMode("PreventDeletesError")}
                                             title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database."
                                         >
-                                            <i className="icon-trash-cutout icon-addon-exclamation" /> Prevent database
+                                            <Icon icon="trash" addon="exclamation" className="me-1" /> Prevent database
                                             delete (Error)
                                         </DropdownItem>
                                     </DropdownMenu>
@@ -403,7 +394,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 title="Toggle distribution details"
                                 className="ms-1"
                             >
-                                <i className={panelCollapsed ? "icon-arrow-down" : "icon-arrow-up"} />
+                                <Icon icon={panelCollapsed ? "arrow-down" : "arrow-up"} />
                             </Button>
                         </RichPanelActions>
                     </RichPanelHeader>

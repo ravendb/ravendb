@@ -9,3 +9,21 @@
 a.link {
     cursor: pointer;
 }
+
+a:not(.btn) {
+    background-image: linear-gradient(90deg, $border-color-light, $border-color-light);
+    background-position: 50% 100%;
+    background-repeat: no-repeat;
+    background-size: 0% $border-width;
+    transition: color 0.1s, background 0.2s $global-easing;
+    transition-delay: 0.05s;
+    padding-bottom: $gutter-xxs * 0.5;
+    margin-bottom: $gutter-xxs * -0.5;
+
+    &:hover,
+    &:focus {
+        transition: color 0.1s, background 0.35s cubic-bezier(0, 1.7, 0.4, 0.8);
+        background-image: linear-gradient(90deg, $primary-var, $primary-var);
+        background-size: 85% $border-width;
+    }
+}
