@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Globalization;
 using System.Linq;
 using FastTests;
@@ -118,7 +119,9 @@ namespace SlowTests.Issues
                 }
 
                 Indexes.WaitForIndexing(store);
-
+                var idComparer = options.SearchEngineMode is RavenSearchEngineMode.Corax 
+                    ? StringComparer.OrdinalIgnoreCase 
+                    : StringComparer.Ordinal;
                 using (var session = store.OpenSession())
                 {
                     var items = session
@@ -128,7 +131,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(2, items.Count);
 
-                    var item1 = items.Single(x => x.Id == "items/1-A");
+                    var item1 = items.Single(x => idComparer.Compare(x.Id, "items/1-A") == 0);
 
                     Assert.Equal(dec, item1.Decimal1);
                     Assert.Equal(dec, item1.Decimal2);
@@ -142,7 +145,7 @@ namespace SlowTests.Issues
                     Assert.Equal(l, item1.Long1);
                     Assert.Equal(l, item1.Long2);
 
-                    var item2 = items.Single(x => x.Id == "items/2-A");
+                    var item2 = items.Single(x => idComparer.Compare(x.Id, "items/2-A") == 0);
 
                     Assert.Equal(default(decimal), item2.Decimal1);
                     Assert.Equal(-1, item2.Decimal2);
