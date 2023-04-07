@@ -16,6 +16,7 @@ import {
     openCreateDatabaseFromRestoreDialog,
     syncDatabaseDetails,
 } from "components/common/shell/databaseSliceActions";
+import { DatabaseFilterCriteria } from "components/models/databases";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -37,7 +38,12 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
 
-    const filteredDatabaseNames = useAppSelector(selectFilteredDatabaseNames, shallowEqual);
+    const [filterCriteria, setFilterCriteria] = useState<DatabaseFilterCriteria>({
+        name: "",
+        states: [],
+    });
+
+    const filteredDatabaseNames = useAppSelector(selectFilteredDatabaseNames(filterCriteria), shallowEqual);
 
     useEffect(() => {
         dispatch(loadDatabasesDetails(nodeTags));
@@ -91,7 +97,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
                     setSelectedDatabaseNames={setSelectedDatabaseNames}
                 />
             </Row>
-            <DatabasesFilter />
+            <DatabasesFilter searchCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
             <div className="flex-grow scroll js-scroll-container">
                 <div>
                     {filteredDatabaseNames.map((dbName) => (

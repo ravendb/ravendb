@@ -1,30 +1,38 @@
 ﻿import React, { ChangeEvent } from "react";
 import { DatabaseFilterByStateOption, DatabaseFilterCriteria } from "components/models/databases";
 import { Input } from "reactstrap";
-import { useAppDispatch, useAppSelector } from "components/store";
+import { useAppSelector } from "components/store";
 
 import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 import "./DatabasesFilter.scss";
-import { shallowEqual } from "react-redux";
 import { InputItem } from "components/models/common";
-import {
-    selectAllDatabasesCount,
-    selectDatabaseSearchCriteria,
-    selectFilterByStateOptions,
-} from "components/common/shell/databaseSliceSelectors";
-import { setSearchCriteriaName, setSearchCriteriaStates } from "components/common/shell/databaseSliceActions";
+import { selectAllDatabasesCount, selectFilterByStateOptions } from "components/common/shell/databaseSliceSelectors";
 
 type FilterByStateOptions = InputItem<DatabaseFilterByStateOption>[];
 
-export function DatabasesFilter() {
-    const dispatch = useAppDispatch();
+interface DatabasesFilterProps {
+    searchCriteria: DatabaseFilterCriteria;
+    setFilterCriteria: (criteria: DatabaseFilterCriteria) => void;
+}
+
+export function DatabasesFilter(props: DatabasesFilterProps) {
+    const { searchCriteria, setFilterCriteria } = props;
 
     const allDatabasesCount = useAppSelector(selectAllDatabasesCount);
-    const searchCriteria: DatabaseFilterCriteria = useAppSelector(selectDatabaseSearchCriteria, shallowEqual);
     const filterByStateOptions: FilterByStateOptions = useAppSelector(selectFilterByStateOptions);
 
     const onSearchNameChange = (e: ChangeEvent<HTMLInputElement>) => {
-        dispatch(setSearchCriteriaName(e.target.value));
+        setFilterCriteria({
+            name: e.target.value,
+            states: searchCriteria.states,
+        });
+    };
+
+    const onSearchStatusesChange = (states: DatabaseFilterByStateOption[]) => {
+        setFilterCriteria({
+            name: searchCriteria.name,
+            states,
+        });
     };
 
     const selectAllItem: InputItem = {
@@ -52,7 +60,7 @@ export function DatabasesFilter() {
                     inputItems={filterByStateOptions}
                     label="Filter by state"
                     selectedItems={searchCriteria.states}
-                    setSelectedItems={(x) => dispatch(setSearchCriteriaStates(x))}
+                    setSelectedItems={onSearchStatusesChange}
                     itemSelectAll={selectAllItem}
                 />
             </div>

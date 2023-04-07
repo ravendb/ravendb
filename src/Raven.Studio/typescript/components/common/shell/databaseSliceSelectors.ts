@@ -2,6 +2,7 @@
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import {
     DatabaseFilterByStateOption,
+    DatabaseFilterCriteria,
     DatabaseLocalInfo,
     DatabaseSharedInfo,
     OrchestratorLocalInfo,
@@ -28,8 +29,6 @@ const {
 export const selectAllDatabases = (store: RootState) => databasesSelectors.selectAll(store.databases.databases);
 
 export const selectAllDatabasesCount = (store: RootState) => databasesSelectors.selectTotal(store.databases.databases);
-
-export const selectDatabaseSearchCriteria = (store: RootState) => store.databases.searchCriteria;
 
 export const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterByStateOption>[] => {
     let error = 0,
@@ -104,48 +103,54 @@ const isDatabaseInFilterState = (
     const perNodeState = selectDatabaseState(db.name)(store);
     const databaseState = DatabaseUtils.getDatabaseState(db, perNodeState);
 
-    // prettier-ignore
+    const matchesStatus =
+        !filterStates.some((x) => ["Online", "Offline", "Error", "Disabled"].includes(x)) ||
+        filterStates.includes(databaseState) ||
+        databaseState === "Loading";
+
+    if (!matchesStatus) {
+        return false;
+    }
+
+    const matchesSharding =
+        !filterStates.some((x) => ["Sharded", "NonSharded"].includes(x)) ||
+        (filterStates.includes("Sharded") && db.sharded) ||
+        (filterStates.includes("NonSharded") && !db.sharded);
+
+    if (!matchesSharding) {
+        return false;
+    }
+
     return (
-        (
-            !filterStates.some((x) => ["Online", "Offline", "Error", "Disabled"].includes(x)) ||
-            filterStates.includes(databaseState) ||
-            databaseState === "Loading"
-        ) &&
-        (
-            !filterStates.some((x) => ["Sharded", "NonSharded"].includes(x)) ||
-            (filterStates.includes("Sharded") && db.sharded) ||
-            (filterStates.includes("NonSharded") && !db.sharded)
-        ) &&
-        (
-            !filterStates.some((x) => ["Local", "Remote"].includes(x)) ||
-            (filterStates.includes("Local") && db.currentNode.relevant) ||
-            (filterStates.includes("Remote") && !db.currentNode.relevant)
-        )
+        !filterStates.some((x) => ["Local", "Remote"].includes(x)) ||
+        (filterStates.includes("Local") && db.currentNode.relevant) ||
+        (filterStates.includes("Remote") && !db.currentNode.relevant)
     );
 };
 
-export const selectFilteredDatabaseNames = (store: RootState): string[] => {
-    const criteria = selectDatabaseSearchCriteria(store);
-    const allDatabases = selectAllDatabases(store);
+export const selectFilteredDatabaseNames =
+    (criteria: DatabaseFilterCriteria) =>
+    (store: RootState): string[] => {
+        const allDatabases = selectAllDatabases(store);
 
-    if (!(criteria.name || criteria.states?.length > 0)) {
-        return allDatabases.map((x) => x.name);
-    }
+        if (!(criteria.name || criteria.states?.length > 0)) {
+            return allDatabases.map((x) => x.name);
+        }
 
-    let filteredDatabases = allDatabases;
+        let filteredDatabases = allDatabases;
 
-    if (criteria.name) {
-        filteredDatabases = filteredDatabases.filter((db) =>
-            db.name.toLowerCase().includes(criteria.name.toLowerCase())
-        );
-    }
+        if (criteria.name) {
+            filteredDatabases = filteredDatabases.filter((db) =>
+                db.name.toLowerCase().includes(criteria.name.toLowerCase())
+            );
+        }
 
-    if (criteria.states?.length > 0) {
-        filteredDatabases = filteredDatabases.filter((db) => isDatabaseInFilterState(store, db, criteria.states));
-    }
+        if (criteria.states?.length > 0) {
+            filteredDatabases = filteredDatabases.filter((db) => isDatabaseInFilterState(store, db, criteria.states));
+        }
 
-    return filteredDatabases.map((x) => x.name);
-};
+        return filteredDatabases.map((x) => x.name);
+    };
 
 export function selectDatabaseByName(name: string) {
     return (store: RootState) => {

@@ -1,14 +1,12 @@
 ﻿import { createAsyncThunk, createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
 import {
-    DatabaseFilterByStateOption,
-    DatabaseFilterCriteria,
     DatabaseLocalInfo,
     DatabaseSharedInfo,
     OrchestratorLocalInfo,
     TopLevelDatabaseInfo,
 } from "components/models/databases";
 import genUtils from "common/generalUtils";
-import { InputItem, locationAwareLoadableData, perNodeTagLoadStatus } from "components/models/common";
+import { perNodeTagLoadStatus } from "components/models/common";
 import { services } from "hooks/useServices";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseLocationComparator } from "components/utils/common";
@@ -33,7 +31,6 @@ export interface DatabasesState {
      */
     localDetailedLoadStatus: EntityState<perNodeTagLoadStatus>;
     activeDatabase: string;
-    searchCriteria: DatabaseFilterCriteria;
 }
 
 const databasesAdapter = createEntityAdapter<DatabaseSharedInfo>({
@@ -69,10 +66,6 @@ const initialState: DatabasesState = {
     localDetailedLoadStatus: localDatabaseDetailedLoadStatusAdapter.getInitialState(),
     localOrchestratorDetailedInfo: localOrchestratorInfoAdapter.getInitialState(),
     activeDatabase: null,
-    searchCriteria: {
-        name: "",
-        states: [],
-    },
 };
 
 const sliceName = "databases";
@@ -139,12 +132,6 @@ export const databasesSlice = createSlice({
         databasesLoaded: (state, action: PayloadAction<DatabaseSharedInfo[]>) => {
             //TODO: update in shallow mode?
             databasesAdapter.setAll(state.databases, action.payload);
-        },
-        setSearchCriteriaName: (state, action: PayloadAction<string>) => {
-            state.searchCriteria.name = action.payload;
-        },
-        setSearchCriteriaStates: (state, action: PayloadAction<DatabaseFilterByStateOption[]>) => {
-            state.searchCriteria.states = action.payload;
         },
         initDetails: {
             reducer: (state, action: PayloadAction<{ nodeTags: string[] }>) => {
