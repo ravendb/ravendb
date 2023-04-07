@@ -10,6 +10,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Test;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.Documents.Queries;
@@ -228,12 +229,25 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
+            return CreateNew(definition, documentDatabase, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
+        }
+
+        private static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration)
+        {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
             instance.Initialize(documentDatabase,
-                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
+                configuration,
                 documentDatabase.Configuration.PerformanceHints);
 
             return instance;
+        }
+
+        public static Index CreateNewForTest(IndexDefinition definition, DocumentDatabase documentDatabase, DocumentsOperationContext context)
+        {
+            var index = CreateNew(definition, documentDatabase, new TestIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
+            index.InitializeTestIndex(context);
+            
+            return index;
         }
 
         public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)

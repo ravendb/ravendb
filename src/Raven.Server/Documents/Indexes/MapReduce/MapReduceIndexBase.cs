@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
@@ -166,6 +167,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                             GetResultsStore(reduceKeyHash, indexContext, create: true).Add(mapEntryId, mapResult.Data);
                         }
+
+                        var sourceCollection = CurrentIndexingScope.Current.SourceCollection;
+
+                        TestRun?.AddMapResult(mapResult.Data, sourceCollection);
                     }
                 }
 

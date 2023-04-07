@@ -39,6 +39,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Indexes.Test;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -271,6 +272,10 @@ namespace Raven.Server.Documents.Indexes
         internal bool SourceDocumentIncludedInOutput;
         private bool _alreadyNotifiedAboutIncludingDocumentInOutput;
 
+        public bool IsTestRun => TestRun != null;
+
+        public TestIndexRun TestRun;
+        
         protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition)
         {
             Type = type;
@@ -2315,6 +2320,11 @@ namespace Raven.Server.Documents.Indexes
             return HandleReferencesBase.InMemoryReferencesInfo.Default;
         }
 
+        public void InitializeTestIndex(DocumentsOperationContext context)
+        {
+            TestRun = new TestIndexRun(context);
+        }
+
         public bool DoIndexingWork(IndexingStatsScope stats, CancellationToken cancellationToken)
         {
             _threadAllocations = NativeMemory.CurrentThreadStats;
@@ -2334,8 +2344,15 @@ namespace Raven.Server.Documents.Indexes
                 using (CurrentIndexingScope.Current =
                     new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
                 {
-                    var writeOperation = new Lazy<IndexWriteOperationBase>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext));
+                    var writeOperation = new Lazy<IndexWriteOperationBase>(() =>
+                    {
+                        var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext);
 
+                        if (IsTestRun)
+                            writer = TestRun.CreateIndexWriteOperationWrapper(writer, this);
+
+                        return writer;
+                    });
                     try
                     {
                         long? entriesCount = null;
@@ -2462,7 +2479,27 @@ namespace Raven.Server.Documents.Indexes
                     writeOperation.Value.Dispose();
             }
         }
+        
+        private Dictionary<string, bool> _collectionTracker;
+        
+        public IIndexedItemEnumerator GetMapEnumeratorAndBoxWhenNeeded(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
+            IndexingStatsScope stats, IndexType type)
+        {
+            var enumerator = GetMapEnumerator(items, collection, indexContext, stats, type);
+            
+            if (IsTestRun)
+            {
+                _collectionTracker ??= new();
+                if (_collectionTracker.ContainsKey(collection))
+                    return new EmptyItemEnumerator();
+                
+                _collectionTracker[collection] = true;
+                return new BoxedItemEnumerator(enumerator, Collections.Count);
+            }
 
+            return enumerator;
+        }
+        
         public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type);
 

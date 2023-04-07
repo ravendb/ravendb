@@ -1,19 +1,31 @@
 ﻿using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Indexes.Test;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -33,6 +45,106 @@ namespace Raven.Server.Documents.Handlers.Admin
                 await processor.ExecuteAsync();
         }
 
+        [RavenAction("/databases/*/admin/indexes/test", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
+        public async Task PutTestIndex()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Input");
+
+                if (input.TryGet("IndexDefinition", out BlittableJsonReaderObject indexDefinitionBlittable) == false)
+                    throw new Exception();
+                
+                var indexDefinition = JsonDeserializationServer.IndexDefinition(indexDefinitionBlittable);
+
+                if (indexDefinition.Name is null)
+                    indexDefinition.Name = Guid.NewGuid().ToString().Replace("-", string.Empty);
+
+                Index index;
+                
+                switch (indexDefinition.SourceType)
+                {
+                    case IndexSourceType.Documents:
+                        switch (indexDefinition.Type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                index = MapIndex.CreateNewForTest(indexDefinition, context);
+                                break;
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                index = MapReduceIndex.CreateNewForTest<MapReduceIndex>(indexDefinition, context.DocumentDatabase, context);
+                                break;
+                            default:
+                                throw new Exception();
+                        }
+                        break;
+                    case IndexSourceType.Counters:
+                        switch (indexDefinition.Type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                index = MapCountersIndex.CreateNewForTest(indexDefinition, context);
+                                break;
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                index = MapReduceIndex.CreateNewForTest<MapReduceCountersIndex>(indexDefinition, context.DocumentDatabase, context);
+                                break;
+                            default:
+                                throw new Exception();
+                        }
+                        break;
+                    case IndexSourceType.TimeSeries:
+                        switch (indexDefinition.Type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                index = MapTimeSeriesIndex.CreateNewForTest(indexDefinition, context.DocumentDatabase, context);
+                                break;
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                index = MapReduceIndex.CreateNewForTest<MapReduceTimeSeriesIndex>(indexDefinition, context.DocumentDatabase, context);
+                                break;
+                            default:
+                                throw new Exception(); 
+                        }
+                        break;
+                    default:
+                        throw new Exception();
+                }
+                
+                if (input.TryGet("Query", out BlittableJsonReaderObject query) == false || query is null)
+                {
+                    var queryString = $"from index '{index.Name}'";
+                    var queryObject = new { Query = queryString };
+                    
+                    query = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(queryObject, context);
+                }
+
+                index.Start();
+
+                using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "Query"))
+                using (var token = CreateTimeLimitedQueryToken())
+                using (var queryContext = QueryOperationContext.Allocate(Database))
+                {
+                    var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, query, Database.QueryMetadataCache, tracker);
+
+                    indexQueryServerSide.WaitForNonStaleResults = true;
+                    
+                    var entries = await index.IndexEntries(indexQueryServerSide, queryContext, true, token);
+                    var queryResults = await index.Query(indexQueryServerSide, queryContext, token);
+                    var mapResults = index.TestRun.MapResults;
+                    var reduceResults = index.TestRun.ReduceResults;
+
+                    var hasDynamicFields = index.Definition.HasDynamicFields;
+
+                    var result = new TestIndexResult(){ IndexEntries = entries.Results, QueryResults = queryResults.Results, MapResults = mapResults, HasDynamicFields = hasDynamicFields, ReduceResults = reduceResults };
+                    
+                    await result.WriteTestIndexResult(ResponseBodyStream(), context);
+                }
+            }
+        }
+        
         [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task Stop()
         {

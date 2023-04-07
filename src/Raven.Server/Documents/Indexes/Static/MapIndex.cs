@@ -9,6 +9,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Test;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.NotificationCenter.Notifications;
@@ -181,13 +182,27 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
+            return CreateNew(definition, documentDatabase, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
+        }
+        
+        public static Index CreateNewForTest(IndexDefinition definition, DocumentsOperationContext context)
+        {
+            var index = CreateNew(definition, context.DocumentDatabase, new TestIndexConfiguration(definition.Configuration, context.DocumentDatabase.Configuration));
+
+            index.InitializeTestIndex(context);
+            
+            return index;
+        }
+        
+        private static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration)
+        {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
             
             var staticIndex = instance._compiled;
             staticIndex.CheckDepthOfStackInOutputMap(definition, documentDatabase);
             
             instance.Initialize(documentDatabase,
-                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
+                configuration,
                 documentDatabase.Configuration.PerformanceHints);
 
             return instance;
