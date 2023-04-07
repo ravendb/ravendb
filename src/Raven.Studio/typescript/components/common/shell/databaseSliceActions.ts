@@ -248,5 +248,4 @@ export const confirmToggleIndexing =
 
 export const throttledReloadDatabaseDetails = _.throttle(reloadDatabasesDetails, 100);
 
-export const { activeDatabaseChanged, databasesLoaded, initDetails, setSearchCriteriaName, setSearchCriteriaStates } =
-    databasesSlice.actions;
+export const { activeDatabaseChanged, databasesLoaded, initDetails } = databasesSlice.actions;

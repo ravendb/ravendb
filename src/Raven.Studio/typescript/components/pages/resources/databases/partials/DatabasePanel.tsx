@@ -213,10 +213,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
             const databaseToActivate = manager.getDatabaseByName(db.name);
 
             if (databaseToActivate) {
-                manager.activate(databaseToActivate);
-                manager.updateDatabaseInfo(databaseToActivate, db.name);
-
-                await dispatch(reloadDatabaseDetails(db.name));
+                try {
+                    await manager.activate(databaseToActivate);
+                    await manager.updateDatabaseInfo(databaseToActivate, db.name);
+                } finally {
+                    await dispatch(reloadDatabaseDetails(db.name));
+                }
             }
         }
     };
