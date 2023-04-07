@@ -1,7 +1,7 @@
 ﻿import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { findLatestBackup } from "components/pages/resources/databases/partials/ValidDatabasePropertiesPanel";
-import { toDatabaseLocalInfo } from "components/common/shell/databasesSlice";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
+import { toDatabaseLocalInfo } from "components/common/shell/databasesSlice";
 
 describe("findLatestBackup", () => {
     it("get use latest backup", () => {

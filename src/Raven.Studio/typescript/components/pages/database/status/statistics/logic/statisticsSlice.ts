@@ -15,8 +15,8 @@ import {
 } from "components/utils/common";
 import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/logic/models";
 import { WritableDraft } from "immer/dist/types/types-external";
-import { selectDatabaseByName } from "components/common/shell/databasesSlice";
 import { DatabaseSharedInfo } from "components/models/databases";
+import { selectDatabaseByName } from "components/common/shell/databaseSliceSelectors";
 
 interface StatisticsState {
     databaseName: string;

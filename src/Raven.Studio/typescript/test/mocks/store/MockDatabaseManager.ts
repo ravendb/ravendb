@@ -3,7 +3,7 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { MockedValue } from "test/mocks/services/AutoMockService";
 import { createValue } from "../utils";
 import { globalDispatch } from "components/storeCompat";
-import { databasesLoaded } from "components/common/shell/databasesSlice";
+import { databasesLoaded } from "components/common/shell/databaseSliceActions";
 
 export class MockDatabaseManager {
     with_Cluster(dto?: MockedValue<DatabaseSharedInfo>) {

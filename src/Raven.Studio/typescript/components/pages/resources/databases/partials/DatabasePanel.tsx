@@ -23,23 +23,6 @@ import {
     RichPanelStatus,
 } from "components/common/RichPanel";
 import { useAppDispatch, useAppSelector } from "components/store";
-import {
-    changeDatabasesLockMode,
-    compactDatabase,
-    confirmDeleteDatabases,
-    confirmSetLockMode,
-    confirmToggleDatabases,
-    confirmToggleIndexing,
-    confirmTogglePauseIndexing,
-    deleteDatabases,
-    reloadDatabaseDetails,
-    selectActiveDatabase,
-    selectDatabaseByName,
-    selectDatabaseState,
-    toggleDatabases,
-    toggleIndexing,
-    togglePauseIndexing,
-} from "components/common/shell/databasesSlice";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import useBoolean from "hooks/useBoolean";
 import { DatabaseDistribution } from "components/pages/resources/databases/partials/DatabaseDistribution";
@@ -53,6 +36,25 @@ import databasesManager from "common/shell/databasesManager";
 import { AccessIcon } from "components/pages/resources/databases/partials/AccessIcon";
 import { DatabaseTopology } from "components/pages/resources/databases/partials/DatabaseTopology";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
+import {
+    selectActiveDatabase,
+    selectDatabaseByName,
+    selectDatabaseState,
+} from "components/common/shell/databaseSliceSelectors";
+import {
+    changeDatabasesLockMode,
+    compactDatabase,
+    confirmDeleteDatabases,
+    confirmSetLockMode,
+    confirmToggleDatabases,
+    confirmToggleIndexing,
+    confirmTogglePauseIndexing,
+    deleteDatabases,
+    reloadDatabaseDetails,
+    toggleDatabases,
+    toggleIndexing,
+    togglePauseIndexing,
+} from "components/common/shell/databaseSliceActions";
 
 interface DatabasePanelProps {
     databaseName: string;

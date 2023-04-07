@@ -5,18 +5,17 @@ import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
 import { Row } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
-import {
-    compactDatabase,
-    loadDatabasesDetails,
-    openCreateDatabaseFromRestoreDialog,
-    selectAllDatabases,
-    selectFilteredDatabaseNames,
-    syncDatabaseDetails,
-} from "components/common/shell/databasesSlice";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
 import { selectClusterNodeTags } from "components/common/shell/clusterSlice";
 import { shallowEqual } from "react-redux";
+import { selectAllDatabases, selectFilteredDatabaseNames } from "components/common/shell/databaseSliceSelectors";
+import {
+    compactDatabase,
+    loadDatabasesDetails,
+    openCreateDatabaseFromRestoreDialog,
+    syncDatabaseDetails,
+} from "components/common/shell/databaseSliceActions";
 
 interface DatabasesPageProps {
     activeDatabase?: string;

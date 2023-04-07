@@ -2,11 +2,6 @@
 import { RichPanelDetailItem, RichPanelDetails } from "components/common/RichPanel";
 import React from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
-import {
-    openNotificationCenterForDatabase,
-    selectDatabaseState,
-    selectTopLevelState,
-} from "components/common/shell/databasesSlice";
 import { sumBy } from "lodash";
 import genUtils from "common/generalUtils";
 import appUrl from "common/appUrl";
@@ -14,6 +9,8 @@ import { withPreventDefault } from "components/utils/common";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import { selectLocalNodeTag } from "components/common/shell/clusterSlice";
+import { selectDatabaseState, selectTopLevelState } from "components/common/shell/databaseSliceSelectors";
+import { openNotificationCenterForDatabase } from "components/common/shell/databaseSliceActions";
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;

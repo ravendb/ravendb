@@ -3,10 +3,10 @@ import React from "react";
 import { DatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
-import { selectDatabaseState } from "components/common/shell/databasesSlice";
 import genUtils from "common/generalUtils";
 import { SizeOnDisk } from "components/pages/resources/databases/partials/SizeOnDisk";
 import { DatabaseLoadError } from "components/pages/resources/databases/partials/DatabaseLoadError";
+import { selectDatabaseState } from "components/common/shell/databaseSliceSelectors";
 
 interface DatabaseDistributionProps {
     db: DatabaseSharedInfo;
@@ -100,4 +100,3 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
         </LocationDistribution>
     );
 }
-
