@@ -20,13 +20,13 @@ import { CheckboxTriple } from "components/common/CheckboxTriple";
 
 interface DatabasesToolbarActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
-    filteredDatabases: DatabaseSharedInfo[];
+    databaseNames: string[];
     setSelectedDatabaseNames: (x: string[]) => void;
 }
 
 export function DatabasesToolbarActions({
     selectedDatabases,
-    filteredDatabases,
+    databaseNames,
     setSelectedDatabaseNames,
 }: DatabasesToolbarActionsProps) {
     const { isOperatorOrAbove } = useAccessManager();
@@ -48,13 +48,13 @@ export function DatabasesToolbarActions({
         if (selectedCount > 0) {
             setSelectedDatabaseNames([]);
         } else {
-            setSelectedDatabaseNames(filteredDatabases.map((x) => x.name));
+            setSelectedDatabaseNames(databaseNames);
         }
-    }, [selectedDatabases.length, setSelectedDatabaseNames, filteredDatabases]);
+    }, [selectedDatabases.length, setSelectedDatabaseNames, databaseNames]);
 
     const databasesSelectionState = useMemo<checkbox>(() => {
         const selectedCount = selectedDatabases.length;
-        const dbsCount = filteredDatabases.length;
+        const dbsCount = databaseNames.length;
         if (dbsCount > 0 && dbsCount === selectedCount) {
             return "checked";
         }
@@ -64,7 +64,7 @@ export function DatabasesToolbarActions({
         }
 
         return "unchecked";
-    }, [selectedDatabases.length, filteredDatabases]);
+    }, [selectedDatabases.length, databaseNames]);
 
     if (!isOperatorOrAbove()) {
         // no access

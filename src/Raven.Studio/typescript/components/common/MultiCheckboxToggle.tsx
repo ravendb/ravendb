@@ -29,7 +29,7 @@ export function MultiCheckboxToggle<T extends string | number = string>({
         toggle: toggleIsSelectedAll,
         setFalse: setIsSelectedAllFalse,
         setTrue: setIsSelectedAllTrue,
-    } = useBoolean(itemSelectAll ? true : false);
+    } = useBoolean(!!itemSelectAll);
 
     const toggleItem = (toggleValue: boolean, inputItemValue: T) => {
         if (toggleValue) {
