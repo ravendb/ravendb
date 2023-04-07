@@ -246,7 +246,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }));
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -274,7 +274,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -301,7 +301,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -326,7 +326,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -421,7 +421,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }));
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -465,7 +465,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -517,7 +517,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -556,7 +556,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -637,7 +637,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     }));
 
                     var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                   // Assert.True(staleness.IsStale);
+                    Assert.True(staleness.IsStale);
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -675,7 +675,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     }
 
                     staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                   // Assert.True(staleness.IsStale);
+                    Assert.True(staleness.IsStale);
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -700,7 +700,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     }
 
                     staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                   // Assert.True(staleness.IsStale);
+                    Assert.True(staleness.IsStale);
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -724,7 +724,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     }
 
                     staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
-                   // Assert.True(staleness.IsStale);
+                    Assert.True(staleness.IsStale);
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1119,7 +1119,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }));
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1146,7 +1146,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1179,7 +1179,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1211,7 +1211,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1240,7 +1240,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1299,7 +1299,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }));
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1333,7 +1333,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1368,7 +1368,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1400,7 +1400,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1582,7 +1582,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 store.Maintenance.Send(new PutIndexesOperation(definition));
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1604,7 +1604,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
@@ -1625,7 +1625,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
-               // Assert.True(staleness.IsStale);
+                Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
