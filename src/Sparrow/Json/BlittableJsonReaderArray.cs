@@ -17,7 +17,7 @@ namespace Sparrow.Json
         private readonly byte* _metadataPtr;
         private readonly byte* _dataStart;
         private readonly long _currentOffsetSize;
-        private Dictionary<int, Tuple<object, BlittableJsonToken>> _cache;
+        private Dictionary<int, (object, BlittableJsonToken)> _cache;
 
         public DynamicJsonArray Modifications;
 
@@ -198,12 +198,12 @@ namespace Sparrow.Json
             }
         }
 
-        public Tuple<object, BlittableJsonToken> GetValueTokenTupleByIndex(int index)
+        public (object, BlittableJsonToken) GetValueTokenTupleByIndex(int index)
         {
             AssertContextNotDisposed();
 
             // try get value from cache, works only with Blittable types, other objects are not stored for now
-            if (NoCache == false && _cache != null && _cache.TryGetValue(index, out Tuple<object, BlittableJsonToken> result))
+            if (NoCache == false && _cache != null && _cache.TryGetValue(index, out (object, BlittableJsonToken) result))
                 return result;
 
             if (index >= _count || index < 0)
@@ -212,7 +212,7 @@ namespace Sparrow.Json
             var itemMetadataStartPtr = _metadataPtr + index * (_currentOffsetSize + 1);
             var offset = ReadNumber(itemMetadataStartPtr, _currentOffsetSize);
             var token = *(itemMetadataStartPtr + _currentOffsetSize);
-            result = Tuple.Create(
+            result = (
                 _parent.GetObject((BlittableJsonToken)token,(int)(_dataStart - _parent.BasePointer - offset), out bool isBlittableJsonReader), 
                 (BlittableJsonToken)token & TypesMask
             );
@@ -222,10 +222,7 @@ namespace Sparrow.Json
                 ((BlittableJsonReaderBase)result.Item1).NoCache = NoCache;
                 if (NoCache == false)
                 {
-                    if (_cache == null)
-                    {
-                        _cache = new Dictionary<int, Tuple<object, BlittableJsonToken>>(NumericEqualityComparer.BoxedInstanceInt32);
-                    }
+                    _cache ??= new Dictionary<int, (object, BlittableJsonToken)>(NumericEqualityComparer.BoxedInstanceInt32);
                     _cache[index] = result;
                 }
             }
