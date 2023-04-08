@@ -5,6 +5,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
-        public void CanFillGaps_LinearInterpolation_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_LinearInterpolation_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -91,10 +93,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_LinearInterpolation2_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_LinearInterpolation2_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = "people/1";
                 var baseline = RavenTestHelper.UtcToday;
@@ -151,10 +154,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_NearestNeighbor_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_NearestNeighbor_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -230,10 +234,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_NearestNeighbor2_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_NearestNeighbor2_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -307,10 +312,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_GroupByMonth_Linear_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_GroupByMonth_Linear_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = "people/1";
                 var baseline = new DateTime(2020, 4, 1);
@@ -384,10 +390,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_GroupByMonth_Nearest_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_GroupByMonth_Nearest_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = "people/1";
                 var dt1 = new DateTime(2020, 2, 1);
@@ -441,10 +448,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_MultipleValues_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_MultipleValues_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = "people/1";
                 var baseline = RavenTestHelper.UtcToday;
@@ -503,10 +511,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_DifferentNumberOfValues_RawQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_DifferentNumberOfValues_RawQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -568,10 +577,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_LinearInterpolation_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_LinearInterpolation_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -640,10 +650,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_NearestNeighbor_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_NearestNeighbor_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -716,10 +727,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_DifferentNumberOfValues_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_DifferentNumberOfValues_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
@@ -780,10 +792,11 @@ select timeseries(
             }
         }
 
-        [Fact]
-        public void CanFillGaps_SeveralValuesPerBucket_Linq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFillGaps_SeveralValuesPerBucket_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";

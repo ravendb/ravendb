@@ -21,8 +21,8 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUsePercentileInTimeSeriesQuery_RawQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -81,8 +81,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUsePercentileInTimeSeriesQuery_Linq(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -172,11 +172,11 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUsePercentileInTimeSeriesQuery_WithGroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
@@ -237,8 +237,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUsePercentileInTimeSeriesQuery_WithWhere(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -298,8 +298,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUsePercentileInTimeSeriesQuery_WithMultipleValues(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -369,8 +369,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUsePercentileInTimeSeriesQuery_WithScale(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -431,8 +431,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUsePercentileInTimeSeriesQuery_WithInterpolation(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -527,8 +527,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUsePercentileInTimeSeriesQuery_EdgeCases(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -579,8 +579,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldThrowOnUsingPercentileOnRolledUpSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -651,8 +651,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseSlopeInTimeSeriesQuery_Linq(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -722,8 +722,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseSlopeInTimeSeriesQuery_Raw(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -770,8 +770,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldThrowOnUsingSlopeWithoutGroupBy(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -811,8 +811,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseSlopeInTimeSeriesQuery_WithInterpolation(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -867,8 +867,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseSlopeInTimeSeriesQuery_WithScale(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -921,8 +921,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanUseSlopeInTimeSeriesQuery_OnRollUps(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1002,8 +1002,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseStdDevInTimeSeriesQuery_RawQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1067,8 +1067,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseStdDevInTimeSeriesQuery_Linq(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1165,8 +1165,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseStdDevInTimeSeriesQuery_WithGroupBy(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1233,8 +1233,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseStdDevInTimeSeriesQuery_WithWhere(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1296,8 +1296,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseStdDevInTimeSeriesQuery_WithScale(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1357,8 +1357,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseStdDevInTimeSeriesQuery_WithMultipleValues(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1432,8 +1432,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseStdDevInTimeSeriesQuery_WithInterpolation(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1530,8 +1530,8 @@ select timeseries(
             }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldThrowOnUsingStdDevOnRolledUpSeries(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using FastTests;
-using MySql.Data.MySqlClient;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using Raven.Server.SqlMigration;
@@ -74,12 +75,25 @@ namespace SlowTests.Server.Documents.Migration
         {
             switch (provider)
             {
-                case MigrationProvider.MySQL:
+                case MigrationProvider.MySQL_MySql_Data:
                 {
-                    using (var connection = new MySqlConnection(connectionString))
+                    using (var connection = new MySql.Data.MySqlClient.MySqlConnection(connectionString))
                     {
                         connection.Open();
-                        using (var cmd = new MySqlCommand(query, connection))
+                        using (var cmd = new MySql.Data.MySqlClient.MySqlCommand(query, connection))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    break;
+                }
+                case MigrationProvider.MySQL_MySqlConnector:
+                {
+                    using (var connection = new MySqlConnector.MySqlConnection(connectionString))
+                    {
+                        connection.Open();
+                        using (var cmd = new MySqlConnector.MySqlCommand(query, connection))
                         {
                             cmd.ExecuteNonQuery();
                         }
@@ -129,8 +143,9 @@ namespace SlowTests.Server.Documents.Migration
         {
             switch (provider)
             {
-                case MigrationProvider.MySQL:
-                    return WithMySqlDatabase(out connectionString, out schemaName, dataSet, includeData);
+                case MigrationProvider.MySQL_MySql_Data:
+                case MigrationProvider.MySQL_MySqlConnector:
+                    return WithMySqlDatabase(out connectionString, out schemaName, dataSet, provider, includeData);
                 case MigrationProvider.MsSQL:
                     schemaName = "dbo";
                     return WithMsSqlDatabase(out connectionString, out string databaseName, dataSet, includeData);
@@ -239,7 +254,16 @@ namespace SlowTests.Server.Documents.Migration
             });
         }
 
-        private static DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        private static DbConnection GetMySqlConnection(MigrationProvider provider, string connectionString)
+        {
+            Debug.Assert(provider is MigrationProvider.MySQL_MySql_Data or MigrationProvider.MySQL_MySqlConnector);
+
+            return provider == MigrationProvider.MySQL_MySql_Data
+                ? new MySql.Data.MySqlClient.MySqlConnection(connectionString)
+                : new MySqlConnector.MySqlConnection(connectionString);
+        }
+
+        private static DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, MigrationProvider provider, bool includeData = true)
         {
             databaseName = "sql_test_" + Guid.NewGuid();
             var rawConnectionString = MySqlConnectionString.Instance.VerifiedConnectionString.Value;
@@ -249,7 +273,7 @@ namespace SlowTests.Server.Documents.Migration
             
             connectionString = $"{rawConnectionString};database='{databaseName}'";
 
-            using (var connection = new MySqlConnection(rawConnectionString))
+            using (var connection = GetMySqlConnection(provider, rawConnectionString))
             {
                 connection.Open();
 
@@ -263,7 +287,7 @@ namespace SlowTests.Server.Documents.Migration
             
             if (string.IsNullOrEmpty(dataSet) == false)
             {
-                using (var dbConnection = new MySqlConnection(connectionString))
+                using (var dbConnection = GetMySqlConnection(provider, connectionString))
                 {
                     dbConnection.Open();
 
@@ -293,7 +317,7 @@ namespace SlowTests.Server.Documents.Migration
             string dbName = databaseName;
             return new DisposableAction(() =>
             {
-                using (var con = new MySqlConnection(rawConnectionString))
+                using (var con = GetMySqlConnection(provider, rawConnectionString))
                 {
                     con.Open();
 

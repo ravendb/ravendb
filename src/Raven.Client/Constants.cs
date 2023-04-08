@@ -338,6 +338,23 @@ namespace Raven.Client
                     public const string NullValue = "NULL_VALUE";
 
                     public const string EmptyString = "EMPTY_STRING";
+
+                    public class JavaScript
+                    {
+                        private JavaScript()
+                        {
+                        }
+                        
+                        public const string ValuePropertyName = "$value";
+                        
+                        public const string OptionsPropertyName = "$options";
+                        
+                        public const string NamePropertyName = "$name";
+                        
+                        public const string SpatialPropertyName = "$spatial";
+                        
+                        public const string BoostPropertyName = "$boost";
+                    }
                 }
 
                 public class Spatial

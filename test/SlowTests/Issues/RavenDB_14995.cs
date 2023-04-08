@@ -3,6 +3,8 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,15 +16,21 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldWork_TimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldWork_TimeSeries(RavenTestParameters config)
         {
             const int numberOfCompanies = 77;
             const int numberOfTimeSeriesEntriesPerCompany = 333;
 
             var now = DateTime.UtcNow;
 
-            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.MaxNumberOfRequestsPerSession = int.MaxValue }))
+            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.MaxNumberOfRequestsPerSession = int.MaxValue, ModifyDatabaseRecord =
+                       record =>
+                       {
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                       }}))
             {
                 new SimpleTimeSeriesMapReduce().Execute(store);
 

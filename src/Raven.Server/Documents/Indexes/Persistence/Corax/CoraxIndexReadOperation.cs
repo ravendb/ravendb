@@ -569,12 +569,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (willAlwaysIncludeInResults)
                         goto Include;
 
-                    // Ok, we will need to check for duplicates, then we will have to work. 
-                    var rawIdentity = _indexSearcher.GetRawIdentityFor(indexEntryId);
-                    bool includeInResults = identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity);
+                    // Ok, we will need to check for duplicates, then we will have to work. In some cases (like TimeSeries) we don't "have" unique identifier so we skip checking.
+                    var identityExists = retriever.TryGetKeyCorax(_indexSearcher, ids[i], out var rawIdentity);
 
                     // If we have figured out that this document identity has already been seen, we are skipping it.
-                    if (includeInResults == false)
+                    if (identityExists && identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity) == false)
                     {
                         docsToLoad++;
                         skippedResults.Value++;

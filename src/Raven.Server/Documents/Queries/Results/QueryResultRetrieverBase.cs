@@ -120,7 +120,9 @@ namespace Raven.Server.Documents.Queries.Results
 
         public abstract (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
-        public abstract bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
+        public abstract bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key);
+
+        public abstract bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key);
 
         public abstract Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
 

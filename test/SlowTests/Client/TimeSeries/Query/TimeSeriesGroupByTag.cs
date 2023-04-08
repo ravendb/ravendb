@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,10 +21,11 @@ namespace SlowTests.Client.TimeSeries.Query
         {
         }
 
-        [Fact]
-        public void CanGroupByTagRql()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByTagRql(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -86,10 +88,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanGroupByTagLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByTagLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -153,10 +156,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanGroupByLoadedTagRql()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByLoadedTagRql(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = PopulateCanGroupByLoadedTag(store);
 
@@ -207,10 +211,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanGroupByNull()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByNull(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = PopulateCanGroupByLoadedTag(store);
 
@@ -256,10 +261,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanGroupByDocument()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = PopulateCanGroupByLoadedTag(store);
 
@@ -317,10 +323,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanGroupByArray()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByArray(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = PopulateCanGroupByLoadedTag(store);
 
@@ -372,10 +379,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanGroupByLoadedTagLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByLoadedTagLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = PopulateCanGroupByLoadedTag(store);
 
@@ -421,10 +429,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanGroupByLoadedTagWithTagFilter()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByLoadedTagWithTagFilter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = PopulateCanGroupByLoadedTag(store);
 
@@ -465,10 +474,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanGroupByTagWithInterpolationRql()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByTagWithInterpolationRql(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = PopulateCanGroupByTagWithInterpolation(store);
 
@@ -528,10 +538,11 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact]
-        public void CanGroupByTagWithInterpolationLinq()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGroupByTagWithInterpolationLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = PopulateCanGroupByTagWithInterpolation(store);
 
@@ -595,10 +606,11 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
 
-        [Fact]
-        public void CanStreamGroupByTagWithInterpolation()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanStreamGroupByTagWithInterpolation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = PopulateCanGroupByTagWithInterpolation(store);
 

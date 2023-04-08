@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
-        public void CanPassTimeSeriesNameAsQueryParameter()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanPassTimeSeriesNameAsQueryParameter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 using (var session = store.OpenSession())
@@ -64,10 +66,11 @@ select out()
             }
         }
 
-        [Fact]
-        public void CanPassTimeSeriesNameAsQueryParameter_2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanPassTimeSeriesNameAsQueryParameter_2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 using (var session = store.OpenSession())

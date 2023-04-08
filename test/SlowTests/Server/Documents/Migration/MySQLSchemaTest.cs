@@ -13,12 +13,13 @@ namespace SlowTests.Server.Documents.Migration
         {
         }
 
-        [RequiresMySqlFact]
-        public void CanFetchSchema()
+        [Theory]
+        [RequiresMySqlInlineData]
+        public void CanFetchSchema(MigrationProvider provider)
         {
-            using (WithSqlDatabase(MigrationProvider.MySQL, out var connectionString, out string schemaName, includeData: false))
+            using (WithSqlDatabase(provider, out var connectionString, out string schemaName, includeData: false))
             {
-                var driver = DatabaseDriverDispatcher.CreateDriver(MigrationProvider.MySQL, connectionString);
+                var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 var schema = driver.FindSchema();
                 Assert.NotNull(schema.CatalogName);
 

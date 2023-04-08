@@ -9,6 +9,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Client.TimeSeries
 
         // RavenDB-15108
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task TimeSeriesConflictsInMetadata()
         {
             using (var storeA = GetDocumentStore())
@@ -86,7 +87,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task MergeTimSeriesOnDocumentConflict()
         {
             using (var storeA = GetDocumentStore())
@@ -145,7 +146,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task MergeTimSeriesOnDocumentConflict2()
         {
             using (var storeA = GetDocumentStore(options: new Options
@@ -259,7 +260,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task TimeSeriesAppendOnConflictedDocument()
         {
             using (var storeA = GetDocumentStore())
@@ -311,7 +312,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task PutNewTimeSeriesOnConflictedDocument()
         {
             using (var storeA = GetDocumentStore())
@@ -390,7 +391,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task TimeSeriesConflictsInMetadataOnDifferentCasing()
         {
             using (var storeA = GetDocumentStore())

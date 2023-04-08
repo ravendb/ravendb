@@ -82,6 +82,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     return false;
 
                 case SqlProvider.MySqlClient:
+                case SqlProvider.MySqlConnectorFactory:
                     encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "Encrypt", "UseSSL" });
 
                     if (string.IsNullOrEmpty(encrypt) == false)

@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,7 +16,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
         public void CanIncludeTimeSeriesWithoutProvidingFromAndToDates_ViaLoad()
         {
             using (var store = GetDocumentStore())
@@ -60,10 +61,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public void CanIncludeTimeSeriesWithoutProvidingFromAndToDates_ViaQuery()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIncludeTimeSeriesWithoutProvidingFromAndToDates_ViaQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

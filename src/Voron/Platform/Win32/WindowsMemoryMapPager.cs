@@ -371,7 +371,6 @@ namespace Voron.Platform.Win32
                     Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION memoryInfo2 = new Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION();
                     int vQuerySecondOutput = Win32MemoryProtectMethods.VirtualQuery(start, &memoryInfo2, new UIntPtr(size));
                     int vQuerySecondError = Marshal.GetLastWin32Error();
-                    Debugger.Break();
                 }
             }
         }
@@ -396,7 +395,6 @@ namespace Voron.Platform.Win32
                     Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION memoryInfo2 = new Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION();
                     int vQuerySecondOutput = Win32MemoryProtectMethods.VirtualQuery(start, &memoryInfo2, new UIntPtr(size));
                     int vQuerySecondError = Marshal.GetLastWin32Error();
-                    Debugger.Break();
                 }
             }
         }

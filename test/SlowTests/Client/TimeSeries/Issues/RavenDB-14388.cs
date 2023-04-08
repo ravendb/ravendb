@@ -22,8 +22,8 @@ namespace SlowTests.Client.TimeSeries.Issues
             public string Name { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void TimeSeriesSelectShouldAffectQueryEtag(Options options)
         {
             using (var store = GetDocumentStore(options))

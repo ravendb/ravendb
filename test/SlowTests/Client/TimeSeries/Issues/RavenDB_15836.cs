@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,10 +21,11 @@ namespace SlowTests.Client.TimeSeries.Issues
 
         private const string DocId = "users/ayende";
 
-        [Fact]
-        public void TimeSeriesLinqQuery_CanUseStringInterpolationInName()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesLinqQuery_CanUseStringInterpolationInName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var timeSeries = "HeartRate";
 
@@ -49,10 +51,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public async Task TimeSeriesLinqQuery_CanUseSimpleCallExpressionInName()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task TimeSeriesLinqQuery_CanUseSimpleCallExpressionInName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var timeSeries = "HeartRate";
 
@@ -106,10 +109,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public void TimeSeriesLinqQuery_CanUseSimpleCallExpressionInGroupBy()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSeriesLinqQuery_CanUseSimpleCallExpressionInGroupBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var timeSeries = "HeartRate";
 

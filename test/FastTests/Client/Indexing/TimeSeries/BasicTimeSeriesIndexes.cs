@@ -22,8 +22,8 @@ namespace FastTests.Client.Indexing.TimeSeries
         {
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -55,7 +55,6 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "   User = ts.DocumentId " +
                     "}" }
                 }));
-
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
@@ -197,8 +196,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapIndexWithLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -369,8 +368,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -575,8 +574,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapReduceIndexWithLoad(Options options)
         {
             {
@@ -748,8 +747,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task TimeSeriesForDocumentIdWithEscapePositions(Options options)
         {
             var str = "Oren\r\nEini";
@@ -811,8 +810,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void MapIndexWithCaseInsensitiveTimeSeriesNames(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -866,8 +865,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUpdateMapTimeSeriesIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -909,8 +908,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUpdateMapTimeSeriesIndexWithoutUpdatingCompiledIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -953,8 +952,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUpdateMapReduceTimeSeriesIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1018,8 +1017,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUpdateMapReduceTimeSeriesIndexWithoutUpdatingCompiledIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1084,8 +1083,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeriesFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1260,8 +1259,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1641,8 +1640,8 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanPersist(Options options)
         {
             using (var store = GetDocumentStore(new Options
