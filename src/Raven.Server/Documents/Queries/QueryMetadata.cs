@@ -7,9 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Esprima;
 using Esprima.Ast;
-using Nest;
+using Esprima.Utils;
 using Raven.Client;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -31,7 +30,6 @@ using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Extensions;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Sparrow;
-using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Utils;
 using Spatial4n.Shapes;
@@ -735,7 +733,9 @@ function execute(doc, args){
             // validate that this is valid JS code
             try
             {
-                Query.SelectFunctionBody.Program = ValidateScript(parameters);
+                (Esprima.Ast.Program program, HashSet<string> referencedParameters) = ValidateScript(parameters);
+                Query.SelectFunctionBody.Program = program;
+                Query.SelectFunctionBody.ReferencedParameters = referencedParameters;
                 CheckIfProjectionHasSpecialMethod(Query.SelectFunctionBody.Program);
             }
             catch (Exception e)
@@ -770,9 +770,13 @@ function execute(doc, args){
             sb.AppendLine("rvnQueryArgs) { ");
             if (parameters != null)
             {
+                HashSet<string> referencedParameters = Query.SelectFunctionBody.ReferencedParameters;
                 foreach (var parameter in parameters.GetPropertyNames())
                 {
-                    sb.Append("var $").Append(parameter).Append(" = rvnQueryArgs.").Append(parameter).AppendLine(";");
+                    if (referencedParameters != null && referencedParameters.Contains('$' + parameter))
+                    {
+                        sb.Append("var $").Append(parameter).Append(" = rvnQueryArgs.").Append(parameter).AppendLine(";");
+                    }
                 }
             }
             sb.Append("    return ");
@@ -2770,65 +2774,92 @@ function execute(doc, args){
             "console", "spatial"
         };
 
-        private Esprima.Ast.Program ValidateScript(BlittableJsonReaderObject parameters)
+        private sealed class ScriptValidator : AstVisitor
         {
-            HashSet<string> maybeUnknowns = null;
-            Identifier currentProp = null;
+            private readonly QueryMetadata _queryMetadata;
+            private readonly BlittableJsonReaderObject _parameters;
+            internal HashSet<string> _referencedParameters;
+            private HashSet<string> _maybeUnknowns;
+            private Identifier _currentProp;
 
-            void VerifyKnownAliases(Node node)
+            public ScriptValidator(QueryMetadata queryMetadata, BlittableJsonReaderObject parameters)
             {
-                switch (node)
+                _queryMetadata = queryMetadata;
+                _parameters = parameters;
+            }
+
+            protected override void VisitIdentifier(Identifier identifier)
+            {
+                if (identifier.Name?.StartsWith('$') == true)
                 {
-                    case Identifier identifier when currentProp == null:
-                        currentProp = identifier;
-                        break;
+                    _referencedParameters ??= new HashSet<string>();
+                    _referencedParameters.Add(identifier.Name);
+                }
+                _currentProp ??= identifier;
+            }
 
-                    case ArrowFunctionExpression arrowFunction:
-                        RemoveFromUnknowns(arrowFunction.Params);
-                        break;
+            protected override void VisitFunctionExpression(IFunction expression)
+            {
+                RemoveFromUnknowns(expression.Params);
+            }
 
-                    case FunctionExpression functionExpression:
-                        RemoveFromUnknowns(functionExpression.Params);
-                        break;
+            protected override void VisitProperty(Property property)
+            {
+                if (property.Key != _currentProp)
+                {
+                    return;
+                }
 
-                    case Property prop when prop.Key == currentProp:
-                        if (maybeUnknowns?.Count > 0)
-                            ThrowUnknownAlias(maybeUnknowns.First(), parameters);
-                        currentProp = null;
-                        break;
+                if (_maybeUnknowns?.Count > 0)
+                {
+                    _queryMetadata.ThrowUnknownAlias(_maybeUnknowns.First(), _parameters);
+                }
 
-                    case StaticMemberExpression sme when sme.Object is Identifier id &&
-                                                         UnknownIdentifier(id.Name):
-                        maybeUnknowns = maybeUnknowns ?? new HashSet<string>();
-                        maybeUnknowns.Add(id.Name);
-                        break;
+                _currentProp = null;
+            }
+
+            protected override void VisitMemberExpression(MemberExpression memberExpression)
+            {
+                if (memberExpression is StaticMemberExpression { Object: Identifier id } && UnknownIdentifier(id.Name))
+                {
+                    _maybeUnknowns ??= new HashSet<string>();
+                    _maybeUnknowns.Add(id.Name);
                 }
             }
 
-            bool UnknownIdentifier(string identifier)
+            private bool UnknownIdentifier(string identifier)
             {
-                return RootAliasPaths.TryGetValue(identifier, out _) == false &&
+                return _queryMetadata.RootAliasPaths.TryGetValue(identifier, out _) == false &&
                        JsBaseObjects.Contains(identifier) == false &&
-                       (parameters == null ||
-                        identifier.StartsWith("$") == false ||
-                        parameters.TryGet(identifier.Substring(1), out object _) == false);
+                       (_parameters == null ||
+                        identifier.StartsWith('$') == false ||
+                        _parameters.TryGet(identifier.Substring(1), out object _) == false);
             }
 
-            void RemoveFromUnknowns(NodeList<Expression> functionParameters)
+            private void RemoveFromUnknowns(in NodeList<Expression> functionParameters)
             {
-                if (maybeUnknowns == null || maybeUnknowns.Count == 0)
+                if (_maybeUnknowns == null || _maybeUnknowns.Count == 0)
+                {
                     return;
+                }
 
                 foreach (var p in functionParameters)
                 {
-                    if (!(p is Identifier i))
-                        continue;
-
-                    maybeUnknowns.Remove(i.Name);
+                    if (p is Identifier i)
+                    {
+                        _maybeUnknowns.Remove(i.Name);
+                    }
                 }
             }
+        }
 
-            return new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAliases).ParseScript();
+        private (Esprima.Ast.Program, HashSet<string>) ValidateScript(BlittableJsonReaderObject parameters)
+        {
+            ScriptValidator validator = new(this, parameters);
+            JavaScriptParser parser = new("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), validator.Visit);
+            Script script = parser.ParseScript();
+
+            return (script, validator._referencedParameters);
         }
 
         private bool NotInRootAliasPaths(string key)
