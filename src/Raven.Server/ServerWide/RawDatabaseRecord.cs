@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Server.Documents.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -375,6 +374,36 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _periodicBackupsTaskIds;
+            }
+        }
+
+        private List<PeriodicBackupConfiguration> _periodicBackups;
+
+        public List<PeriodicBackupConfiguration> PeriodicBackups
+        {
+            get
+            {
+                if (_periodicBackups != null) 
+                    return _periodicBackups;
+
+                if (_materializedRecord != null)
+                {
+                    _periodicBackups = _materializedRecord.PeriodicBackups;
+                }
+                else
+                {
+                    _periodicBackups = new List<PeriodicBackupConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray periodicBackups) && periodicBackups != null)
+                    {
+                        foreach (BlittableJsonReaderObject backup in periodicBackups)
+                        {
+                            var backupConfiguration = JsonDeserializationClient.GetPeriodicBackupConfiguration(backup);
+                            _periodicBackups.Add(backupConfiguration);
+                        }
+                    }
+                }
+
+                return _periodicBackups;
             }
         }
 
