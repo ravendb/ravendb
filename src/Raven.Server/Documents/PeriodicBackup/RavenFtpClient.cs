@@ -16,7 +16,9 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using FluentFTP;
+using FluentFTP.Client.BaseClient;
 using FluentFTP.Exceptions;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -32,6 +34,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly bool _useSsl;
         private const int DefaultBufferSize = 81920;
         private const int DefaultFtpPort = 21;
+        private readonly bool _isTesting;
 
         public RavenFtpClient(FtpSettings ftpSettings, Progress progress = null, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
@@ -57,6 +60,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _url += "/";
 
             Debug.Assert(_url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase));
+            _isTesting = Environment.GetEnvironmentVariable("isTesting") != null;
         }
 
         public void UploadFile(string folderName, string fileName, Stream stream)
@@ -156,9 +160,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var x509Certificate = new X509Certificate2(byteArray);
                     client.Config.EncryptionMode = FtpEncryptionMode.Explicit;
-                    client.Config.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
                     client.Config.ClientCertificates.Add(x509Certificate);
-                    client.Config.ValidateAnyCertificate = true;
+                    if (_isTesting)
+                        client.Config.ValidateAnyCertificate = true;
+                    else
+                        client.ValidateCertificate += new FtpSslValidation(OnValidateCertificate);
                 }
                 catch (Exception e)
                 {
@@ -173,6 +179,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                 client.Port = DefaultFtpPort;
             client.Connect();
             return client;
+        }
+
+        private static void OnValidateCertificate(BaseFtpClient control, FtpSslValidationEventArgs e)
+        {
+            if (e.PolicyErrors == SslPolicyErrors.None)
+            {
+                e.Accept = true;
+            }
+            else
+            {
+                throw new Exception($"{e.PolicyErrors}{Environment.NewLine}{e.Certificate}");
+            }
         }
 
         public void TestConnection()
@@ -231,18 +249,20 @@ namespace Raven.Server.Documents.PeriodicBackup
             return GetItemsInternal(url, path, FtpObjectType.Directory);
         }
 
-        public List<string> GetFiles(string folderName)
+        public List<string> GetFiles([NotNull] string folderName)
         {
+            if (string.IsNullOrEmpty(folderName)) throw new ArgumentException("Value cannot be null or empty.", nameof(folderName));
             ExtractUrlAndDirectories(out var url, out _);
             return GetItemsInternal(url, folderName, FtpObjectType.File);
         }
 
-        public void DeleteFolder(string folderName)
+        public void DeleteFolder([NotNull] string folderName)
         {
+            if (string.IsNullOrEmpty(folderName)) throw new ArgumentException("Value cannot be null or empty.", nameof(folderName));
             ExtractUrlAndDirectories(out var url, out _);
             using (var client = CreateFtpClient(url, keepAlive: false))
             {
-                client.DeleteDirectory($"{folderName}");
+                client.DeleteDirectory(folderName);
             }
         }
     }
