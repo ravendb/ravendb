@@ -21,10 +21,12 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Blittable\BlittableJsonWriterTests\Jsons\*.json" />
+    <None Remove="Corax\Bugs\access_violation.json.gz" />
     <None Remove="Corax\Bugs\Corax.Set.Adds.txt" />
     <None Remove="Voron\CompactTrees\RavenDB-19703.replay" />
     <None Remove="Voron\CompactTrees\RavenDB-19937.replay" />
     <None Remove="Voron\CompactTrees\RavenDB-19956.replay" />
+    <EmbeddedResource Include="Corax\Bugs\access_violation.json.gz"/>
     <EmbeddedResource Include="Corax\Bugs\Corax.Set.Adds.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>

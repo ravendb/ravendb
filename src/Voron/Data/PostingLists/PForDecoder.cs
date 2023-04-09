@@ -9,6 +9,7 @@ using System.Xml;
 using static System.Runtime.Intrinsics.X86.Sse2;
 using static System.Runtime.Intrinsics.X86.Avx2;
 using System.Runtime.Intrinsics.X86;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 
@@ -75,11 +76,11 @@ namespace Voron.Data.PostingLists
             Debug.Assert(inputBufferSize == state.BufferSize);
 
             var stateBitPos = state._bitPos;
-
-            var headerBits = Read2(stateBitPos, inputBufferPtr, out stateBitPos);
+          
+            var headerBits = Read2(stateBitPos, inputBufferPtr, inputBufferSize, out stateBitPos);
             if (headerBits == 0b11) // Extended value, now figure out which one...
             {
-                headerBits = Read2(stateBitPos, inputBufferPtr, out stateBitPos);
+                headerBits = Read2(stateBitPos, inputBufferPtr, inputBufferSize, out stateBitPos);
                 switch (headerBits)
                 {
                     // end of entries marker
@@ -89,7 +90,7 @@ namespace Voron.Data.PostingLists
                         //state._bitPos = stateBitPos;
                         return 0;
                     case 0b10: // raw value, return directly
-                        var value = (long)Read(stateBitPos, inputBufferPtr, 63, out stateBitPos);
+                        var value = (long)Read(stateBitPos, inputBufferPtr, 63, inputBufferSize, out stateBitPos);
                         state._prevValue = value;
                         state._bitPos = stateBitPos;
                         state.NumberOfReads++;
@@ -104,7 +105,7 @@ namespace Voron.Data.PostingLists
                 throw new ArgumentOutOfRangeException(headerBits + " isn't a valid header marker");
 
             var bitsToRead = headerBits == 0b00 ? 7 : 13;
-            var bits = Read(stateBitPos, inputBufferPtr, bitsToRead, out stateBitPos);
+            var bits = Read(stateBitPos, inputBufferPtr, bitsToRead, inputBufferSize, out stateBitPos);
 
             int numOfBits = (int)(0x1F & bits);
             if (numOfBits == 0)
@@ -118,7 +119,7 @@ namespace Voron.Data.PostingLists
             
             if (headerBits == 0b10)
             {
-                var repeatedDelta = (int)Read(stateBitPos, inputBufferPtr, numOfBits, out stateBitPos);
+                var repeatedDelta = (int)Read(stateBitPos, inputBufferPtr, numOfBits, inputBufferSize, out stateBitPos);
                 for (int i = 0; i < numOfRepeatedValues; i++)
                 {
                     statePrevValue += repeatedDelta;
@@ -130,7 +131,7 @@ namespace Voron.Data.PostingLists
                 // We are sure they are 0b00 or 0b01            
                 for (int i = 0; i < numOfRepeatedValues; i++)
                 {
-                    var v = Read(stateBitPos, inputBufferPtr, numOfBits, out stateBitPos);
+                    var v = Read(stateBitPos, inputBufferPtr, numOfBits, inputBufferSize, out stateBitPos);
                     statePrevValue += (int)v;
                     outputBuffer[i] = statePrevValue;
                 }
@@ -173,9 +174,15 @@ namespace Voron.Data.PostingLists
         }        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe static ulong Read(int stateBitPos, byte* inputBufferPtr, int bitsToRead, out int outputStateBit)
+        private unsafe static ulong Read(int stateBitPos, byte* inputBufferPtr, int bitsToRead, int inputBufferSize, out int outputStateBit)
         {
-            if ( Avx2.IsSupported)
+            var maxByteOffset = (stateBitPos + bitsToRead) / 8;
+#if DEBUG
+            if (maxByteOffset >= inputBufferSize)
+                throw new ArgumentOutOfRangeException();
+#endif
+            //TODO: Ensure that we aren't reading beyond the end of the buffer!
+            if (Avx2.IsSupported && maxByteOffset + 32 < inputBufferSize)
             {
                 return ReadAvx2(stateBitPos, inputBufferPtr, bitsToRead, out outputStateBit);
             }
@@ -292,9 +299,14 @@ namespace Voron.Data.PostingLists
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe static ulong Read2(in int stateBitPos, byte* inputBufferPtr, out int outputStateBit)
+        private static ulong Read2(in int stateBitPos, byte* inputBufferPtr, int inputBufferSize, out int outputStateBit)
         {
             int shiftIndex = stateBitPos & 0x7;
+#if DEBUG
+            if ((shiftIndex + 2)/8 >= inputBufferSize)
+                throw new ArgumentOutOfRangeException();
+#endif
+
             fixed (byte* shiftTablePtr = ShiftValue)
             {
                 byte* shiftTable = shiftTablePtr + shiftIndex;
