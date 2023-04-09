@@ -1255,7 +1255,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 var dueTime = (int)(wakeup - now).TotalMilliseconds;
-                DatabasesLandlord.RescheduleDatabaseWakeup(db, dueTime, wakeup);
+                DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, dueTime, new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup));
 
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{wakeup}', with dueTime: {dueTime} ms.");
@@ -2378,7 +2378,7 @@ namespace Raven.Server.ServerWide
                                 dbIdEtagDictionary[kvp.Key] = kvp.Value;
                         }
 
-                        if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key, database.PeriodicBackupRunner.GetWakeDatabaseTimeUtc(database.Name)))
+                        if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key, database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name)))
                             IdleDatabases[database.Name] = dbIdEtagDictionary;
                     }
                 }

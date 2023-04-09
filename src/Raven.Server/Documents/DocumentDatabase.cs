@@ -1577,8 +1577,19 @@ namespace Raven.Server.Documents
             IDatabaseTaskStatus taskStatus,
             bool keepTaskOnOriginalMemberNode = false)
         {
+            return WhoseTaskIsIt(ServerStore, databaseTopology, configuration, taskStatus, NotificationCenter, keepTaskOnOriginalMemberNode);
+        }
+
+        public static string WhoseTaskIsIt(
+            ServerStore serverStore,
+            DatabaseTopology databaseTopology,
+            IDatabaseTask configuration,
+            IDatabaseTaskStatus taskStatus,
+            NotificationCenter.NotificationCenter notificationCenter,
+            bool keepTaskOnOriginalMemberNode = false)
+        {
             var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
-                ServerStore.Engine.CurrentState, configuration,
+                serverStore.Engine.CurrentState, configuration,
                 getLastResponsibleNode:
                 () =>
                 {
@@ -1609,10 +1620,19 @@ namespace Raven.Server.Documents
                         }
                     }
 
-                    if (ServerStore.LicenseManager.HasHighlyAvailableTasks() == false)
+                    if (serverStore.LicenseManager.HasHighlyAvailableTasks() == false)
                     {
                         // can't redistribute, keep it on the original node
-                        RaiseAlertIfNecessary(databaseTopology, configuration, lastResponsibleNode);
+                        if (databaseTopology.Count > 1 &&
+                            serverStore.NodeTag != lastResponsibleNode &&
+                            databaseTopology.Members.Contains(lastResponsibleNode) == false &&
+                            notificationCenter != null)
+                        {
+                            // raise alert if redistribution is necessary
+                            var alert = LicenseManager.CreateHighlyAvailableTasksAlert(databaseTopology, configuration, lastResponsibleNode);
+                            notificationCenter.Add(alert);
+                        }
+
                         return lastResponsibleNode;
                     }
 
@@ -1630,18 +1650,6 @@ namespace Raven.Server.Documents
                 return taskStatus.NodeTag; // we don't want to stop backup process
 
             return whoseTaskIsIt;
-        }
-
-        private void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode)
-        {
-            // raise alert if redistribution is necessary
-            if (databaseTopology.Count > 1 &&
-                ServerStore.NodeTag != lastResponsibleNode &&
-                databaseTopology.Members.Contains(lastResponsibleNode) == false)
-            {
-                var alert = LicenseManager.CreateHighlyAvailableTasksAlert(databaseTopology, configuration, lastResponsibleNode);
-                NotificationCenter.Add(alert);
-            }
         }
 
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
