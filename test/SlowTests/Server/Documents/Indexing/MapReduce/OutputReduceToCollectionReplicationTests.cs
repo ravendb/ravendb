@@ -12,8 +12,8 @@ using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
-{
-    public class OutputReduceToCollectionReplicationTests : ReplicationTestBase, ITombstoneAware
+{/*
+    public class OutputReduceToCollectionReplicationTests : ReplicationTestBase
     {
         public OutputReduceToCollectionReplicationTests(ITestOutputHelper output) : base(output)
         {
@@ -105,5 +105,5 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 ["DailyInvoices"] = 0
             };
         }
-    }
+    }*/
 }

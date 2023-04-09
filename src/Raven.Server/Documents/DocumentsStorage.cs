@@ -1323,6 +1323,34 @@ namespace Raven.Server.Documents
             }
         }
 
+        public long TombstonesCountForCollection(DocumentsOperationContext context, string collection)
+        {
+            string tableName;
+
+            if (collection == AttachmentsStorage.AttachmentsTombstones ||
+                collection == RevisionsStorage.RevisionsTombstones)
+            {
+                tableName = collection;
+            }
+            else
+            {
+                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
+            }
+
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
+            if (table == null)
+                return 0;
+
+            long count = 0;
+            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], 0, 0))
+            {
+                count++;
+            }
+
+            return count;
+        }
+
         public IEnumerable<Tombstone> GetTombstonesFrom(
             DocumentsOperationContext context,
             string collection,
