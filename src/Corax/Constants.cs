@@ -46,7 +46,7 @@ namespace Corax
         public static class IndexWriter
         {
             // This is the schema version for the indexes. 
-            public const long SchemaVersion = 54_006;
+            public const long SchemaVersion = 54_007;
             
             
             public static ReadOnlySpan<byte> DoubleTreeSuffix => DoubleTreeSuffixBytes.AsSpan();
