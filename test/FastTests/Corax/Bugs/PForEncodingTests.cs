@@ -131,7 +131,7 @@ public class PForEncodingTests
     [Fact]
     public unsafe void CanProperlyEncodeValues()
     {
-        Span<byte> buffer = stackalloc byte[4053];
+        Span<byte> buffer = stackalloc byte[5000];
         uint* scratch = stackalloc uint[PForEncoder.BufferLen];
         var pForEncoder = new PForEncoder(buffer, scratch);
         foreach (long l in Data)
@@ -142,12 +142,18 @@ public class PForEncodingTests
 
         var state = new PForDecoder.DecoderState(buffer.Length);
         Span<long> output = stackalloc long[PForEncoder.BufferLen];
+        var idx = 0;
         fixed (byte* b = buffer)
         {
             while (true)
             {
-                if (PForDecoder.Decode(ref state, buffer, output) == 0)
+                var read = PForDecoder.Decode(ref state, buffer, output);
+                if (read== 0)
                     break;
+                for (int i = 0; i < read; i++)
+                {
+                    Assert.Equal(Data[idx++],output[i]);
+                }
             }
         }
     }
