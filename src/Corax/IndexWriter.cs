@@ -1388,13 +1388,20 @@ namespace Corax
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, entryId).ToSpan();
                 // combine with existing value
                 var cur = 0L;
-                var count = ZigZagEncoding.Decode<int>(smallSet, out var pos);
-                for (int idX = 0; idX < count; ++idX)
+                _ = VariableSizeEncoding.Read<int>(smallSet, out var pos);
+                var entries = smallSet[pos..];
+                var decoderState = new PForDecoder.DecoderState(entries.Length);
+                Span<long> output = stackalloc long[PForEncoder.BufferLen];
+                while (true)
                 {
-                    var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
-                    pos += len;
-                    cur += value;
-                    _deletedEntries.Add(EntryIdEncodings.DecodeAndDiscardFrequency(cur));
+                    var read = PForDecoder.Decode(ref decoderState, entries, output);
+                    if (read == 0) 
+                        break;
+                    EntryIdEncodings.DecodeAndDiscardFrequency(output, read);
+                    for (int i = 0; i < read; i++)
+                    {
+                        _deletedEntries.Add(output[i]);
+                    }
                     _numberOfModifications--;
                 }
             }
