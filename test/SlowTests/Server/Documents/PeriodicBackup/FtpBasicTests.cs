@@ -166,10 +166,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [FtpFact]
         public async Task CanUploadFileOnEncrypted()
         {
-            CertificateUtils.CreateCertificateAuthorityCertificate("auth", out var caKey, out var caName);
-            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey("admin", caName, caKey, true, false,
-                DateTime.UtcNow.Date.AddMonths(3), out var certBytes);
-            var cert = new X509Certificate2(certBytes);
+            var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var setupCert = Certificates.SetupServerAuthentication(certificates: generatedCert);
+            var cert = new X509Certificate2(setupCert.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             var services = new ServiceCollection();
             services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
             services.Configure<AuthTlsOptions>(cfg => cfg.ServerCertificate = cert);
@@ -189,10 +188,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Password = "itay@ravendb.net",
                         CertificateAsBase64 = Convert.ToBase64String(cert.Export(X509ContentType.Cert))
                     };
+                    Environment.SetEnvironmentVariable("isTesting", "true");
                     using (var client = new RavenFtpClient(settings))
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("abc")))
                     {
-                        client.UploadFile("testFolder", "testFile", stream);
+                         client.UploadFile("testFolder", "testFile", stream);
                         var isExist = CheckFile(settings.Url, "testFolder", "testFile", client);
                         Assert.Equal(true, isExist);
                     }
@@ -207,10 +207,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [FtpFact]
         public async Task CanUploadBackupOnEncrypted()
         {
-            CertificateUtils.CreateCertificateAuthorityCertificate("auth", out var caKey, out var caName);
-            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey("admin", caName, caKey, true, false,
-                DateTime.UtcNow.Date.AddMonths(3), out var certBytes);
-            var cert = new X509Certificate2(certBytes);
+            var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var setupCert = Certificates.SetupServerAuthentication(certificates: generatedCert);
+            var cert = new X509Certificate2(setupCert.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             var services = new ServiceCollection();
             services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
             services.Configure<AuthTlsOptions>(cfg => cfg.ServerCertificate = cert);
@@ -229,8 +228,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Password = "itay@ravendb.net",
                         CertificateAsBase64 = Convert.ToBase64String(cert.Export(X509ContentType.Cert))
                     };
+                    Environment.SetEnvironmentVariable("isTesting", "true");
                     using (var client = new RavenFtpClient(settings))
-                    using (var store = GetDocumentStore())
+                    using (var store = GetDocumentStore(options: new Options
+                           {
+                               ClientCertificate = cert
+                           }))
                     {
                         using (var session = store.OpenSession())
                         {
@@ -258,10 +261,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [FtpFact]
         public async Task CanUploadBackupsWithDeletionOnEncrypted()
         {
-            CertificateUtils.CreateCertificateAuthorityCertificate("auth", out var caKey, out var caName);
-            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey("admin", caName, caKey, true, false,
-                DateTime.UtcNow.Date.AddMonths(3), out var certBytes);
-            var cert = new X509Certificate2(certBytes);
+            var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var setupCert = Certificates.SetupServerAuthentication(certificates: generatedCert);
+            var cert = new X509Certificate2(setupCert.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
             var services = new ServiceCollection();
             services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
@@ -280,8 +282,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Password = "itay@ravendb.net",
                         CertificateAsBase64 = Convert.ToBase64String(cert.Export(X509ContentType.Cert))
                     };
+                    Environment.SetEnvironmentVariable("isTesting", "true");
                     using (var client = new RavenFtpClient(settings))
-                    using (var store = GetDocumentStore())
+                    using (var store = GetDocumentStore(options: new Options
+                           {
+                               ClientCertificate = cert
+                           }))
                     {
                         var config = Backup.CreateBackupConfiguration(ftpSettings: settings, name: "ftpBackupTest",
                             retentionPolicy: new RetentionPolicy { MinimumBackupAgeToKeep = TimeSpan.FromSeconds(15) });

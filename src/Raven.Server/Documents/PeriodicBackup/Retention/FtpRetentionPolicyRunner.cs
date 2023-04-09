@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly RavenFtpClient _client;
 
-        protected override string Name => "Ftp";
+        protected override string Name => "FTP";
 
         public FtpRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenFtpClient client)
             : base(parameters)
