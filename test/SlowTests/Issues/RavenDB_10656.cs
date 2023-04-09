@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_10656 : ReplicationTestBase, ITombstoneAware
+    public class RavenDB_10656 : ReplicationTestBase
     {
         public RavenDB_10656(ITestOutputHelper output) : base(output)
         {

@@ -978,5 +978,10 @@ namespace SlowTests.Server.Documents.Revisions
                 ["Users"] = 0
             };
         }
+
+        public HashSet<string> GetDisabledSubscribers()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

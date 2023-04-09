@@ -4151,6 +4151,35 @@ namespace Raven.Server.Documents.Indexes
 
         public string TombstoneCleanerIdentifier => $"Index '{Name}'";
 
+        public HashSet<string> GetDisabledSubscribers()
+        {
+            var disabledSubscribers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (State == IndexState.Disabled)
+                disabledSubscribers.Add(Name);
+
+            return disabledSubscribers;
+        }
+        /*
+        public Dictionary<string, long> GetBlockingTombstonesPerCollection()
+        {
+            if (State == IndexState.Disabled)
+            {
+                using (CurrentlyInUse())
+                {
+                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    {
+                        using (var tx = context.OpenReadTransaction())
+                        {
+                            return GetLastProcessedDocumentTombstonesPerCollection(tx);
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }*/
+
         public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             if (tombstoneType != ITombstoneAware.TombstoneType.Documents)

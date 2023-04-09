@@ -816,6 +816,36 @@ namespace Raven.Server.Documents.ETL
 
         public string TombstoneCleanerIdentifier => $"ETL loader for {_database.Name}";
 
+        public HashSet<string> GetDisabledSubscribers()
+        {
+            var disabledSubscribers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var config in _databaseRecord.RavenEtls)
+            {
+                if (config.Disabled)
+                {
+                    disabledSubscribers.Add(config.Name);
+                }
+            }
+
+            foreach (var config in _databaseRecord.SqlEtls)
+            {
+                if (config.Disabled)
+                {
+                    disabledSubscribers.Add(config.Name);
+                }
+            }
+
+            foreach (var config in _databaseRecord.ElasticSearchEtls) // ?????????
+            {
+                if (config.Disabled)
+                {
+                    disabledSubscribers.Add(config.Name);
+                }
+            }
+
+            return disabledSubscribers;
+        }
+
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             var lastProcessedTombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);

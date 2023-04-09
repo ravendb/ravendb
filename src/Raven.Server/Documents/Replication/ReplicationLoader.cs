@@ -1851,6 +1851,19 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<ReplicationNode, IncomingReplicationFailureToConnectReporter> IncomingReplicationConnectionErrored;
 
+        public HashSet<string> GetDisabledSubscribers()
+        {
+            var disabledSubscribers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            /*
+            foreach (var periodicBackup in PeriodicBackups)
+            {
+                if (periodicBackup.Configuration.Disabled)
+                    disabledSubscribers.Add(periodicBackup.Configuration.Name);
+            }
+            */
+            return disabledSubscribers;
+        }
+
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             var minEtag = Math.Min(GetMinimalEtagForTombstoneCleanupWithHubReplication(), GetMinimalEtagForReplication());
