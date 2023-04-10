@@ -939,9 +939,10 @@ namespace Raven.Server.Documents
                     maxLastWork = env.Environment.LastWorkTime;
             }
 
-            return ForTestingPurposes is { ShouldFetchIdleStateImmediately: true }
-                ? resource.LastAccessTime
-                : maxLastWork.AddMilliseconds(dbSize / 1024L);
+            if (ForTestingPurposes is { ShouldFetchIdleStateImmediately: true })
+                return resource.LastAccessTime;
+            
+            return maxLastWork.AddMilliseconds(dbSize / 1024L);
         }
 
         public Task<IDisposable> UnloadAndLockDatabase(string dbName, string reason)
@@ -1022,12 +1023,16 @@ namespace Raven.Server.Documents
                 LastRecentlyUsed.TryRemove(databaseName, out _);
 
                 if (idleDatabaseActivity?.DueTime > 0)
-                    _wakeupTimers.TryAdd(databaseName.Value, new Timer(_ => NextScheduledActivityCallback(databaseName.Value, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite));
+                    _wakeupTimers.TryAdd(databaseName.Value, new Timer(
+                        callback: _ => NextScheduledActivityCallback(databaseName.Value, idleDatabaseActivity), 
+                        state: null, 
+                        dueTime: idleDatabaseActivity.DueTime, 
+                        period: Timeout.Infinite));
 
                 if (_logger.IsOperationsEnabled)
                 {
                     var msg = idleDatabaseActivity?.DueTime > 0 
-                        ? $"wakeup timer set to: {idleDatabaseActivity.TimeOfActivityUtc.Value}, which will happen in {idleDatabaseActivity.DueTime} ms." 
+                        ? $"wakeup timer set to: {idleDatabaseActivity.DateTime.Value}, which will happen in {idleDatabaseActivity.DueTime} ms." 
                         : "without setting a wakeup timer.";
 
                     _logger.Operations($"Unloading directly database '{databaseName}', {msg}");
@@ -1065,17 +1070,12 @@ namespace Raven.Server.Documents
 
         public void RescheduleNextIdleDatabaseActivity(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
         {
-            RescheduleNextIdleDatabaseActivity(databaseName, idleDatabaseActivity.DueTime, idleDatabaseActivity);
-        }
-
-        public void RescheduleNextIdleDatabaseActivity(string databaseName, long dueTime, IdleDatabaseActivity idleDatabaseActivity)
-        {
             if (_wakeupTimers.TryGetValue(databaseName, out var oldTimer))
             {
                 oldTimer.Dispose();
             }
 
-            var newTimer = new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, dueTime, Timeout.Infinite);
+            var newTimer = new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite);
             _wakeupTimers.AddOrUpdate(databaseName, _ => newTimer, (_, __) => newTimer);
         }
 
@@ -1088,13 +1088,13 @@ namespace Raven.Server.Documents
                     if (_serverStore.ServerShutdown.IsCancellationRequested)
                         return;
 
-                    switch (nextIdleDatabaseActivity.IdleDatabaseActivityType)
+                    switch (nextIdleDatabaseActivity.Type)
                     {
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
                             var backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, databaseName, nextIdleDatabaseActivity.TaskId);
                             
-                            backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.TimeOfActivityUtc;
-                            backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.TimeOfActivityUtc;
+                            backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
+                            backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;
                             backupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
 
                             var backupResult = new BackupResult();
@@ -1114,7 +1114,7 @@ namespace Raven.Server.Documents
                             break;
 
                         case IdleDatabaseActivityType.WakeUpDatabase:
-                            _ = TryGetOrCreateResourceStore(databaseName, nextIdleDatabaseActivity.TimeOfActivityUtc).ContinueWith(t =>
+                            _ = TryGetOrCreateResourceStore(databaseName, nextIdleDatabaseActivity.DateTime).ContinueWith(t =>
                             {
                                 var ex = t.Exception.ExtractSingleInnerException();
                                 if (ex is DatabaseConcurrentLoadTimeoutException e)
@@ -1125,7 +1125,8 @@ namespace Raven.Server.Documents
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Failed to start database '{databaseName}' on timer, will retry the wakeup in '{_dueTimeOnRetry}' ms", e);
 
-                                    RescheduleNextIdleDatabaseActivity(databaseName, dueTime: _dueTimeOnRetry, nextIdleDatabaseActivity);
+                                    nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(_dueTimeOnRetry);
+                                    RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
                                 }
                             }, TaskContinuationOptions.OnlyOnFaulted);
                             break;
@@ -1149,7 +1150,7 @@ namespace Raven.Server.Documents
             if (idleDatabaseActivity == null)
                 return true;
 
-            if (idleDatabaseActivity.TimeOfActivityUtc.HasValue == false)
+            if (idleDatabaseActivity.DateTime.HasValue == false)
                 return true;
 
             if (SkipShouldContinueDisposeCheck)
@@ -1238,19 +1239,19 @@ namespace Raven.Server.Documents
     public class IdleDatabaseActivity
     {
         public long LastEtag { get; }
-        public IdleDatabaseActivityType IdleDatabaseActivityType { get; }
-        public DateTime? TimeOfActivityUtc { get; }
+        public IdleDatabaseActivityType Type { get; }
+        public DateTime? DateTime { get; internal set; }
         public long TaskId { get; }
-        public int DueTime => TimeOfActivityUtc.HasValue 
-            ? (int)(TimeOfActivityUtc.Value - DateTime.UtcNow).TotalMilliseconds
+        public int DueTime => DateTime.HasValue 
+            ? (int)(DateTime.Value - System.DateTime.UtcNow).TotalMilliseconds
             : 0;
 
-        public IdleDatabaseActivity(IdleDatabaseActivityType idleDatabaseActivityType, DateTime? timeOfActivity, long taskId = 0, long lastEtag = 0)
+        public IdleDatabaseActivity(IdleDatabaseActivityType type, DateTime? timeOfActivity, long taskId = 0, long lastEtag = 0)
         {
             LastEtag = lastEtag;
-            IdleDatabaseActivityType = idleDatabaseActivityType;
+            Type = type;
             TaskId = taskId;
-            TimeOfActivityUtc = timeOfActivity?.ToUniversalTime();
+            DateTime = timeOfActivity?.ToUniversalTime();
         }
     }
 

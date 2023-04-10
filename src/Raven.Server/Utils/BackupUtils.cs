@@ -321,7 +321,7 @@ internal static class BackupUtils
                     continue;
 
                 earliestAction =
-                    earliestAction == null || nextAction.TimeOfActivityUtc < earliestAction.TimeOfActivityUtc
+                    earliestAction == null || nextAction.DateTime < earliestAction.DateTime
                         ? nextAction
                         : earliestAction;
             }
@@ -362,7 +362,7 @@ internal static class BackupUtils
 
         if (responsibleNodeTag != parameters.ServerStore.NodeTag)
         {
-            // not responsive for this backup task
+            // not responsible for this backup task
             if (parameters.Logger.IsOperationsEnabled)
                 parameters.Logger.Operations($"Current server '{parameters.ServerStore.NodeTag}' is not responsible node for backup task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}'. Backup Task responsible node is '{responsibleNodeTag}'.");
 

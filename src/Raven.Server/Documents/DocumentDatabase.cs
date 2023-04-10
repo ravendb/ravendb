@@ -1623,16 +1623,7 @@ namespace Raven.Server.Documents
                     if (serverStore.LicenseManager.HasHighlyAvailableTasks() == false)
                     {
                         // can't redistribute, keep it on the original node
-                        if (databaseTopology.Count > 1 &&
-                            serverStore.NodeTag != lastResponsibleNode &&
-                            databaseTopology.Members.Contains(lastResponsibleNode) == false &&
-                            notificationCenter != null)
-                        {
-                            // raise alert if redistribution is necessary
-                            var alert = LicenseManager.CreateHighlyAvailableTasksAlert(databaseTopology, configuration, lastResponsibleNode);
-                            notificationCenter.Add(alert);
-                        }
-
+                        RaiseAlertIfNecessary(databaseTopology, configuration, lastResponsibleNode, serverStore, notificationCenter);
                         return lastResponsibleNode;
                     }
 
@@ -1650,6 +1641,20 @@ namespace Raven.Server.Documents
                 return taskStatus.NodeTag; // we don't want to stop backup process
 
             return whoseTaskIsIt;
+        }
+
+        private static void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode, 
+            ServerStore serverStore, NotificationCenter.NotificationCenter notificationCenter)
+        {
+            // raise alert if redistribution is necessary
+            if (notificationCenter != null &&
+                databaseTopology.Count > 1 &&
+                serverStore.NodeTag != lastResponsibleNode &&
+                databaseTopology.Members.Contains(lastResponsibleNode) == false)
+            {
+                var alert = LicenseManager.CreateHighlyAvailableTasksAlert(databaseTopology, configuration, lastResponsibleNode);
+                notificationCenter.Add(alert);
+            }
         }
 
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
