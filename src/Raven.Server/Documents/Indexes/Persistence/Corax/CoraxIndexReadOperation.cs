@@ -503,7 +503,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (query.Metadata.HasExplanations)
                 throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
 
-            var take = pageSize + query.Start;
+            if (pageSize + query.Start > int.MaxValue)
+            {
+                throw new NotSupportedException($"Corax query cannot cover 2.1 billion results at once, but got pageSize: {pageSize} and start: {query.Start}");
+            }
+            int take = (int)(pageSize + query.Start);
             if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
@@ -516,7 +520,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             QueryTimingsScope coraxScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false);
             using (coraxScope?.Start())
             {
-                var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, CoraxConstants.IndexSearcher.TakeAll);
+                var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, take);
 
                 if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters)) is null)
                     yield break;
