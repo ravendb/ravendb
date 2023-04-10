@@ -397,7 +397,7 @@ namespace Raven.Server.ServerWide
                     {
                         foreach (BlittableJsonReaderObject backup in periodicBackups)
                         {
-                            var backupConfiguration = JsonDeserializationClient.GetPeriodicBackupConfiguration(backup);
+                            var backupConfiguration = JsonDeserializationServer.GetPeriodicBackupConfiguration(backup);
                             _periodicBackups.Add(backupConfiguration);
                         }
                     }

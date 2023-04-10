@@ -209,6 +209,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, BackupConfiguration> BackupConfiguration = GenerateJsonDeserializationRoutine<BackupConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> GetPeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
+
         public class Parameters
         {
             private Parameters()

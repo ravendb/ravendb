@@ -1254,11 +1254,11 @@ namespace Raven.Server.ServerWide
                     }
                 }
 
-                var dueTime = (int)(wakeup - now).TotalMilliseconds;
-                DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, dueTime, new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup));
+                var nextIdleDatabaseActivity = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
+                DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
 
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{wakeup}', with dueTime: {dueTime} ms.");
+                    Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{nextIdleDatabaseActivity.DateTime}', with dueTime: {nextIdleDatabaseActivity.DueTime} ms.");
             }
         }
 
