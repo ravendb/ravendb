@@ -25,6 +25,9 @@ public class SparrowLoggerWrapper : ILogger<RavenServer>
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
     {
+        if (IsEnabled(logLevel) == false)
+            return;
+        
         if (formatter == null)
             throw new ArgumentNullException(nameof(formatter));
         
