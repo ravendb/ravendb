@@ -1387,7 +1387,6 @@ namespace Corax
             {
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, entryId).ToSpan();
                 // combine with existing value
-                var cur = 0L;
                 _ = VariableSizeEncoding.Read<int>(smallSet, out var pos);
                 var entries = smallSet[pos..];
                 var decoderState = new PForDecoder.DecoderState(entries.Length);

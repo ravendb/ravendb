@@ -263,6 +263,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
         switch (fieldReader.Type)
         {
+            case IndexEntryFieldType.ListWithEmpty:
             case IndexEntryFieldType.ListWithNulls:
             case IndexEntryFieldType.List:
             case IndexEntryFieldType.TupleList:
