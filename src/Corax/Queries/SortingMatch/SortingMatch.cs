@@ -56,7 +56,7 @@ namespace Corax.Queries
             {
                 _fillFunc = _comparer.FieldType switch
                 {
-                    MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric => &Fill<ItemSorting<SequenceItem>>,
+                    MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric => &FillTop<Fetcher,SequenceItem>,
                     MatchCompareFieldType.Integer => &Fill<ItemSorting<NumericalItem<long>>>,
                     MatchCompareFieldType.Floating => &Fill<ItemSorting<NumericalItem<double>>>,
                     MatchCompareFieldType.Spatial => &Fill<ItemSorting<NumericalItem<double>>>,
@@ -64,6 +64,156 @@ namespace Corax.Queries
                     _ => throw new ArgumentOutOfRangeException(_comparer.FieldType.ToString())
                 };
             }
+        }
+        
+        private interface IFetcher
+        {
+            bool Get<TOut, TIn>(IndexSearcher searcher, FieldMetadata binding, long entryId, out TOut storedValue, in TIn comparer)
+                where TIn : IMatchComparer
+                where TOut : struct;
+        }
+
+        private struct Fetcher : IFetcher
+        {
+             [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Get<TOut, TIn>(IndexSearcher searcher, FieldMetadata binding, long entryId, out TOut storedValue, in TIn comparer)
+                where TIn : IMatchComparer
+                where TOut : struct
+            {
+                var reader = searcher.GetEntryReaderFor(entryId);
+
+                if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
+                {
+                    if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
+                        goto Failed;
+
+                    var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    if (readX == false)
+                        goto Failed;
+                        
+                    var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
+
+                    storedValue = (TOut)(object)new NumericalItem<double>(distance);
+                    return readX;
+                }
+                else if (typeof(TIn) == typeof(SpatialDescendingMatchComparer))
+                {
+                    if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
+                        goto Failed;
+
+                    var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    if (readX == false)
+                        goto Failed;
+                    
+                    var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
+
+                    storedValue = (TOut)(object)new NumericalItem<double>(distance);
+                    return readX;
+                }
+                else if (typeof(TOut) == typeof(SequenceItem))
+                {
+                    var readX = reader.GetFieldReaderFor(binding).Read(out var sv);
+                    if (readX == false)
+                        goto Failed;
+                    
+                    fixed (byte* svp = sv)
+                    {
+                        storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
+                    }
+                    return readX;
+                }
+                else if (typeof(TOut) == typeof(NumericalItem<long>))
+                {
+                    var readX = reader.GetFieldReaderFor(binding).Read<long>(out var value);
+                    if (readX == false)
+                        goto Failed;
+                    
+                    storedValue = (TOut)(object)new NumericalItem<long>(value);
+                    return readX;
+                }
+                else if (typeof(TOut) == typeof(NumericalItem<double>))
+                {
+                    var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
+                    if (readX == false)
+                        goto Failed;
+                    
+                    storedValue = (TOut)(object)new NumericalItem<double>(value);
+                    return readX;
+                }
+
+                Failed:
+                Unsafe.SkipInit(out storedValue);
+                return false;
+            }
+        }
+
+        
+        private static int FillTop<TFetcher, TOut>(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
+            where TFetcher : struct, IFetcher
+            where TOut : struct
+        {
+            Debug.Assert(matches.Length >= match._take);
+            using var _ = match._searcher.Allocator.Allocate(sizeof(MatchComparer<TComparer, TOut>.Item) * match._take, out Span<byte> itemsBuffer);
+            var items = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(itemsBuffer);
+            var index = 0;
+            TFetcher fetcher = default;
+            var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
+
+            while (true)
+            {
+                var read = match._inner.Fill(matches);
+                match.TotalResults += read;
+                if (read == 0)
+                    break;
+
+                for (int i = 0; i < read; i++)
+                {
+                    
+                    var cur = new MatchComparer<TComparer, TOut>.Item { Key =  matches[i], };
+                    if (fetcher.Get(match._searcher, match._comparer.Field, cur.Key, out cur.Value, match._comparer) == false)
+                    {
+                        //TODO: What happens when there aren't any values for the field? 
+                        continue;
+                    }
+
+                    ref MatchComparer<TComparer, TOut>.Item item = ref items[0];
+                    if (index < match._take)
+                    {
+                        items[index++] = cur;
+                    }
+                    else if(comparer.Compare(items[^1], cur) > 0)
+                    {
+                        items[^1] = cur;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                    
+                    HeapUp( items);
+                }
+            }
+
+            for (int i = 0; i < index; i++)
+            {
+                matches[i] = items[i].Key;
+            }
+            return index;
+
+            void HeapUp(Span<MatchComparer<TComparer, TOut>.Item> items)
+            {
+                var current = index - 1;
+                while (current > 0)
+                {
+                    var parent = (current - 1) / 2;
+                    if (comparer.Compare(items[parent], items[current]) < 0)
+                        break;
+                    (items[parent], items[current]) = (items[current], items[parent]);
+                    current = parent;
+                }
+            }
+            // if (match._inner.IsOrdered && heap.IsFull)
+            //     return;
         }
 
         public long Count => _inner.Count;
@@ -298,6 +448,7 @@ namespace Corax.Queries
             if (match._currentIdx != NotStarted)
                 goto ReturnMatches;
 
+            Debug.Assert(matches.Length > 1);
             // If there is nothing or just 1 element to return, we are done as there is no need to sort anything.
             int totalMatches = match._inner.Fill(matches);
             if (totalMatches is 0 or 1)
