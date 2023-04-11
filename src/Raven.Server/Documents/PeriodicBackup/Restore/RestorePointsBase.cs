@@ -15,8 +15,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public abstract class RestorePointsBase : IDisposable
     {
-        public static Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
-        public static Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?)", RegexOptions.Compiled);
+        public static Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
+        public static Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?)", RegexOptions.Compiled);
 
         private readonly SortedList<DateTime, RestorePoint> _sortedList;
         private readonly TransactionOperationContext _context;
@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _sortedList = new SortedList<DateTime, RestorePoint>(new DescendedDateComparer());
         }
 
-        public abstract Task<RestorePoints> FetchRestorePoints(string path);
+        public abstract Task<RestorePoints> FetchRestorePoints(string path, int? shardNumber = null);
 
         protected abstract Task<List<FileInfoDetails>> GetFiles(string path);
 
@@ -46,6 +46,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // [Backup Type] - backup/snapshot
             // example 1: //2018-02-03-15-34.ravendb-Northwind-A-backup
             // example 2: //2018-02-03-15-34-02.ravendb-Northwind-A-backup
+            // example 2: //2018-02-03-15-34-02-1234567.ravendb-Northwind-A-backup
 
             var match = BackupFolderRegex.Match(folderName);
             if (match.Success)
@@ -95,16 +96,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             public string NodeTag { get; set; }
         }
 
-        protected Task<RestorePoints> FetchRestorePointsForPath(string path, bool assertLegacyBackups)
+        protected Task<RestorePoints> FetchRestorePointsForPath(string path, bool assertLegacyBackups, int? shardNumber = null)
         {
             return FetchRestorePointsForPaths(new[] { path }, assertLegacyBackups);
         }
 
-        protected async Task<RestorePoints> FetchRestorePointsForPaths(IEnumerable<string> paths, bool assertLegacyBackups)
+        protected async Task<RestorePoints> FetchRestorePointsForPaths(IEnumerable<string> paths, bool assertLegacyBackups, int? shardNumber = null)
         {
             foreach (var path in paths)
             {
-                await FetchRestorePointsInternal(path, assertLegacyBackups);
+                await FetchRestorePointsInternal(path, assertLegacyBackups, shardNumber);
             }
 
             foreach (var restorePointGroup in _sortedList.Values.GroupBy(x => x.Location))
@@ -116,11 +117,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             return new RestorePoints
             {
-                List = _sortedList.Values.ToList() 
+                List = _sortedList.Values.ToList()
             };
         }
 
-        private async Task FetchRestorePointsInternal(string path, bool assertLegacyBackups)
+        private async Task FetchRestorePointsInternal(string path, bool assertLegacyBackups, int? shardNumber = null)
         {
             var fileInfos = (await GetFiles(path))
                 .Where(filePath =>
@@ -140,7 +141,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         }
                     }
 
-                    return IsBackupOrSnapshot(filePath.FullPath);
+                    var containsShardNumber = shardNumber == null || filePath.DirectoryPath.Contains($"${shardNumber}-");
+
+                    return IsBackupOrSnapshot(filePath.FullPath) && containsShardNumber;
                 })
                 .OrderBy(x => Path.GetFileNameWithoutExtension(x.FullPath))
                 .ThenBy(x => Path.GetExtension(x.FullPath), PeriodicBackupFileExtensionComparer.Instance)

@@ -72,6 +72,9 @@ namespace Raven.Client.Documents.Operations.Backups
         /// </summary>
         public string FolderPath { get; set; }
 
+        // TODO: summary
+        public int? ShardNumber { get; set; }
+
         public override bool HasSettings()
         {
             if (base.HasSettings())

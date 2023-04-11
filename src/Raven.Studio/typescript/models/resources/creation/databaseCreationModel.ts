@@ -419,26 +419,16 @@ class databaseCreationModel {
         this.restore.restorePointError(null);
         
         const groups: RestorePointsGroup[] = [];
-        let direcotryPathShardNumber = 0;
+        let shardNumber = 0;
         const direcotryPaths = this.restore.shardingBackupDirectories().map(x => x.directoryPath());
 
         for await (const direcotryPath of direcotryPaths) {
             try {
                 const restorePoints: RestorePoints = await this.restoreSourceObject()
-                    .fetchRestorePointsCommand(direcotryPath) 
+                    .fetchRestorePointsCommand(direcotryPath, shardNumber)
                     .execute();
 
                 restorePoints.List.forEach(rp => {
-                    if (!rp.DatabaseName || !DatabaseUtils.isSharded(rp.DatabaseName)) {
-                        return;
-                    }
-
-                    const shardNumber = this.getShardNumberFormLocationFolder(rp.Location);
-
-                    if (shardNumber !== direcotryPathShardNumber) {
-                        return;
-                    }
-
                     const databaseName = DatabaseUtils.shardGroupKey(rp.DatabaseName);
                     
                     if (!this.getRestorePointGroup(groups, databaseName)) {
@@ -471,7 +461,7 @@ class databaseCreationModel {
 
             } finally {
                 this.spinners.fetchingRestorePoints(false);
-                direcotryPathShardNumber++;
+                shardNumber++;
             }
         }
 
