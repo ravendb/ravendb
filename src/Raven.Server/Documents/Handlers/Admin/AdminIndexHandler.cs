@@ -113,6 +113,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         throw new Exception();
                 }
                 
+                index.InitializeTestIndex(context);
+                
                 if (input.TryGet("Query", out BlittableJsonReaderObject query) == false || query is null)
                 {
                     var queryString = $"from index '{index.Name}'";

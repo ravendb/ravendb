@@ -189,8 +189,6 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var index = CreateNew(definition, context.DocumentDatabase, new TestIndexConfiguration(definition.Configuration, context.DocumentDatabase.Configuration));
 
-            index.InitializeTestIndex(context);
-            
             return index;
         }
         
