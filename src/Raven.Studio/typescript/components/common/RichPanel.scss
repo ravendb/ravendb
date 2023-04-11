@@ -1,12 +1,33 @@
 ﻿@use "sass:math";
 @use "Content/scss/bs5variables";
 
-$status-border-radius: bs5variables.$gutter-xs;
-
 .rich-panel-item {
+    $status-border-radius: bs5variables.$gutter-xs;
+    $border-offset: 2px;
+    $bulge-width: bs5variables.$gutter-xxs;
+    $border-width: bs5variables.$border-width;
     $default-panel-transitions: box-shadow 0.25s bs5variables.$global-easing;
 
-    transition: $default-panel-transitions;
+    &:before {
+        content: "";
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        z-index: -1;
+        border-radius: var(--bs-card-border-radius);
+        transition: box-shadow 0.25s bs5variables.$global-easing;
+        pointer-events: none;
+        box-shadow: 0px 0px 0px $border-offset rgba(bs5variables.$body-bg-var, 0);
+    }
+
+    &.active {
+        &:before {
+            box-shadow: 0px 0px 0px $border-offset rgba(bs5variables.$body-bg-var, 1),
+                0px 0px 0px ($border-offset + $border-width) bs5variables.$primary-var,
+                (($bulge-width + $border-offset) * -1) 0px 0px ($border-offset + $border-width)
+                    bs5variables.$primary-var;
+        }
+    }
 
     &.rich-panel-hover {
         transition: $default-panel-transitions, filter 0.3s ease-in-out;
@@ -19,6 +40,20 @@ $status-border-radius: bs5variables.$gutter-xs;
 
     & + .rich-panel-item {
         margin-top: bs5variables.$gutter-sm;
+    }
+
+    &.with-status,
+    &.with-status::before {
+        border-radius: $status-border-radius var(--bs-card-border-radius) var(--bs-card-border-radius)
+            $status-border-radius;
+    }
+
+    .rich-panel-status {
+        writing-mode: vertical-rl;
+        transform: scale(-1);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        border-radius: 0 $status-border-radius $status-border-radius 0 !important;
     }
 
     .rich-panel-header {
@@ -46,29 +81,6 @@ $status-border-radius: bs5variables.$gutter-xs;
             justify-content: end;
             flex-grow: 1;
         }
-    }
-
-    &.active {
-        $bulge-width: bs5variables.$gutter-xxs;
-        $border-offset: 2px;
-        $border-width: bs5variables.$border-width;
-
-        box-shadow: 0px 0px 0px $border-offset rgba(bs5variables.$body-bg-var, 1),
-            0px 0px 0px ($border-offset + $border-width) bs5variables.$primary-var,
-            (($bulge-width + $border-offset) * -1) 0px 0px ($border-offset + $border-width) bs5variables.$primary-var;
-    }
-
-    &.with-status {
-        border-top-left-radius: $status-border-radius;
-        border-bottom-left-radius: $status-border-radius;
-    }
-
-    .rich-panel-status {
-        writing-mode: vertical-rl;
-        transform: rotate(180.1deg);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        border-radius: 0 $status-border-radius $status-border-radius 0 !important;
     }
 
     .rich-panel-details {
