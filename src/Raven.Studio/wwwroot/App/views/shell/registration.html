@@ -1,21 +1,23 @@
 <div class="modal-dialog prevent-close" role="document" id="licenseModal">
     <form class="form-horizontal" autocomplete="off" data-bind="submit: submit">
-        <div class="modal-content">
+        <div class="modal-content neo-modal">
             <div class="modal-header">
-                <button type="button" data-bind="visible: dismissVisible() || canBeClosed()" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h3 class="modal-title" id="myModalLabel">
+                <h4 class="modal-title" id="myModalLabel">
                     <span data-bind="visible: licenseType() === 'None'">Register License</span>
                     <span data-bind="visible: !licenseExpired() && licenseType() !== 'None' && !renewWhenNotExpired()">Replace License</span>
                     <span data-bind="visible: licenseExpired() && licenseType() !== 'None'">License Expired</span>
                     <span data-bind="visible: renewWhenNotExpired">Renew License</span>
-                </h3>
+                    <button type="button" data-bind="visible: dismissVisible() || canBeClosed()" class="close rounded-pill" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </h4>
             </div>
-            <div class="modal-body">
-                <img src="../../../Content/img/license_multiple.png" class="img-responsive licenseModalImg" data-bind="visible: !licenseExpired() && !renewWhenNotExpired()"/>
-                <div data-bind="visible: licenseType() !== 'None'" class="text-center">
-                    <strong data-bind="text: 'License ID: ' + licenseId()"></strong>
+            <div class="modal-body pt-0 d-flex align-items-center flex-vertical">
+                <div class="d-flex flex-horizontal gap-3">
+                    <img src="../../../Content/img/license.svg" class="img-responsive licenseModalImg" width="140"/>
+                    <div data-bind="visible: licenseType() !== 'None'" class="d-flex flex-vertical">
+                        <h2>Current license ID</h2><strong data-bind="text: licenseId()"></strong>
+                    </div>
                 </div>
-                <div class="text-center lead">
+                <div class="d-flex flex-vertical text-center lead">
                     <span data-bind="if: dismissVisible">
                         <strong class="text-warning" data-bind="text: daysToRegister"></strong>
                         day<span data-bind="if: daysToRegister() > 1">s</span> left to register
@@ -23,19 +25,19 @@
                     <span data-bind="if: error">
                         <strong class="text-warning" data-bind="text: error"></strong>
                     </span>
-                    <div data-bind="visible: licenseExpired" class="margin-top"> 
+                    <span data-bind="visible: licenseExpired">
                         Select one of the following options:
-                    </div>
+                    </span>
                 </div>
             </div>
             <div class="modal-footer">
                 <div class="text-left padding padding-sm" id="renewLicense" data-bind="visible: renewWhenExpired() || renewWhenNotExpired()">
-                    <div><strong>Renew License</strong></div> 
+                    <h3>Renew License</h3> 
                     <small data-bind="visible: !renewMessage()">Click to renew the current existing license.<br>The license expiration date will be extended.</small>
                     <small class="text-info" data-bind="visible: renewMessage, html: renewMessage"></small>
                     <span data-bind="visible: renewError"><br><small class="text-danger" data-bind="text: renewError"></small></span>
                     <div class="margin-bottom">
-                        <button type="button" class="btn btn-info pull-right" 
+                        <button type="button" class="btn btn-info pull-right rounded-pill" 
                                 data-bind="click: renewLicense, disable: spinners.renewLicense() || spinners.activateLicense() || renewMessage(),
                                            css: { 'btn-spinner': spinners.renewLicense },
                                            attr: { 'title': renewMessage() ? 'Please check your mail for the renewed license' : 'Click to renew your license' }"> 
@@ -48,7 +50,7 @@
                     <div><strong>Force Update</strong></div>
                     <small>Click to apply the new expiration date that was set for you.</small>
                     <div class="margin-bottom">
-                        <button type="button" class="btn btn-info pull-right" title="Click to apply the new expiration date" 
+                        <button type="button" class="btn btn-info pull-right rounded-pill" title="Click to apply the new expiration date" 
                                 data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate() || spinners.activateLicense(),
                                            css: { 'btn-spinner': spinners.forceLicenseUpdate }">
                             <i class="icon-force"></i>
@@ -57,12 +59,10 @@
                     </div>
                 </div>
                 <hr data-bind="visible: licenseExpired() || renewWhenNotExpired()"/>
-                <div class="padding padding-sm" id="enterLicenseKey" 
-                     data-bind="css: { 'text-left': licenseExpired() || renewWhenNotExpired(), 
-                                       'text-center': !licenseExpired() && !renewWhenNotExpired() }">
-                    <div>
-                        <strong>Submit License</strong>
-                    </div>
+                <div class="padding padding-sm text-left" id="enterLicenseKey">
+                    <h3>
+                        Submit License
+                    </h3>
                     <small class="text-info" data-bind="visible: renewMessage">
                         Paste the renewed license key received in the email and click Submit.
                     </small>
@@ -84,7 +84,7 @@
                     <div class="form-horizontal margin-top">
                         <div class="form-group" data-bind="validationElement: licenseKeyModel().key">
                             <div class="col-sm-12">
-                                <textarea rows="9" class="form-control" id="inputLicenseKey" data-bind="textInput: licenseKeyModel().key"
+                                <textarea rows="9" class="form-control border-radius-xs resize-none" id="inputLicenseKey" data-bind="textInput: licenseKeyModel().key"
                                           placeholder='e.g.
 {
             "Id": "12345678-1234-1234-1234-123456789101",
@@ -100,12 +100,12 @@
                     <div class="clearfix">
                     <button type="submit" title="Click to submit the new license"
                             data-bind="disable: spinners.activateLicense() || spinners.forceLicenseUpdate(), css: { 'btn-spinner': spinners.activateLicense }"
-                            class="btn btn-primary pull-right">
+                            class="btn btn-primary pull-right rounded-pill">
                         <i class="icon-check"></i>
                         <span>Submit</span>
                     </button>
                     <div data-bind="visible: dismissVisible()">
-                        <button class="btn btn-default pull-left" data-bind="click: $root.dismiss.bind($root, 1)">
+                        <button class="btn btn-default pull-left rounded-pill" data-bind="click: $root.dismiss.bind($root, 1)">
                             <i class="icon-recent"></i>
                             <span>Dismiss for 1 day</span>
                         </button>
