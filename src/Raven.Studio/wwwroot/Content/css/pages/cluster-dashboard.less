@@ -298,9 +298,8 @@
                     transition: transform .3s cubic-bezier(0, 2, 0.5, 1), opacity .2s;
                     transform-origin: left top;
                     padding: @gutter-xs/2 @gutter-sm/2;
-                    flex-grow: 1;
                     color: @text-muted;
-                    width: 20%;
+                    flex-basis: 20%;
 
                     .nodes-item-header {
                         display: flex;
@@ -323,6 +322,7 @@
                             flex-grow: 1;
                             line-height: 1.1em;
                             transition: .2s color;
+                            min-width: 4em;
 
                             .supplementary-info {
                                 display: block;
