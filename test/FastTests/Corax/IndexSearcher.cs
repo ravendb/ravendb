@@ -839,7 +839,7 @@ namespace FastTests.Corax
             OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderByAscending(match1, orderMetadata);
+                var match = searcher.OrderByAscending(match1, orderMetadata, take: 16);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -931,11 +931,15 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
+
+                Assert.Equal("entry/3", searcher.GetIdentityFor(ids[0]));
+                Assert.Equal("entry/2", searcher.GetIdentityFor(ids[1]));
+                Assert.Equal("entry/1", searcher.GetIdentityFor(ids[2]));
             }
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderByAscending(match1, orderMetadata);
+                var match = searcher.OrderByAscending(match1, orderMetadata, take: 16);
 
                 Span<long> ids1 = stackalloc long[2];
                 Assert.Equal(2, match.Fill(ids1));
