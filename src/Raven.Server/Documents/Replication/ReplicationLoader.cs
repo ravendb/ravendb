@@ -1319,7 +1319,7 @@ namespace Raven.Server.Documents.Replication
                     Database = Database.Name
                 }).ToList();
 
-                Task.Run(() =>
+                _ = Task.Run(() =>
                 {
                     // here we might have blocking calls to fetch the tcp info.
                     try
@@ -1333,10 +1333,15 @@ namespace Raven.Server.Documents.Replication
                     }
                 });
             }
+
             _internalDestinations.Clear();
-            foreach (var item in newInternalDestinations)
+
+            if (newInternalDestinations != null)
             {
-                _internalDestinations.Add(item);
+                foreach (var item in newInternalDestinations)
+                {
+                    _internalDestinations.Add(item);
+                }
             }
         }
 
@@ -1458,7 +1463,7 @@ namespace Raven.Server.Documents.Replication
                 switch (node)
                 {
                     case ExternalReplicationBase exNode:
-                    {
+                        {
                             var database = exNode.ConnectionString.Database;
                             if (node is PullReplicationAsSink sink)
                             {
@@ -1467,17 +1472,17 @@ namespace Raven.Server.Documents.Replication
 
                             // normal external replication
                             return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                    }
-                    case InternalReplication internalNode:
-                    {
-                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
-                        {
-                            cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
-                            return ReplicationUtils.GetTcpInfoForInternalReplication(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
-                                "Replication",
-                        certificate, _server.NodeTag, cts.Token);
                         }
-                    }
+                    case InternalReplication internalNode:
+                        {
+                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
+                            {
+                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                                return ReplicationUtils.GetTcpInfoForInternalReplication(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
+                                    "Replication",
+                            certificate, _server.NodeTag, cts.Token);
+                            }
+                        }
                     default:
                         throw new InvalidOperationException(
                             $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
