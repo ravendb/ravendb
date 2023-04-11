@@ -1963,6 +1963,21 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
         }
 
+        public void AddFromAliasToFilterTokens(string fromAlias)
+        {
+            if (string.IsNullOrEmpty(fromAlias))
+                throw new InvalidOperationException("Alias cannot be null or empty");
+
+            var tokens = GetCurrentFilterTokens();
+            var current = tokens.First;
+            while (current != null)
+            {
+                if (current.Value is WhereToken w)
+                    current.Value = w.AddAlias(fromAlias);
+                current = current.Next;
+            }
+        }
+        
         public string AddAliasToIncludesTokens(string fromAlias)
         {
             if (_includesAlias == null)
