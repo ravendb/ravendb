@@ -16,7 +16,7 @@ namespace Corax
 
             public IndexTermDumper(Tree tree, Slice field)
             {
-                _writer = File.AppendText(tree.Name.ToString() + fieldId);
+                _writer = File.AppendText(tree.Name.ToString() + field.ToString());
             }
 #else
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
