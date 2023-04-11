@@ -110,33 +110,41 @@
         
         <div data-bind="visible: enableSharding, foreach: shardingBackupDirectories">
             <span class="margin-top-sm margin-bottom-xs"><i class="icon-shard text-info" title="Shard"></i> #<span data-bind="text: $index()"></span></span>
-            <div class="form-group flex-horizontal">
-                <div class="position-relative">
-                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                        <span>
-                            <i class="icon-node text-success"></i>
-                            <span>Node <span data-bind="text: $parent.shardingBackupDirectories()[$index()].nodeTag()"></span></span>
-                        </span>
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" data-bind="foreach: $root.clusterNodes">
-                        <li data-bind="click: $parents[1].setShardingDirectoryNodeTag.bind($parent, $parentContext.$index(), $data.tag())">
-                            <a href="#" data-bind="text: $data.tag"></a>
-                        </li>
-                    </ul>
+            <div class="form-group flex-horizontal" style="align-items: start;">
+
+                <div data-bind="validationElement: $data.nodeTag">
+                    <div class="position-relative">
+                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                            <span>
+                                <i class="icon-node text-success"></i>
+                                <span>Node <span data-bind="text: $data.nodeTag()"></span></span>
+                            </span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" data-bind="foreach: $root.clusterNodes">
+                            <li data-bind="click: $parents[1].setShardingDirectoryNodeTag.bind($parent, $parentContext.$index(), $data.tag())">
+                                <a href="#" data-bind="text: $data.tag"></a>
+                            </li>
+                        </ul>
+                    </div>
+                    <span class="help-block" data-bind="validationMessage: $data.nodeTag"></span>
                 </div>
                 
-                <div class="dropdown btn-block">
-                    <input type="text" class="form-control dropdown-toggle"
-                           data-bind="textInput: $parent.shardingBackupDirectories()[$index()].directoryPath()"
-                           data-toggle="dropdown" placeholder="Enter backup directory path" />
-                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                    <ul class="dropdown-menu" data-bind="foreach: $data.directoryPathOptions">
-                        <li data-bind="click: $parents[1].setShardingDirectoryPath.bind($parent, $parentContext.$index(), $data)">
-                            <a href="#" data-bind="text: $data"></a>
-                        </li>
-                    </ul>
+                <div data-bind="validationElement: $data.directoryPath" class="flex-grow">
+                    <div class="dropdown btn-block">
+                        <input type="text" class="form-control dropdown-toggle"
+                        data-bind="textInput: $data.directoryPath()"
+                        data-toggle="dropdown" placeholder="Enter backup directory path" />
+                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                        <ul class="dropdown-menu" data-bind="foreach: $data.directoryPathOptions">
+                            <li data-bind="click: $parents[1].setShardingDirectoryPath.bind($parent, $parentContext.$index(), $data)">
+                                <a href="#" data-bind="text: $data"></a>
+                            </li>
+                        </ul>
+                    </div>
+                    <span class="help-block" data-bind="validationMessage: $data.directoryPath"></span>
                 </div>
+
                 <button type="button" class="btn btn-danger margin-left-xs" data-bind="click: $parent.removeShardingDirectoryPath.bind($parent, $index())">
                     <i class="icon-trash"></i>
                 </button>
@@ -516,9 +524,9 @@
                                                 data-bind="visible: $root.databaseModel.restore.enableSharding"
                                                 class="files flex-horizontal"
                                             >
-                                                <span data-bind="style: { 'color': avaiableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }">[ </span>
-                                                <span data-bind="text: avaiableShards.map(x => x.shardNumber).join(', '), style: { 'color': avaiableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"></span>
-                                                <span data-bind="style: { 'color': avaiableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"> ]</span>
+                                                <span data-bind="style: { 'color': availableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }">[ </span>
+                                                <span data-bind="text: availableShards.map(x => x.shardNumber).join(', '), style: { 'color': availableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"></span>
+                                                <span data-bind="style: { 'color': availableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"> ]</span>
 
                                             </div>
                                             <div class="files" data-bind="text: filesToRestore.toLocaleString()"></div>

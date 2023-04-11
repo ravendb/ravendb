@@ -454,7 +454,17 @@ class createDatabase extends dialogViewModelBase {
             });
 
             const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
-            const allValid = globalValid && _.every(sectionsValidityList, x => !!x);
+
+            // TODO: kalczur
+            let allShardingBackupDirectoriesValid = true;
+
+            this.databaseModel.restore.shardingBackupDirectories().forEach(x => {
+                if (!this.isValid(x.validationGroup)) {
+                    allShardingBackupDirectoriesValid = false
+                }
+            });
+
+            const allValid = globalValid && _.every(sectionsValidityList, x => !!x) && allShardingBackupDirectoriesValid;
 
             if (allValid) {
                 // disable validation for name as it might display error: database already exists
