@@ -1,15 +1,15 @@
 ﻿<div class="sharding-control" data-bind="visible: showContext, if: showContext">
-    <div class="flex-grow"></div>
+    <div class="btn-group margin-left">
+        <button class="btn btn-default" data-bind="click: changeScope, visible: canChangeScope" title="Select a shard to view">
+            <i class="icon-settings"></i>
+        </button>
+    </div>    
     <div class="flex-horizontal">
         <div class="shard-selector">
             <i data-bind="css: { 'icon-shard': contextName() !== 'All Shards', 'icon-sharding': contextName() === 'All Shards'}"></i>
             <div data-bind="text: contextName"></div>
         </div>
-        <div class="btn-group">
-            <button class="btn btn-default" data-bind="click: changeScope, visible: canChangeScope" title="Select a shard to view">
-                <i class="icon-settings"></i>
-            </button>
-        </div>
+
     </div>
 </div>
 <div data-bind="compose: { model: shardSelector }"></div>
