@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndReferences(IndexDefinition definition, string cSharpSafeName)
         {
-            if (definition.AdditionalSources == null && definition.AdditionalSources == null)
+            if (definition.AdditionalSources == null && definition.AdditionalAssemblies == null)
             {
                 return (Usings, new List<SyntaxTree>(), References);
             }
