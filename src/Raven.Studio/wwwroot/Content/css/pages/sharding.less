@@ -3,18 +3,17 @@
 .sharding-control {
     display: flex;
     align-items: center;
-    margin-bottom: -40px;
-    position: absolute;
     right: @gutter-xxs;
     top: @gutter-xxs;
-    border: 1px solid @sharding-color;
+    color: var(--text-emphasis);
+    background-color: var(--bs-shard);
 
     &.pinned {
         position: static;
         right: auto;
         top: auto;
-        background-color: @sharding-color;
-        color: @gray-800;
+        background-color: var(--bs-shard);
+        color: var(--text-emphasis);
         margin-bottom: 0;
     }
 
@@ -50,13 +49,7 @@
     }
 
     .btn {
-        background-color: @sharding-color;
-        color: @gray-800;
-        border: none;
-
-        &:hover {
-            background-color: @white;
-        }
+        border: none;       
     }
 }
 
@@ -66,6 +59,6 @@
     flex-direction: column;
 
     &.pinned {
-        box-shadow: 0 0 0 2px inset @sharding-color;
+        box-shadow: 0 0 0 2px inset var(--bs-shard);
     }
 }
