@@ -124,6 +124,9 @@ namespace Raven.Client.Documents.Session.Tokens
         
         public OrderByToken AddAlias(string alias)
         {
+            if (_fieldName == "id()")
+                return this;
+            
             var aliasedName = $"{alias}.{_fieldName}";
 
             if (_sorterName != null)
