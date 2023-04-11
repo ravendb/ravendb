@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -17,8 +18,8 @@ namespace FastTests.Issues
         [Fact]
         public async Task WhereIdInLargeCollectionPerformance()
         {
-            // before fixing id injection to script, this could take more than two minutes
-            var documents = Enumerable.Range(1, 20_000)
+            // 5000 documents, but way more ids supplied for where in cause > 20 second runtime
+            var documents = Enumerable.Range(1, 5_000)
                 .Select(x => new Document
                 {
                     Id = "documents/" + x,
@@ -27,6 +28,8 @@ namespace FastTests.Issues
                 .ToList();
 
             var ids = documents.Select(x => x.Id).ToList();
+            // add more ids to make query parameters big
+            ids = ids.Concat(Enumerable.Range(1, 10_000).Select(x => "documents/" + x)).ToList();
 
             using (var store = GetDocumentStore())
             {
@@ -49,11 +52,11 @@ namespace FastTests.Issues
                         })
                         .ToListAsync();
 
-                    Assert.Equal(ids.Count, results.Count);
+                    Assert.Equal(documents.Count, results.Count);
                 }
                 sw.Stop();
 
-                Output.WriteLine("Took: " + sw.Elapsed);
+                Assert.True(sw.Elapsed < TimeSpan.FromSeconds(5));
             }
         }
 
