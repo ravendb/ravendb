@@ -397,8 +397,6 @@ class databaseCreationModel {
         this.path.dataPathHasFocus(true);
     }
 
-    // TODO: kalczur
-
     getShardNumberFormLocationFolder(locationFolder: string): number {
         const dollarIndex = locationFolder.indexOf("$");
         const dashIndex = locationFolder.indexOf("-", dollarIndex);
@@ -428,7 +426,7 @@ class databaseCreationModel {
             try {
                 const restorePoints: RestorePoints = await this.restoreSourceObject()
                     .fetchRestorePointsCommand(direcotryPath) 
-                    .execute()
+                    .execute();
 
                 restorePoints.List.forEach(rp => {
                     if (!rp.DatabaseName || !DatabaseUtils.isSharded(rp.DatabaseName)) {
@@ -723,8 +721,9 @@ class databaseCreationModel {
             required: {
                 onlyIf: () => this.restore.restorePoints().length === 0 
             }
-        });    
-                
+        });
+
+        // TODO: remove this.restore.enableSharding()
         this.restore.selectedRestorePoint.extend({
             validation: [
                 {
@@ -732,7 +731,7 @@ class databaseCreationModel {
                     message: "Please enter valid source data"
                 },
                 {
-                    validator: () => this.restore.enableSharding() || !this.restore.restorePointError(),
+                    validator: () => !this.restore.restorePointError(),
                     message: `Couldn't fetch restore points, {0}`,
                     params: this.restore.restorePointError
                 },
@@ -740,14 +739,14 @@ class databaseCreationModel {
                     validator: (restorePoint: restorePoint) => {
                         if (restorePoint && restorePoint.isEncrypted && restorePoint.isSnapshotRestore) {
                             // check if license supports that
-                            return this.restore.enableSharding() || (licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
+                            return (licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
                         }
                         return true;
                     },
                     message: "License doesn't support storage encryption"
                 },
                 {
-                    validator: (value: string) => this.restore.enableSharding() || !!value,
+                    validator: (value: string) => !!value,
                     message: "This field is required"
                 }
             ]
