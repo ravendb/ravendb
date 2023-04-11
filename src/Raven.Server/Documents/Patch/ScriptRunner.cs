@@ -927,8 +927,8 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue Spatial_Distance(JsValue self, JsValue[] args)
             {
-                if (args.Length < 4 && args.Length > 5)
-                    throw new ArgumentException("Called with expected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)");
+                if (args.Length is < 4 or > 5)
+                    throw new ArgumentException("Called with unexpected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)");
 
                 for (int i = 0; i < 4; i++)
                 {
