@@ -7,7 +7,9 @@ using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
+using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Voron.Data.Fixed;
 using static Corax.Queries.SortingMatch;
 
 namespace Corax.Queries
@@ -31,6 +33,7 @@ namespace Corax.Queries
         internal int _bufferSize;
         internal IDisposable _bufferHandler;
 
+        internal int _bufferUsedCount;
         public long TotalResults;
 
         public SortingMatch(IndexSearcher searcher, in TInner inner, in TComparer comparer, int take = -1)
@@ -40,23 +43,26 @@ namespace Corax.Queries
             _take = take;
             _comparer = comparer;
             _isScoreComparer = typeof(TComparer) == typeof(BoostingComparer);
+            _bufferUsedCount = NotStarted;
             _currentIdx = NotStarted;
 
             TotalResults = 0;
 
             if (typeof(TComparer) == typeof(BoostingComparer))
             {
-                _fillFunc = &Fill<BoostingSorting>;
+                // TODO: Maciej the old Fill would just return the values in inserting order and the tests are checking that. 
+                _fillFunc = &FillAdv<Fetcher, NumericalItem<float>>;
+                //_fillFunc = &Fill<BoostingSorting>;
             }
             else
             {
                 _fillFunc = _comparer.FieldType switch
                 {
                     MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric => &FillAdv<Fetcher,SequenceItem>,
-                    MatchCompareFieldType.Integer => &Fill<ItemSorting<NumericalItem<long>>>,
-                    MatchCompareFieldType.Floating => &Fill<ItemSorting<NumericalItem<double>>>,
-                    MatchCompareFieldType.Spatial => &Fill<ItemSorting<NumericalItem<double>>>,
-                    MatchCompareFieldType.Score => &Fill<BoostingSorting>,
+                    MatchCompareFieldType.Integer => &FillAdv<Fetcher, NumericalItem<long>>,
+                    MatchCompareFieldType.Floating => &FillAdv<Fetcher, NumericalItem<double>>,
+                    MatchCompareFieldType.Spatial => &FillAdv<Fetcher, NumericalItem<double>>,
+                    MatchCompareFieldType.Score => &FillAdv<Fetcher, NumericalItem<double>>,
                     _ => throw new ArgumentOutOfRangeException(_comparer.FieldType.ToString())
                 };
             }
@@ -71,11 +77,14 @@ namespace Corax.Queries
 
         private struct Fetcher : IFetcher
         {
-             [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Get<TOut, TIn>(IndexSearcher searcher, FieldMetadata binding, long entryId, out TOut storedValue, in TIn comparer)
                 where TIn : IMatchComparer
                 where TOut : struct
             {
+                if (typeof(TIn) == typeof(BoostingComparer))
+                    throw new NotSupportedException($"Boosting fetching is done by the main {nameof(FillAdv)} method.");
+
                 var reader = searcher.GetEntryReaderFor(entryId);
 
                 if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
@@ -90,7 +99,7 @@ namespace Corax.Queries
                     var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
 
                     storedValue = (TOut)(object)new NumericalItem<double>(distance);
-                    return readX;
+                    return true;
                 }
                 else if (typeof(TIn) == typeof(SpatialDescendingMatchComparer))
                 {
@@ -104,7 +113,7 @@ namespace Corax.Queries
                     var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
 
                     storedValue = (TOut)(object)new NumericalItem<double>(distance);
-                    return readX;
+                    return true;
                 }
                 else if (typeof(TOut) == typeof(SequenceItem))
                 {
@@ -116,7 +125,7 @@ namespace Corax.Queries
                     {
                         storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
                     }
-                    return readX;
+                    return true;
                 }
                 else if (typeof(TOut) == typeof(NumericalItem<long>))
                 {
@@ -125,7 +134,7 @@ namespace Corax.Queries
                         goto Failed;
                     
                     storedValue = (TOut)(object)new NumericalItem<long>(value);
-                    return readX;
+                    return true;
                 }
                 else if (typeof(TOut) == typeof(NumericalItem<double>))
                 {
@@ -134,7 +143,16 @@ namespace Corax.Queries
                         goto Failed;
                     
                     storedValue = (TOut)(object)new NumericalItem<double>(value);
-                    return readX;
+                    return true;
+                }
+                else if (typeof(TOut) == typeof(NumericalItem<double>))
+                {
+                    var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
+                    if (readX == false)
+                        goto Failed;
+                    
+                    storedValue = (TOut)(object)new NumericalItem<double>(value);
+                    return true;
                 }
 
                 Failed:
@@ -147,18 +165,21 @@ namespace Corax.Queries
             where TFetcher : struct, IFetcher
             where TOut : struct
         {
-            // We will try to use the matches buffer for as long as we can, if it is not enough we will switch to a more complex 
-            // behavior. This method should also be re-entrant for the case where we have already pre-sorted everything and 
+            var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
+
+            ByteStringContext<ByteStringMemoryCache>.InternalScope bufferHandler = default;
+
+            // This method should also be re-entrant for the case where we have already pre-sorted everything and 
             // we will just need to acquire via pages the totality of the results. 
-            int totalMatches;
-            if (match._currentIdx != NotStarted)
+            if (match._bufferUsedCount != NotStarted)
             {
-                totalMatches = (int)match.TotalResults;
                 goto ReturnMatches;
             }
             
             Debug.Assert(matches.Length > 1);
-            totalMatches = match._take == -1 ? matches.Length : match._take;
+            var totalMatches = match._take == -1 ? 
+                Math.Max(128, matches.Length) : // no limit specified, we'll guess on the size and rely on growing as needed 
+                match._take;
 
             // We will allocate the space for the heap data structure that we are gonna use to fill the results.
             int heapSize = Unsafe.SizeOf<MatchComparer<TComparer, TOut>.Item>() * totalMatches;
@@ -166,11 +187,21 @@ namespace Corax.Queries
                 match.UnlikelyGrowBuffer(heapSize);
 
             var items = new Span<MatchComparer<TComparer, TOut>.Item>(match._buffer, totalMatches);
-            match._currentIdx = 0;
+
+            Span<float> scores;
+            if (typeof(TComparer) == typeof(BoostingComparer))
+            {
+                // Allocate the new buffer
+                bufferHandler = match._searcher.Allocator.Allocate(matches.Length * sizeof(float), out var buffer);
+                scores = new Span<float>(buffer.Ptr, matches.Length);
+            }
+            else
+            {
+                scores = Span<float>.Empty;
+            }
 
             // Initialize the important infrastructure for the sorting.
             TFetcher fetcher = default;
-            var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
             var index = 0;
             while (true)
             {
@@ -179,13 +210,57 @@ namespace Corax.Queries
                 if (read == 0)
                     break;
 
+                // Since we are doing boosting, we need to score the matches so we can use them later. 
+                if (typeof(TComparer) == typeof(BoostingComparer))
+                {
+                    Debug.Assert(scores.Length == totalMatches);
+                    scores[..read].Fill(Bm25Relevance.InitialScoreValue);
+
+                    // We perform the scoring process. 
+                    match._inner.Score(matches[..read], scores[..read], 1f);
+
+                    // If we need to do documents boosting then we need to modify the based on documents stored score. 
+                    if (match._searcher.DocumentsAreBoosted)
+                    {
+                        // We get the boosting tree and go to check every document. 
+                        var tree = match._searcher.GetDocumentBoostTree();
+                        if (tree is { NumberOfEntries: > 0 })
+                        {
+                            // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
+                            for (int idx = 0; idx < totalMatches; idx++)
+                            {
+                                var ptr = (float*)tree.ReadPtr(matches[idx], out var _);
+                                if (ptr == null)
+                                    continue;
+
+                                scores[idx] *= *ptr;
+                            }
+                        }
+                    }
+                }
+
+                // PERF: We perform this at the end to avoid this check if we are not really adding elements. 
+                if (match._take == -1 && index + read + 16 > items.Length)
+                {
+                    // we don't have a limit to the number of results returned
+                    // so we have to ensure that we keep *all* the results in memory, as such,
+                    // we cannot limit the size of the sorting heap and need to grow it
+                    match.UnlikelyGrowBuffer(match._bufferSize);
+                    items = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(new Span<byte>(match._buffer, match._bufferSize));
+                }
+
                 for (int i = 0; i < read; i++)
                 {
                     var cur = new MatchComparer<TComparer, TOut>.Item { Key = matches[i], };
-                    if (fetcher.Get(match._searcher, match._comparer.Field, cur.Key, out cur.Value, match._comparer) == false)
+                    if (typeof(TComparer) == typeof(BoostingComparer))
                     {
-                        //TODO: What happens when there aren't any values for the field? 
-                        continue;
+                        // Since we are boosting, we can get the value straight from the scores array.
+                        cur.Value = (TOut)(object)new NumericalItem<float>(scores[i]);
+                    }
+                    else
+                    {
+                        if (fetcher.Get(match._searcher, match._comparer.Field, cur.Key, out cur.Value, match._comparer) == false)
+                            cur.Key = -cur.Key;
                     }
 
                     if (index < items.Length)
@@ -201,39 +276,68 @@ namespace Corax.Queries
                         continue;
                     }
 
-                    HeapUp(items);
-
-                    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                    void HeapUp(Span<MatchComparer<TComparer, TOut>.Item> items)
-                    {
-                        var current = index - 1;
-                        while (current > 0)
-                        {
-                            var parent = (current - 1) / 2;
-                            if (comparer.Compare(items[parent], items[current]) <= 0)
-                                break;
-
-                            (items[parent], items[current]) = (items[current], items[parent]);
-                            current = parent;
-                        }
-                    }
+                    HeapUp(items, index - 1);
                 }
-
-                match.TotalResults = index;
             }
+            match._bufferUsedCount = index;
 
             ReturnMatches:
-            items = new Span<MatchComparer<TComparer, TOut>.Item>(match._buffer, (int)match.TotalResults);
+            items = new Span<MatchComparer<TComparer, TOut>.Item>(match._buffer, match._bufferUsedCount);
 
-            int matchesToReturn = 0;
-            int leftOvers = Math.Min(match._currentIdx + matches.Length, (int)match.TotalResults);
-            for (int i = match._currentIdx; i < leftOvers; i++)
+            int matchesToReturn = Math.Min(match._bufferUsedCount, matches.Length);
+            for (int i = 0; i < matchesToReturn; i++)
             {
-                matches[matchesToReturn] = items[i].Key;
-                matchesToReturn++;
+                // We are getting the top element because this is a heap and the top element is the one that is
+                // going to be removed. Then the rest of the element will be pushed up to find the new top.
+                matches[i] = items[0].Key;
+                HeapDown(items, match._bufferUsedCount - i - 1);
             }
-            match._currentIdx += matchesToReturn;
+            match._bufferUsedCount -= matchesToReturn;
+
+            bufferHandler.Dispose();
+
             return matchesToReturn;
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            void HeapUp(Span<MatchComparer<TComparer, TOut>.Item> items, int current)
+            {
+                while (current > 0)
+                {
+                    var parent = (current - 1) / 2;
+                    if (comparer.Compare(items[parent], items[current]) <= 0)
+                        break;
+
+                    (items[parent], items[current]) = (items[current], items[parent]);
+                    current = parent;
+                }
+            }
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            void HeapDown(Span<MatchComparer<TComparer, TOut>.Item> items, int heapMaxIndex)
+            {
+                items[0] = items[heapMaxIndex];
+                var current = 0;
+                int childIdx;
+                
+                int GetChildIndex(int idx) => 2 * idx + 1;
+                
+                while ((childIdx = GetChildIndex(current)) < heapMaxIndex)
+                {
+                    if (childIdx + 1 < heapMaxIndex)
+                    {
+                        if (comparer.Compare(items[childIdx], items[childIdx + 1]) > 0)
+                        {
+                            childIdx++;
+                        }
+                    }
+                    
+                    if (comparer.Compare(items[current], items[childIdx]) <= 0)
+                        break;
+                
+                    (items[current], items[childIdx]) = (items[childIdx], items[current]);
+                    current = childIdx;
+                }
+            }
         }
 
         public long Count => _inner.Count;
@@ -279,6 +383,8 @@ namespace Corax.Queries
         {
             int Execute(ref SortingMatch<TInner, TComparer> match, Span<long> matches);
         }
+
+
 
         private struct ItemSorting<TOut> : IItemSorter
             where TOut : struct

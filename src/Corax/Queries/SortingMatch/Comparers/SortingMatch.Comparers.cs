@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Corax.Queries;
 
@@ -16,6 +17,13 @@ unsafe partial struct SortingMatch
             Ptr = ptr;
             Size = size;
         }
+
+        public override string ToString()
+        {
+            if (Size is > 0 and < 64)
+                return Encoding.UTF8.GetString(Ptr, Size);
+            return "Size: " + Size;
+        }
     }
 
     internal struct NumericalItem<T> where T : unmanaged
@@ -25,6 +33,11 @@ unsafe partial struct SortingMatch
         public NumericalItem(in T value)
         {
             Value = value;
+        }
+
+        public override string ToString()
+        {
+            return Value.ToString();
         }
     }
 
@@ -36,6 +49,11 @@ unsafe partial struct SortingMatch
         {
             public long Key;
             public TW Value;
+
+            public override string ToString()
+            {
+                return $"{nameof(Key)}: {Key}, {nameof(Value)}: {Value}";
+            }
         }
 
         private readonly T _comparer;
@@ -63,6 +81,10 @@ unsafe partial struct SortingMatch
                 else if (typeof(TW) == typeof(NumericalItem<double>))
                 {
                     return _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
+                }
+                else if (typeof(TW) == typeof(NumericalItem<float>))
+                {
+                    return _comparer.CompareNumerical(((NumericalItem<float>)(object)ix.Value).Value, ((NumericalItem<float>)(object)iy.Value).Value);
                 }
             }
             else if (ix.Key > 0)
