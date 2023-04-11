@@ -1,16 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
-using Newtonsoft.Json.Linq;
 using Sparrow;
-using Sparrow.Server;
 using Sparrow.Server.Utils;
 using static Corax.Queries.SortingMatch;
 
@@ -31,7 +27,7 @@ namespace Corax.Queries
         private const int NotStarted = -1;
         private int _currentIdx;
 
-        internal long* _buffer;
+        internal byte* _buffer;
         internal int _bufferSize;
         internal IDisposable _bufferHandler;
 
@@ -56,7 +52,7 @@ namespace Corax.Queries
             {
                 _fillFunc = _comparer.FieldType switch
                 {
-                    MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric => &FillTop<Fetcher,SequenceItem>,
+                    MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric => &FillAdv<Fetcher,SequenceItem>,
                     MatchCompareFieldType.Integer => &Fill<ItemSorting<NumericalItem<long>>>,
                     MatchCompareFieldType.Floating => &Fill<ItemSorting<NumericalItem<double>>>,
                     MatchCompareFieldType.Spatial => &Fill<ItemSorting<NumericalItem<double>>>,
@@ -147,18 +143,35 @@ namespace Corax.Queries
             }
         }
 
-        
-        private static int FillTop<TFetcher, TOut>(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
+        private static int FillAdv<TFetcher, TOut>(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
             where TFetcher : struct, IFetcher
             where TOut : struct
         {
-            Debug.Assert(matches.Length >= match._take);
-            using var _ = match._searcher.Allocator.Allocate(sizeof(MatchComparer<TComparer, TOut>.Item) * match._take, out Span<byte> itemsBuffer);
-            var items = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(itemsBuffer);
-            var index = 0;
+            // We will try to use the matches buffer for as long as we can, if it is not enough we will switch to a more complex 
+            // behavior. This method should also be re-entrant for the case where we have already pre-sorted everything and 
+            // we will just need to acquire via pages the totality of the results. 
+            int totalMatches;
+            if (match._currentIdx != NotStarted)
+            {
+                totalMatches = (int)match.TotalResults;
+                goto ReturnMatches;
+            }
+            
+            Debug.Assert(matches.Length > 1);
+            totalMatches = match._take == -1 ? matches.Length : match._take;
+
+            // We will allocate the space for the heap data structure that we are gonna use to fill the results.
+            int heapSize = Unsafe.SizeOf<MatchComparer<TComparer, TOut>.Item>() * totalMatches;
+            if (match._bufferSize < heapSize)
+                match.UnlikelyGrowBuffer(heapSize);
+
+            var items = new Span<MatchComparer<TComparer, TOut>.Item>(match._buffer, totalMatches);
+            match._currentIdx = 0;
+
+            // Initialize the important infrastructure for the sorting.
             TFetcher fetcher = default;
             var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
-
+            var index = 0;
             while (true)
             {
                 var read = match._inner.Fill(matches);
@@ -168,20 +181,18 @@ namespace Corax.Queries
 
                 for (int i = 0; i < read; i++)
                 {
-                    
-                    var cur = new MatchComparer<TComparer, TOut>.Item { Key =  matches[i], };
+                    var cur = new MatchComparer<TComparer, TOut>.Item { Key = matches[i], };
                     if (fetcher.Get(match._searcher, match._comparer.Field, cur.Key, out cur.Value, match._comparer) == false)
                     {
                         //TODO: What happens when there aren't any values for the field? 
                         continue;
                     }
 
-                    ref MatchComparer<TComparer, TOut>.Item item = ref items[0];
-                    if (index < match._take)
+                    if (index < items.Length)
                     {
                         items[index++] = cur;
                     }
-                    else if(comparer.Compare(items[^1], cur) > 0)
+                    else if (comparer.Compare(items[^1], cur) > 0)
                     {
                         items[^1] = cur;
                     }
@@ -189,31 +200,40 @@ namespace Corax.Queries
                     {
                         continue;
                     }
-                    
-                    HeapUp( items);
+
+                    HeapUp(items);
+
+                    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                    void HeapUp(Span<MatchComparer<TComparer, TOut>.Item> items)
+                    {
+                        var current = index - 1;
+                        while (current > 0)
+                        {
+                            var parent = (current - 1) / 2;
+                            if (comparer.Compare(items[parent], items[current]) <= 0)
+                                break;
+
+                            (items[parent], items[current]) = (items[current], items[parent]);
+                            current = parent;
+                        }
+                    }
                 }
+
+                match.TotalResults = index;
             }
 
-            for (int i = 0; i < index; i++)
-            {
-                matches[i] = items[i].Key;
-            }
-            return index;
+            ReturnMatches:
+            items = new Span<MatchComparer<TComparer, TOut>.Item>(match._buffer, (int)match.TotalResults);
 
-            void HeapUp(Span<MatchComparer<TComparer, TOut>.Item> items)
+            int matchesToReturn = 0;
+            int leftOvers = Math.Min(match._currentIdx + matches.Length, (int)match.TotalResults);
+            for (int i = match._currentIdx; i < leftOvers; i++)
             {
-                var current = index - 1;
-                while (current > 0)
-                {
-                    var parent = (current - 1) / 2;
-                    if (comparer.Compare(items[parent], items[current]) < 0)
-                        break;
-                    (items[parent], items[current]) = (items[current], items[parent]);
-                    current = parent;
-                }
+                matches[matchesToReturn] = items[i].Key;
+                matchesToReturn++;
             }
-            // if (match._inner.IsOrdered && heap.IsFull)
-            //     return;
+            match._currentIdx += matchesToReturn;
+            return matchesToReturn;
         }
 
         public long Count => _inner.Count;
@@ -251,7 +271,7 @@ namespace Corax.Queries
             }
 
             _bufferSize = size;
-            _buffer = (long*)buffer.Ptr;
+            _buffer = buffer.Ptr;
             _bufferHandler = bufferHandler;
         }
 
@@ -518,7 +538,7 @@ namespace Corax.Queries
             // Copy to the buffer the matches that we already have.
             matches[..totalMatches].CopyTo(new Span<long>(match._buffer, totalMatches));
 
-            long* buffer = match._buffer;
+            long* buffer = (long*)match._buffer;
             while (true)
             {
                 // We will ensure we have enough space to fill matches.
@@ -529,7 +549,7 @@ namespace Corax.Queries
                     excessSpace = match._bufferSize - totalMatches;
                     
                     // Since the buffer is gonna grow, we need to update all local variables.
-                    buffer = match._buffer;
+                    buffer = (long*)match._buffer;
                 }
 
                 // We will get more batches until we are done getting matches.

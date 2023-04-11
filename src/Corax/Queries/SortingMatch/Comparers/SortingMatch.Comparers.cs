@@ -28,14 +28,14 @@ unsafe partial struct SortingMatch
         }
     }
 
-    internal struct MatchComparer<T, W> : IComparer<MatchComparer<T, W>.Item>
+    internal readonly struct MatchComparer<T, TW> : IComparer<MatchComparer<T, TW>.Item>
         where T : IMatchComparer
-        where W : struct
+        where TW : struct
     {
         public struct Item
         {
             public long Key;
-            public W Value;
+            public TW Value;
         }
 
         private readonly T _comparer;
@@ -50,17 +50,17 @@ unsafe partial struct SortingMatch
         {
             if (ix.Key > 0 && iy.Key > 0)
             {
-                if (typeof(W) == typeof(SequenceItem))
+                if (typeof(TW) == typeof(SequenceItem))
                 {
                     return _comparer.CompareSequence(
                         new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
                         new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
                 }
-                else if (typeof(W) == typeof(NumericalItem<long>))
+                else if (typeof(TW) == typeof(NumericalItem<long>))
                 {
                     return _comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
                 }
-                else if (typeof(W) == typeof(NumericalItem<double>))
+                else if (typeof(TW) == typeof(NumericalItem<double>))
                 {
                     return _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
                 }
