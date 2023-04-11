@@ -62,7 +62,9 @@ internal class DatabasesHandlerProcessorForGetRestorePoints : AbstractServerHand
             var settings = await GetSettingsAsync(context);
 
             using var source = GetRestorePointsSource(context, connectionType, settings, out string path);
-            var restorePoints = await source.FetchRestorePoints(path);
+
+            var shardNumber = JsonDeserializationServer.LocalSettings(settings).ShardNumber;
+            var restorePoints = await source.FetchRestorePoints(path, shardNumber);
 
             if (restorePoints.List.Count == 0)
                 throw new InvalidOperationException("Couldn't locate any backup files.");

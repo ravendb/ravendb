@@ -13,7 +13,7 @@ export abstract class restoreSettings {
     mandatoryFieldsText: string;
 
     folderContent: KnockoutComputed<string>;
-    fetchRestorePointsCommand: (backupDirectory?: string) => commandBase;
+    fetchRestorePointsCommand: (backupDirectory?: string, shardNumber?: number) => commandBase;
 
     abstract getFolderPathOptions(backupDirectory?: string): JQueryPromise<string[]>;
     
@@ -41,7 +41,7 @@ export class localServerCredentials extends restoreSettings {
     backupDirectory = ko.observable<string>();
     folderContent = ko.pureComputed(() => this.backupDirectory());
 
-    fetchRestorePointsCommand = (backupDirectory: string = this.backupDirectory()) => getRestorePointsCommand.forServerLocal(backupDirectory, true);
+    fetchRestorePointsCommand = (backupDirectory: string = this.backupDirectory(), shardNumber: number = null) => getRestorePointsCommand.forServerLocal(backupDirectory, true, shardNumber);
 
     getFolderPathOptions(backupDirectory: string = this.backupDirectory()) {
         return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forServerLocal(backupDirectory, true))

@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _client = new RavenAwsS3Client(s3Settings, configuration.Backup);
         }
 
-        public override async Task<RestorePoints> FetchRestorePoints(string path)
+        public override async Task<RestorePoints> FetchRestorePoints(string path, int? shardNumber = null)
         {
             path = path.TrimEnd('/');
             var objects = await _client.ListAllObjectsAsync(string.IsNullOrEmpty(path) ? "" : path + "/", "/", listFolders: true);

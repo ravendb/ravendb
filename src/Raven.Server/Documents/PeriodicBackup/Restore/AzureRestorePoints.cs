@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _client = RavenAzureClient.Create(azureSettings, configuration.Backup);
         }
 
-        public override Task<RestorePoints> FetchRestorePoints(string path)
+        public override Task<RestorePoints> FetchRestorePoints(string path, int? shardNumber = null)
         {
             return FetchRestorePointsForPath(path, assertLegacyBackups: true);
         }

@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _client = new RavenGoogleCloudClient(client, configuration.Backup);
         }
 
-        public override Task<RestorePoints> FetchRestorePoints(string path)
+        public override Task<RestorePoints> FetchRestorePoints(string path, int? shardNumber = null)
         {
             return FetchRestorePointsForPath(path, assertLegacyBackups: true);
         }

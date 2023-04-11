@@ -4,6 +4,7 @@ import endpoints = require("endpoints");
 class getRestorePointsCommand extends commandBase {
 
     private path: string;
+    private shardNumber: number;
 
     private skipReportingError: boolean;
 
@@ -14,19 +15,22 @@ class getRestorePointsCommand extends commandBase {
     private constructor(path: string,
                         skipReportingError: boolean,
                         connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
-                        credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings) {
+                        credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings,
+                        shardNumber?: number) {
         super();
         this.credentials = credentials;
         this.connectionType = connectionType;
         this.skipReportingError = skipReportingError;
         this.path = path;
+        this.shardNumber = shardNumber;
     }
 
     private preparePayload() {
         switch (this.connectionType) {
             case "Local":
                 return {
-                    FolderPath: this.path
+                    FolderPath: this.path,
+                    ShardNumber: this.shardNumber
                 };
             default:
                 return this.credentials;
@@ -52,8 +56,8 @@ class getRestorePointsCommand extends commandBase {
             });
     }
     
-    static forServerLocal(path: string, skipReportingError: boolean) {
-        return new getRestorePointsCommand(path, skipReportingError, "Local");
+    static forServerLocal(path: string, skipReportingError: boolean, shardNumber: number) {
+        return new getRestorePointsCommand(path, skipReportingError, "Local", null, shardNumber);
     }
     
     static forS3Backup(credentials: Raven.Client.Documents.Operations.Backups.S3Settings, skipReportingError: boolean) {

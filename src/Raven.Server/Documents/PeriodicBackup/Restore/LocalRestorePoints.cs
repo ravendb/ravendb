@@ -13,17 +13,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
         }
 
-        public override Task<RestorePoints> FetchRestorePoints(string directoryPath)
+        public override Task<RestorePoints> FetchRestorePoints(string directoryPath, int? shardNumber = null)
         {
-            var directories = Directory.GetDirectories(directoryPath).OrderBy(x => x).ToList();
+            // TODO: kalczur tests?
+            var directories = Directory.GetDirectories(directoryPath)
+                .OrderBy(x => x)
+                .ToList();
+
             if (directories.Count == 0)
             {
                 // no folders in directory
                 // will scan the directory for backup files
-                return FetchRestorePointsForPath(directoryPath, assertLegacyBackups: true);
+                return FetchRestorePointsForPath(directoryPath, assertLegacyBackups: true, shardNumber);
             }
 
-            return FetchRestorePointsForPaths(directories, assertLegacyBackups: true);
+            return FetchRestorePointsForPaths(directories, assertLegacyBackups: true, shardNumber);
         }
 
         protected override Task<List<FileInfoDetails>> GetFiles(string directoryPath)
