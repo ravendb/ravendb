@@ -222,7 +222,6 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         public static Index CreateNewForTest(IndexDefinition definition, DocumentsOperationContext context)
         {
             var index = CreateNew(definition, context.DocumentDatabase, new TestIndexConfiguration(definition.Configuration, context.DocumentDatabase.Configuration));
-            index.InitializeTestIndex(context);
 
             return index;
         }

@@ -245,8 +245,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public static Index CreateNewForTest(IndexDefinition definition, DocumentDatabase documentDatabase, DocumentsOperationContext context)
         {
             var index = CreateNew(definition, documentDatabase, new TestIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
-            index.InitializeTestIndex(context);
-            
+
             return index;
         }
 

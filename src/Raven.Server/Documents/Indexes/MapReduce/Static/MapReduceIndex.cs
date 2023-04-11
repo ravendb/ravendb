@@ -341,8 +341,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             where TStaticIndex : MapReduceIndex
         {
             var index = CreateNew<TStaticIndex>(definition, documentDatabase, new TestIndexConfiguration(definition.Configuration, context.DocumentDatabase.Configuration));
-            index.InitializeTestIndex(context);
-            
+
             return index;
         }
 
