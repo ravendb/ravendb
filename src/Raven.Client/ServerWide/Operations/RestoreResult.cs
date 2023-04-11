@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations
         {
             var json = base.ToJson();
             json[nameof(DataDirectory)] = DataDirectory;
-            json[nameof(JournalStoragePath)] = DataDirectory;
+            json[nameof(JournalStoragePath)] = JournalStoragePath;
             json[nameof(SnapshotRestore)] = SnapshotRestore.ToJson();
             return json;
         }
