@@ -1342,7 +1342,7 @@ namespace Raven.Client.Documents.Indexes
                     Out($"As{node.Type.Name}(");
                 }
 
-                
+
                 OutMember(node.Expression, node.Member, exprType);
                 Out(")");
                 return node;
@@ -1398,7 +1398,7 @@ namespace Raven.Client.Documents.Indexes
                 Out("new");
             }
             else
-            { 
+            {
                 Visit(node.NewExpression);
                 if (TypeExistsOnServer(node.Type) == false)
                 {
@@ -2112,9 +2112,8 @@ namespace Raven.Client.Documents.Indexes
         {
             // hack: the only way to detect anonymous types right now
             return type.IsDefined(typeof(CompilerGeneratedAttribute), false)
-                && type.IsGenericType && type.Name.Contains("AnonymousType")
-                && (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
-                && type.Attributes.HasFlag(TypeAttributes.NotPublic);
+                   && type.IsGenericType && type.Name.Contains("AnonymousType")
+                   && (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"));
         }
 
         public static readonly HashSet<string> KeywordsInCSharp = new HashSet<string>(new[]
