@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Utils;
@@ -44,7 +45,7 @@ unsafe partial struct SortingMatch
                 return 1;
             }
 
-            static int CompareWithLoadNumerical<T>(ref DescendingMatchComparer comparer, long x, long y) where T : unmanaged
+            static int CompareWithLoadNumerical<T>(ref DescendingMatchComparer comparer, long x, long y) where T : unmanaged, INumber<T>
             {
                 var readerX = comparer._searcher.GetEntryReaderFor(x);
                 var readX = readerX.GetFieldReaderFor(comparer._field).Read<T>(out var resultX);
@@ -79,7 +80,7 @@ unsafe partial struct SortingMatch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int CompareNumerical<T>(T sx, T sy) where T : unmanaged
+        public int CompareNumerical<T>(T sx, T sy) where T : unmanaged, INumber<T>
         {
             return -BasicComparers.CompareAscending(sx, sy);
         }
