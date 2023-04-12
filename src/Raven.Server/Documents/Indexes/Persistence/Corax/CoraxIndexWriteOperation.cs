@@ -24,7 +24,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly CoraxDocumentConverterBase _converter;
         private readonly IndexFieldsMappingBuilder _dynamicFieldsBuilder;
         private IndexFieldsMapping _dynamicFields;
-        private long _entriesCount = 0;
         private readonly CurrentIndexingScope _indexingScope;
         private readonly ByteStringContext _allocator;
 
@@ -39,7 +38,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _indexWriter = index.Definition.HasDynamicFields 
                     ? new IndexWriter(writeTransaction, knownFields, true) 
                     : new IndexWriter(writeTransaction, knownFields);
-                _entriesCount = _indexWriter.GetNumberOfEntries();
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {
@@ -110,18 +108,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
 
                 if (documentBoost.HasValue)
-                    _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan(), ref _entriesCount, documentBoost.Value);
+                    _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan(), documentBoost.Value);
                 else
-                    _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan(), ref _entriesCount);
+                    _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan());
             }
         }
 
-        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
-            JsonOperationContext indexContext)
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
             
-            _entriesCount++;
             LazyStringValue lowerId;
             ByteString data;
             ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
@@ -174,7 +170,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             };
         }
 
-        public override long EntriesCount() => _entriesCount;
+        public override long EntriesCount() => _indexWriter.GetNumberOfEntries();
 
         public override (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
         {
@@ -198,27 +194,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private void DeleteByField(string fieldName, LazyStringValue key, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
+            
             using (Stats.DeleteStats.Start())
-            {
-                if (_indexWriter.TryDeleteEntry(fieldName, key.ToString(CultureInfo.InvariantCulture), out var entriesCountDifference))
-                {
-                    _entriesCount += entriesCountDifference;
-                }
-            }
+                _indexWriter.TryDeleteEntry(fieldName, key.ToString(CultureInfo.InvariantCulture));
         }
 
         public override void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
             
-            using var _ = Stats.DeleteStats.Start();
-            if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, sourceDocumentId.ToString(CultureInfo.InvariantCulture), out var entriesCountDifference))
-                    _entriesCount += entriesCountDifference;
+            using (var _ = Stats.DeleteStats.Start())
+                _indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, sourceDocumentId.ToString(CultureInfo.InvariantCulture));
         }
 
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
             DeleteByField(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, reduceKeyHash, stats);
+            
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
         }

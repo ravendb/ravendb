@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Tests.Infrastructure;
 using Xunit;
@@ -43,7 +45,7 @@ public class RavenIntegration : RavenTestBase
             Assert.Equal(results[1].Name, "Three");
             Assert.Equal(results[2].Name, "Two");
         }
-        
+
         {
             using var session = store.OpenSession();
             var results = session
@@ -55,14 +57,14 @@ public class RavenIntegration : RavenTestBase
             Assert.Equal(results[2].Name, "Two");
         }
 
-        
+
         {
             using var session = store.OpenSession();
             var doc = session.Query<Doc, DocIndex>().Single(i => i.Name == "Two");
             session.Delete(doc);
             session.SaveChanges();
         }
-        
+
         Indexes.WaitForIndexing(store);
         {
             using var session = store.OpenSession();
@@ -72,7 +74,7 @@ public class RavenIntegration : RavenTestBase
             Assert.Equal(results[1].Name, "Three");
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanUsePosititiveAndNegativeBoostFactors(Options options)
@@ -97,7 +99,7 @@ public class RavenIntegration : RavenTestBase
             Assert.Equal(results[0].Name, "Five");
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanIndexWithDocumentBoostAndUpdateTheItems(Options options)
@@ -122,14 +124,14 @@ public class RavenIntegration : RavenTestBase
             Assert.Equal(results[2].Name, "Two");
         }
 
-        
+
         {
             using var session = store.OpenSession();
             var doc = session.Query<Doc, DocIndex>().Single(i => i.Name == "Two");
             doc.BoostFactor = 5;
             session.SaveChanges();
         }
-        
+
         Indexes.WaitForIndexing(store);
         {
             using var session = store.OpenSession();
@@ -144,11 +146,11 @@ public class RavenIntegration : RavenTestBase
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void IndexTimeDocumentBoostViaLinq(Options options) => IndexTimeDocumentBoost<DocIndex>(options);
-    
+
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void IndexTimeDocumentBoostViaJs(Options options) => IndexTimeDocumentBoost<JsDocIndex>(options);
-    
+
     private void IndexTimeDocumentBoost<T>(Options options, IDocumentStore defaultStore = null) where T : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(options);
@@ -234,10 +236,10 @@ public class RavenIntegration : RavenTestBase
             Assert.True(restTags.Select(i => i.Range).Contains("rachis"));
             Assert.True(restTags.Select(i => i.Range).Contains("lucene"));
             Assert.True(restTags.Select(i => i.Range).Contains("sparrow"));
-            Assert.Empty(restTags.Where(i=> i.Count != 1));
+            Assert.Empty(restTags.Where(i => i.Count != 1));
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanUseMoreLikeThisForDynamicFields(Options options)
@@ -245,27 +247,25 @@ public class RavenIntegration : RavenTestBase
         using var store = DatabaseForDynamicIndex(options);
         {
             using var session = store.OpenSession();
-            var mlt = session.Query<DtoForDynamics, DynamicIndex>().MoreLikeThis(builder => builder.UsingDocument(@"{""DynamicTag"": ""Corax""}").WithOptions(new MoreLikeThisOptions
-            {
-                Fields = new[] { "DynamicTag" },
-            })).ToList();
+            var mlt = session.Query<DtoForDynamics, DynamicIndex>().MoreLikeThis(builder =>
+                builder.UsingDocument(@"{""DynamicTag"": ""Corax""}").WithOptions(new MoreLikeThisOptions {Fields = new[] {"DynamicTag"},})).ToList();
             Assert.Equal(2, mlt.Count);
         }
     }
-    
+
     private IDocumentStore DatabaseForDynamicIndex(Options options)
     {
         var store = GetDocumentStore(options);
         {
             using var session = store.OpenSession();
-            session.Store(new DtoForDynamics(){Tag = "Corax"});
-            session.Store(new DtoForDynamics(){Tag = "Corax"});
-            session.Store(new DtoForDynamics(){Tag = "Lucene"});
-            session.Store(new DtoForDynamics(){Tag = "Rachis"});
-            session.Store(new DtoForDynamics(){Tag = "Sparrow"});
+            session.Store(new DtoForDynamics() {Tag = "Corax"});
+            session.Store(new DtoForDynamics() {Tag = "Corax"});
+            session.Store(new DtoForDynamics() {Tag = "Lucene"});
+            session.Store(new DtoForDynamics() {Tag = "Rachis"});
+            session.Store(new DtoForDynamics() {Tag = "Sparrow"});
             session.SaveChanges();
         }
-        
+
         var index = new DynamicIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store);
@@ -302,9 +302,9 @@ public class RavenIntegration : RavenTestBase
             using var session = store.OpenSession();
             var person = session.Advanced.DocumentQuery<Person>()
                 .OpenSubclause()
-                    .WhereStartsWith(i => i.Name, "mac")
-                    .OrElse()
-                    .WhereEndsWith(i => i.Name, "iej")
+                .WhereStartsWith(i => i.Name, "mac")
+                .OrElse()
+                .WhereEndsWith(i => i.Name, "iej")
                 .CloseSubclause()
                 .Boost(10)
                 .Single();
@@ -333,7 +333,7 @@ public class RavenIntegration : RavenTestBase
                 .OrElse()
                 .WhereEquals(i => i.Name, "marika")
                 .ToList();
-            
+
             var resultWithBoosting = session.Query<Person>()
                 .ToDocumentQuery()
                 .WaitForNonStaleResults()
@@ -341,14 +341,14 @@ public class RavenIntegration : RavenTestBase
                 .OrElse()
                 .WhereEquals(i => i.Name, "marika").Boost(1000)
                 .ToList();
-            
+
             Assert.Equal(resultsNoBoosting[0].Name, resultWithBoosting[1].Name);
             Assert.Equal(resultsNoBoosting[1].Name, resultWithBoosting[0].Name);
         }
     }
 
     private record Person(string Name);
-    
+
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanQueryWithLongOnDoubleField(Options options)
@@ -356,7 +356,7 @@ public class RavenIntegration : RavenTestBase
         using var store = GetDocumentStore(options);
         using (var session = store.OpenSession())
         {
-            session.Store(new Doc{Name = "Maciej", BoostFactor = 11.5f});
+            session.Store(new Doc {Name = "Maciej", BoostFactor = 11.5f});
             session.SaveChanges();
         }
 
@@ -397,7 +397,7 @@ public class RavenIntegration : RavenTestBase
         Indexes.WaitForIndexing(store);
         WaitForUserToContinueTheTest(store);
     }
-    
+
     private class SearchIndex : AbstractIndexCreationTask<DtoForDynamics>
     {
         public SearchIndex()
@@ -406,7 +406,7 @@ public class RavenIntegration : RavenTestBase
             Index(i => i.Tag, FieldIndexing.Search);
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void TermMatchCanQueryOnDoubleTermThatDoesntExists(Options options)
@@ -414,7 +414,7 @@ public class RavenIntegration : RavenTestBase
         using var store = GetDocumentStore(options);
         using (var session = store.OpenSession())
         {
-            session.Store(new Doc{Name = "Maciej", BoostFactor = 11.5f});
+            session.Store(new Doc {Name = "Maciej", BoostFactor = 11.5f});
             session.SaveChanges();
         }
 
@@ -455,16 +455,13 @@ public class RavenIntegration : RavenTestBase
     public void CanDistinguishBetweenIdMethodAndIdFieldName2(Options options)
     {
         using var store = GetDocumentStore(options);
-        var doc = new Doc()
-        {
-            Name = "maciej"
-        };
+        var doc = new Doc() {Name = "maciej"};
         using (var session = store.OpenSession())
         {
             session.Store(doc);
             session.SaveChanges();
         }
-        
+
         using (var session = store.OpenSession())
         {
             var classicId = session.Advanced.RawQuery<IdClass>($"from Docs where Name == 'maciej' and  id() == '{doc.Id}'").WaitForNonStaleResults().Count();
@@ -474,8 +471,8 @@ public class RavenIntegration : RavenTestBase
             Assert.Equal(0, classicIdViaFieldName);
         }
     }
-    
-    
+
+
     private class IdClass
     {
         public string Id { get; set; }
@@ -491,30 +488,29 @@ public class RavenIntegration : RavenTestBase
 
     private class User
     {
-
         public string Id { get; set; }
         public string Name { get; set; }
-        
+
         public Dictionary<string, string> Dict { get; set; }
     }
-    
+
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanUpdateDynamicFields(Options options)
     {
         using var store = GetDocumentStore();
-        var user = new User() {Name = "TestDoc", Dict = new Dictionary<string, string>() {{"secret_field", "maciej"}}};   
+        var user = new User() {Name = "TestDoc", Dict = new Dictionary<string, string>() {{"secret_field", "maciej"}}};
         using (var session = store.OpenSession())
         {
-            session.Store(user);  
+            session.Store(user);
             session.SaveChanges();
         }
 
         var index = new DynamicFieldIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store);
-        
+
         using (var session = store.OpenSession())
         {
             var count = session.Query<User, DynamicFieldIndex>().ToDocumentQuery().WhereEquals("secret_field", "maciej").Count();
@@ -525,6 +521,7 @@ public class RavenIntegration : RavenTestBase
             session.Store(loadDoc);
             session.SaveChanges();
         }
+
         Indexes.WaitForIndexing(store);
 
         using (var session = store.OpenSession())
@@ -534,7 +531,6 @@ public class RavenIntegration : RavenTestBase
             count = session.Query<User, DynamicFieldIndex>().ToDocumentQuery().WhereEquals("secret_field", "jan").Count();
             Assert.Equal(1, count);
         }
-
     }
 
     private class DynamicFieldIndex : AbstractIndexCreationTask<User>
@@ -542,6 +538,56 @@ public class RavenIntegration : RavenTestBase
         public DynamicFieldIndex()
         {
             Map = users => users.Select(u => new {_ = u.Dict.Select(d => CreateField(d.Key, d.Value))});
-        }   
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[]{2})]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[]{10})]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, Data = new object[]{256})]
+    public async Task CanUpdateFanout(Options options, int count)
+    {
+        using var store = GetDocumentStore(options);
+        var doc = new FanoutDto() {Data = Enumerable.Range(0, count).Select(i => i).ToList()};
+        var index = new FanoutIndex();
+        await index.ExecuteAsync(store);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(doc);
+            await session.SaveChangesAsync();
+        }
+
+        Assert.Equal(count, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, count));
+
+        using (var session = store.OpenAsyncSession())
+        {
+            doc = await session.LoadAsync<FanoutDto>(doc.Id);
+            doc.Data = doc.Data.Take(count/2).ToList(); // remove half
+
+            await session.StoreAsync(doc);
+            await session.SaveChangesAsync();
+        }
+        
+        Indexes.WaitForIndexing(store);
+        Assert.Equal(count/2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, count/2));
+    }
+
+
+    private class FanoutIndex : AbstractIndexCreationTask<FanoutDto>
+    {
+        public FanoutIndex()
+        {
+            Map = dtos => from doc in dtos
+                from num in doc.Data
+                select new {Number = num};
+        }
+    }
+
+    private class FanoutDto
+    {
+        public string Id { get; set; }
+        public int Number { get; set; }
+        public List<int> Data { get; set; }
     }
 }
