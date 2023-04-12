@@ -13,7 +13,8 @@ $filtering-input-bg: $toggle-bg !default;
     border: sizes.$border-width solid colors.$border-color-light-var;
     height: $filtering-input-baseheight;
     font-size: 0.8rem;
-    min-width: 140px;
+    min-width: 20em;
+    max-width: 40em;
     padding-left: sizes.$gutter-sm;
     padding-right: sizes.$gutter-sm;
 }

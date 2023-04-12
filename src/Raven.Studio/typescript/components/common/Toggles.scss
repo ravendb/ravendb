@@ -176,7 +176,7 @@ $multi-toggle-label-fontsize: $toggle-label-fontsize !default;
 
 $multi-toggle-baseheight: $toggle-baseheight !default;
 
-$multi-toggle-border-radius: $toggle-baseheight !default;
+$multi-toggle-border-radius: $toggle-baseheight * 0.5 !default;
 $multi-toggle-bg: $toggle-bg !default;
 $multi-toggle-color: $toggle-color !default;
 $multi-toggle-hover-color: $toggle-hover-color !default;
@@ -190,29 +190,81 @@ $multi-toggle-knob-scale: $toggle-knob-scale !default;
 
 $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
 
+$separator-margin: 3px;
+$separator-color: colors.$border-color-light-var;
+
 .multi-toggle {
+    .multi-toggle-button {
+        border-radius: $multi-toggle-baseheight sizes.$border-radius-sm sizes.$border-radius-sm $multi-toggle-baseheight;
+        background-color: transparent;
+        border: none;
+        font-size: $multi-toggle-label-fontsize;
+        padding-left: sizes.$gutter-xs;
+        padding-right: sizes.$gutter-xxs;
+
+        .label-span {
+            position: relative;
+            display: inline-block;
+            .label-clear,
+            .label-select-all {
+                transition: 0.35s sizes.$easing-rubber;
+                pointer-events: none;
+            }
+
+            .label-clear {
+                opacity: 0;
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                left: 0;
+                top: 0;
+                transform: translateY(1em);
+            }
+        }
+
+        &.clear-selected {
+            .label-select-all {
+                opacity: 0;
+                transform: translateY(-1em);
+            }
+            .label-clear {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    }
+
+    .multi-toggle-item-count {
+        margin-left: sizes.$gutter-xxs;
+        background-color: colors.$panel-bg-2-var;
+        color: colors.$text-color-var;
+        border-radius: sizes.$border-radius-lg;
+        padding: 0 sizes.$gutter-xxs;
+    }
+
     .multi-toggle-list {
         background: $multi-toggle-bg;
         border-radius: $multi-toggle-border-radius;
-        border: sizes.$border-width solid colors.$border-color-light-var;
+        border: sizes.$border-width solid $separator-color;
         display: inline-flex;
         min-height: $multi-toggle-baseheight;
         color: $multi-toggle-knob-muted-color;
-        //padding: sizes.$gutter-xxs * 0.5;
         font-weight: 700;
         flex-wrap: wrap;
+        gap: 4px;
+        padding: 4px;
 
         .vr {
-            margin: 0 1px 0 4px;
+            margin: $separator-margin 0 $separator-margin 0;
+            background-color: colors.$border-color-var;
         }
 
         .multi-toggle-item {
             display: flex;
             position: relative;
-
-            & + .multi-toggle-item {
-                margin-left: sizes.$gutter-xxs * -0.5;
-            }
 
             label {
                 display: flex;
@@ -224,7 +276,6 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
                 padding: 4px sizes.$gutter-xs;
                 position: relative;
                 transition: all 0.6s sizes.$global-easing;
-                margin: 4px;
                 white-space: nowrap;
 
                 span {
@@ -245,14 +296,6 @@ $multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
                     opacity: 0;
                     transform: scale($multi-toggle-knob-scale);
                     transition: all 0.1s sizes.$global-easing;
-                }
-
-                .multi-toggle-item-count {
-                    margin-left: sizes.$gutter-xxs;
-                    background-color: colors.$panel-bg-2-var;
-                    color: colors.$text-color-var;
-                    border-radius: sizes.$border-radius-lg;
-                    padding: 0 sizes.$gutter-xxs;
                 }
             }
 
