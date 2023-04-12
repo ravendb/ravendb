@@ -160,9 +160,9 @@ class accessManager {
 
         const requiredText = accessManager.default.getAccessLevelText(requiredAccess);
 
-        return `<div class="text-left">
-                    <h4>${title}</h4>
-                    <ul>
+        return `<div class="text-left padding-xs">
+                    <h4 class="margin-none">${title}</h4>
+                    <ul class="margin-top-xs">
                         <li>Required: <strong>${requiredText}</strong></li>
                     </ul>
                 </div>`;
