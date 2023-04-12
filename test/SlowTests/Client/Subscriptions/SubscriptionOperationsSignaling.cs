@@ -7,6 +7,7 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void CanNameAndOpenWithNameOnly()
         {
             using (var store = GetDocumentStore())
@@ -64,7 +65,7 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void WaitOnSubscriptionTaskWhenSubscriptionIsOvertaken()
         {
             using (var store = GetDocumentStore())
@@ -142,7 +143,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task WaitOnSubscriptionTaskWhenSubscriptionIsDeleted()
         {
             using (var store = GetDocumentStore())
@@ -182,7 +183,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void WaitOnSubscriptionTaskWhenSubscriptionCompleted()
         {
             using (var store = GetDocumentStore())
@@ -221,7 +222,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task WaitOnSubscriptionStopDueToSubscriberError()
         {
             using (var store = GetDocumentStore())

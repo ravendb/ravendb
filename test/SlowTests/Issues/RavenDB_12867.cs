@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
             public Dictionary<string, BlittableJsonReaderObject> D { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void CanDeserializeToBlittableDictionary()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -49,7 +50,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport)]
         public void CanRestoreSubscriptions()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

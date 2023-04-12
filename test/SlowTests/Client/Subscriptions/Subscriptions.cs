@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CreateSubscription()
         {
             using (var store = GetDocumentStore())
@@ -43,7 +44,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task BasicSusbscriptionTest()
         {
             using (var store = GetDocumentStore())
@@ -82,7 +83,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionStrategyConnectIfFree()
         {
             using (var store = GetDocumentStore())
@@ -149,7 +150,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionWaitStrategy()
         {
             using (var store = GetDocumentStore())
@@ -236,7 +237,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionSimpleTakeOverStrategy()
         {
             using (var store = GetDocumentStore())
@@ -327,7 +328,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void CanDisableSubscription()
         {
             using (var store = GetDocumentStore())
@@ -346,7 +347,7 @@ namespace SlowTests.Client.Subscriptions
             public string Error { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task Subscription_WhenFilteredByNull_ShouldWork()
         {
             const string id = "A1";

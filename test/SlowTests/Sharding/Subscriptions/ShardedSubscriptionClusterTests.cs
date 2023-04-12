@@ -27,7 +27,7 @@ namespace SlowTests.Sharding.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(3000);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task CanRunShardedSubscriptionInCluster()
         {
             var db = GetDatabaseName();
@@ -74,7 +74,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task SubscriptionShouldTryConnectWithTimeoutIfShardUnavailable()
         {
             int rf = 1;
@@ -210,7 +210,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task SubscriptionShouldFailoverIfNodeIsDownButShardIsAvailable()
         {
             int rf = 2;

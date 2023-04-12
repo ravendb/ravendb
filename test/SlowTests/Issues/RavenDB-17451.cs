@@ -8,6 +8,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Core.AdminConsole;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -89,7 +90,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanDisableTcpCompressionViaConfiguration_SubscriptionsTest()
         {
             var server = GetNewServer(new ServerCreationOptions
@@ -157,7 +158,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanDisableTcpCompressionOnTheClientViaStoreConventions()
         {
             var server = GetNewServer(new ServerCreationOptions

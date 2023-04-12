@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
 
         private readonly TimeSpan _waitForDocTimeout = TimeSpan.FromMinutes(4);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void AllClientsWith_WaitForFree_StrategyShouldGetAccessToSubscription()
         {
             using (var store = GetDocumentStore())

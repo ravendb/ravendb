@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +31,7 @@ namespace SlowTests.Issues
 #pragma warning restore 414
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUseSubscriptionWithTcpProtocol40()
         {
             using (var store = GetDocumentStore())
@@ -68,7 +69,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CannotUseSubscriptionWithIncludesWhenProtocolDoesNotSupportIt()
         {
             using (var store = GetDocumentStore())

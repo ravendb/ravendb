@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Client.Subscriptions
     {
         public RavenDB_16944(ITestOutputHelper output) : base(output) { }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void SubscriptionIsDisabledWhenCreatedAsDisabled()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +42,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void SubscriptionIsEnabledWhenCreatedWithoutPassingDisabledArg()
         {
             using (var store = GetDocumentStore())

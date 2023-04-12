@@ -8,6 +8,7 @@ using Orders;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(30);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
         public void DeleteRevisionShouldReturnNullCurrent()
         {
             using (var store = GetDocumentStore())

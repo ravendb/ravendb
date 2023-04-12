@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,7 +50,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionTypedCreationOptionsShouldSupportConstantValuesWithIndirectPath()
         {
             using (var store = GetDocumentStore())
@@ -58,7 +59,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionTypedCreationOptionsShouldSupportConstantValuesWithIndirectPathAndSaveEnumsAsIntegers()
         {
             using (var store = GetDocumentStore(new Options

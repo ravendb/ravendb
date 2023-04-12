@@ -4,6 +4,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Subscriptions;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +31,7 @@ namespace SlowTests.Issues
 #pragma warning restore 414
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUseSubscriptionWithIncludes()
         {
             using (var store = GetDocumentStore())
@@ -79,7 +80,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
         public async Task CanUseSubscriptionRevisionsWithIncludes()
         {
             using (var store = GetDocumentStore())
@@ -149,7 +150,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
         public async Task CanUseSubscriptionRevisionsWithIncludesViaJavaScript()
         {
             using (var store = GetDocumentStore())
@@ -226,7 +227,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUseSubscriptionWithIncludesViaJavaScript()
         {
             using (var store = GetDocumentStore())

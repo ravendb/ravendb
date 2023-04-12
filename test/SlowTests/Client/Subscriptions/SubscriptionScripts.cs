@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleAny()
         {
             using (var store = GetDocumentStore())
@@ -51,20 +52,21 @@ namespace SlowTests.Client.Subscriptions
                         {
                             "this is annoying"
                         }
-                    });                    
+                    });
 
                     await session.SaveChangesAsync();
                 }
-                
 
-                
+
+
                 var id = await store.Subscriptions.CreateAsync<SupportCall>(
                     call => call.Name == "James" && call.Comments.Any(comment => comment.Contains("annoying"))
                     );
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -80,7 +82,7 @@ namespace SlowTests.Client.Subscriptions
 
                     Assert.True(users.TryTake(out SupportCall call, 5000));
                     Assert.Equal("James", call.Name);
-                    Assert.Equal(2, call.SupportCallNumber);                   
+                    Assert.Equal(2, call.SupportCallNumber);
                     Assert.False(users.TryTake(out call, 50));
 
 
@@ -88,7 +90,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleAll()
         {
             using (var store = GetDocumentStore())
@@ -128,14 +130,15 @@ namespace SlowTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                
-                
+
+
                 var id = await store.Subscriptions.CreateAsync<SupportCall>(
                     call => call.Name == "James" && call.Comments.All(comment => comment.Contains("nice")));
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -159,7 +162,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleAll_Nested()
         {
             using (var store = GetDocumentStore())
@@ -181,7 +184,7 @@ namespace SlowTests.Client.Subscriptions
                             {
                                 new Node { Name = "x"},
                                 new Node { Name = "y"}
-                            }}                            
+                            }}
                         }
                     });
 
@@ -220,7 +223,8 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<Node>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<Node>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -241,7 +245,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleWhere()
         {
             using (var store = GetDocumentStore())
@@ -280,16 +284,17 @@ namespace SlowTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-                
 
-                
+
+
                 var id = await store.Subscriptions.CreateAsync<SupportCall>(
                     call => call.Comments.Where(comment => comment.Contains("nice")).All(comment => comment.Contains("very"))
                     );
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -313,7 +318,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleSelect()
         {
             using (var store = GetDocumentStore())
@@ -398,7 +403,8 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -412,10 +418,10 @@ namespace SlowTests.Client.Subscriptions
                         }
                     }));
 
-                    var matches = new List<(string, int)> { ("James", 2) , ("Aviv", 3)};
+                    var matches = new List<(string, int)> { ("James", 2), ("Aviv", 3) };
 
                     Assert.True(users.TryTake(out SupportCall call, 5000));
-                    Assert.True(matches.Remove((call.Name , call.SupportCallNumber)));
+                    Assert.True(matches.Remove((call.Name, call.SupportCallNumber)));
                     Assert.True(users.TryTake(out call, 5000));
                     Assert.True(matches.Remove((call.Name, call.SupportCallNumber)));
                     Assert.False(users.TryTake(out call, 50));
@@ -424,7 +430,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleBooleanConstantsAndCount()
         {
             //RavenDB-7866
@@ -479,7 +485,8 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -500,7 +507,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleCountAsProperty()
         {
             using (var store = GetDocumentStore())
@@ -556,7 +563,8 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -577,7 +585,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleDates_Today()
         {
             using (var store = GetDocumentStore())
@@ -604,14 +612,15 @@ namespace SlowTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-                
+
                 var id = await store.Subscriptions.CreateAsync<SupportCall>(
                     call => call.Started > DateTime.Today
                     );
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -632,7 +641,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleDates_Now()
         {
             using (var store = GetDocumentStore())
@@ -659,7 +668,7 @@ namespace SlowTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-                
+
 
                 var id = await store.Subscriptions.CreateAsync<SupportCall>(
                     call => call.Started < DateTime.Now
@@ -667,7 +676,8 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -688,7 +698,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleDates_UtcNow()
         {
             using (var store = GetDocumentStore())
@@ -716,14 +726,15 @@ namespace SlowTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-                
+
                 var id = await store.Subscriptions.CreateAsync<SupportCall>(
                     call => call.Started > DateTime.UtcNow
                     );
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -744,7 +755,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleDates_New()
         {
             using (var store = GetDocumentStore())
@@ -771,14 +782,15 @@ namespace SlowTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-                
+
                 var id = await store.Subscriptions.CreateAsync<SupportCall>(
                     call => call.Started < new DateTime(1990, 1, 1)
                     );
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -799,7 +811,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleDates_Year()
         {
             using (var store = GetDocumentStore())
@@ -833,7 +845,8 @@ namespace SlowTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
@@ -854,7 +867,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanHandleNestedDates()
         {
             using (var store = GetDocumentStore())
@@ -866,7 +879,7 @@ namespace SlowTests.Client.Subscriptions
                         Name = "Michael",
                         Person = new Person
                         {
-                            DateOfBirth = new DateTime(1983 , 1, 1)
+                            DateOfBirth = new DateTime(1983, 1, 1)
                         }
                     });
 
@@ -890,14 +903,15 @@ namespace SlowTests.Client.Subscriptions
 
                     await session.SaveChangesAsync();
                 }
-                
+
                 var id = await store.Subscriptions.CreateAsync<SupportCall>(
                     call => call.Person.DateOfBirth < new DateTime(1984, 1, 1)
                     );
 
                 using (
                     var subscription =
-                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id) {
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)
+                        {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                         }))
                 {
