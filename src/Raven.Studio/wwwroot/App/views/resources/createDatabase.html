@@ -145,7 +145,11 @@
                     <span class="help-block" data-bind="validationMessage: $data.directoryPath"></span>
                 </div>
 
-                <button type="button" class="btn btn-danger margin-left-xs" data-bind="click: $parent.removeShardingDirectoryPath.bind($parent, $index())">
+                <button
+                    type="button"
+                    class="btn btn-danger margin-left-xs"
+                    data-bind="visible: $index() !== 0, click: $parent.removeShardingDirectoryPath.bind($parent, $index())"
+                >
                     <i class="icon-trash"></i>
                 </button>
             </div>
@@ -524,10 +528,7 @@
                                                 data-bind="visible: $root.databaseModel.restore.enableSharding"
                                                 class="files flex-horizontal"
                                             >
-                                                <span data-bind="style: { 'color': availableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }">[ </span>
-                                                <span data-bind="text: availableShards.map(x => x.shardNumber).join(', '), style: { 'color': availableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"></span>
-                                                <span data-bind="style: { 'color': availableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"> ]</span>
-
+                                                <span data-bind="text: '[' + availableShards.map(x => x.shardNumber).join(', ') + ']', style: { 'color': availableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"></span>
                                             </div>
                                             <div class="files" data-bind="text: filesToRestore.toLocaleString()"></div>
                                         </div>

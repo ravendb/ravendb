@@ -397,13 +397,6 @@ class databaseCreationModel {
         this.path.dataPathHasFocus(true);
     }
 
-    getShardNumberFormLocationFolder(locationFolder: string): number {
-        const dollarIndex = locationFolder.indexOf("$");
-        const dashIndex = locationFolder.indexOf("-", dollarIndex);
-
-        return Number(locationFolder.substring(dollarIndex + 1, dashIndex));
-    }
-
     getRestorePointGroup(groups: RestorePointsGroup[], databaseName: string): RestorePointsGroup {
         return groups.find(x => x.databaseName === databaseName);
     }
