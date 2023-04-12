@@ -94,5 +94,37 @@ unsafe partial struct SortingMatch
 
             return -1;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(ref Item ix, ref Item iy)
+        {
+            if (ix.Key > 0 && iy.Key > 0)
+            {
+                if (typeof(TW) == typeof(SequenceItem))
+                {
+                    return _comparer.CompareSequence(
+                        new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
+                        new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
+                }
+                else if (typeof(TW) == typeof(NumericalItem<long>))
+                {
+                    return _comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
+                }
+                else if (typeof(TW) == typeof(NumericalItem<double>))
+                {
+                    return _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
+                }
+                else if (typeof(TW) == typeof(NumericalItem<float>))
+                {
+                    return _comparer.CompareNumerical(((NumericalItem<float>)(object)ix.Value).Value, ((NumericalItem<float>)(object)iy.Value).Value);
+                }
+            }
+            else if (ix.Key > 0)
+            {
+                return 1;
+            }
+
+            return -1;
+        }
     }
 }

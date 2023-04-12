@@ -23,7 +23,6 @@ namespace Corax.Queries
         private IQueryMatch _inner;        
         private readonly TComparer _comparer;
         private readonly int _take;
-        private readonly bool _isScoreComparer;
         private readonly delegate*<ref SortingMatch<TInner, TComparer>, Span<long>, int> _fillFunc;
 
         private const int NotStarted = -1;
@@ -42,7 +41,6 @@ namespace Corax.Queries
             _inner = inner;
             _take = take;
             _comparer = comparer;
-            _isScoreComparer = typeof(TComparer) == typeof(BoostingComparer);
             _bufferUsedCount = NotStarted;
             _currentIdx = NotStarted;
 
@@ -50,19 +48,17 @@ namespace Corax.Queries
 
             if (typeof(TComparer) == typeof(BoostingComparer))
             {
-                // TODO: Maciej the old Fill would just return the values in inserting order and the tests are checking that. 
-                _fillFunc = &FillAdv<Fetcher, NumericalItem<float>>;
-                //_fillFunc = &Fill<BoostingSorting>;
+                _fillFunc = &Fill<Fetcher, NumericalItem<float>>;
             }
             else
             {
                 _fillFunc = _comparer.FieldType switch
                 {
-                    MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric => &FillAdv<Fetcher,SequenceItem>,
-                    MatchCompareFieldType.Integer => &FillAdv<Fetcher, NumericalItem<long>>,
-                    MatchCompareFieldType.Floating => &FillAdv<Fetcher, NumericalItem<double>>,
-                    MatchCompareFieldType.Spatial => &FillAdv<Fetcher, NumericalItem<double>>,
-                    MatchCompareFieldType.Score => &FillAdv<Fetcher, NumericalItem<double>>,
+                    MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric => &Fill<Fetcher,SequenceItem>,
+                    MatchCompareFieldType.Integer => &Fill<Fetcher, NumericalItem<long>>,
+                    MatchCompareFieldType.Floating => &Fill<Fetcher, NumericalItem<double>>,
+                    MatchCompareFieldType.Spatial => &Fill<Fetcher, NumericalItem<double>>,
+                    MatchCompareFieldType.Score => &Fill<Fetcher, NumericalItem<double>>,
                     _ => throw new ArgumentOutOfRangeException(_comparer.FieldType.ToString())
                 };
             }
@@ -83,7 +79,7 @@ namespace Corax.Queries
                 where TOut : struct
             {
                 if (typeof(TIn) == typeof(BoostingComparer))
-                    throw new NotSupportedException($"Boosting fetching is done by the main {nameof(FillAdv)} method.");
+                    throw new NotSupportedException($"Boosting fetching is done by the main {nameof(Fill)} method.");
 
                 var reader = searcher.GetEntryReaderFor(entryId);
 
@@ -161,13 +157,15 @@ namespace Corax.Queries
             }
         }
 
-        private static int FillAdv<TFetcher, TOut>(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
+        private static int Fill<TFetcher, TOut>(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
             where TFetcher : struct, IFetcher
             where TOut : struct
         {
             var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
 
             ByteStringContext<ByteStringMemoryCache>.InternalScope bufferHandler = default;
+
+            ref var matchesRef = ref MemoryMarshal.GetReference(matches);
 
             // This method should also be re-entrant for the case where we have already pre-sorted everything and 
             // we will just need to acquire via pages the totality of the results. 
@@ -213,13 +211,16 @@ namespace Corax.Queries
                 // Since we are doing boosting, we need to score the matches so we can use them later. 
                 if (typeof(TComparer) == typeof(BoostingComparer))
                 {
-                    Debug.Assert(scores.Length == totalMatches);
+                    
+                    Debug.Assert(scores.Length == matches.Length);
+
+                    var readScores = scores[..read];
                     
                     // We have to initialize the score buffer with a positive number to ensure that multiplication (document-boosting) is taken into account when BM25 relevance returns 0 (for example, with AllEntriesMatch).
-                    scores[..read].Fill(Bm25Relevance.InitialScoreValue);
+                    readScores.Fill(Bm25Relevance.InitialScoreValue);
 
                     // We perform the scoring process. 
-                    match._inner.Score(matches[..read], scores[..read], 1f);
+                    match._inner.Score(matches[..read], readScores, 1f);
 
                     // If we need to do documents boosting then we need to modify the based on documents stored score. 
                     if (match._searcher.DocumentsAreBoosted)
@@ -229,14 +230,15 @@ namespace Corax.Queries
                         if (tree is { NumberOfEntries: > 0 })
                         {
                             // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
+                            ref var scoresRef = ref MemoryMarshal.GetReference(scores);
                             for (int idx = 0; idx < totalMatches; idx++)
                             {
-                                var ptr = (float*)tree.ReadPtr(matches[idx], out var _);
+                                var ptr = (float*)tree.ReadPtr(Unsafe.Add(ref matchesRef, idx), out var _);
                                 if (ptr == null)
                                     continue;
 
-                                scores[idx] *= *ptr;
-                            }
+                                ref var scoresIdx = ref Unsafe.Add(ref scoresRef, idx);
+                                scoresIdx *= *ptr;                            }
                         }
                     }
                 }
@@ -251,9 +253,13 @@ namespace Corax.Queries
                     items = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(new Span<byte>(match._buffer, match._bufferSize));
                 }
 
+                ref var itemsRef = ref MemoryMarshal.GetReference(items);
+                ref var itemsLast = ref items[^1];
+
+                MatchComparer<TComparer, TOut>.Item cur = default;
                 for (int i = 0; i < read; i++)
                 {
-                    var cur = new MatchComparer<TComparer, TOut>.Item { Key = matches[i], };
+                    cur.Key = matches[i];
                     if (typeof(TComparer) == typeof(BoostingComparer))
                     {
                         // Since we are boosting, we can get the value straight from the scores array.
@@ -267,18 +273,20 @@ namespace Corax.Queries
 
                     if (index < items.Length)
                     {
-                        items[index++] = cur;
+                        ref var itemPtr = ref Unsafe.Add(ref itemsRef, index);
+                        itemPtr = cur;
+                        index++;
                     }
                     else if (comparer.Compare(items[^1], cur) > 0)
                     {
-                        items[^1] = cur;
+                        itemsLast = cur;
                     }
                     else
                     {
                         continue;
                     }
 
-                    HeapUp(items, index - 1);
+                    HeapUp(ref itemsRef, index - 1);
                 }
             }
             match._bufferUsedCount = index;
@@ -287,12 +295,14 @@ namespace Corax.Queries
             items = new Span<MatchComparer<TComparer, TOut>.Item>(match._buffer, match._bufferUsedCount);
 
             int matchesToReturn = Math.Min(match._bufferUsedCount, matches.Length);
+            ref var itemsStart = ref MemoryMarshal.GetReference(items);
             for (int i = 0; i < matchesToReturn; i++)
             {
                 // We are getting the top element because this is a heap and the top element is the one that is
                 // going to be removed. Then the rest of the element will be pushed up to find the new top.
-                matches[i] = items[0].Key;
-                HeapDown(items, match._bufferUsedCount - i - 1);
+                ref var matchIdxPtr = ref Unsafe.Add(ref matchesRef, i);
+                matchIdxPtr = itemsStart.Key;
+                HeapDown(ref itemsStart, match._bufferUsedCount - i - 1);
             }
             match._bufferUsedCount -= matchesToReturn;
 
@@ -301,42 +311,44 @@ namespace Corax.Queries
             return matchesToReturn;
             
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void HeapUp(Span<MatchComparer<TComparer, TOut>.Item> items, int current)
+            void HeapUp(ref MatchComparer<TComparer, TOut>.Item itemsStart, int current)
             {
                 while (current > 0)
                 {
                     var parent = (current - 1) / 2;
-                    if (comparer.Compare(items[parent], items[current]) <= 0)
+                    ref var parentItem = ref Unsafe.Add(ref itemsStart, parent);
+                    ref var currentItem = ref Unsafe.Add(ref itemsStart, current);
+                    if (comparer.Compare(ref parentItem, ref currentItem) <= 0)
                         break;
-
-                    (items[parent], items[current]) = (items[current], items[parent]);
+                        
+                    (parentItem, currentItem) = (currentItem, parentItem);
                     current = parent;
                 }
             }
             
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void HeapDown(Span<MatchComparer<TComparer, TOut>.Item> items, int heapMaxIndex)
+            void HeapDown(ref MatchComparer<TComparer, TOut>.Item itemsPtr, int heapMaxIndex)
             {
-                items[0] = items[heapMaxIndex];
+                itemsPtr = Unsafe.Add(ref itemsPtr, heapMaxIndex);
                 var current = 0;
                 int childIdx;
                 
-                int GetChildIndex(int idx) => 2 * idx + 1;
-                
-                while ((childIdx = GetChildIndex(current)) < heapMaxIndex)
+                while ((childIdx = 2 * current + 1) < heapMaxIndex)
                 {
                     if (childIdx + 1 < heapMaxIndex)
                     {
-                        if (comparer.Compare(items[childIdx], items[childIdx + 1]) > 0)
+                        if (comparer.Compare(ref Unsafe.Add(ref itemsPtr, childIdx), ref Unsafe.Add(ref itemsPtr, childIdx+1)) > 0)
                         {
                             childIdx++;
                         }
                     }
                     
-                    if (comparer.Compare(items[current], items[childIdx]) <= 0)
+                    ref var currentPtr = ref Unsafe.Add(ref itemsPtr, current);
+                    ref var childPtr = ref Unsafe.Add(ref itemsPtr, childIdx);
+                    if (comparer.Compare(ref currentPtr, ref childPtr) <= 0)
                         break;
                 
-                    (items[current], items[childIdx]) = (items[childIdx], items[current]);
+                    (currentPtr, childPtr) = (childPtr, currentPtr);
                     current = childIdx;
                 }
             }
@@ -346,7 +358,7 @@ namespace Corax.Queries
 
         public QueryCountConfidence Confidence => throw new NotSupportedException();
 
-        public bool IsBoosting => _inner.IsBoosting || _isScoreComparer;
+        public bool IsBoosting => _inner.IsBoosting || typeof(TComparer) == typeof(BoostingComparer);
 
         public int AndWith(Span<long> buffer, int matches)
         {
@@ -381,190 +393,7 @@ namespace Corax.Queries
             _bufferHandler = bufferHandler;
         }
 
-        private interface IItemSorter
-        {
-            int Execute(ref SortingMatch<TInner, TComparer> match, Span<long> matches);
-        }
-
-
-
-        private struct ItemSorting<TOut> : IItemSorter
-            where TOut : struct
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static bool Get<TIn>(IndexSearcher searcher, FieldMetadata binding, long entryId, out TOut storedValue, in TIn comparer)
-                where TIn : IMatchComparer
-            {
-                var fieldReader = searcher
-                    .GetEntryReaderFor(entryId)
-                    .GetFieldReaderFor(binding);
-                
-                if (fieldReader.Type is IndexEntryFieldType.Null)
-                    goto Failed;
-
-                if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
-                {
-                    if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
-                        goto Failed;
-
-                    var readX = fieldReader.Read(out (double lat, double lon) coordinates);
-                    if (readX == false)
-                        goto Failed;
-                        
-                    var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
-
-                    storedValue = (TOut)(object)new NumericalItem<double>(distance);
-                    return readX;
-                }
-                else if (typeof(TIn) == typeof(SpatialDescendingMatchComparer))
-                {
-                    if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
-                        goto Failed;
-
-                    var readX = fieldReader.Read(out (double lat, double lon) coordinates);
-                    if (readX == false)
-                        goto Failed;
-                    
-                    var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
-
-                    storedValue = (TOut)(object)new NumericalItem<double>(distance);
-                    return readX;
-                }
-                else if (typeof(TOut) == typeof(SequenceItem))
-                {
-                    var readX = fieldReader.Read(out var sv);
-                    if (readX == false)
-                        goto Failed;
-                    
-                    fixed (byte* svp = sv)
-                    {
-                        storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
-                    }
-                    return readX;
-                }
-                else if (typeof(TOut) == typeof(NumericalItem<long>))
-                {
-                    var readX = fieldReader.Read<long>(out var value);
-                    if (fieldReader.Type is not IndexEntryFieldType.Tuple || readX == false)
-                        goto Failed;
-                    
-                    storedValue = (TOut)(object)new NumericalItem<long>(value);
-                    return readX;
-                }
-                else if (typeof(TOut) == typeof(NumericalItem<double>))
-                {
-                    var readX = fieldReader.Read<double>(out var value);
-                    if (fieldReader.Type is not IndexEntryFieldType.Tuple || readX == false)
-                        goto Failed;
-                    
-                    storedValue = (TOut)(object)new NumericalItem<double>(value);
-                    return readX;
-                }
-
-                Failed:
-                Unsafe.SkipInit(out storedValue);
-                return false;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int Execute(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
-            {
-                // PERF: This method assumes that we need to perform sorting of the whole set (even if we have a take statement).
-                // However, there is space to improve this further doing iterative sorting with element discarding in cases where
-                // take statements requires us to remove lots of elements. While we are not going to perform this optimization yet
-                // sorting is a costly primitive that if we can avoid it, would provide us a great opportunity for improvement. 
-
-                // It may happen that multiple calls to `.Fill()` would require us to remove duplicates. While sorting is not 
-                // required at this stage, to remove duplicates we need to sort anyways as we want to avoid further work down the line.
-                var totalMatches = Sorting.SortAndRemoveDuplicates(matches);
-
-                int itemArraySize = Unsafe.SizeOf<MatchComparer<TComparer, TOut>.Item>() * totalMatches;
-                using var _ = match._searcher.Allocator.Allocate(itemArraySize, out var bufferHolder);
-
-                var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(bufferHolder.ToSpan().Slice(0, itemArraySize));
-                Debug.Assert(itemKeys.Length == totalMatches);
-
-                var searcher = match._searcher;
-                var field = match._comparer.Field;
-                var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
-                var indexContainsField = false;
-                for (int i = 0; i < totalMatches; i++)
-                {
-                    var read = Get(searcher, field, matches[i], out itemKeys[i].Value, match._comparer);
-                    itemKeys[i].Key = read ? matches[i] : -matches[i];
-                    indexContainsField |= read;
-                }
-
-                // We sort the the set
-                if (indexContainsField)
-                {
-                    var sorter = new Sorter<MatchComparer<TComparer, TOut>.Item, long, MatchComparer<TComparer, TOut>>(comparer);
-                    sorter.Sort(itemKeys, matches[0..totalMatches]);
-                }
-
-                // We have a take statement so we are only going to care about the highest priority elements. 
-                if (match._take > 0)
-                    totalMatches = Math.Min(totalMatches, match._take);
-
-                return totalMatches;
-            }
-        }
-
-        private struct BoostingSorting : IItemSorter
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int Execute(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
-            {
-                // PERF: This method assumes that we need to perform sorting of the whole set (even if we have a take statement).
-                // However, there is space to improve this further doing iterative sorting with element discarding in cases where
-                // take statements requires us to remove lots of elements. While we are not going to perform this optimization yet
-                // sorting is a costly primitive that if we can avoid it, would provide us a great opportunity for improvement. 
-
-                // It may happen that multiple calls to `.Fill()` would require us to remove duplicates. While sorting is not 
-                // required at this stage, to remove duplicates we need to sort anyways as we want to avoid further work down the line. 
-                var totalMatches = Sorting.SortAndRemoveDuplicates(matches);
-
-                int scoresArraySize = sizeof(float) * totalMatches;
-                using var _ = match._searcher.Allocator.Allocate( scoresArraySize, out var bufferHolder);
-
-                var scores = MemoryMarshal.Cast<byte, float>(bufferHolder.ToSpan());
-                Debug.Assert(scores.Length == totalMatches);
-                scores.Fill(Bm25Relevance.InitialScoreValue);
-                
-                // We perform the scoring process. 
-                match._inner.Score(matches[0..totalMatches], scores, 1f);
-
-                // If we need to do documents boosting then we need to modify the based on documents stored score. 
-                if (match._searcher.DocumentsAreBoosted)
-                {
-                    // We get the boosting tree and go to check every document. 
-                    var tree = match._searcher.GetDocumentBoostTree();
-                    if (tree is { NumberOfEntries: > 0 })
-                    {
-                        // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
-                        for (int idx = 0; idx < totalMatches; idx++)
-                        {
-                            var ptr = (float*)tree.ReadPtr(matches[idx], out var _);
-                            if (ptr == null)
-                                continue;
-
-                            scores[idx] *= *ptr;
-                        }
-                    }
-                }
-
-                // Before returning we want the return the matches in score order. 
-                var sorter = new Sorter<float, long, NumericDescendingComparer>();
-                sorter.Sort(scores, matches[0..totalMatches]);
-
-                // We have a take statement so we are only going to care about the highest priority elements. 
-                if (match._take > 0)
-                    totalMatches = Math.Min(totalMatches, match._take);
-
-                return totalMatches;
-            }
-        }
-
+      
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int Fill<TSorter>(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
             where TSorter : struct, IItemSorter
