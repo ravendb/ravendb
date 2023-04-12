@@ -25,6 +25,7 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Cluster;
 using Sparrow.Json;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
 using Xunit.Abstractions;
@@ -480,12 +481,12 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [RavenTheory(RavenTestCategory.Subscriptions)]
         public async Task SingleSubscriptionMixedClusterEnsureDocumentResend54()
         {
             var proccess526List = await CreateCluster(new string[] { "5.4.101", "5.4.101" });
             await UpgradeServerAsync("current", proccess526List[0]);
-            
+
             using (var store53 = await GetStore(proccess526List[0].Url, proccess526List[0].Process, null,
                        new InterversionTestOptions() { ReplicationFactor = 2, CreateDatabase = true }))
             {
@@ -558,7 +559,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [RavenTheory(RavenTestCategory.Subscriptions)]
         public async Task SingleSubscriptionMixedClusterStartAgainFromSpecificChangeVector()
         {
             var proccess526List = await CreateCluster(new string[] { "5.4.101", "5.4.101" });
@@ -629,7 +630,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [RavenTheory(RavenTestCategory.Subscriptions)]
         public async Task SingleSubscriptionMixedClusterV54StartAgainFromSpecificChangeVector()
         {
             var proccess541List = await CreateCluster(new string[] { "5.4.101", "5.4.101" });
@@ -982,7 +983,7 @@ namespace InterversionTests
         public async Task ClusterTcpCompressionTest()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
-            var (leader, peers, local) = await CreateMixedCluster(new [] { "5.4.0", "5.4.0", "5.4.0" }, watcherCluster: true);
+            var (leader, peers, local) = await CreateMixedCluster(new[] { "5.4.0", "5.4.0", "5.4.0" }, watcherCluster: true);
             await UpgradeServerAsync("current", peers[0]);
             var database = GetDatabaseName();
             var (disposable, stores) = await GetStores(database, peers);
@@ -1237,7 +1238,7 @@ namespace InterversionTests
 
         }
 
-        [Fact(Skip = "WIP")]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions, Skip = "WIP")]
 
         public async Task MixedCluster_DistributedRevisionsSubscription()
         {

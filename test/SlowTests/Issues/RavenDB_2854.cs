@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ namespace SlowTests.Issues
             public bool Cute { get; set; }
         }
 
-        [Fact]
-        public void CanGetCountWithoutGettingAllTheData()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetCountWithoutGettingAllTheData(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -30,10 +32,12 @@ namespace SlowTests.Issues
                 }
             }
         }
-        [Fact]
-        public async Task CanGetCountWithoutGettingAllTheDataAsync()
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetCountWithoutGettingAllTheDataAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenAsyncSession())
                 {
@@ -43,10 +47,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanGetCountWithoutGettingAllTheDataLazy()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetCountWithoutGettingAllTheDataLazy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var s = store.OpenSession())
@@ -59,10 +64,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanGetCountWithoutGettingAllTheDataLazyAsync()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetCountWithoutGettingAllTheDataLazyAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenAsyncSession())
                 {

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUseInOnMetadataInSubscription()
         {
             using var store = GetDocumentStore();
@@ -65,7 +66,7 @@ where doc.'@metadata'.'@collection' in ('Items','Users')"
             Assert.Equal(2, items);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUseMetadataUsingOr()
         {
             using var store = GetDocumentStore();

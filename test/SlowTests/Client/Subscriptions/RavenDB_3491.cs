@@ -8,6 +8,7 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _waitForDocTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscribtionWithEtag()
         {
             using (var store = GetDocumentStore())
@@ -52,7 +53,8 @@ namespace SlowTests.Client.Subscriptions
 
                     var users = new List<dynamic>();
 
-                    using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id) {
+                    using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                    {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     }))
                     {
@@ -106,7 +108,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task StronglyTypedSubscribtionWithStartEtag()
         {
             using (var store = GetDocumentStore())
@@ -135,7 +137,8 @@ namespace SlowTests.Client.Subscriptions
 
                     var users = new List<User>();
 
-                    using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id) {
+                    using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
+                    {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     }))
                     {
@@ -190,7 +193,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscribtionWithEtag_MultipleOpens()
         {
             using (var store = GetDocumentStore())
@@ -221,8 +224,9 @@ namespace SlowTests.Client.Subscriptions
                     subscriptionName = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                     var users = new List<dynamic>();
-                    
-                    using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName) {
+
+                    using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName)
+                    {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
 
                     }))
@@ -294,9 +298,10 @@ namespace SlowTests.Client.Subscriptions
                     }
                 }
 
-                Assert.True(Task.WaitAll(new[] {subscriptionReleasedAwaiter}, 250));
-                
-                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName) {
+                Assert.True(Task.WaitAll(new[] { subscriptionReleasedAwaiter }, 250));
+
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
@@ -305,7 +310,7 @@ namespace SlowTests.Client.Subscriptions
                     {
                         docs.Add((x));
                     }));
-                    
+
                     dynamic item;
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
                     Assert.False(tryTake);

@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ public class RavenDB_19544 : RavenTestBase
     {
     }
 
-    [Fact]
-    public async Task CanGetSpatialDistanceOnIndex_MapReduce()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task CanGetSpatialDistanceOnIndex_MapReduce(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             await store.ExecuteIndexAsync(new MapReduceRestoIndex());
 
@@ -53,10 +55,11 @@ public class RavenDB_19544 : RavenTestBase
     }
 
 
-    [Fact]
-    public async Task CanGetSpatialDistanceOnIndex_Map()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanGetSpatialDistanceOnIndex_Map(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             await store.ExecuteIndexAsync(new RestoIndex());
 

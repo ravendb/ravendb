@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,16 +17,16 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Can_query_after_the_superseded_auto_index_was_deleted()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_query_after_the_superseded_auto_index_was_deleted(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDatabaseRecord = record =>
             {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
-                }
-            }))
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

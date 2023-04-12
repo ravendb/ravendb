@@ -16,8 +16,8 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task TestIdQueryTest(Options options)
         {
             using (var store = GetDocumentStore(options))

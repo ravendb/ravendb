@@ -26,7 +26,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task Should_Retry_When_DatabaseDisabledException_Was_Thrown()
         {
             using var store = GetDocumentStore(new Options()
@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                 ReplicationFactor = 1,
                 RunInMemory = false
             });
-            
+
             string id = "User/33-A";
             using (var session = store.OpenAsyncSession())
             {
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                 {
                     Name = "BackgroundSubscriptionWorker"
                 });
-            
+
             using var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("BackgroundSubscriptionWorker"));
 
             // disable database
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                 }
             };
             var successMre = new ManualResetEvent(false);
-            var _ = worker.Run( batch =>
+            var _ = worker.Run(batch =>
             {
                 successMre.Set();
             }, cts.Token);
@@ -79,7 +79,7 @@ namespace SlowTests.Issues
             Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task Should_Retry_When_AllTopologyNodesDownException_Was_Thrown()
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, shouldRunInMemory: false);
@@ -119,7 +119,7 @@ namespace SlowTests.Issues
                 }
             };
             var successMre = new ManualResetEvent(false);
-            var _ = worker.Run( batch =>
+            var _ = worker.Run(batch =>
             {
                 successMre.Set();
             }, cts.Token);
@@ -144,7 +144,7 @@ namespace SlowTests.Issues
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task Should_Throw_DatabaseDisabledException_When_MaxErroneousPeriod_Was_Passed()
         {
             using var store = GetDocumentStore(new Options()
@@ -199,7 +199,7 @@ namespace SlowTests.Issues
             Assert.True(subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task Should_Throw_AllTopologyNodesDownException_When_MaxErroneousPeriod_Was_Passed()
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, shouldRunInMemory: false);
@@ -233,8 +233,8 @@ namespace SlowTests.Issues
             var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(nodes[1]);
 
             var cts = new CancellationTokenSource();
-            
-            var aggregateException = await Assert.ThrowsAsync<AggregateException>( () => worker.Run(batch => { }, cts.Token));
+
+            var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => worker.Run(batch => { }, cts.Token));
             var actualExceptionWasThrown = false;
             var subscriptionInvalidStateExceptionWasThrown = false;
             foreach (var e in aggregateException.InnerExceptions)

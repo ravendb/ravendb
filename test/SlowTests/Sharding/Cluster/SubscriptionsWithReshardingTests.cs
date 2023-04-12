@@ -32,7 +32,7 @@ namespace SlowTests.Sharding.Cluster
             await SubscriptionWithResharding(store);
         }
 
-        [RavenFact(RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task GetDocumentOnce()
         {
             using var store = Sharding.GetDocumentStore();
@@ -51,10 +51,10 @@ namespace SlowTests.Sharding.Cluster
             var id = await store.Subscriptions.CreateAsync<User>();
             var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
-                         {
-                             MaxDocsPerBatch = 5, 
-                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
-                         }))
+            {
+                MaxDocsPerBatch = 5,
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
+            }))
             {
                 var t = subscription.Run(batch =>
                 {
@@ -82,12 +82,12 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task GetDocumentOnce2()
         {
             using var store = Sharding.GetDocumentStore();
             var numberOfDocs = 100;
-            
+
             using (var session = store.OpenSession())
             {
                 session.Store(new User
@@ -109,14 +109,14 @@ namespace SlowTests.Sharding.Cluster
                     }
                 }
             });
-           
+
             var sub = await store.Subscriptions.CreateAsync<User>();
             var users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sub)
-                         {
-                             MaxDocsPerBatch = 5, 
-                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250),
-                         }))
+            {
+                MaxDocsPerBatch = 5,
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250),
+            }))
             {
                 var mre = new AsyncManualResetEvent();
                 var t = subscription.Run(batch =>
@@ -128,13 +128,13 @@ namespace SlowTests.Sharding.Cluster
                             throw new SubscriberErrorException($"Got exact same {item.Id} twice");
                         }
 
-                        if (users.Count == numberOfDocs+1)
+                        if (users.Count == numberOfDocs + 1)
                         {
                             mre.Set();
                         }
                     }
                 });
-                
+
                 await Sharding.Resharding.MoveShardForId(store, "users/1-A");
                 await Sharding.Resharding.MoveShardForId(store, "users/1-A");
                 await Sharding.Resharding.MoveShardForId(store, "users/1-A");
@@ -161,17 +161,17 @@ namespace SlowTests.Sharding.Cluster
                 for (int i = 0; i < numberOfDocs; i++)
                 {
                     var id = $"num-{i}$users/1-A";
-                    Assert.True(users.Contains(id),$"{id} is missing");
+                    Assert.True(users.Contains(id), $"{id} is missing");
                 }
-                
-                Assert.True(users.Contains("users/1-A"),"users/1-A is missing");
+
+                Assert.True(users.Contains("users/1-A"), "users/1-A is missing");
                 Assert.Equal(numberOfDocs + 1, users.Count);
 
                 await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, sub);
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task GetDocumentsWithFilteringAndModifications()
         {
             using var store = Sharding.GetDocumentStore();
@@ -206,10 +206,10 @@ namespace SlowTests.Sharding.Cluster
             var id = await store.Subscriptions.CreateAsync<User>(predicate: u => u.Age > 0);
             var users = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
-                         {
-                             MaxDocsPerBatch = 5, 
-                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
-                         }))
+            {
+                MaxDocsPerBatch = 5,
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
+            }))
             {
                 var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 var timeoutEvent = new TimeoutEvent(TimeSpan.FromSeconds(5), "foo");
@@ -234,7 +234,7 @@ namespace SlowTests.Sharding.Cluster
                         users[item.Id] = item.Result.Age;
                     }
                 });
-                
+
                 await Sharding.Resharding.MoveShardForId(store, "users/1-A");
                 await Sharding.Resharding.MoveShardForId(store, "users/1-A");
                 await Sharding.Resharding.MoveShardForId(store, "users/1-A");
@@ -269,18 +269,18 @@ namespace SlowTests.Sharding.Cluster
                         users.Remove(user.Id);
                     }
                 }
-                
+
                 await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id);
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task GetDocumentsWithFilteringAndModifications2()
         {
             using var store = Sharding.GetDocumentStore();
             var id = await store.Subscriptions.CreateAsync<User>(predicate: u => u.Age > 0);
             var users = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            
+
             await CreateItems(store, 0, 2);
             await ProcessSubscription(store, id, users);
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
@@ -315,13 +315,13 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task GetDocumentsWithFilteringAndModifications3()
         {
             using var store = Sharding.GetDocumentStore();
             var id = await store.Subscriptions.CreateAsync<User>(predicate: u => u.Age > 0);
             var users = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            
+
             var t = ProcessSubscription(store, id, users, timoutSec: 15);
             await CreateItems(store, 0, 2);
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
@@ -355,11 +355,11 @@ namespace SlowTests.Sharding.Cluster
         private async Task ProcessSubscription(IDocumentStore store, string id, Dictionary<string, int> users, int timoutSec = 5)
         {
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
-                         {
-                             MaxDocsPerBatch = 5, 
-                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250),
-                             // CloseWhenNoDocsLeft = true
-                         }))
+            {
+                MaxDocsPerBatch = 5,
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250),
+                // CloseWhenNoDocsLeft = true
+            }))
             {
                 try
                 {
@@ -390,7 +390,7 @@ namespace SlowTests.Sharding.Cluster
                 await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id);
             }
         }
-    
+
 
         private static async Task CreateItems(IDocumentStore store, int from, int to)
         {
@@ -436,7 +436,7 @@ namespace SlowTests.Sharding.Cluster
             current.Age *= -1;
         }
 
-        [RavenFact(RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task ContinueSubscriptionAfterReshardingInACluster()
         {
             var cluster = await CreateRaftCluster(5, watcherCluster: true);
@@ -449,7 +449,7 @@ namespace SlowTests.Sharding.Cluster
             await SubscriptionWithResharding(store);
         }
 
-        [RavenFact(RavenTestCategory.Sharding, Skip = "Need to stablize this")]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions, Skip = "Need to stablize this")]
         public async Task ContinueSubscriptionAfterReshardingInAClusterWithFailover()
         {
             var cluster = await CreateRaftCluster(5, watcherCluster: true, shouldRunInMemory: false);
@@ -492,7 +492,7 @@ namespace SlowTests.Sharding.Cluster
 
                             result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
                             await Cluster.WaitForNodeToBeRehabAsync(store, result.NodeTag, token: cts.Token);
-                            
+
                             await Task.Delay(TimeSpan.FromSeconds(3), cts.Token);
 
                             cluster.Nodes[position] = await ReviveNodeAsync(result, recoveryOptions);
@@ -521,9 +521,9 @@ namespace SlowTests.Sharding.Cluster
                 }
                 finally
                 {
-                   cts.Cancel();
-                   await fail;
-                   await t;
+                    cts.Cancel();
+                    await fail;
+                    await t;
                 }
 
                 await Indexes.WaitForIndexingInTheClusterAsync(store);
@@ -549,10 +549,10 @@ namespace SlowTests.Sharding.Cluster
             var users = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             var mre = new ManualResetEvent(false);
             await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
-                         {
-                             MaxDocsPerBatch = 5, 
-                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
-                         }))
+            {
+                MaxDocsPerBatch = 5,
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
+            }))
             {
                 subscription.AfterAcknowledgment += batch =>
                 {
@@ -635,7 +635,7 @@ namespace SlowTests.Sharding.Cluster
 
                 await WaitAndAssertForValueAsync(() => users["users/8-A"].Count, 2);
                 await WaitAndAssertForValueAsync(() => users["users/1-A"].Count, 2);
-                
+
                 Assert.True(mre.WaitOne(TimeSpan.FromSeconds(5)));
                 mre.Reset();
 
@@ -684,7 +684,7 @@ namespace SlowTests.Sharding.Cluster
                 Assert.True(expected.Count == 0,
                     $"Missing {string.Join(Environment.NewLine, expected.Select(async e => $"{e} (shard: {await Sharding.GetShardNumberFor(store, e)})"))}");
 
-                
+
                 await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id);
             }
         }

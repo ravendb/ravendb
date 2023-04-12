@@ -21,7 +21,7 @@ namespace StressTests.Issues
         {
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
         public void IndexingWhenTransactionSizeLimitExceeded()
         {
             using (var store = GetDocumentStore(new Options()
@@ -36,7 +36,7 @@ namespace StressTests.Issues
             }
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
         public void IndexingWhenScratchSpaceLimitExceeded()
         {
             using (var store = GetDocumentStore(new Options()
@@ -53,7 +53,7 @@ namespace StressTests.Issues
             }
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
         public void IndexingWhenGlobalScratchSpaceLimitExceeded()
         {
             UseNewLocalServer(new Dictionary<string, string>
@@ -71,7 +71,7 @@ namespace StressTests.Issues
             }
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX86)]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.AllX86)]
         public void IndexingWhenTransactionSizeLimitExceeded32()
         {
             using (var store = GetDocumentStore(new Options()
@@ -86,7 +86,7 @@ namespace StressTests.Issues
             }
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX86)]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.AllX86)]
         public void IndexingWhenScratchSpaceLimitExceeded32()
         {
             using (var store = GetDocumentStore(new Options()
@@ -103,7 +103,7 @@ namespace StressTests.Issues
             }
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX86)]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.AllX86)]
         public void IndexingWhenGlobalScratchSpaceLimitExceeded32()
         {
             UseNewLocalServer(new Dictionary<string, string>

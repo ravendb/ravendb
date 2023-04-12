@@ -57,8 +57,8 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanIncludeTypedTimeSeriesAsync(Options options)
         {
             using (var store = GetDocumentStore(options))

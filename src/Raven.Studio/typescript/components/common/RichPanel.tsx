@@ -30,7 +30,7 @@ export function RichPanelStatus(props: RichPanelStatusProps) {
     const { children, className, color, ...rest } = props;
     return (
         <Badge className={classNames("rich-panel-status", className)} color={color} {...rest}>
-            {children}
+            <span className="position-sticky">{children}</span>
         </Badge>
     );
 }

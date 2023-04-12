@@ -52,7 +52,7 @@ namespace SlowTests.Issues
 
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanHandleHandleLongUrl(Options options)
         {
             using (var store = GetDocumentStore(options))

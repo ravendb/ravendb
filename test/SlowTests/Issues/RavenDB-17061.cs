@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,8 +20,8 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_project_when_the_document_is_missing(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
                     };
                     await session.StoreAsync(user);
                     await session.SaveChangesAsync();
-                    
+
                     userId = user.Id;
                 }
 
@@ -55,14 +56,15 @@ namespace SlowTests.Issues
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(0, stats.SkippedResults);
                     Assert.Equal(1, users.Count);
-                    
-                    var idComparer = options.SearchEngineMode is RavenSearchEngineMode.Corax 
-                        ? StringComparer.OrdinalIgnoreCase 
+
+                    var idComparer = options.SearchEngineMode is RavenSearchEngineMode.Corax
+                        ? StringComparer.OrdinalIgnoreCase
                         : StringComparer.Ordinal;
                     Assert.Equal(userId, users[0], comparer: idComparer);
                 }
 
-                await store.Maintenance.SendAsync(new StopIndexOperation(stats.IndexName));
+                store.Maintenance.ForTesting(() => new StopIndexOperation(stats.IndexName))
+                    .ExecuteOnAll();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -79,15 +81,24 @@ namespace SlowTests.Issues
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    //Corax only: This is not valid since Corax's AutoIndexes are stored. 
-                    Assert.Equal(options.SearchEngineMode is RavenSearchEngineMode.Corax ? 0 : 1, stats.SkippedResults);
-                    Assert.Equal(options.SearchEngineMode is RavenSearchEngineMode.Corax ? 1 : 0, users.Count);
+
+                    if (options.SearchEngineMode is RavenSearchEngineMode.Corax)
+                    {
+                        //Corax only: This is not valid since Corax's AutoIndexes are stored. 
+                        Assert.Equal(0, stats.SkippedResults);
+                        Assert.Equal(1, users.Count);
+                    }
+                    else
+                    {
+                        Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+                        Assert.Equal(0, users.Count);
+                    }
                 }
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_project_when_the_document_is_missing_with_index(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -114,9 +125,9 @@ namespace SlowTests.Issues
 
                 var isCorax = options.SearchEngineMode is RavenSearchEngineMode.Corax;
                 var idComparer = isCorax
-                    ? StringComparer.OrdinalIgnoreCase 
+                    ? StringComparer.OrdinalIgnoreCase
                     : StringComparer.Ordinal;
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.Query<User, UserIndex>()
@@ -131,7 +142,8 @@ namespace SlowTests.Issues
                     Assert.Equal(userId, users[0], comparer: idComparer);
                 }
 
-                await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
+                store.Maintenance.ForTesting(() => new StopIndexOperation(index.IndexName))
+                    .ExecuteOnAll();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -162,8 +174,17 @@ namespace SlowTests.Issues
                         .ToListAsync();
                     WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(isCorax ? 0 : 1, stats.SkippedResults);
-                    Assert.Equal(isCorax ? 1 : 0, users.Count);
+
+                    if (isCorax)
+                    {
+                        Assert.Equal(0, stats.SkippedResults);
+                        Assert.Equal(1, users.Count);
+                    }
+                    else
+                    {
+                        Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+                        Assert.Equal(0, users.Count);
+                    }
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -175,18 +196,27 @@ namespace SlowTests.Issues
                         {
                             x.Id, // projected from the document
                             x.Name // projected from the index
-                        }) 
+                        })
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(isCorax ? 0 : 1, stats.SkippedResults);
-                    Assert.Equal(isCorax ? 1 : 0, users.Count);
+
+                    if (isCorax)
+                    {
+                        Assert.Equal(0, stats.SkippedResults);
+                        Assert.Equal(1, users.Count);
+                    }
+                    else
+                    {
+                        Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+                        Assert.Equal(0, users.Count);
+                    }
                 }
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_project_when_mixed_stored_options_in_index(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -232,7 +262,8 @@ namespace SlowTests.Issues
                     Assert.Equal(lastName, users[0].LastName);
                 }
 
-                await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
+                store.Maintenance.ForTesting(() => new StopIndexOperation(index.IndexName))
+                    .ExecuteOnAll();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -254,7 +285,7 @@ namespace SlowTests.Issues
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(1, stats.SkippedResults);
+                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
                     Assert.Equal(0, users.Count);
                 }
 
@@ -282,10 +313,10 @@ namespace SlowTests.Issues
             public UserIndex()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name
-                    };
+                               select new
+                               {
+                                   user.Name
+                               };
 
                 StoreAllFields(FieldStorage.Yes);
             }
@@ -296,11 +327,11 @@ namespace SlowTests.Issues
             public UserIndexPartialStore()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name,
-                        user.LastName
-                    };
+                               select new
+                               {
+                                   user.Name,
+                                   user.LastName
+                               };
 
                 Store(x => x.Name, FieldStorage.Yes);
             }

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SmugglerShouldNotExportImportSubscribtionIdentities()
         {
             using (var store1 = GetDocumentStore(new Options
@@ -35,7 +36,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                 {
-                    OperateOnTypes =~ DatabaseItemType.Subscriptions
+                    OperateOnTypes = ~DatabaseItemType.Subscriptions
                 }, store2.Smuggler);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 

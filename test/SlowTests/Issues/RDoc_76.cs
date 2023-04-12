@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -84,17 +85,16 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task RegisteringConventionForSameTypeShouldOverrideOldOneAsync()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RegisteringConventionForSameTypeShouldOverrideOldOneAsync(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
-                {
-                    s.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("a/" + r.Sth));
-                    s.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("mb/" + r.Sth));
-                }
-            }))
+                s.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("a/" + r.Sth));
+                s.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("mb/" + r.Sth));
+            };
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

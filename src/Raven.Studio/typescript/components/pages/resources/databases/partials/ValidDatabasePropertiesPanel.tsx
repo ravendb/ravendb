@@ -11,6 +11,7 @@ import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import { selectLocalNodeTag } from "components/common/shell/clusterSlice";
 import { selectDatabaseState, selectTopLevelState } from "components/common/shell/databaseSliceSelectors";
 import { openNotificationCenterForDatabase } from "components/common/shell/databaseSliceActions";
+import { Badge } from "reactstrap";
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
@@ -159,44 +160,47 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     <RichPanelDetailItem
                         key="indexing-errors"
                         title="Indexing errors. Click to view the Indexing Errors."
-                        className="text-danger"
                     >
-                        <a href={indexingErrorsUrl} target={linksTarget}>
-                            <i className="icon-exclamation me-1" /> {indexingErrors} Indexing errors
-                        </a>
+                        <Badge color="faded-danger" className="d-flex align-items-center lh-base rounded-pill">
+                            <a href={indexingErrorsUrl} target={linksTarget} className="no-decor">
+                                <i className="icon-exclamation me-1" /> {indexingErrors} Indexing errors
+                            </a>
+                        </Badge>
                     </RichPanelDetailItem>
                 )}
                 {indexingPaused && (
                     <RichPanelDetailItem
                         key="indexing-paused"
                         title="Indexing is paused. Click to view the Index List."
-                        className="text-warning"
                     >
-                        <a href={indexingListUrl} target={linksTarget}>
-                            <i className="icon-pause me-1" /> Indexing paused
-                        </a>
+                        <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
+                            <a href={indexingListUrl} target={linksTarget} className="no-decor">
+                                <i className="icon-pause me-1" /> Indexing paused
+                            </a>
+                        </Badge>
                     </RichPanelDetailItem>
                 )}
                 {indexingDisabled && (
-                    <RichPanelDetailItem key="indexing-disabled" title="Indexing is disabled" className="text-danger">
-                        <a href={indexingListUrl} target={linksTarget}>
-                            <i className="icon-stop me-1" /> Indexing disabled
-                        </a>
+                    <RichPanelDetailItem key="indexing-disabled" title="Indexing is disabled">
+                        <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
+                            <a href={indexingListUrl} target={linksTarget} className="no-decor">
+                                <i className="icon-disabled me-1" /> Indexing disabled
+                            </a>
+                        </Badge>
                     </RichPanelDetailItem>
                 )}
                 {alerts > 0 && (
-                    <RichPanelDetailItem
-                        key="alerts"
-                        title="Click to view alerts in Notification Center"
-                        className="text-warning"
-                    >
+                    <RichPanelDetailItem key="alerts" title="Click to view alerts in Notification Center">
                         {db.currentNode.relevant ? (
-                            <a
-                                href="#"
-                                onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
-                            >
-                                {alertSection}
-                            </a>
+                            <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
+                                <a
+                                    href="#"
+                                    onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
+                                    className="no-decor"
+                                >
+                                    {alertSection}
+                                </a>
+                            </Badge>
                         ) : (
                             alertSection
                         )}
@@ -206,23 +210,27 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     <RichPanelDetailItem
                         key="performance-hints"
                         title="Click to view performance hints in Notification Center"
-                        className="text-info"
                     >
                         {db.currentNode.relevant ? (
-                            <a
-                                href="#"
-                                onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
-                            >
-                                {performanceHintsSection}
-                            </a>
+                            <Badge color="faded-info" className="d-flex align-items-center lh-base rounded-pill">
+                                <a
+                                    href="#"
+                                    onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
+                                    className="no-decor"
+                                >
+                                    {performanceHintsSection}
+                                </a>
+                            </Badge>
                         ) : (
                             performanceHintsSection
                         )}
                     </RichPanelDetailItem>
                 )}
                 {hasAnyLoadError && (
-                    <RichPanelDetailItem key="load-error" className="text-danger pulse">
-                        <i className="icon-danger me-1" /> Database has load errors!
+                    <RichPanelDetailItem key="load-error">
+                        <Badge color="faded-danger" className="d-flex align-items-center lh-base rounded-pill pulse">
+                            <i className="icon-danger me-1" /> Database has load errors!
+                        </Badge>
                     </RichPanelDetailItem>
                 )}
             </div>

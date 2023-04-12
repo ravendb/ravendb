@@ -84,7 +84,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedSearch_Remotely(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -94,7 +94,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanPerformFacetedSearch_Remotely_Asynchronously(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -104,7 +104,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedSearch_Remotely_WithStronglyTypedAPI(Options options)
         {
             using (var store = GetDocumentStore(options))

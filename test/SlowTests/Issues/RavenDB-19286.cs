@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ public class RavenDB_19286 : RavenTestBase
         public string Name;
     }
 
-    [Fact]
-    public async Task CanDoStringRangeQuery()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanDoStringRangeQuery(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         using (var session = store.OpenAsyncSession())
         {
             await session.StoreAsync(new User { Name = "Zoof" });

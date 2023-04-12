@@ -103,14 +103,14 @@ select new
             }
         }
 
-        [MultiplatformTheory(RavenArchitecture.AllX86)]
+        [RavenMultiplatformTheory(RavenTestCategory.Voron, RavenArchitecture.AllX86)]
         [InlineData(10, 1, 1)]
         public void Getting_trees32(int numberOfDocs, int expectedTreeDepth, int expectedPageCount)
         {
             Getting_trees(numberOfDocs, expectedTreeDepth, expectedPageCount);
         }
 
-        [MultiplatformTheory(RavenArchitecture.AllX64)]
+        [RavenMultiplatformTheory(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         [InlineData(1000, 2, 3)]
         [InlineData(10, 1, 1)] // nested section
         public void Getting_trees(int numberOfDocs, int expectedTreeDepth, int expectedPageCount)
@@ -145,9 +145,10 @@ select new
                         var scope = new IndexingStatsScope(firstRunStats);
 
                         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-                        while (index.DoIndexingWork(scope, cts.Token));
+                        while (index.DoIndexingWork(scope, cts.Token))
+                            ;
 
-                        foreach (var documentId in new[] {"orders/1", "orderS/1"})
+                        foreach (var documentId in new[] { "orders/1", "orderS/1" })
                         {
                             IEnumerable<ReduceTree> trees;
                             using (index.GetReduceTree(new[] { documentId }, out trees))

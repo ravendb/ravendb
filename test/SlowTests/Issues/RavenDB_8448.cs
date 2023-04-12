@@ -4,6 +4,7 @@ using System.Diagnostics;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void ShouldBeAbleToUseIdMethod()
         {
             using (var store = GetDocumentStore())

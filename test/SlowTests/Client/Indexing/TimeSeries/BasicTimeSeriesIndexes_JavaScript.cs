@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -222,7 +223,7 @@ return ({
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -239,24 +240,20 @@ return ({
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 var timeSeriesIndex = new MyTsIndex();
                 timeSeriesIndex.Execute(store);
 
-                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                AssertIsStale(store, "MyTsIndex");
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex");
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -266,21 +263,20 @@ return ({
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                AssertIsStale(store, "MyTsIndex");
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex");
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
-                Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 2));
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
+                {
+                    Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 2));
+                }
 
                 var terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(2, terms.Length);
@@ -294,7 +290,7 @@ return ({
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "User", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("companies/1", terms);
-
+            
                 // delete time series
 
                 using (var session = store.OpenSession())
@@ -305,25 +301,20 @@ return ({
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                AssertIsStale(store, "MyTsIndex");
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex");
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("7", terms);
-
                 // delete document
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -331,21 +322,16 @@ return ({
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                AssertIsStale(store, "MyTsIndex");
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex");
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(0, terms.Length);
-
                 // delete document - this time don't stop indexing to make sure doc deletion will be noticed by the index
 
                 using (var session = store.OpenSession())
@@ -371,8 +357,7 @@ return ({
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex");
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(0, terms.Length);
@@ -1016,7 +1001,7 @@ return ({
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanMapAllTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1038,21 +1023,17 @@ return ({
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 new MyTsIndex_AllDocs().Execute(store);
 
-                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                AssertIsStale(store, "MyTsIndex/AllDocs");
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex/AllDocs");
 
                 var terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
                 Assert.Equal(3, terms.Length);
@@ -1066,7 +1047,7 @@ return ({
                 Assert.Contains("likes", terms);
                 Assert.Contains("dislikes", terms);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -1076,17 +1057,13 @@ return ({
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                AssertIsStale(store, "MyTsIndex/AllDocs");
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex/AllDocs");
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
                 Assert.Equal(4, terms.Length);
@@ -1101,7 +1078,7 @@ return ({
                 Assert.Contains("likes", terms);
                 Assert.Contains("dislikes", terms);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -1111,17 +1088,13 @@ return ({
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                AssertIsStale(store, "MyTsIndex/AllDocs");
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex/AllDocs");
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
                 Assert.Equal(3, terms.Length);
@@ -1134,7 +1107,7 @@ return ({
                 Assert.Contains("heartrate", terms);
                 Assert.Contains("dislikes", terms);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {
@@ -1143,17 +1116,13 @@ return ({
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                AssertIsStale(store, "MyTsIndex/AllDocs");
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex/AllDocs");
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
                 Assert.Equal(1, terms.Length);
@@ -1175,8 +1144,7 @@ return ({
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex/AllDocs");
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
                 Assert.Equal(2, terms.Length);
@@ -1196,8 +1164,7 @@ return ({
 
                 Indexes.WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
-                Assert.False(staleness.IsStale);
+                AssertIsNotStale(store, "MyTsIndex/AllDocs");
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
                 Assert.Equal(0, terms.Length);
@@ -1335,6 +1302,23 @@ return ({
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("true", terms);
             }
+        }
+
+        void AssertIsStale(DocumentStore store, string indexName)
+        {
+            store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                .AssertAny((key, staleness) =>
+                {
+                    Assert.True(staleness.IsStale);
+                    Assert.Equal(1, staleness.StalenessReasons.Count);
+                    Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                });
+        }
+
+        void AssertIsNotStale(DocumentStore store, string indexName)
+        {
+            store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
+                .AssertAll((key, staleness) => { Assert.False(staleness.IsStale); });
         }
     }
 }

@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,12 +16,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task EntryIsNotPresentInMapReduceIndexWithMoreThan128Terms()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task EntryIsNotPresentInMapReduceIndexWithMoreThan128Terms(Options options)
         {
             const string locationIdentifier = "locations/12345-A";
 
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             await store.ExecuteIndexAsync(new SearchIndex());
 
             using var session = store.OpenAsyncSession();

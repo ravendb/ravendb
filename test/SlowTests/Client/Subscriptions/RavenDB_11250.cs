@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [Fact] 
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionShouldNotAllowStartWorkingIfItsStoreIsNotInitialized()
         {
             using (var store = GetDocumentStore())

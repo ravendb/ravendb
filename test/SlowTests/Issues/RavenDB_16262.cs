@@ -5,6 +5,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Counters)]
         public async Task CanIncludeCountersInSubscriptions_EvenIfTheyDoNotExist()
         {
             using (var store = GetDocumentStore())

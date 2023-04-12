@@ -625,7 +625,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     else
                     {
                         skippedResults.Value++;
-                }
+                    }
                 }
 
                 // No need to continue filling buffers as there are no more docs to load.

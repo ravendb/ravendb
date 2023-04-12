@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -127,10 +128,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task streaming_query_returns_metadata_async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task streaming_query_returns_metadata_async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -158,7 +160,10 @@ namespace SlowTests.Issues
                         Assert.NotNull(enumerator.Current.ChangeVector);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
+                        
+                        if (options.SearchEngineMode == RavenSearchEngineMode.Lucene)
+                            Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
+                        
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.LastModified]);
                     }
                 }

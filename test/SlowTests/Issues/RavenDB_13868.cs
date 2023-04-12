@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +20,8 @@ namespace SlowTests.Issues
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(30);
-        [Fact]
+        
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CollectionInSubscriptionsShouldbeCaseInsensitive()
         {
             using (var store = GetDocumentStore())

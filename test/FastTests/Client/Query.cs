@@ -386,7 +386,7 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryWithWhere_WhenUsingStringEquals_ShouldWork(Options options)
         {
             const string constStrToQuery = "Tarzan";

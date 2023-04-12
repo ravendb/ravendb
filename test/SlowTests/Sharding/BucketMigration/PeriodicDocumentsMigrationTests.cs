@@ -20,6 +20,7 @@ using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -206,7 +207,7 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
         public async Task PeriodicDocumentsMigratorShouldWork_SubscriptionsCase()
         {
             using var store = Sharding.GetDocumentStore();

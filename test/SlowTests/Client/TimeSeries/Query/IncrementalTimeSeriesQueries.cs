@@ -1818,8 +1818,8 @@ select out($tsName)
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanQueryIncrementalTimeSeriesAggregation_DifferentNumberOfValues_UsingLinq(Options options)
         {
             using (var store = GetDocumentStore(options))

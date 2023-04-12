@@ -33,7 +33,7 @@ namespace FastTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void SubscriptionLongName()
         {
             using (var store = GetDocumentStore())
@@ -44,7 +44,8 @@ namespace FastTests.Client.Subscriptions
                 }));
             }
         }
-        [Fact]
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanDeleteSubscription()
         {
             using (var store = GetDocumentStore())
@@ -65,7 +66,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldThrowWhenOpeningNoExisingSubscription()
         {
             using (var store = GetDocumentStore())
@@ -78,7 +79,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldThrowOnAttemptToOpenAlreadyOpenedSubscription()
         {
             using (var store = GetDocumentStore())
@@ -112,7 +113,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
         public void ShouldBeAbleToChangeBufferSizes()
         {
             using (var store = GetDocumentStore())
@@ -176,7 +177,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
         public void ShouldStreamAllDocumentsAfterSubscriptionCreation()
         {
             using (var store = GetDocumentStore())
@@ -238,7 +239,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void ShouldSendAllNewAndModifiedDocs()
         {
             using (var store = GetDocumentStore())
@@ -294,7 +295,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void ShouldRespectMaxDocCountInBatch()
         {
             using (var store = GetDocumentStore())
@@ -339,7 +340,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void ShouldRespectCollectionCriteria()
         {
             using (var store = GetDocumentStore())
@@ -370,7 +371,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact(Skip = "RavenDB-8404, RavenDB-8682")]
+        [RavenFact(RavenTestCategory.Subscriptions, Skip = "RavenDB-8404, RavenDB-8682")]
         public void ShouldRespectStartsWithCriteria()
         {
             using (var store = GetDocumentStore())
@@ -421,7 +422,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void WillAcknowledgeEmptyBatches()
         {
             using (var store = GetDocumentStore())
@@ -465,7 +466,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldKeepPullingDocsAfterServerRestart()
         {
             var dataPath = NewDataPath();
@@ -563,7 +564,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanReleaseSubscription()
         {
             SubscriptionWorker<dynamic> subscriptionWorker = null;
@@ -635,7 +636,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void ShouldPullDocumentsAfterBulkInsert()
         {
             using (var store = GetDocumentStore())
@@ -664,7 +665,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact(Skip = "RavenDB-15919, need to change the test, since we update the ChangeVectorForNextBatchStartingPoint upon fetching and not acking")]
+        [RavenFact(RavenTestCategory.Subscriptions, Skip = "RavenDB-15919, need to change the test, since we update the ChangeVectorForNextBatchStartingPoint upon fetching and not acking")]
         public async Task ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault()
         {
             using (var store = GetDocumentStore())
@@ -687,7 +688,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void CanSetToIgnoreSubscriberErrors()
         {
             using (var store = GetDocumentStore())
@@ -717,7 +718,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task RavenDB_3452_ShouldStopPullingDocsIfReleased()
         {
             DoNotReuseServer();
@@ -773,7 +774,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void RavenDB_3453_ShouldDeserializeTheWholeDocumentsAfterTypedSubscription()
         {
             using (var store = GetDocumentStore())
@@ -819,7 +820,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void DisposingOneSubscriptionShouldNotAffectOnNotificationsOfOthers()
         {
             SubscriptionWorker<User> subscription1 = null;
@@ -878,7 +879,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUpdateSubscriptionByName()
         {
             using (var store = GetDocumentStore())
@@ -912,7 +913,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUpdateSubscriptionById()
         {
             using (var store = GetDocumentStore())
@@ -946,7 +947,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void UpdateNonExistentSubscriptionShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -972,7 +973,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task UpdateSubscriptionShouldReturnNotModified()
         {
             using (var store = GetDocumentStore())
@@ -1001,7 +1002,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanCreateByUpdateSubscription()
         {
             using (var store = GetDocumentStore())
@@ -1092,7 +1093,7 @@ namespace FastTests.Client.Subscriptions
             public string SomeProp { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad()
         {
             using var store = GetDocumentStore();
@@ -1135,7 +1136,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction()
         {
             using var store = GetDocumentStore();

@@ -16,6 +16,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -63,12 +64,12 @@ namespace SlowTests.Bugs
         }
 
         #region FindCollectionName special chars
-        private class User 
+        private class User
         {
             public string Id { get; set; }
             public string CarId { get; set; }
         }
-        private class Car 
+        private class Car
         {
             public string Id { get; set; }
             public string Manufacturer { get; set; }
@@ -78,13 +79,13 @@ namespace SlowTests.Bugs
         {
             public string CarManufacturer { get; set; }
         }
-        
+
         private class LoadWithStringIndex : AbstractIndexCreationTask<User, IndexResult>
         {
             public LoadWithStringIndex()
             {
                 Map = users =>
-                    users.Select(user => new {CarManufacturer = LoadDocument<Car>(user.CarId.ToString()).Manufacturer});
+                    users.Select(user => new { CarManufacturer = LoadDocument<Car>(user.CarId.ToString()).Manufacturer });
 
             }
         }
@@ -94,7 +95,7 @@ namespace SlowTests.Bugs
             {
                 Map = users =>
                     from user in users
-                    select new { CarManufacturer = LoadDocument<Car>(user.CarId).Manufacturer};
+                    select new { CarManufacturer = LoadDocument<Car>(user.CarId).Manufacturer };
             }
         }
 
@@ -104,12 +105,12 @@ namespace SlowTests.Bugs
                 .Select(i => (char)i)
                 .Concat(new[] { 'a', '-', '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' });
         }
-        
+
         private static IEnumerable<object[]> GetCharactersToTest()
         {
             return GetChars()
                 .Distinct()
-                .Select(c => new object[]{c});
+                .Select(c => new object[] { c });
         }
 
         private static IEnumerable<object[]> GetCharactersToTestWithSpecial()
@@ -117,17 +118,17 @@ namespace SlowTests.Bugs
             return GetChars()
                 .Concat(new[] { 'Ā', 'Ȁ', 'Ѐ', 'Ԁ', '؀', '܀', 'ऀ', 'ਅ', 'ଈ', 'అ', 'ഊ', 'ข', 'ဉ', 'ᄍ', 'ሎ', 'ጇ', 'ᐌ', 'ᔎ', 'ᘀ', 'ᜩ', 'ᢹ', 'ᥤ', 'ᨇ' })
                 .Distinct()
-                .Select(c => new object[]{c});
+                .Select(c => new object[] { c });
         }
 
-        
+
         [Theory]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenIndexWithLoadByString(char c)
         {
             await TestWhenCollectionAndIdContainSpecialChars<LoadWithStringIndex>(c);
         }
-        
+
         [Theory]
         [MemberData(nameof(GetCharactersToTestWithSpecial))]
         public async Task FindCollectionName_WhenIndexWithLoadByLazyString(char c)
@@ -140,7 +141,7 @@ namespace SlowTests.Bugs
             //TODO RavenDB-15533
             if (c == '\v' || c >= 14 && c <= 31)
                 return;
-            
+
             using var store = GetDocumentStore(new Options
             {
                 ModifyDocumentStore = s => s.Conventions.FindCollectionName = type => "Test" + c + DocumentConventions.DefaultGetCollectionName(type)
@@ -148,9 +149,9 @@ namespace SlowTests.Bugs
 
             using (var session = store.OpenAsyncSession())
             {
-                var car = new Car {Manufacturer = "BMW"};
+                var car = new Car { Manufacturer = "BMW" };
                 await session.StoreAsync(car);
-                await session.StoreAsync(new User {CarId = car.Id});
+                await session.StoreAsync(new User { CarId = car.Id });
                 await session.SaveChangesAsync();
             }
 
@@ -169,13 +170,13 @@ namespace SlowTests.Bugs
                 Assert.Equal(1, results.Length);
             }
         }
-        
+
         [Theory]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenSubscribeToApiChanges(char c)
         {
             var mre = new AsyncManualResetEvent();
-            
+
             using var store = GetDocumentStore(new Options
             {
                 ModifyDocumentStore = s => s.Conventions.FindCollectionName = type => "Test" + c + DocumentConventions.DefaultGetCollectionName(type)
@@ -187,7 +188,7 @@ namespace SlowTests.Bugs
                 .ForDocumentsInCollection<User>();
             observableWithTask.Subscribe(change => mre.Set());
             await observableWithTask.EnsureSubscribedNow();
-            
+
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new User());
@@ -196,23 +197,23 @@ namespace SlowTests.Bugs
 
             Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)));
         }
-        
+
         private class MultiMapIndex : AbstractMultiMapIndexCreationTask<IndexResult>
         {
             public MultiMapIndex()
             {
                 AddMap<User>(users =>
-                    users.Select(user => new {CarManufacturer = LoadDocument<Car>(user.CarId.ToString()).Manufacturer}));
+                    users.Select(user => new { CarManufacturer = LoadDocument<Car>(user.CarId.ToString()).Manufacturer }));
             }
         }
-        
+
         [Theory]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenIndexWithMultiMap(char c)
         {
             await TestWhenCollectionAndIdContainSpecialChars<MultiMapIndex>(c);
         }
-        
+
         [Theory]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenQuery(char c)
@@ -224,9 +225,9 @@ namespace SlowTests.Bugs
 
             using (var session = store.OpenAsyncSession())
             {
-                var car = new Car {Manufacturer = "BMW"};
+                var car = new Car { Manufacturer = "BMW" };
                 await session.StoreAsync(car);
-                await session.StoreAsync(new User {CarId = car.Id});
+                await session.StoreAsync(new User { CarId = car.Id });
                 await session.SaveChangesAsync();
             }
 
@@ -238,7 +239,7 @@ namespace SlowTests.Bugs
 
                 Assert.Equal(1, results.Length);
             }
-            
+
             using (var session = store.OpenAsyncSession())
             {
                 var results = await session.Advanced
@@ -247,7 +248,7 @@ namespace SlowTests.Bugs
 
                 Assert.Equal(1, results.Length);
             }
-            
+
             using (var session = store.OpenSession())
             {
                 var results = session
@@ -256,7 +257,7 @@ namespace SlowTests.Bugs
 
                 Assert.Equal(1, results.Length);
             }
-            
+
             using (var session = store.OpenSession())
             {
                 var results = session.Advanced
@@ -279,13 +280,13 @@ namespace SlowTests.Bugs
             var user = new User();
             using (var session = store.OpenAsyncSession())
             {
-                var car = new Car {Manufacturer = "BMW"};
+                var car = new Car { Manufacturer = "BMW" };
                 await session.StoreAsync(car);
                 user.CarId = car.Id;
                 await session.StoreAsync(user);
                 await session.SaveChangesAsync();
             }
-            
+
             using (var session = store.OpenAsyncSession())
             {
                 var loadedUser = await session.Include<User, Car>(x => x.CarId)
@@ -296,8 +297,7 @@ namespace SlowTests.Bugs
             }
         }
 
-
-        [Theory]
+        [RavenTheory(RavenTestCategory.Subscriptions)]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenSubscribeWithInclude(char c)
         {
@@ -309,13 +309,13 @@ namespace SlowTests.Bugs
             var user = new User();
             using (var session = store.OpenAsyncSession())
             {
-                var car = new Car {Manufacturer = "BMW"};
+                var car = new Car { Manufacturer = "BMW" };
                 await session.StoreAsync(car);
                 user.CarId = car.Id;
                 await session.StoreAsync(user);
                 await session.SaveChangesAsync();
             }
-            
+
             var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>
             {
                 Includes = builder => builder

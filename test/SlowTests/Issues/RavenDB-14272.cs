@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Projection_With_A_Single_Primitive_Field()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Projection_With_A_Single_Primitive_Field(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -34,10 +36,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Projection_With_A_Single_Primitive_Field_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Projection_With_A_Single_Primitive_Field_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -53,10 +56,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Projection_With_A_Single_Field()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Projection_With_A_Single_Field(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -72,10 +76,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Projection_With_A_Single_Field_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Projection_With_A_Single_Field_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -91,10 +96,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Select_Fields1()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Select_Fields1(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -111,10 +117,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Select_Fields1_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Select_Fields1_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -131,10 +138,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Select_Fields2()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Select_Fields2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -151,10 +159,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Select_Fields2_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Select_Fields2_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -171,10 +180,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Select_Fields3()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Select_Fields3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -191,10 +201,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Select_Fields3_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Select_Fields3_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -211,10 +222,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Select_Fields4()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Select_Fields4(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -230,10 +242,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Select_Fields4_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Select_Fields4_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -249,10 +262,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Project_Into()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Project_Into(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -269,10 +283,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Project_Into_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Project_Into_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -289,10 +304,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Streaming_Query_Projection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Streaming_Query_Projection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -314,10 +330,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Streaming_Query_Projection_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Streaming_Query_Projection_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -339,10 +356,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Streaming_Document_Query_Projection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Streaming_Document_Query_Projection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 
@@ -365,10 +383,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Streaming_Document_Query_Projection_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Streaming_Document_Query_Projection_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userTalk = SaveUserTalk(store);
 

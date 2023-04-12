@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,12 +16,13 @@ public class RavenDB_19925 : RavenTestBase
         public string Id { get; set; }
         public string[] ArrayStr { get; set; }
     }
-    
-    [Fact]
-    public async Task CanProjectArrayFromDocument()
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanProjectArrayFromDocument(Options options)
     {
         const string id = "testdocument";
-        using var store = GetDocumentStore();        
+        using var store = GetDocumentStore(options);        
         using (var session = store.OpenAsyncSession())
         {
             DocWithArray[] testDocs = new DocWithArray[4];

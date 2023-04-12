@@ -90,7 +90,7 @@ namespace StressTests.Rachis
         private bool _toggled;
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         [TestParams(subscriptionsChainSize: 2, clusterSize: 3, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
         [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
         [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]

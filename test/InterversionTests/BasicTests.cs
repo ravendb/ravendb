@@ -29,7 +29,7 @@ namespace InterversionTests
             AssertStore(GetDocumentStore());
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Subscriptions)]
         [InlineData("5.2.3")]
         [InlineData("5.3.0-nightly-20211107-0402")]
         public async Task SubscriptionTest(string version)
@@ -37,7 +37,7 @@ namespace InterversionTests
             using (var store = await GetDocumentStoreAsync(version))
             {
                 var id = store.Subscriptions.Create<User>();
-                
+
                 await using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -56,7 +56,7 @@ namespace InterversionTests
                     }
 
                     var con1Docs = new List<string>();
-                    
+
                     var t = subscription.Run(x =>
                     {
                         foreach (var item in x.Items)

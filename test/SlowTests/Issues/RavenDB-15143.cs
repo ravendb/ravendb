@@ -27,7 +27,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanUseCreateCmpXngToInSessionWithNoOtherChanges(Options options)
         {
             using var store = GetDocumentStore(options);

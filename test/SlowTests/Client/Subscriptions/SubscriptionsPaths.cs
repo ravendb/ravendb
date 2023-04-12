@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Client.Subscriptions
             public List<Node> Children = new List<Node>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void PositivePathWithCollectionsTyped()
         {
             var nestedNode = new Node
@@ -68,7 +69,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void PositivePathWithCollectionsUntyped()
         {
             var nestedNode = new Node
@@ -113,7 +114,8 @@ declare function areAllGrandchildsGrandchilds(doc){
 From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionID) {
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionID)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
@@ -127,7 +129,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void NegativePathWithCollectionsTyped()
         {
             var nestedNode = new Node
@@ -157,8 +159,8 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                     session.Store(simpleNode);
                     session.SaveChanges();
                 }
-                var subscriptionID = store.Subscriptions.Create<Node>(node => 
-                node.Children.All(x => 
+                var subscriptionID = store.Subscriptions.Create<Node>(node =>
+                node.Children.All(x =>
                     x.Children.All(i => i.Name == "Grandchild")));
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker<Node>(new SubscriptionWorkerOptions(subscriptionID));
@@ -173,7 +175,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void NegativePathWithCollectionsUntyped()
         {
             var nestedNode = new Node
@@ -203,7 +205,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                     session.Store(simpleNode);
                     session.SaveChanges();
                 }
-         
+
                 var subscriptionID = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
                     Query = @"declare function areAllGrandchildsGrandchilds(doc){

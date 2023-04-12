@@ -6,6 +6,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionShouldStopUponDatabaseDeletion()
         {
             using (var store = GetDocumentStore())

@@ -31,7 +31,7 @@
                 if (skip != null)
                     return skip;
 
-                return MultiplatformFactAttribute.ShouldSkip(_platform, _architecture, LicenseRequired);
+                return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, LicenseRequired, nightlyBuildOnly: true);
             }
         }
     }

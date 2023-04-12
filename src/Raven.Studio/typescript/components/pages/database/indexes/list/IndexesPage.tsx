@@ -1,7 +1,7 @@
 ﻿import React from "react";
 import database from "models/resources/database";
 import { IndexPanel } from "./IndexPanel";
-import IndexFilter, { IndexFilterDescription } from "./IndexFilter";
+import { IndexFilterDescription } from "./IndexFilter";
 import IndexToolbarActions from "./IndexToolbarActions";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { CheckboxTriple } from "components/common/CheckboxTriple";
@@ -83,21 +83,15 @@ export function IndexesPage(props: IndexesPageProps) {
             <StickyHeader>
                 {stats.indexes.length > 0 && (
                     <Row>
-                        <Col>
-                            <Row>
-                                <Col sm="auto">
-                                    {canReadWriteDatabase(database) && (
-                                        <CheckboxTriple
-                                            onChanged={toggleSelectAll}
-                                            state={indexesSelectionState()}
-                                            title="Select all or none"
-                                        />
-                                    )}
-                                </Col>
-                                <Col>
-                                    <IndexFilter filter={filter} setFilter={setFilter} />
-                                </Col>
-                            </Row>
+                        <Col></Col>
+                        <Col sm="auto">
+                            {canReadWriteDatabase(database) && (
+                                <CheckboxTriple
+                                    onChanged={toggleSelectAll}
+                                    state={indexesSelectionState()}
+                                    title="Select all or none"
+                                />
+                            )}
                         </Col>
                         <Col sm="auto">
                             {canReadWriteDatabase(database) && (
@@ -115,7 +109,11 @@ export function IndexesPage(props: IndexesPageProps) {
                         {/*  TODO  <IndexGlobalIndexing /> */}
                     </Row>
                 )}
-                <IndexFilterDescription filter={filter} indexes={getAllIndexes(groups, replacements)} />
+                <IndexFilterDescription
+                    filter={filter}
+                    setFilter={(x) => setFilter(x)}
+                    indexes={getAllIndexes(groups, replacements)}
+                />
             </StickyHeader>
             <div className="indexes content-margin no-transition">
                 <div className="indexes-list">

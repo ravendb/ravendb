@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using Orders;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,11 +12,12 @@ namespace SlowTests.Issues
         public RavenDB_14109(ITestOutputHelper output) : base(output)
         {
         }
-        
-        [Fact]
-        public async Task QueryStatsShouldBeFilledBeforeCallingMoveNext()
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task QueryStatsShouldBeFilledBeforeCallingMoveNext(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

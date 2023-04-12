@@ -19,7 +19,7 @@ public class RavenDB_19205 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public async Task UnableToFilterOnNullableDateOnlyProperty(Options options)
     {
         using var store = GetDocumentStore(options);

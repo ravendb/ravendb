@@ -42,8 +42,8 @@ public class RavenDB_19557 : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public async Task TestCase(Options options)
     {
         using var store = GetDocumentStore(options);

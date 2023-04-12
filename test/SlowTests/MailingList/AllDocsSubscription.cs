@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
@@ -26,7 +27,7 @@ namespace SlowTests.MailingList
         private class Dog : Animal { }
         private class Cat : Animal { }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUseAllDocsSubscription()
         {
             using var store = GetDocumentStore();
@@ -84,7 +85,7 @@ namespace SlowTests.MailingList
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
         public async Task CanUseAllDocsSubscriptionWithRevisions()
         {
             using var store = GetDocumentStore();

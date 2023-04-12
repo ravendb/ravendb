@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -74,7 +75,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionShouldRespectDocumentsWithCompressedData()
         {
             DoNotReuseServer();

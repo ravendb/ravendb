@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ForbidOpeningMoreThenOneSessionPerSubscriptionBatch()
         {
             using var store = GetDocumentStore();
@@ -77,7 +78,7 @@ namespace SlowTests.Issues
             Assert.Equal("Session can only be opened once per each Subscription batch", exception.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ClearSessionOpenedWhenBatchIsReused()
         {
             using var store = GetDocumentStore();

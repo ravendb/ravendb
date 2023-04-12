@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,11 +13,12 @@ public class RavenDB_19830 : RavenTestBase
     {
     }
 
-    [Fact]
-    public async Task CanProjectWhenFieldAndPropertyNameAreTheSameWithDifferentCasing()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanProjectWhenFieldAndPropertyNameAreTheSameWithDifferentCasing(Options options)
     {
         const string id = "testdocument/1";
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         using (var session = store.OpenAsyncSession())
         {

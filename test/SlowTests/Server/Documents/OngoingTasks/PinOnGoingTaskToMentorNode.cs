@@ -16,6 +16,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +33,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
     {
         const string srcDb = "ETL-src";
         const string dstDb = "ETL-dst";
-        
+
         var srcRaft = await CreateRaftCluster(3);
         var leader = srcRaft.Leader;
 
@@ -42,22 +43,22 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         var mentorNode = srcNodes.Servers.First(s => s != leader);
         var mentorTag = mentorNode.ServerStore.NodeTag;
         using (var src = new DocumentStore
-               {
-                   Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(),
-                   Database = srcDb,
-               }.Initialize())
+        {
+            Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(),
+            Database = srcDb,
+        }.Initialize())
 
         using (var dest = new DocumentStore
-               {
-                   Urls = new[]
+        {
+            Urls = new[]
                    {
                        destNodes.Servers.First(u => u != mentorNode).WebUrl
                    },
-                   Database = dstDb,
-               }.Initialize())
+            Database = dstDb,
+        }.Initialize())
         {
             const string name = "PinToMentorNode";
-            var urls =  destNodes.Servers.Select(u => u.WebUrl);
+            var urls = destNodes.Servers.Select(u => u.WebUrl);
             var config = new RavenEtlConfiguration
             {
                 Name = name,
@@ -84,12 +85,12 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 Database = dest.Database,
                 TopologyDiscoveryUrls = urls.ToArray(),
             };
-            
+
             var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
             Assert.NotNull(result.RaftCommandIndex);
 
             src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
-            
+
             var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
 
             var responsibleNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
@@ -104,7 +105,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
 
                 session.SaveChanges();
             }
-            
+
             Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
 
 
@@ -119,10 +120,10 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
 
                 session.SaveChanges();
             }
-            
+
             Assert.False(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 10_000));
 
-            var revivedServer =GetNewServer(new ServerCreationOptions
+            var revivedServer = GetNewServer(new ServerCreationOptions
             {
                 CustomSettings = new Dictionary<string, string>
                 {
@@ -133,14 +134,14 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 DataDirectory = originalResult.DataDirectory
             });
 
-            var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive,CancellationToken.None);
+            var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
             Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(10_000)));
             using (var session = src.OpenSession())
             {
                 session.Store(new User()
-                    {
-                        Name = "Joe Doe3"
-                    },
+                {
+                    Name = "Joe Doe3"
+                },
                     "users/3");
 
                 session.SaveChanges();
@@ -148,7 +149,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
 
             Assert.True(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3", 10_000));
             Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 10_000));
-        
+
         }
     }
 
@@ -157,7 +158,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
     {
         const string srcDb = "ETL-src";
         const string dstDb = "ETL-dst";
-        
+
         var srcRaft = await CreateRaftCluster(5);
         var leader = srcRaft.Leader;
 
@@ -168,19 +169,19 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         var mentorTag = mentorNode.ServerStore.NodeTag;
 
         using (var src = new DocumentStore
-               {
-                   Urls = new [] {leader.WebUrl},
-                   Database = srcDb,
-               }.Initialize())
+        {
+            Urls = new[] { leader.WebUrl },
+            Database = srcDb,
+        }.Initialize())
 
         using (var dest = new DocumentStore
-               {
-                   Urls =  new [] {destNodes.Servers.First(u => u != mentorNode).WebUrl},
-                   Database = dstDb,
-               }.Initialize())
+        {
+            Urls = new[] { destNodes.Servers.First(u => u != mentorNode).WebUrl },
+            Database = dstDb,
+        }.Initialize())
         {
             const string name = "PinToMentorNode";
-            var urls =  destNodes.Servers.Select(u => u.WebUrl);
+            var urls = destNodes.Servers.Select(u => u.WebUrl);
             var config = new RavenEtlConfiguration
             {
                 Name = name,
@@ -207,15 +208,15 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 Database = dest.Database,
                 TopologyDiscoveryUrls = urls.ToArray(),
             };
-            
+
             var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
             Assert.NotNull(result.RaftCommandIndex);
 
             src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
-            
+
             var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
             var responsibleNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
-            
+
             using (var session = src.OpenSession())
             {
                 session.Store(new User()
@@ -225,14 +226,14 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
 
                 session.SaveChanges();
             }
-            
+
             Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
-            
+
             await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(responsibleNodeNodeTag));
-            
-            var waitForPassive = mentorNode.ServerStore.Engine.WaitForState(RachisState.Passive,CancellationToken.None);
+
+            var waitForPassive = mentorNode.ServerStore.Engine.WaitForState(RachisState.Passive, CancellationToken.None);
             Assert.True(waitForPassive.Wait(TimeSpan.FromSeconds(10_000)));
-            
+
             var val = await WaitForValueAsync(async () =>
                 {
                     var dbRecord = await src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(srcDb));
@@ -259,8 +260,8 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 10_000));
         }
     }
-    
-    [Fact]
+
+    [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
     public async Task Can_Set_Pin_To_Node_Property_Subscription()
     {
         var store = GetDocumentStore();
@@ -270,11 +271,11 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             MentorNode = "A",
             PinToMentorNode = true
         }).ConfigureAwait(false);
-    
+
         var state = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
         Assert.True(state.PinToMentorNode);
     }
-    
+
     [Fact]
     public async Task Can_Set_Pin_To_Node_Backup()
     {
@@ -294,7 +295,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         var res = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(updateBackupResult.TaskId, OngoingTaskType.Backup));
         Assert.True(res.PinToMentorNode);
     }
-    
+
     [Fact]
     public async Task Can_Set_Pin_To_Node_ExternalReplication()
     {
@@ -321,133 +322,133 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
 
         var (hubNodes, hubLeader, hubCertificatesHolder) = await CreateRaftClusterWithSsl(clusterSize, watcherCluster: true, shouldRunInMemory: true);
         var adminHubClusterCert = hubCertificatesHolder.ServerCertificate.Value;
-        
+
         var mentorNodes = hubNodes.Where(s => s.ServerStore.NodeTag != hubLeader.ServerStore.NodeTag).ToList();
-       
+
         var hubMentorNode = mentorNodes[0];
         var sinkMentorNode = mentorNodes[1];
 
         using (var hubStore = GetDocumentStore(new Options
-               {
-                   Server = hubLeader,
-                   ReplicationFactor = 3,
-                   AdminCertificate = adminHubClusterCert,
-                   ClientCertificate = adminHubClusterCert,
-               }))
         {
-            
+            Server = hubLeader,
+            ReplicationFactor = 3,
+            AdminCertificate = adminHubClusterCert,
+            ClientCertificate = adminHubClusterCert,
+        }))
+        {
+
             using (var sinkStore = GetDocumentStore(new Options
-                   {
-                       Server = sinkMentorNode,
-                       ReplicationFactor = 3,
-                       AdminCertificate = adminHubClusterCert,
-                       ClientCertificate = adminHubClusterCert,
-                   }))
-            { 
+            {
+                Server = sinkMentorNode,
+                ReplicationFactor = 3,
+                AdminCertificate = adminHubClusterCert,
+                ClientCertificate = adminHubClusterCert,
+            }))
+            {
                 await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
-            {
-                MentorNode = hubMentorNode.ServerStore.NodeTag,
-                PinToMentorNode = true,
-                Name = hubStore.Database + "HUB",
-            }));
-
-            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
-            {
-                Database = hubStore.Database,
-                Name = hubStore.Database + "ConStr",
-                TopologyDiscoveryUrls = hubNodes.Select(u => u.WebUrl).ToArray()
-            }));
-
-            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
-            {
-                ConnectionStringName = hubStore.Database + "ConStr",
-                HubName =  hubStore.Database + "HUB",
-            }));
-            WaitForUserToContinueTheTest(hubStore,true,hubStore.Database,adminHubClusterCert);
-
-            using (var hubSession = hubStore.OpenSession())
-            {
-                hubSession.Store(new User
                 {
-                    Name = "Arava",
-                }, "users/1");
-                hubSession.SaveChanges();
-            }
+                    MentorNode = hubMentorNode.ServerStore.NodeTag,
+                    PinToMentorNode = true,
+                    Name = hubStore.Database + "HUB",
+                }));
 
-            Assert.True(WaitForDocument<User>(sinkStore, "users/1", u => u.Name == "Arava",30_000));
-            var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(hubMentorNode);
-            using (var hubSession = hubStore.OpenSession())
-            {
-                hubSession.Store(new User
+                await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
-                    Name = "Arava2",
-                }, "users/2");
-                hubSession.SaveChanges();
-            }
-            Assert.False(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2",30_000));
-            var revivedServer = GetNewServer(new ServerCreationOptions
-            {
-                CustomSettings = new Dictionary<string, string>
+                    Database = hubStore.Database,
+                    Name = hubStore.Database + "ConStr",
+                    TopologyDiscoveryUrls = hubNodes.Select(u => u.WebUrl).ToArray()
+                }));
+
+                await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+                {
+                    ConnectionStringName = hubStore.Database + "ConStr",
+                    HubName = hubStore.Database + "HUB",
+                }));
+                WaitForUserToContinueTheTest(hubStore, true, hubStore.Database, adminHubClusterCert);
+
+                using (var hubSession = hubStore.OpenSession())
+                {
+                    hubSession.Store(new User
+                    {
+                        Name = "Arava",
+                    }, "users/1");
+                    hubSession.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sinkStore, "users/1", u => u.Name == "Arava", 30_000));
+                var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(hubMentorNode);
+                using (var hubSession = hubStore.OpenSession())
+                {
+                    hubSession.Store(new User
+                    {
+                        Name = "Arava2",
+                    }, "users/2");
+                    hubSession.SaveChanges();
+                }
+                Assert.False(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2", 30_000));
+                var revivedServer = GetNewServer(new ServerCreationOptions
+                {
+                    CustomSettings = new Dictionary<string, string>
                 {
                     {RavenConfiguration.GetKey(x => x.Core.ServerUrls), disposedServer.Url},
                     {RavenConfiguration.GetKey(x => x.Security.CertificatePath), hubCertificatesHolder.ServerCertificatePath}
                 },
-                RunInMemory = true,
-                DataDirectory = disposedServer.DataDirectory
-            });
-            var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
-            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20_000)));
-            Assert.True(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2",30_000)); 
-            Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 3));
-            Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
+                    RunInMemory = true,
+                    DataDirectory = disposedServer.DataDirectory
+                });
+                var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
+                Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20_000)));
+                Assert.True(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2", 30_000));
+                Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 3));
+                Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
             }
         }
     }
-   
+
     [Fact]
     public async Task Can_Set_Pin_To_Node_Pull_Replication_As_Sink()
     {
         const int clusterSize = 3;
-    
+
         var (hubNodes, hubLeader, hubCertificatesHolder) = await CreateRaftClusterWithSsl(clusterSize, watcherCluster: true, shouldRunInMemory: true);
         var adminHubClusterCert = hubCertificatesHolder.ServerCertificate.Value;
-        
+
         var mentorNodes = hubNodes.Where(s => s.ServerStore.NodeTag != hubLeader.ServerStore.NodeTag).ToList();
-       
+
         var hubMentorNode = mentorNodes[0];
         var sinkMentorNode = mentorNodes[1];
         using (var hubStore = GetDocumentStore(new Options
         {
-           Server = hubMentorNode,
-           ReplicationFactor = 1,
-           AdminCertificate = adminHubClusterCert,
-           ClientCertificate = adminHubClusterCert,
-           ModifyDatabaseRecord = r =>
-           {
-               r.Topology = new DatabaseTopology();
-               r.Topology.Members.Add(hubMentorNode.ServerStore.NodeTag);
-           }
+            Server = hubMentorNode,
+            ReplicationFactor = 1,
+            AdminCertificate = adminHubClusterCert,
+            ClientCertificate = adminHubClusterCert,
+            ModifyDatabaseRecord = r =>
+            {
+                r.Topology = new DatabaseTopology();
+                r.Topology.Members.Add(hubMentorNode.ServerStore.NodeTag);
+            }
         }))
         using (var sinkStore = GetDocumentStore(new Options
         {
-           Server = hubLeader,
-           ReplicationFactor = 3,
-           AdminCertificate = adminHubClusterCert,
-           ClientCertificate = adminHubClusterCert
+            Server = hubLeader,
+            ReplicationFactor = 3,
+            AdminCertificate = adminHubClusterCert,
+            ClientCertificate = adminHubClusterCert
         }))
         {
             using (var hubSession = hubStore.OpenAsyncSession())
             {
-                await hubSession.StoreAsync(new {Type = "Eggs"}, "menus/breakfast");
-                await hubSession.StoreAsync(new {Name = "Bird Seed Milkshake"}, "recipes/bird-seed-milkshake");
-                await hubSession.StoreAsync(new {Name = "3 USD"}, "prices/eastus/2");
-                await hubSession.StoreAsync(new {Name = "3 EUR"}, "prices/eu/1");
+                await hubSession.StoreAsync(new { Type = "Eggs" }, "menus/breakfast");
+                await hubSession.StoreAsync(new { Name = "Bird Seed Milkshake" }, "recipes/bird-seed-milkshake");
+                await hubSession.StoreAsync(new { Name = "3 USD" }, "prices/eastus/2");
+                await hubSession.StoreAsync(new { Name = "3 EUR" }, "prices/eu/1");
                 await hubSession.SaveChangesAsync();
             }
 
             using (var sinkSession = sinkStore.OpenAsyncSession())
             {
-                await sinkSession.StoreAsync(new {Name = "Candy"}, "orders/bert/3");
+                await sinkSession.StoreAsync(new { Name = "Candy" }, "orders/bert/3");
                 await sinkSession.SaveChangesAsync();
             }
 
@@ -463,13 +464,15 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 {
                     Name = "Franchises",
                     CertificateBase64 = Convert.ToBase64String(hubCertificatesHolder.ClientCertificate1.Value.Export(X509ContentType.Cert)),
-                    AllowedSinkToHubPaths = new[] {"orders/*","users/*"},
-                    AllowedHubToSinkPaths = new[] {"menus/*", "prices/eastus/*", "recipes/*"}
+                    AllowedSinkToHubPaths = new[] { "orders/*", "users/*" },
+                    AllowedHubToSinkPaths = new[] { "menus/*", "prices/eastus/*", "recipes/*" }
                 }));
 
             await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
-                Database = hubStore.Database, Name = "HopperConStr", TopologyDiscoveryUrls = hubStore.Urls
+                Database = hubStore.Database,
+                Name = "HopperConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
             }));
             await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
             {
@@ -486,7 +489,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(sinkMentorNode);
             using (var sinkSession = sinkStore.OpenAsyncSession())
             {
-                await sinkSession.StoreAsync(new User {Name = "Arava",}, "users/1");
+                await sinkSession.StoreAsync(new User { Name = "Arava", }, "users/1");
                 await sinkSession.SaveChangesAsync();
             }
 
