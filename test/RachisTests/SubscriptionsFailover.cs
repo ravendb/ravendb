@@ -254,7 +254,7 @@ namespace RachisTests
             Interlocked.Exchange(ref AckCounter, 0);
         }
 
-        [MultiplatformTheory(RavenArchitecture.AllX64)]
+        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenArchitecture.AllX64)]
         [InlineData(3)]
         [InlineData(5)]
         public async Task DistributedRevisionsSubscription(int nodesAmount)
@@ -369,7 +369,7 @@ namespace RachisTests
             }
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX86)]
+        [RavenMultiplatformFact(RavenTestCategory.Subscriptions, RavenArchitecture.AllX86)]
         public async Task DistributedRevisionsSubscription32Bit()
         {
             await DistributedRevisionsSubscription(3);
@@ -539,7 +539,7 @@ namespace RachisTests
             {
                 subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
                 {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500), 
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                     MaxDocsPerBatch = batchSize,
                     Strategy = strategy
                 });
@@ -568,7 +568,7 @@ namespace RachisTests
 
                     return Task.CompletedTask;
                 };
-                
+
                 subTasks.Add(subscription.Run(batch =>
                 {
                     foreach (var item in batch.Items)
@@ -596,7 +596,7 @@ namespace RachisTests
             {
                 Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(RachisState.Follower, subscripitonState, null));
             }
-            
+
             //await Task.WhenAny(task, Task.Delay(_reasonableWaitTime)).ConfigureAwait(false);
 
             return (subscription, Task.WhenAll(subTasks));
@@ -693,7 +693,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionWorkerShouldNotFailoverToErroredNodes()
         {
             var cluster = await CreateRaftCluster(numberOfNodes: 3);

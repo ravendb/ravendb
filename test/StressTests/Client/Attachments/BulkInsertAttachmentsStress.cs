@@ -13,7 +13,7 @@ namespace StressTests.Client.Attachments
         {
         }
 
-        [MultiplatformTheory(RavenArchitecture.AllX64)]
+        [RavenMultiplatformTheory(RavenTestCategory.Attachments, RavenArchitecture.AllX64)]
         [InlineData(100, 32 * 1024 * 1024)]
         public async Task StoreManyAttachmentsStress(int count, int size)
         {
@@ -23,7 +23,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [MultiplatformTheory(RavenArchitecture.AllX64)]
+        [RavenMultiplatformTheory(RavenTestCategory.Attachments, RavenArchitecture.AllX64)]
         [InlineData(1000, 100, 32 * 1024)]
         [InlineData(1000, 100, 64 * 1024)]
         public async Task StoreManyAttachmentsAndDocsStress(int count, int attachments, int size)

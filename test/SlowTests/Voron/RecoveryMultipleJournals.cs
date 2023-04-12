@@ -100,7 +100,7 @@ namespace SlowTests.Voron
             Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public void CanResetLogInfoAfterBigUncommitedTransaction2()
         {
             using (var tx = Env.WriteTransaction())

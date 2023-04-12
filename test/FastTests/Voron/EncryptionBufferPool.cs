@@ -18,7 +18,7 @@ namespace FastTests.Voron
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Memory | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public void dont_pool_buffers_larger_than_8Mb()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
@@ -57,7 +57,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformTheory(RavenTestCategory.Memory | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         [InlineData(LowMemorySeverity.Low)]
         [InlineData(LowMemorySeverity.ExtremelyLow)]
         public void clear_all_buffers_from_current_generation_on_low_memory(LowMemorySeverity lowMemorySeverity)
@@ -106,7 +106,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Memory | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public void clear_all_buffers_on_extremely_low_memory()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
@@ -137,7 +137,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Memory | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public void can_save_buffers_after_low_memory()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
@@ -171,7 +171,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Memory | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public void clear_buffers_only_when_in_extremely_low_memory()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
@@ -191,7 +191,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Memory | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public void properly_calculate_thread_total_allocations_when_we_cant_put_buffer_in_pool()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool(registerLowMemory: false, registerCleanup: false);

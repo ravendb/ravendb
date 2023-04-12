@@ -27,7 +27,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void WriteAndReadPageUsingCryptoPager()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
@@ -111,7 +111,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void StreamsTempFile_With_Encryption_ShouldNotThrow_When_NotAllStreamsWereRead()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
@@ -152,7 +152,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void StreamsTempFile_With_Encryption_ShouldThrow_When_SeekAndWrite_AreMixed_Without_ExecutingReset()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
@@ -172,7 +172,7 @@ namespace FastTests.Sparrow
                         using (temp.Scope())
                         {
                             stream = temp.StartNewStream();
-                            
+
                             stream.Write(bytes, 0, bytes.Length);
                             stream.Flush();
 
@@ -190,7 +190,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void RavenDB_15975()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
@@ -206,7 +206,7 @@ namespace FastTests.Sparrow
                         {
                             var overflowSize = 4 * Constants.Storage.PageSize + 100;
 
-                            cryptoPager.EnsureContinuous(26, 5); 
+                            cryptoPager.EnsureContinuous(26, 5);
                             var pagePointer = cryptoPager.AcquirePagePointerForNewPage(tx, 26, 5);
 
                             var header = (PageHeader*)pagePointer;

@@ -16,7 +16,7 @@ public class RavenDB_19273 : StorageTest
     {
     }
 
-    [MultiplatformFact(RavenArchitecture.AllX64)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
     public unsafe void Will_write_correctly_more_than_2GB_to_journal_file()
     {
         var size = 4_780_343_296L;
