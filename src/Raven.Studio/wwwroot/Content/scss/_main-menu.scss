@@ -2,9 +2,9 @@
 $menu-width: 280px;
 $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
 #main-menu {
+    z-index: 1040;
     position: sticky;
     top: 0;
-    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     width: var(--menu-width, $menu-width);

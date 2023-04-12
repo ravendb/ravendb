@@ -144,7 +144,7 @@ class menu {
 
         $('#main-menu [data-toggle="tooltip"]').tooltip({
             placement: "right",
-            container: "body",
+            container: ".main-menu",
             html: true
         });
     }
