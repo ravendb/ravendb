@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Counters)]
         public async Task SubscriptionsWorksWithCounter()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +56,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.CompareExchange)]
         public async Task SubscriptionsWorksWithCompareExchange()
         {
             using (var store = GetDocumentStore())

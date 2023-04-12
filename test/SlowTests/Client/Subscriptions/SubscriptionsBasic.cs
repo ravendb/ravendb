@@ -49,7 +49,7 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void CanGetSubscriptionsFromDatabase()
         {
             using (var store = GetDocumentStore())
@@ -85,7 +85,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionsBatchSizeShouldIgnoreSkippedItems()
         {
             using (var store = GetDocumentStore())
@@ -133,7 +133,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport)]
         public async Task CanBackupAndRestoreSubscriptions()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -172,9 +172,10 @@ namespace SlowTests.Client.Subscriptions
 
                         var mre = new AsyncManualResetEvent();
                         using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
-                               {
-                                   MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
-                               }))
+                        {
+                            MaxDocsPerBatch = 5,
+                            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+                        }))
                         {
                             var t = worker.Run(_ =>
                             {
@@ -188,7 +189,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImportSubscriptions()
         {
             var file = Path.GetTempFileName();
@@ -231,9 +232,10 @@ namespace SlowTests.Client.Subscriptions
 
                     var mre = new AsyncManualResetEvent();
                     using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
-                           {
-                               MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
-                           }))
+                    {
+                        MaxDocsPerBatch = 5,
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+                    }))
                     {
                         var t = worker.Run(_ =>
                         {
@@ -250,7 +252,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void CanUseNestedPropertiesInSubscriptionCriteria()
         {
             using (var store = GetDocumentStore())
@@ -319,7 +321,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task RunningSubscriptionShouldJumpToNextChangeVectorIfItWasChangedByAdmin()
         {
             using (var store = GetDocumentStore())
@@ -417,7 +419,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void ShouldIncrementFailingTests()
         {
             DoNotReuseServer();
@@ -473,7 +475,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUpdateSubscriptionToStartFromBeginningOfTime()
         {
             using (var store = GetDocumentStore())
@@ -566,7 +568,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUpdateSubscriptionToStartFromLastDocument()
         {
             using (var store = GetDocumentStore())
@@ -664,7 +666,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUpdateSubscriptionToStartFromDoNotChange()
         {
             using (var store = GetDocumentStore())
@@ -754,7 +756,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task AcknowledgeSubscriptionBatchWhenDBisBeingDeletedShouldThrow()
         {
             using var store = GetDocumentStore();
@@ -795,7 +797,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldThrowWhenCannotDeserializeEntity()
         {
             using (var store = GetDocumentStore())
@@ -819,7 +821,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -852,7 +854,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.TimeSeries)]
         public void CanCreateSubscriptionWithIncludeTimeSeries_LastRangeByTime()
         {
             var now = DateTime.UtcNow.EnsureMilliseconds();
@@ -904,7 +906,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.TimeSeries)]
         public void CanCreateSubscriptionWithIncludeTimeSeries_LastRangeByCount()
         {
             var now = DateTime.UtcNow.EnsureMilliseconds();
@@ -960,7 +962,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.TimeSeries)]
         [InlineData(true)]
         [InlineData(false)]
         public void CanCreateSubscriptionWithIncludeTimeSeries_Array_LastRange(bool byTime)
@@ -1041,7 +1043,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.TimeSeries)]
         [InlineData(true)]
         [InlineData(false)]
         public void CanCreateSubscriptionWithIncludeTimeSeries_All_LastRange(bool byTime)
@@ -1122,7 +1124,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task DisposeSubscriptionWorkerShouldNotThrow()
         {
             var mre = new AsyncManualResetEvent();
@@ -1158,7 +1160,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task Worker_should_consider_RegisterSubscriptionConnection_time_on_calculation_of_LastConnectionFailure()
         {
             DoNotReuseServer();
@@ -1269,12 +1271,12 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task EnsureSingleSubscriptionDoesNotContinueBeforeAckSent()
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionName = await store.Subscriptions.CreateAsync(new() {Query = "from Users"});
+                var subscriptionName = await store.Subscriptions.CreateAsync(new() { Query = "from Users" });
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1287,7 +1289,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var firstCV = "";
 
-                using (var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName) {MaxDocsPerBatch = 1}))
+                using (var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName) { MaxDocsPerBatch = 1 }))
                 {
                     _ = worker.Run(async batch =>
                     {
@@ -1313,7 +1315,7 @@ namespace SlowTests.Client.Subscriptions
                             var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, subscriptionName);
                             if (connectionState == null)
                                 return false;
-                          
+
                             lastChangeVectorSent = connectionState.LastChangeVectorSent;
 
                             return lastChangeVectorSent != null;
@@ -1327,7 +1329,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task WaitingSubscriptionShouldBeRegisteredInSubscriptionConnections()
         {
             using (var store = GetDocumentStore())
@@ -1400,7 +1402,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task DatabaseShouldNotGetIdleWhenTHereIsActiveSubscriptionConnection()
         {
             using var server = GetNewServer(new ServerCreationOptions
@@ -1436,7 +1438,7 @@ namespace SlowTests.Client.Subscriptions
 
             Assert.True(await mreConnect1.WaitAsync(_reasonableWaitTime));
             List<SubscriptionState> states;
-            var re =  store.GetRequestExecutor();
+            var re = store.GetRequestExecutor();
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var cmd = new GetRunningSubscriptionsCommand(0, int.MaxValue);
@@ -1450,7 +1452,7 @@ namespace SlowTests.Client.Subscriptions
                 var url = Uri.EscapeDataString($"{store.Urls.First()}/admin/debug/databases/idle");
                 var raw = (await re.HttpClient.GetAsync($"{store.Urls.First()}/admin/debug/databases/idle")).Content.ReadAsStringAsync().Result;
                 var idleDatabaseStatistics = JsonConvert.DeserializeObject<IdleDatabaseStatistics>(raw);
-                if(idleDatabaseStatistics == null)
+                if (idleDatabaseStatistics == null)
                     return false;
                 if (1 != idleDatabaseStatistics.Results.Count)
                     return false;
@@ -1466,7 +1468,7 @@ namespace SlowTests.Client.Subscriptions
             }, true, timeout: 60000, interval: 1000), $"WaitForValue=>LastRecentlyUsed");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldContinueSubscriptionOnClientException()
         {
             using var server = GetNewServer();
@@ -1501,7 +1503,7 @@ namespace SlowTests.Client.Subscriptions
                 onSubscriptionConnectionRetry = exception;
                 retry.Set();
             };
-            var t =  subscription.Run(x => { });
+            var t = subscription.Run(x => { });
             Assert.True(await unexpected.WaitAsync(_reasonableWaitTime));
             Assert.True(await retry.WaitAsync(_reasonableWaitTime));
             Assert.False(t.IsFaulted);
@@ -1511,7 +1513,7 @@ namespace SlowTests.Client.Subscriptions
             Assert.Equal(onSubscriptionConnectionRetry.InnerException.GetType().FullName, onUnexpectedSubscriptionError.InnerException.GetType().FullName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task DeletingSubscriptionShouldRemoveItsState()
         {
             using var server = GetNewServer(new ServerCreationOptions
@@ -1527,7 +1529,7 @@ namespace SlowTests.Client.Subscriptions
             using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
             var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users", Name = "Subscription0" });
             var state = await store.Subscriptions.GetSubscriptionStateAsync(name);
-          
+
 
             var connections = new CountdownEvent(5);
             var tasks = new List<Task>();

@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUseSubscriptionIncludesViaStronglyTypedApi()
         {
             using (var store = GetDocumentStore())
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task CanUseSubscriptionIncludesOnArraysViaStronglyTypedApi()
         {
             using (var store = GetDocumentStore())

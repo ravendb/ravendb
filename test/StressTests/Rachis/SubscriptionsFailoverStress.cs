@@ -186,7 +186,7 @@ namespace StressTests.Rachis
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task SubscriptionShouldFailIfLeaderIsDownAndItIsOnlyOpening()
         {
             const int nodesAmount = 2;
@@ -239,7 +239,7 @@ namespace StressTests.Rachis
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task SubscriptionShouldFailIfLeaderIsDownBeforeAck()
         {
             const int nodesAmount = 2;
@@ -299,7 +299,7 @@ namespace StressTests.Rachis
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task SubscriptionShouldNotFailIfLeaderIsDownButItStillHasEnoughTimeToRetry()
         {
             const int nodesAmount = 2;

@@ -21,19 +21,20 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(50);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void OpenIfFree_ShouldBeDefaultStrategy()
         {
             Assert.Equal(SubscriptionOpeningStrategy.OpenIfFree, new SubscriptionWorkerOptions("test").Strategy);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldRejectWhen_OpenIfFree_StrategyIsUsed()
         {
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id) {
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
@@ -57,7 +58,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldReplaceActiveClientWhen_TakeOver_StrategyIsUsed()
         {
             DoNotReuseServer();
@@ -74,7 +75,7 @@ namespace SlowTests.Client.Subscriptions
                 using (var s = store.OpenSession())
                 {
                     var usersShouldnotexist = "users/ShouldNotExist";
-                    s.Store(new User(),usersShouldnotexist);
+                    s.Store(new User(), usersShouldnotexist);
                     s.SaveChanges();
                     s.Delete(usersShouldnotexist);
                     s.SaveChanges();
@@ -92,7 +93,7 @@ namespace SlowTests.Client.Subscriptions
                         });
 
                         var items = new BlockingCollection<User>();
-                        
+
                         var batchAcknowledgedMre = new AsyncManualResetEvent();
 
                         subscription.AfterAcknowledgment += x =>
@@ -145,7 +146,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void ShouldOpenSubscriptionWith_WaitForFree_StrategyWhenItIsNotInUseByAnotherClient()
         {
             using (var store = GetDocumentStore())
@@ -158,7 +159,7 @@ namespace SlowTests.Client.Subscriptions
                 });
 
                 var items = new BlockingCollection<User>();
-                
+
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User());
@@ -174,7 +175,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldProcessSubscriptionAfterItGetsReleasedWhen_WaitForFree_StrategyIsSet()
         {
             using (var store = GetDocumentStore())
@@ -183,7 +184,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var userId = 0;
 
-                foreach (var activeClientStrategy in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver})
+                foreach (var activeClientStrategy in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver })
                 {
                     var processedUsers = 0;
                     var activeSubscriptionMre = new AsyncManualResetEvent();
@@ -212,7 +213,7 @@ namespace SlowTests.Client.Subscriptions
                     };
 
                     var items = new BlockingCollection<User>();
-                    
+
                     using (var s = store.OpenSession())
                     {
                         s.Store(new User(), "users/" + userId++);
@@ -271,6 +272,6 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-     
+
     }
 }

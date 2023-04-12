@@ -10,6 +10,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Client.Subscriptions
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task DisablingDatabaseShouldCutConnection()
         {
             using (var store = GetDocumentStore())
@@ -34,7 +35,8 @@ namespace SlowTests.Client.Subscriptions
                     Name = "Subs1"
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1") {
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1")
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
@@ -43,7 +45,7 @@ namespace SlowTests.Client.Subscriptions
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{});
+                    session.Store(new User { });
                     session.SaveChanges();
                 }
 
@@ -76,7 +78,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task UpdatingSubscriptionScriptShouldNotChangeVector()
         {
             using (var store = GetDocumentStore())
@@ -87,7 +89,8 @@ namespace SlowTests.Client.Subscriptions
                     Query = "from Users as u select {Name:'David'}"
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1") {
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1")
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
@@ -96,7 +99,7 @@ namespace SlowTests.Client.Subscriptions
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{});
+                    session.Store(new User { });
                     session.SaveChanges();
                 }
 
@@ -113,7 +116,7 @@ namespace SlowTests.Client.Subscriptions
 
                 Assert.True(await mre.WaitAsync(_reasonableWaitTime));
                 mre.Reset();
-                Assert.Equal("David",results[0].Name);
+                Assert.Equal("David", results[0].Name);
                 results.Clear();
                 var currentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 

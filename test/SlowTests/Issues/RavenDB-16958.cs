@@ -17,6 +17,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Handlers.Debugging;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
             return ravenServer;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task MoveOnToNextTcpAddressOnGuidFailInSubscriptions()
         {
             //Create same cert servers. B tries to open subscription but accidentally connects to A, after which the guid check fails and failover occurs.
@@ -99,7 +100,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Certificates)]
         public async Task MoveOnToNextTcpAddressOnCertFailInSubscriptions()
         {
             // create 2 servers with different certs. A tries to connect to itself but accidentaly tries to connect to B, cert is rejected and failover occurs.

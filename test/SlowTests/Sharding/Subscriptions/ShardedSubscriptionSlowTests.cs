@@ -39,7 +39,7 @@ namespace SlowTests.Sharding.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(30);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task AcknowledgeSubscriptionBatchWhenDBisBeingDeletedShouldThrow()
         {
             using var store = Sharding.GetDocumentStore();
@@ -84,7 +84,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task CanUpdateSubscriptionToStartFromBeginningOfTime()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -196,7 +196,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task CanUpdateSubscriptionToStartFromLastDocument()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -283,7 +283,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Subscriptions)]
         public async Task CanUpdateSubscriptionToStartFromDoNotChange()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -359,7 +359,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "RavenDB-18223: Cannot set CV by admin in sharded subscription")]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding, Skip = "RavenDB-18223: Cannot set CV by admin in sharded subscription")]
         public async Task RunningSubscriptionShouldJumpToNextChangeVectorIfItWasChangedByAdmin()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -620,7 +620,7 @@ namespace SlowTests.Sharding.Subscriptions
                 string name = store.Subscriptions
                         .Create(new SubscriptionCreationOptions<Company>()
                         {
-                            Includes = builder => builder.IncludeCounters(new[] {  "Likes", "Subscribes" })
+                            Includes = builder => builder.IncludeCounters(new[] { "Likes", "Subscribes" })
                         });
 
                 using (var session = store.OpenSession())
@@ -674,7 +674,7 @@ namespace SlowTests.Sharding.Subscriptions
                 if (single == false)
                 {
                     name = store.Subscriptions
-                        .Create(new SubscriptionCreationOptions<Company>() { Includes = builder => builder.IncludeCounters(new []{"Shares", "Subscribes"}) });
+                        .Create(new SubscriptionCreationOptions<Company>() { Includes = builder => builder.IncludeCounters(new[] { "Shares", "Subscribes" }) });
                 }
                 else
                 {
@@ -814,8 +814,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Theory(Skip = "RavenDB-19889")]
-        //[RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding, Skip = "RavenDB-19889")]
         [InlineData(true)]
         [InlineData(false)]
         public void SubscriptionWithIncludeAllCountersOfDocumentAndOfRelatedDocument(bool diff)
@@ -893,7 +892,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "RavenDB-18568")]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding, Skip = "RavenDB-18568")]
         public async Task ConcurrentSubscriptions()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -948,7 +947,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "RavenDB-18568")]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding, Skip = "RavenDB-18568")]
         public async Task CanGetSubscriptionsResendItems()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1110,9 +1109,10 @@ namespace SlowTests.Sharding.Subscriptions
 
                     var mre = new AsyncManualResetEvent();
                     using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
-                           {
-                               MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
-                           }))
+                    {
+                        MaxDocsPerBatch = 5,
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+                    }))
                     {
                         var t = worker.Run(_ =>
                         {
@@ -1203,9 +1203,10 @@ namespace SlowTests.Sharding.Subscriptions
 
                 var mre = new AsyncManualResetEvent();
                 using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
-                       {
-                           MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
-                       }))
+                {
+                    MaxDocsPerBatch = 5,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+                }))
                 {
                     var t = worker.Run(_ =>
                     {

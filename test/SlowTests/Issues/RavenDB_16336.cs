@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.TimeSeries | RavenTestCategory.Counters)]
         public async Task SubscriptionBatchStats_ShouldIncludeSizeOfIncludedTimeSeriesAndCounters()
         {
             using (var store = GetDocumentStore())
@@ -48,7 +49,7 @@ namespace SlowTests.Issues
                         if (i < 20)
                             // we're only taking the last 100 entries
                             continue;
-                        
+
                         expectedTimeSeriesSize += Sparrow.Extensions.RavenDateTimeExtensions.GetDefaultRavenFormat(dateTime, ctx, out _, isUtc: true); // entry.Timestamp
                         expectedTimeSeriesSize += sizeof(double); // entry.Values
                         expectedTimeSeriesSize += 1; // entry.IsRollup

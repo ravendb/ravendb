@@ -30,6 +30,7 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1199,7 +1200,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.BackupExportImport)]
         public async Task CanRestoreSubscriptionsFromBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

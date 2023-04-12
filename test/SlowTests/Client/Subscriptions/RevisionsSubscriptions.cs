@@ -13,12 +13,13 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
-    public class RevisionsSubscriptions:RavenTestBase
+    public class RevisionsSubscriptions : RavenTestBase
     {
         public RevisionsSubscriptions(ITestOutputHelper output) : base(output)
         {
@@ -26,7 +27,7 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
         public async Task PlainRevisionsSubscriptions()
         {
             using (var store = GetDocumentStore())
@@ -82,7 +83,8 @@ namespace SlowTests.Client.Subscriptions
                     }
                 }
 
-                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId) {
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
@@ -105,7 +107,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
         public async Task PlainRevisionsSubscriptionsCompareDocs()
         {
             using (var store = GetDocumentStore())
@@ -160,7 +162,8 @@ namespace SlowTests.Client.Subscriptions
                     }
                 }
 
-                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId) {
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
@@ -195,7 +198,7 @@ namespace SlowTests.Client.Subscriptions
             public int Age;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
         public async Task RevisionsSubscriptionsWithCustomScript()
         {
             using (var store = GetDocumentStore())
@@ -249,7 +252,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                             session.Store(new User
                             {
                                 Name = $"users{i} ver {j}",
-                                Age=j
+                                Age = j
                             }, "users/" + i);
 
                             session.Store(new Company()
@@ -262,7 +265,8 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     }
                 }
 
-                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId) {
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
@@ -284,7 +288,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
         public async Task RevisionsSubscriptionsWithCustomScriptCompareDocs()
         {
             using (var store = GetDocumentStore())
@@ -352,7 +356,8 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     }
                 }
 
-                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId) {
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
@@ -380,7 +385,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Revisions)]
         public async Task RDBCL_801()
         {
             DoNotReuseServer();
@@ -390,9 +395,9 @@ select { Id: id(d.Current), Age: d.Current.Age }
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User
-                        {
-                            Name = "Karmel"
-                        }, "users/1");
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
                     session.SaveChanges();
                 }
 
@@ -432,7 +437,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                 {
                     GC.KeepAlive(sub.Run(x =>
                     {
-                    
+
                     }));
 
                     var acks = 0;
@@ -450,7 +455,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                             }
                         }
                     }
-                   
+
                     Assert.True(acks < 50, $"{acks}");
                 }
             }
