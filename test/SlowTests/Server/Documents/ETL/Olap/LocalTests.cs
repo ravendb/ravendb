@@ -1814,7 +1814,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanUpdateDocIdColumnName()
         {
             using (var store = GetDocumentStore())
@@ -1883,7 +1883,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                 var result = AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
-                
+
                 Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
@@ -1961,7 +1961,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanUpdateRunFrequency()
         {
             using (var store = GetDocumentStore())
@@ -2089,7 +2089,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanUpdateCustomPartitionValue()
         {
             using (var store = GetDocumentStore())
@@ -2212,8 +2212,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 }
             }
         }
-        
-        [Fact]
+
+        [NightlyBuildFact]
         public async Task CanUpdateLocalSettings()
         {
             using (var store = GetDocumentStore())

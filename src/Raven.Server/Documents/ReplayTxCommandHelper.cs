@@ -151,7 +151,7 @@ namespace Raven.Server.Documents
                     throw new ReplayTransactionsException($"Can't read {nameof(RecordingDetails.Type)} of replay detail", peepingTomStream);
                 }
 
-                if (string.IsNullOrEmpty(startDetail.Type))
+                if (string.IsNullOrEmpty(startDetail.Version))
                 {
                     throw new ReplayTransactionsException($"Can't read {nameof(StartRecordingDetails.Version)} of replay instructions", peepingTomStream);
                 }

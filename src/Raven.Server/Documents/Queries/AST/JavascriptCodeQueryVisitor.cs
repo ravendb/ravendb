@@ -190,10 +190,6 @@ namespace Raven.Server.Documents.Queries.AST
             
             if (expr.Name.Value == "id" && expr.Arguments.Count == 0)
             {
-                if (expr.Arguments.Count != 1)
-                {
-                    throw new InvalidOperationException("id(document) must be called with one document parameter");
-                }
                 _sb.Append("this");
             }
 

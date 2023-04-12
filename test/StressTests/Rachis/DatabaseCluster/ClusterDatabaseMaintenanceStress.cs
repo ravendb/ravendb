@@ -96,7 +96,7 @@ namespace StressTests.Rachis.DatabaseCluster
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = 300.ToString(),
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "10",
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
                 [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "15",
             };
@@ -149,7 +149,7 @@ namespace StressTests.Rachis.DatabaseCluster
 
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 0);
                 Assert.Equal(0, val);
-                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), clusterSize);
+                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2);
                 Assert.Equal(clusterSize, val);
 
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -157,5 +157,6 @@ namespace StressTests.Rachis.DatabaseCluster
                 Assert.Equal(fixedOrder, record.Topology.Members);
             }
         }
+
     }
 }

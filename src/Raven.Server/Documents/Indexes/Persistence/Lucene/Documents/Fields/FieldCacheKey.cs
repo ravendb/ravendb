@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         public static int CalculateHashCode(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
         {
-            ulong tmpHash = Hashing.Marvin32.CalculateInline(name) << 32;
+            ulong tmpHash = Hashing.Marvin32.CalculateInline(name);
             int field = ((index != null ? (byte)index : 0xFF) << 16 | ((byte)store << 8) | (byte)termVector);
             tmpHash = tmpHash | (uint)field;
 
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         public static int CalculateHashCode(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, List<int> multipleItemsSameField)
         {
-            ulong tmpHash = Hashing.Marvin32.CalculateInline(name) << 32;
+            ulong tmpHash = Hashing.Marvin32.CalculateInline(name);
             int field = ((index != null ? (byte)index : 0xFF) << 16 | ((byte)store << 8) | (byte)termVector);
             tmpHash = tmpHash | (uint)field;
 

@@ -1221,7 +1221,7 @@ namespace Raven.Server.Documents.Replication
                     Database = Database.Name
                 }).ToList();
 
-                Task.Run(() =>
+                _ = Task.Run(() =>
                 {
                     // here we might have blocking calls to fetch the tcp info.
                     try
@@ -1235,11 +1235,16 @@ namespace Raven.Server.Documents.Replication
                     }
                 });
             }
+
             _internalDestinations.Clear();
+
+            if (newInternalDestinations != null)
+            {
             foreach (var item in newInternalDestinations)
             {
                 _internalDestinations.Add(item);
             }
+        }
         }
 
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)

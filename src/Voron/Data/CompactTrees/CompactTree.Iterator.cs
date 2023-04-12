@@ -1,7 +1,5 @@
 using System;
-using System.Buffers;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace Voron.Data.CompactTrees
 {
@@ -67,7 +65,10 @@ namespace Voron.Data.CompactTrees
                     if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
                     {
                         if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[state.LastSearchPosition], out scope, out value) == false)
+                        {
+                            scope.Dispose();
                             return false;
+                        }
 
                         state.LastSearchPosition++;
                         return true;

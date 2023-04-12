@@ -34,5 +34,6 @@ public readonly struct CompactKeyCacheScope : IDisposable
 
     public void Dispose()
     {
+        Key?.Dispose();
     }
 }

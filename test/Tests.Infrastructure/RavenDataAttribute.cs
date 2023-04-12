@@ -76,7 +76,6 @@ public class RavenDataAttribute : DataAttribute
         {
             var coraxOptions = options.Clone();
             coraxOptions.SearchEngineMode = RavenSearchEngineMode.Corax;
-
             coraxOptions.ModifyDatabaseRecord += record =>
             {
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";

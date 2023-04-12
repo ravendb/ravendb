@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 resultToFill.IndexTimestamp = DateTime.MinValue;
                 resultToFill.IncludedPaths = query.Metadata.Includes;
 
-                var fieldsToFetch = new FieldsToFetch(query, null);
+                var fieldsToFetch = new FieldsToFetch(query, null, IndexType.None);
                 var includeDocumentsCommand  = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
                 var includeRevisionsCommand  = new IncludeRevisionsCommand(Database, context.Documents, query.Metadata.RevisionIncludes);
                 
