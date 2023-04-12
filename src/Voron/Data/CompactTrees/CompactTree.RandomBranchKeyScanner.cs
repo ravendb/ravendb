@@ -114,6 +114,7 @@ unsafe partial class CompactTree
             Success:
             _currentSample++;
             key = scope.Key.Decoded();
+            scope.Dispose();
             return true;
 
             Failure:
