@@ -420,6 +420,7 @@ namespace Corax
             _knownFieldsTerms = new IndexedField[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
                 _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i));
+
         }
         
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -432,7 +433,10 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
+            
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
+            _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+            
             _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
 
         }
@@ -449,7 +453,10 @@ namespace Corax
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
+            
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
+            _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+
             _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
         }
 
@@ -555,19 +562,18 @@ namespace Corax
             _documentBoost.Delete(entryId);
         }
         
-        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries, float documentBoost)
+        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, float documentBoost)
         {
-            var idInTree = Update(field, key, id, data, ref numberOfEntries);
+            var idInTree = Update(field, key, id, data);
             AppendDocumentBoost(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree), documentBoost, true);
             return idInTree;
         }
         
        /// <returns>Encoded entryId</returns>
-        public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries)
+        public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data)
         {
             if (TryGetEntryTermId(field, key, out var idInTree) == false)
             {
-                numberOfEntries++;
                 return Index(id, data);
             }
             // if there is more than a single entry for this key, delete & index from scratch
@@ -575,7 +581,6 @@ namespace Corax
             if((idInTree & (long)TermIdMask.EnsureIsSingleMask) != 0)
             {
                 RecordDeletion(idInTree);
-                numberOfEntries++;
                 return Index(id, data);
             }
             
@@ -594,7 +599,6 @@ namespace Corax
             if (rawSize < idLen + id.Size + data.Length)
             {
                 RecordDeletion(idInTree);
-                numberOfEntries++;
                 return Index(id, data);
             }
             var context = Transaction.Allocator;
@@ -826,7 +830,8 @@ namespace Corax
             }
         }
 
-        public long GetNumberOfEntries() => (_indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0) + _numberOfModifications;
+        private readonly long _initialNumberOfEntries;
+        public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
         private void AddSuggestions(IndexedField field, Slice slice)
         {
@@ -1315,15 +1320,6 @@ namespace Corax
 
             RecordDeletion(idInTree);
             return true;
-        }
-        
-        public bool TryDeleteEntry(string key, string term, out long entriesCountDifference)
-        {
-            var originAmountOfModifications = _numberOfModifications;
-            var result = TryDeleteEntry(key, term);
-            entriesCountDifference = _numberOfModifications - originAmountOfModifications;
-            
-            return result;
         }
         
         /// <summary>
