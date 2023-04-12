@@ -17,7 +17,8 @@ namespace SlowTests.Client.Subscriptions
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(10);
-        [Fact]
+        
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task RunningSubscriptionOnNonExistantCollectionShould_NOT_Throw()
         {
             using (var store = GetDocumentStore())

@@ -771,7 +771,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task CanSnapshotSubscriptionState()
         {
             var (_, leader) = await CreateRaftCluster(1, watcherCluster: true);
@@ -787,7 +787,7 @@ namespace RachisTests
 
                 var waitForBatch = new ManualResetEvent(false);
                 var t = worker.Run((batch) => { waitForBatch.WaitOne(TimeSpan.FromSeconds(15)); });
-              
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User());
