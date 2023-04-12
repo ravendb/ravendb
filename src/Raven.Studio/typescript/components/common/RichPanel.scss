@@ -95,6 +95,10 @@
             flex-grow: 1;
             align-items: flex-end;
             flex-wrap: wrap;
+            gap: 1rem;
+            .rich-panel-detail-item {
+                margin: bs5variables.$gutter-xs 0;
+            }
         }
 
         .rich-panel-detail-item {
