@@ -20,19 +20,19 @@ namespace SlowTests.Issues
         {
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
-        public  Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode()
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
+        public Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode()
         {
             return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(false);
         }
-        
-        [MultiplatformFact(RavenArchitecture.AllX64)]
-        public  Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteModeCompressed()
+
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
+        public Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteModeCompressed()
         {
             return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(true);
         }
 
-        public async Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(bool compressed)
+        private async Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(bool compressed)
         {
             var dbPath = NewDataPath(prefix: Guid.NewGuid().ToString());
             var recoveryExportPath = NewDataPath(prefix: Guid.NewGuid().ToString());
@@ -62,7 +62,7 @@ namespace SlowTests.Issues
             }
 
             var journals = new DirectoryInfo(Path.Combine(dbPath, "Journals")).GetFiles();
-            
+
             // run recovery
             using (var recovery = new Recovery(new VoronRecoveryConfiguration()
             {

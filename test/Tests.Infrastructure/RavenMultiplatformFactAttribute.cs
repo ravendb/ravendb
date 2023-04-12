@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using Xunit;
 
 namespace Tests.Infrastructure;
 
@@ -26,7 +25,7 @@ public enum RavenArchitecture
     All = AllX64 | AllX86
 }
 
-public class MultiplatformFactAttribute : FactAttribute
+public class RavenMultiplatformFactAttribute : RavenFactAttribute
 {
     private static readonly bool ForceUsing32BitsPager;
 
@@ -35,23 +34,24 @@ public class MultiplatformFactAttribute : FactAttribute
 
     private string _skip;
 
-    static MultiplatformFactAttribute()
+    static RavenMultiplatformFactAttribute()
     {
         if (bool.TryParse(Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager"), out var result))
             ForceUsing32BitsPager = result;
     }
 
-    public MultiplatformFactAttribute(RavenPlatform platform = RavenPlatform.All)
-     : this(platform, RavenArchitecture.All)
+    public RavenMultiplatformFactAttribute(RavenTestCategory category, RavenPlatform platform = RavenPlatform.All)
+     : this(category, platform, RavenArchitecture.All)
     {
     }
 
-    public MultiplatformFactAttribute(RavenArchitecture architecture = RavenArchitecture.All)
-        : this(RavenPlatform.All, architecture)
+    public RavenMultiplatformFactAttribute(RavenTestCategory category, RavenArchitecture architecture = RavenArchitecture.All)
+        : this(category, RavenPlatform.All, architecture)
     {
     }
 
-    public MultiplatformFactAttribute(RavenPlatform platform = RavenPlatform.All, RavenArchitecture architecture = RavenArchitecture.All)
+    public RavenMultiplatformFactAttribute(RavenTestCategory category, RavenPlatform platform = RavenPlatform.All, RavenArchitecture architecture = RavenArchitecture.All)
+        : base(category)
     {
         _platform = platform;
         _architecture = architecture;

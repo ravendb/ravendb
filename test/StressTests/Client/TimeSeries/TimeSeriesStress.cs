@@ -30,7 +30,7 @@ namespace StressTests.Client.TimeSeries
         {
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.TimeSeries, RavenArchitecture.AllX64)]
         public async Task RapidRetention()
         {
             var cluster = await CreateRaftCluster(3);

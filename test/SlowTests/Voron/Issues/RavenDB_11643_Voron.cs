@@ -15,7 +15,7 @@ namespace SlowTests.Voron.Issues
         {
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public void PageRefValidationOnBranchPagesShouldNotThrow()
         {
             using (var tx = Env.WriteTransaction())

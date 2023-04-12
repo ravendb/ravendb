@@ -18,7 +18,7 @@ namespace SlowTests.Monitoring
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Linux, RavenPlatform.Linux)]
         public async Task DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
         {
             var currentDirectory = Directory.GetCurrentDirectory();
