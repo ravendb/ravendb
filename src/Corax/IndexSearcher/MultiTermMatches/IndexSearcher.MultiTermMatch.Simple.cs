@@ -11,7 +11,7 @@ public partial class IndexSearcher
     /// <summary>
     /// Test API only
     /// </summary>
-    public MultiTermMatch StartWithQuery(string field, string startWith, bool isNegated = false) => StartWithQuery(FieldMetadataBuilder(field), EncodeAndApplyAnalyzer(default, startWith));
+    public MultiTermMatch StartWithQuery(string field, string startWith, bool isNegated = false, bool hasBoost = false) => StartWithQuery(FieldMetadataBuilder(field, hasBoost: hasBoost), EncodeAndApplyAnalyzer(default, startWith));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch StartWithQuery(FieldMetadata field, string startWith, bool isNegated = false)

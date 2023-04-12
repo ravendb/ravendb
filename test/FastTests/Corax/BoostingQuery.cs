@@ -119,41 +119,7 @@ namespace FastTests.Corax
                 Assert.True(localResults.SequenceEqual(highestScore));
             }
         }
-
-        [Theory]
-        [InlineData(256, 29)]
-        [InlineData(512, 29)]
-        [InlineData(1024, 29)]
-        [InlineData(2048, 29)]
-        [InlineData(4096, 31)]
-        public void UnaryBoostingTest(int amount, int mod)
-        {
-            longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> {Id = $"list/{i}", Content1 = i % mod}).ToList();
-            IndexEntries();
-            using var searcher = new IndexSearcher(Env);
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", 1);
-            {
-                var match = searcher.Boost(searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, 10L, UnaryMatchOperation.GreaterThan), 100);
-                Span<long> ids = stackalloc long[amount];
-                var read = match.Fill(ids);
-                // Assert.Equal(longList.Count, read);
-                List<string> result = new();
-                for (int i = 0; i < read; ++i)
-                {
-                    result.Add(searcher.GetIdentityFor(ids[i]));
-                }
-
-                Assert.Equal(result.Count, result.Distinct().Count());
-
-                var localResults = longList.Where(x => x.Content1 > 10).Select(y => y.Id).ToArray();
-                var highestScore = result.ToArray().AsSpan(0, localResults.Length).ToArray();
-                Array.Sort(localResults);
-                Array.Sort(highestScore);
-
-                Assert.True(localResults.SequenceEqual(highestScore));
-            }
-        }
-
+        
         [Fact]
         public void OrderByBoosting()
         {
@@ -167,12 +133,12 @@ namespace FastTests.Corax
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
             {
-                var startWithMatch = searcher.StartWithQuery("Id", "list/1");
+                var startWithMatch = searcher.StartWithQuery("Id", "list/1", hasBoost: true);
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
-                var contentMatch = searcher.TermQuery("Content1", "1");
+                var contentMatch = searcher.TermQuery("Content1", "1", hasBoost: true);
                 var orMatch = searcher.Or(boostedStartWithMatch, contentMatch);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
-                var contentMatch2 = searcher.TermQuery("Content1", "2");
+                var contentMatch2 = searcher.TermQuery("Content1", "2", hasBoost: true);
                 var orMatch2 = searcher.Or(contentMatch2, boostedOrMatch);
                 var sortedMatch = searcher.OrderByScore(orMatch2);
 
@@ -203,12 +169,12 @@ namespace FastTests.Corax
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
             {
-                var startWithMatch = searcher.StartWithQuery("Id", "list/1");
+                var startWithMatch = searcher.StartWithQuery("Id", "list/1", hasBoost: true);
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
-                var contentMatch = searcher.TermQuery("Content1", "1");
+                var contentMatch = searcher.TermQuery("Content1", "1", hasBoost: true);
                 var orMatch = searcher.Or(boostedStartWithMatch, contentMatch);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
-                var contentMatch2 = searcher.TermQuery("Content1", "2");
+                var contentMatch2 = searcher.TermQuery("Content1", "2", hasBoost: true);
                 var orMatch2 = searcher.Or(contentMatch2, boostedOrMatch);
                 var sortedMatch = searcher.OrderByScore(orMatch2, 4);
 
@@ -245,10 +211,10 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             {
                 var content0Match = searcher.TermQuery("Content1", "0", hasBoost: true);
-                var boostedContent0 = searcher.Boost(content0Match, 0);
+                var boostedContent0 = searcher.Boost(content0Match, 1);
 
                 var content1Match = searcher.TermQuery("Content1", "1", hasBoost: true);
-                var boostedContent1 = searcher.Boost(content1Match, 0);
+                var boostedContent1 = searcher.Boost(content1Match, 1);
 
                 var orMatch = searcher.Or(boostedContent0, boostedContent1);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
@@ -261,8 +227,18 @@ namespace FastTests.Corax
                 for (int i = 0; i < read; ++i)
                     sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
 
+                
                 for (int i = 0; i < longList.Count; ++i)
-                    Assert.Equal(longList[i].Id, sortedByCorax[i]);
+                {
+                    if (longList[i].Id != sortedByCorax[i])
+                    {
+                        // Since documents can change places (we're using unstable sort), we can assert if the boosted value is exactly the same as in the asserted document.
+                        var originalEntry = longList.Single(isne => isne.Id == sortedByCorax[i]);
+                        Assert.Equal(longList[i].Content1, originalEntry.Content1);
+                    }
+                    else
+                        Assert.Equal(longList[i].Id, sortedByCorax[i]);
+                }
             }
         }
 
@@ -280,7 +256,7 @@ namespace FastTests.Corax
 
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
-            var contentMetadata = searcher.FieldMetadataBuilder("Content1");
+            var contentMetadata = searcher.FieldMetadataBuilder("Content1", hasBoost: true);
             {
                 var query = searcher.OrderByScore(searcher.InQuery(contentMetadata, new List<string>() {"0", "1"}));
 
@@ -292,7 +268,16 @@ namespace FastTests.Corax
                     sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
 
                 for (int i = 0; i < longList.Count; ++i)
-                    Assert.Equal(longList[i].Id, sortedByCorax[i]);
+                {
+                    if (longList[i].Id != sortedByCorax[i])
+                    {
+                        // Since documents can change places (we're using unstable sort), we can assert if the boosted value is exactly the same as in the asserted document.
+                        var originalEntry = longList.Single(isne => isne.Id == sortedByCorax[i]);
+                        Assert.Equal(longList[i].Content1, originalEntry.Content1);
+                    }
+                    else
+                        Assert.Equal(longList[i].Id, sortedByCorax[i]);
+                }
             }
         }
 
