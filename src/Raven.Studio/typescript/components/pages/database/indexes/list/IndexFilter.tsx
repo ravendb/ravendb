@@ -6,7 +6,7 @@ import { Badge, Button, Col, DropdownItem, Input, InputGroup, PopoverBody, Row, 
 import useBoolean from "hooks/useBoolean";
 import { DropdownPanel } from "components/common/DropdownPanel";
 import { Switch } from "components/common/Checkbox";
-import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
+import produce from "immer";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -51,11 +51,12 @@ function hasAnyStateFilter(filter: IndexFilterCriteria) {
 
 interface IndexFilterDescriptionProps {
     filter: IndexFilterCriteria;
+    setFilter: (x: IndexFilterCriteria) => void;
     indexes: IndexSharedInfo[];
 }
 
 export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
-    const { filter, indexes } = props;
+    const { filter, setFilter, indexes } = props;
 
     const indexesCount = indexes.length;
 
@@ -110,6 +111,14 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
         ""
     );
 
+    const onSearchTextChange = (searchText: string) => {
+        setFilter(
+            produce(filter, (draft) => {
+                draft.searchText = searchText;
+            })
+        );
+    };
+
     return (
         <Row className="d-flex align-items-end mb-3">
             <Col>
@@ -120,6 +129,8 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
                     placeholder="e.g. Orders/ByCompany/*"
                     title="Filter indexes"
                     className="filtering-input"
+                    value={filter.searchText}
+                    onChange={(e) => onSearchTextChange(e.target.value)}
                 />
             </Col>
             <Col>
@@ -161,6 +172,7 @@ const indexesStatesList = [
     { value: "idle", label: "Idle" },
 ];
 
+// TODO: remove this component after the MultiToggle in IndexFilterDescription is properly connected
 export default function IndexFilter(props: IndexFilterProps) {
     const { filter, setFilter } = props;
 
