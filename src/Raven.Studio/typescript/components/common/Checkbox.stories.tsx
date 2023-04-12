@@ -1,10 +1,9 @@
 ﻿import { ComponentMeta } from "@storybook/react";
-import { Checkbox, Switch } from "./Checkbox";
+import { Checkbox, Radio, Switch } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { boundCopy } from "../utils/common";
-import { Input } from "reactstrap";
 
 export default {
     title: "Bits/Checkbox",
@@ -57,6 +56,25 @@ const Template = (args: { withLabel: boolean }) => {
             <Switch selected={selected} toggleSelection={toggle} reverse color="warning">
                 Switch reverse
             </Switch>
+
+            <Radio selected={selected} toggleSelection={toggle}>
+                Radio
+            </Radio>
+            <br />
+            <Radio selected={selected} toggleSelection={toggle} color="primary" size="sm">
+                Radio sm
+            </Radio>
+            <br />
+            <Radio selected={selected} toggleSelection={toggle} color="node" size="lg">
+                Radio lg
+            </Radio>
+            <br />
+            <Radio selected={selected} toggleSelection={toggle} color="shard" reverse>
+                Radio reverse
+            </Radio>
+            <Radio selected={selected} toggleSelection={toggle} color="danger" disabled>
+                Radio disabled
+            </Radio>
         </div>
     );
 };

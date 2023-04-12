@@ -6,7 +6,7 @@
     background-color: colors.$panel-bg-1-var;
     border-radius: sizes.$gutter-xs;
     display: grid;
-    grid-template-columns: auto auto;
+    grid-template-columns: auto 1fr;
     z-index: 1000;
 
     .location-specific-details-location {
@@ -17,7 +17,7 @@
         margin-right: 1px;
         background-color: colors.$panel-header-bg-var;
         border-top-left-radius: sizes.$gutter-xs;
-        width: 135px;
+        min-width: 135px;
 
         & > div:first-of-type {
             font-size: 36px;

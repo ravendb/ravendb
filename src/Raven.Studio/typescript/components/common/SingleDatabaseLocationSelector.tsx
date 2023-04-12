@@ -1,7 +1,8 @@
 ﻿import React, { useState } from "react";
-import { Label } from "reactstrap";
-import { NodeSet, NodeSetItem, NodeSetLabel, NodeSetListCard } from "./NodeSet";
-import { Radio } from "./Radio";
+import { Card, Label } from "reactstrap";
+import { NodeSet, NodeSetItem, NodeSetLabel, NodeSetList } from "./NodeSet";
+import { Icon } from "./Icon";
+import { Radio } from "./Checkbox";
 
 interface SingleDatabaseLocationSelectorProps {
     locations: databaseLocationSpecifier[];
@@ -20,28 +21,29 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
         <div className="bs5">
             {isNonSharded ? (
                 <>
-                    {locations.map((location, idx) => {
-                        const locationId = uniqId + idx;
-
-                        return (
-                            <div key={locationId}>
-                                <Label className="m-0">
-                                    <NodeSet
-                                        color="secondary"
-                                        className="my-1 p-1 d-flex flex-column align-items-center"
-                                    >
-                                        <NodeSetItem icon="node" color="node">
-                                            {location.nodeTag}
+                    <NodeSet>
+                        <NodeSetList>
+                            {locations.map((location, idx) => {
+                                const locationId = uniqId + idx;
+                                return (
+                                    <>
+                                        <NodeSetItem key={locationId}>
+                                            <Label htmlFor={locationId}>
+                                                <Icon icon="node" color="node" /> {location.nodeTag}
+                                                <div className="d-flex justify-content-center">
+                                                    <Radio
+                                                        id={locationId}
+                                                        selected={selectedLocation === location}
+                                                        toggleSelection={() => setSelectedLocation(location)}
+                                                    />
+                                                </div>
+                                            </Label>
                                         </NodeSetItem>
-                                        <Radio
-                                            selected={selectedLocation === location}
-                                            toggleSelection={() => setSelectedLocation(location)}
-                                        />
-                                    </NodeSet>
-                                </Label>
-                            </div>
-                        );
-                    })}
+                                    </>
+                                );
+                            })}
+                        </NodeSetList>
+                    </NodeSet>
                 </>
             ) : (
                 <>
@@ -51,28 +53,36 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
                         return (
                             <div key={nodeId}>
                                 <NodeSet color="shard" className="my-1">
-                                    <NodeSetLabel color="node" icon="node">
-                                        {nodeTag}
-                                    </NodeSetLabel>
+                                    <Card className="d-flex justify-content-center">
+                                        <NodeSetLabel color="node" icon="node">
+                                            {nodeTag}
+                                        </NodeSetLabel>
+                                    </Card>
 
-                                    <NodeSetListCard>
+                                    <NodeSetList>
                                         {locations
                                             .filter((x) => x.nodeTag === nodeTag)
-                                            .map((location) => (
-                                                <Label
-                                                    key={nodeId + "-shard-" + location.shardNumber}
-                                                    className="m-0 p-1 d-flex flex-column align-items-center"
-                                                >
-                                                    <NodeSetItem color="shard" icon="shard">
-                                                        {location.shardNumber}
-                                                    </NodeSetItem>
-                                                    <Radio
-                                                        selected={selectedLocation === location}
-                                                        toggleSelection={() => setSelectedLocation(location)}
-                                                    ></Radio>
-                                                </Label>
-                                            ))}
-                                    </NodeSetListCard>
+                                            .map((location) => {
+                                                const shardId = nodeId + "-shard-" + location.shardNumber;
+                                                return (
+                                                    <Label key={shardId} htmlFor={shardId}>
+                                                        <NodeSetItem color="shard" icon="shard">
+                                                            {location.shardNumber}
+                                                            <div className="d-flex justify-content-center">
+                                                                <Radio
+                                                                    id={shardId}
+                                                                    selected={selectedLocation === location}
+                                                                    toggleSelection={() =>
+                                                                        setSelectedLocation(location)
+                                                                    }
+                                                                    color="shard"
+                                                                />
+                                                            </div>
+                                                        </NodeSetItem>
+                                                    </Label>
+                                                );
+                                            })}
+                                    </NodeSetList>
                                 </NodeSet>
                             </div>
                         );

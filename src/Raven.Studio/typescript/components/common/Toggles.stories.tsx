@@ -32,12 +32,6 @@ export function Toggles() {
         { value: "remote", label: "Remote" },
     ];
 
-    const checkboxAllItem: InputItem = {
-        label: "All",
-        value: "All",
-        count: 4,
-    };
-
     return (
         <Card>
             <MultiRadioToggle
@@ -60,7 +54,27 @@ export function Toggles() {
                 label="Multi Checkbox Toggle with select all"
                 selectedItems={checkboxWithAllSelectedItems}
                 setSelectedItems={(x) => setCheckboxWithAllSelectedItems(x)}
-                itemSelectAll={checkboxAllItem}
+                selectAll
+            />
+            <MultiCheckboxToggle
+                className="p-4"
+                inputItems={checkboxList}
+                label="Multi Checkbox Toggle with select all + custom label"
+                selectedItems={checkboxWithAllSelectedItems}
+                setSelectedItems={(x) => setCheckboxWithAllSelectedItems(x)}
+                selectAll
+                selectAllLabel="Select All"
+            />
+
+            <MultiCheckboxToggle
+                className="p-4"
+                inputItems={checkboxList}
+                label="Multi Checkbox Toggle with select all + custom label + count"
+                selectedItems={checkboxWithAllSelectedItems}
+                setSelectedItems={(x) => setCheckboxWithAllSelectedItems(x)}
+                selectAll
+                selectAllLabel="Select All Items"
+                selectAllCount={3}
             />
         </Card>
     );

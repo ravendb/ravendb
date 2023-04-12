@@ -104,7 +104,7 @@
 
 .form-control {
     &::placeholder {
-        color: $text-muted-color;
-        opacity: 0.8;
+        color: $text-muted-var;
+        opacity: 0.5;
     }
 }

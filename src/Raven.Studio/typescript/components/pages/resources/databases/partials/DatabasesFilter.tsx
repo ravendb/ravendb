@@ -35,12 +35,6 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
         });
     };
 
-    const selectAllItem: InputItem = {
-        label: "All",
-        value: "All",
-        count: allDatabasesCount,
-    };
-
     return (
         <div className="d-flex flex-wrap gap-3 mb-3">
             <div className="d-flex flex-column flex-grow">
@@ -61,7 +55,9 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
                     label="Filter by state"
                     selectedItems={searchCriteria.states}
                     setSelectedItems={onSearchStatusesChange}
-                    itemSelectAll={selectAllItem}
+                    selectAll
+                    selectAllLabel="All"
+                    selectAllCount={allDatabasesCount}
                 />
             </div>
         </div>
