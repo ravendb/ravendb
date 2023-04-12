@@ -23,7 +23,7 @@ namespace SlowTests.Cluster
         {
         }
 
-        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName] string caller = null)
         {
             if (options == null)
             {
@@ -37,7 +37,7 @@ namespace SlowTests.Cluster
             return base.GetNewServer(options, caller);
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Cluster, RavenArchitecture.AllX64)]
         public async Task RavenDB_14044()
         {
             DoNotReuseServer();

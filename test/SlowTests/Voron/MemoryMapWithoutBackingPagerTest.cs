@@ -33,7 +33,7 @@ namespace SlowTests.Voron
                 yield return new KeyValuePair<string, string>("Key " + i, "Data:" + dummyData);
         }
 
-        [MultiplatformTheory(RavenArchitecture.AllX64)]
+        [RavenMultiplatformTheory(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         [InlineData(2)]
         [InlineData(5)]
         [InlineData(15)]
@@ -42,7 +42,7 @@ namespace SlowTests.Voron
         public void Should_be_able_to_allocate_new_pages_with_apply_logs_to_data_file(int growthMultiplier)
         {
             Options.ManualFlushing = true;
-             Env.Options.DataPager.EnsureContinuous(0, growthMultiplier);
+            Env.Options.DataPager.EnsureContinuous(0, growthMultiplier);
             var testData = GenerateTestData().ToList();
             CreatTestSchema();
             using (var tx = Env.WriteTransaction())
@@ -56,7 +56,7 @@ namespace SlowTests.Voron
             Env.FlushLogToDataFile();
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public void Should_be_able_to_read_and_write_lots_of_data()
         {
             CreatTestSchema();

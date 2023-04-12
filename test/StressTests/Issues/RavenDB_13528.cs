@@ -13,7 +13,7 @@ namespace StressTests.Issues
         {
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public unsafe void Can_write_more_than_4GB_to_journal_file()
         {
             var size = 4_780_343_296L;

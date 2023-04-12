@@ -17,7 +17,7 @@ namespace FastTests.Server
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.None, RavenPlatform.Windows | RavenPlatform.Linux)]
         public void ThreadUsage_WhenThreadsHaveSameCpuUsageAndTotalProcessorTime_ShouldListThemBoth()
         {
             using var database = CreateDocumentDatabase();

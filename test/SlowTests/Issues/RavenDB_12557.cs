@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public void ShouldNotAllowToIncreaseFileSizeWhenUsingCopyOnWriteMode()
         {
             // we must not increase file size during the recovery process because we create new MMF view but we don't see the already applied changes
@@ -32,7 +32,7 @@ namespace SlowTests.Issues
                         {
                             var tree = tx.CreateTree("test");
 
-                            tree.Add($"items/{i}/" + new string('a', 2000), new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 0});
+                            tree.Add($"items/{i}/" + new string('a', 2000), new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 });
 
                             tx.Commit();
                         }

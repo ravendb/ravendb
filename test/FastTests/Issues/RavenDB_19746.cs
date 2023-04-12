@@ -13,7 +13,7 @@ public class RavenDB_19746 : NoDisposalNeeded
     {
     }
 
-    [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux, RavenArchitecture.AllX64)]
+    [RavenMultiplatformFact(RavenTestCategory.Memory, RavenPlatform.Windows | RavenPlatform.Linux, RavenArchitecture.AllX64)]
     public void ShouldDefragment()
     {
         using var allocator = new ByteStringContext(new SharedMultipleUseFlag(), allocationBlockSize: 16384);
