@@ -86,7 +86,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task MakeSureSubscriptionProcessedAfterDisposingTheResponsibleNodes()
         {
             const int clusterSize = 5;
@@ -193,7 +193,7 @@ namespace RachisTests
             return currentResponsibleNode;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task SubscriptionShouldReconnectOnExceptionInTcpListener()
         {
             using var server = GetNewServer(new ServerCreationOptions

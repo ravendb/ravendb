@@ -13,6 +13,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,7 +27,7 @@ namespace FastTests.Sharding.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
         public async Task CanCreateSubscription()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -45,7 +46,7 @@ namespace FastTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
         public async Task CanRunSubscription()
         {
             using (var store = Sharding.GetDocumentStore(/*shards: new[] { new DatabaseTopology(), new DatabaseTopology() }*/))
@@ -89,7 +90,7 @@ namespace FastTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
         public async Task CanUpdateSubscriptionById()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -123,7 +124,7 @@ namespace FastTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
         public async Task CanTrySubscription()
         {
             using (var store = Sharding.GetDocumentStore())

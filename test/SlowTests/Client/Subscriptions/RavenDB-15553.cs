@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(10);
 
-        [Fact] 
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldUseIdPropertySupportWhenTranslatingPredicateToJS()
         {
             var workspaceId = "workspaces/1";

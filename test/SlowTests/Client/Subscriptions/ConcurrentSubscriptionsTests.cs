@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +31,7 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ConcurrentSubscriptions()
         {
             using (var store = GetDocumentStore())
@@ -85,7 +86,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ConcurrentSubscriptionsManyWorkers()
         {
             var workersAmount = 10;
@@ -130,7 +131,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task MakeSureNoopAckDoesntDeleteItemsFromResend()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -285,7 +286,7 @@ namespace SlowTests.Client.Subscriptions
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ResendAfterConnectionClosed()
         {
             using (var store = GetDocumentStore())
@@ -356,7 +357,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ResendWhenDocumentIsProcessedByAnotherConnection()
         {
             using (var store = GetDocumentStore())
@@ -448,7 +449,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task RemoveDeletedDocumentFromResend()
         {
             using (var store = GetDocumentStore())
@@ -544,7 +545,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ResendChangedDocument()
         {
             using (var store = GetDocumentStore())
@@ -640,7 +641,7 @@ namespace SlowTests.Client.Subscriptions
             }, 0);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ResendChangedDocument2()
         {
             using (var store = GetDocumentStore())
@@ -722,7 +723,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ConcurrentSubscriptionMultipleNodes()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -849,7 +850,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task DropSingleConnection()
         {
             using (var store = GetDocumentStore())
@@ -923,7 +924,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Subscriptions)]
         [InlineData(SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.Concurrent)]
         [InlineData(SubscriptionOpeningStrategy.Concurrent, SubscriptionOpeningStrategy.TakeOver)]
         public async Task CannotConnectInDifferentMode(SubscriptionOpeningStrategy strategy1, SubscriptionOpeningStrategy strategy2)
@@ -958,7 +959,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Subscriptions)]
         [InlineData(SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.Concurrent)]
         [InlineData(SubscriptionOpeningStrategy.Concurrent, SubscriptionOpeningStrategy.TakeOver)]
         public async Task CanDropAndConnectInDifferentMode(SubscriptionOpeningStrategy strategy1, SubscriptionOpeningStrategy strategy2)
@@ -997,7 +998,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Licensing)]
         public async Task ThrowOnInvalidLicense()
         {
             DoNotReuseServer();
@@ -1022,7 +1023,7 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ShouldClearOldItemsFromResendListOnBatchProcessing()
         {
             using (var store = GetDocumentStore())

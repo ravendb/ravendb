@@ -218,7 +218,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public void GetSubscriptionTaskInfo()
         {
             var subscriptionOption = new SubscriptionCreationOptions<Order>

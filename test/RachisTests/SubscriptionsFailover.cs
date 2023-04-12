@@ -123,7 +123,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
         public async Task SubscripitonDeletionFromCluster()
         {
             const int nodesAmount = 5;

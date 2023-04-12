@@ -13,6 +13,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Collections;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,8 @@ namespace SlowTests.Client.Subscriptions
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : PlatformDetails.Is32Bits ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15);
-        [Fact]
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task Run()
         {
             using (var store = GetDocumentStore(new Options
