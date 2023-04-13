@@ -13,18 +13,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 
         protected override SubscriptionConnectionsDetails GetConnectionDetails(TransactionOperationContext context, string subscriptionName)
         {
-            var subscriptionConnections = RequestHandler.Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
-            
-            if (subscriptionConnections == null)
-            {
-                return new SubscriptionConnectionsDetails()
-                {
-                    Results = new List<SubscriptionConnectionDetails>(),
-                    SubscriptionMode = "None"
-                };
-            }
-            
-            return subscriptionConnections.GetSubscriptionConnectionsDetails();
+            var state = RequestHandler.Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
+            return state?.GetSubscriptionConnectionsDetails();
         }
     }
 }
