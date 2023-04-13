@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly RavenConfiguration _configuration;
         private readonly RavenAwsS3Client _client;
 
-        public S3RestorePoints(Config.Categories.BackupConfiguration configuration, TransactionOperationContext context, S3Settings s3Settings) : base(context)
+        public S3RestorePoints(RavenConfiguration configuration, TransactionOperationContext context, S3Settings s3Settings) : base(context)
         {
             _configuration = configuration;
             _client = new RavenAwsS3Client(s3Settings, configuration.Backup);

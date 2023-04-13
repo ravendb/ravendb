@@ -17,10 +17,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly RavenConfiguration _configuration;
         private readonly RavenGoogleCloudClient _client;
 
-        public GoogleCloudRestorePoints(Config.Categories.BackupConfiguration configuration, TransactionOperationContext context, GoogleCloudSettings settings) : base(context)
+        public GoogleCloudRestorePoints(RavenConfiguration configuration, TransactionOperationContext context, GoogleCloudSettings settings) : base(context)
         {
             _configuration = configuration;
-            _client = new RavenGoogleCloudClient(settings, configuration);
+            _client = new RavenGoogleCloudClient(settings, configuration.Backup);
         }
 
         public override Task<RestorePoints> FetchRestorePoints(string path)

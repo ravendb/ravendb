@@ -68,54 +68,54 @@ internal class DatabasesHandlerProcessorForGetRestorePoints : AbstractServerHand
                 throw new InvalidOperationException("Couldn't locate any backup files.");
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                    {
+            {
                 var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(restorePoints, context);
                 context.Write(writer, blittable);
-                    }
-                    }
+            }
+        }
     }
 
     protected override Task HandleRemoteNodeAsync(ProxyCommand<RestorePoints> command, JsonOperationContext context, OperationCancelToken token)
-                    {
+    {
         return RequestHandler.ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
-                    }
+    }
 
     private RestorePointsBase GetRestorePointsSource(TransactionOperationContext context, PeriodicBackupConnectionType connectionType, BlittableJsonReaderObject settings, out string path)
     {
         path = null;
 
         switch (connectionType)
-                    {
+        {
             case PeriodicBackupConnectionType.Local:
                 var localSettings = JsonDeserializationServer.LocalSettings(settings);
                 path = localSettings.FolderPath;
                 try
                 {
                     Directory.GetLastAccessTime(path);
-                    }
+                }
                 catch (UnauthorizedAccessException)
-                    {
+                {
                     throw new InvalidOperationException($"Unauthorized access to path: {path}");
-                    }
+                }
                 if (Directory.Exists(path) == false)
                     throw new InvalidOperationException($"Path '{path}' doesn't exist");
                 return new LocalRestorePoints(context);
             case PeriodicBackupConnectionType.S3:
                 var s3Settings = JsonDeserializationServer.S3Settings(settings);
                 path = s3Settings.RemoteFolderName;
-                return new S3RestorePoints(ServerStore.Configuration.Backup, context, s3Settings);
+                return new S3RestorePoints(ServerStore.Configuration, context, s3Settings);
             case PeriodicBackupConnectionType.Azure:
                 var azureSettings = JsonDeserializationServer.AzureSettings(settings);
                 path = azureSettings.RemoteFolderName;
-                return new AzureRestorePoints(ServerStore.Configuration.Backup, context, azureSettings);
+                return new AzureRestorePoints(ServerStore.Configuration, context, azureSettings);
             case PeriodicBackupConnectionType.GoogleCloud:
                 var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(settings);
                 path = googleCloudSettings.RemoteFolderName;
-                return new GoogleCloudRestorePoints(ServerStore.Configuration.Backup, context, googleCloudSettings);
+                return new GoogleCloudRestorePoints(ServerStore.Configuration, context, googleCloudSettings);
                 default:
                 throw new ArgumentOutOfRangeException(nameof(connectionType));
-            }
-            }
+        }
+    }
 
     private class GetRestorePointsCommand : RavenCommand<RestorePoints>
     {
