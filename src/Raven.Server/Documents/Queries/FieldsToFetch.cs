@@ -35,11 +35,10 @@ namespace Raven.Server.Documents.Queries
 
         public readonly ProjectionOptions Projection;
 
-        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition)
+        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition, IndexType indexType, SearchEngineType searchEngineType = SearchEngineType.None)
         {
             Projection = new ProjectionOptions(query);
-
-            Fields = GetFieldsToFetch(query.Metadata, query.ProjectionBehavior, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias, out AnyTimeSeries);
+            Fields = GetFieldsToFetch(query.Metadata, query.ProjectionBehavior, indexDefinition, searchEngineType, indexType, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias, out AnyTimeSeries);
             IsProjection = Fields != null && Fields.Count > 0;
             IndexFields = indexDefinition?.IndexFields;
             AnyDynamicIndexFields = indexDefinition != null && indexDefinition.HasDynamicFields;
@@ -60,6 +59,8 @@ namespace Raven.Server.Documents.Queries
             ProjectionBehavior? projectionBehavior,
             SelectField selectField,
             Dictionary<string, FieldToFetch> results,
+            SearchEngineType searchEngineType,
+            IndexType indexType,
             out string selectFieldKey,
             ref bool anyExtractableFromIndex,
             ref bool extractAllStoredFields,
@@ -67,6 +68,11 @@ namespace Raven.Server.Documents.Queries
         {
             var mustExtractFromIndex = projectionBehavior.FromIndexOnly();
             var maybeExtractFromIndex = projectionBehavior.FromIndexOrDefault();
+            
+            // Since we always store fields in Corax, we can try to retrieve them from the index entry when performing projection. This is an alternative value for `canExtractFromIndex`.
+            // Additionally, when the index is a map-reduce, we have to skip the fields' stored values and look them up in the stored JSON of the reduce-map.
+            // The reason behind this is related to the type of value we return to the client. In the field, we can have a LazyStringValue, but the client may want a numeric value.
+            var forceExtractFromIndex = searchEngineType is SearchEngineType.Corax && indexType.IsMapReduce() is false;
 
             selectFieldKey = selectField.Alias ?? selectField.Name;
             var selectFieldName = selectField.Name;
@@ -103,6 +109,8 @@ namespace Raven.Server.Documents.Queries
                         projectionBehavior,
                         selectField.FunctionArgs[j],
                         null,
+                        searchEngineType,
+                        indexType,
                         out _,
                         ref ignored,
                         ref ignored,
@@ -115,7 +123,7 @@ namespace Raven.Server.Documents.Queries
             if (selectField.IsCounter)
             {
                 var fieldToFetch = new FieldToFetch(selectField.Name, selectField, selectField.Alias ?? selectField.Name,
-                    canExtractFromIndex: false, isDocumentId: false, isTimeSeries: false);
+                    canExtractFromIndex: forceExtractFromIndex, isDocumentId: false, isTimeSeries: false);
                 if (selectField.FunctionArgs != null)
                 {
                     fieldToFetch.FunctionArgs = new FieldToFetch[0];
@@ -155,7 +163,7 @@ namespace Raven.Server.Documents.Queries
                     anyExtractableFromIndex = maybeExtractFromIndex;
                     
                     return new FieldToFetch(selectFieldName, selectField, selectField.Alias, 
-                        canExtractFromIndex: indexDefinition is MapReduceIndexDefinition or AutoMapReduceIndexDefinition, 
+                        canExtractFromIndex: (indexDefinition is MapReduceIndexDefinition or AutoMapReduceIndexDefinition) || forceExtractFromIndex, 
                         isDocumentId: true, isTimeSeries: false);
                 }
 
@@ -172,7 +180,7 @@ namespace Raven.Server.Documents.Queries
 
                         foreach (var kvp in indexDefinition.MapFields)
                         {
-                            var stored = kvp.Value.Storage == FieldStorage.Yes;
+                            var stored = forceExtractFromIndex || kvp.Value.Storage == FieldStorage.Yes;
                             if (stored == false)
                                 continue;
 
@@ -190,7 +198,7 @@ namespace Raven.Server.Documents.Queries
                     ? selectField.SourceAlias
                     : selectFieldName;
 
-            var extract = mustExtractFromIndex || (maybeExtractFromIndex && indexDefinition.MapFields.TryGetValue(key, out var value) && value.Storage == FieldStorage.Yes);
+            var extract = mustExtractFromIndex || (maybeExtractFromIndex && indexDefinition.MapFields.TryGetValue(key, out var value) && (forceExtractFromIndex || value.Storage == FieldStorage.Yes));
 
             if (extract)
                 anyExtractableFromIndex = true;
@@ -218,6 +226,8 @@ namespace Raven.Server.Documents.Queries
             QueryMetadata metadata,
             ProjectionBehavior? projectionBehavior,
             IndexDefinitionBaseServerSide indexDefinition,
+            SearchEngineType searchEngineType,
+            IndexType indexType,
             out bool anyExtractableFromIndex,
             out bool extractAllStoredFields,
             out bool singleFieldNoAlias,
@@ -244,7 +254,7 @@ namespace Raven.Server.Documents.Queries
             for (var i = 0; i < metadata.SelectFields.Length; i++)
             {
                 var selectField = metadata.SelectFields[i];
-                var val = GetFieldToFetch(indexDefinition, metadata, projectionBehavior, selectField, result,
+                var val = GetFieldToFetch(indexDefinition, metadata, projectionBehavior, selectField, result, searchEngineType, indexType,
                     out var key, ref anyExtractableFromIndex, ref extractAllStoredFields, ref anyTimeSeries);
                 if (extractAllStoredFields)
                     return result;

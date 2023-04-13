@@ -54,7 +54,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         protected readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;
 
-        private long _entriesCount = 0;
         
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
         {
@@ -63,8 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
         }
 
-        // TODO: This will always return 0, most likely a reporting bug atm. 
-        public override long EntriesCount() => _entriesCount;
+        public override long EntriesCount() => _indexSearcher.NumberOfEntries;
 
 
         protected interface ISupportsHighlighting

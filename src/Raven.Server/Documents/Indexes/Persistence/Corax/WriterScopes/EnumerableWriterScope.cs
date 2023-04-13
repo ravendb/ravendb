@@ -331,9 +331,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
             if (_count.Raws > 0)
             {
-                type |= _count.Raws == 1 
-                    ? DataType.SingleRaw 
-                    : DataType.Raws;
+                type |= DataType.Raws;
             }
 
             if (type == DataType.Tuples)

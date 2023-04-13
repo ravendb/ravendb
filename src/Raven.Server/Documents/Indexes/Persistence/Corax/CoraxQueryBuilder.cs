@@ -1018,10 +1018,14 @@ internal static class CoraxQueryBuilder
                 continue;
             }
 
+            var orderingType = field.OrderingType;
+            if (index.Configuration.OrderByTicksAutomaticallyWhenDatesAreInvolved && index.IndexFieldsPersistence.HasTimeValues(field.Name.Value))
+                orderingType = OrderByFieldType.Long;
+
             var metadataField = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name.Value, index, builderParameters.HasDynamics, builderParameters.DynamicFields,
                 indexMapping, queryMapping, false);
             OrderMetadata? temporaryOrder = null;
-            switch (field.OrderingType)
+            switch (orderingType)
             {
                 case OrderByFieldType.Custom:
                     throw new NotSupportedException($"{nameof(Corax)} doesn't support Custom OrderBy.");

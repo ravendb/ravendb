@@ -57,7 +57,7 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
         _architecture = architecture;
     }
 
-    public bool LicenseRequired { get; set; }
+    public bool NightlyBuildOnly { get; set; }
 
     public override string Skip
     {
@@ -67,15 +67,18 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
             if (skip != null)
                 return skip;
 
-            return ShouldSkip(_platform, _architecture, LicenseRequired);
+            return ShouldSkip(_platform, _architecture, LicenseRequired, NightlyBuildOnly);
         }
         set => _skip = value;
     }
 
-    internal static string ShouldSkip(RavenPlatform platform, RavenArchitecture architecture, bool licenseRequired)
+    internal static string ShouldSkip(RavenPlatform platform, RavenArchitecture architecture, bool licenseRequired, bool nightlyBuildOnly)
     {
         if (licenseRequired && LicenseRequiredFactAttribute.ShouldSkip(licenseRequired: true))
             return LicenseRequiredFactAttribute.SkipMessage;
+
+        if (nightlyBuildOnly && NightlyBuildTheoryAttribute.IsNightlyBuild == false)
+            return NightlyBuildTheoryAttribute.SkipMessage;
 
         var matchesPlatform = Match(platform);
         var matchesArchitecture = Match(architecture);

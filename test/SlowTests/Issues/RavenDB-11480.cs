@@ -134,8 +134,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax do projection from index by default")]
         public void IndexWithDynamicFieldsShouldNotTryToExtractBySourceAliasIfFieldIsNotStored(Options options)
         {
             using (var store = GetDocumentStore(options))

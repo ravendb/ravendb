@@ -34,6 +34,7 @@ namespace SlowTests.Tests.Linq
 
                 store.ExecuteIndex(new Index());
 
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var item = session.Query<Index.Result, Index>()

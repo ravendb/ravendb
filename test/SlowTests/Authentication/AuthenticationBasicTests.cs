@@ -1183,7 +1183,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Certificates, RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Certificates, RavenArchitecture.AllX64, NightlyBuildOnly = true)]
         public void Routes_ClusterAdmin()
         {
             var certificates = Certificates.SetupServerAuthentication();

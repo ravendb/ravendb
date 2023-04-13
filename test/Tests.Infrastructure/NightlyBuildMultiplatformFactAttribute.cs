@@ -23,6 +23,8 @@
 
         public bool LicenseRequired { get; set; }
 
+        public bool NightlyBuildOnly { get; set; }
+
         public override string Skip
         {
             get
@@ -31,7 +33,7 @@
                 if (skip != null)
                     return skip;
 
-                return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, LicenseRequired);
+                return RavenMultiplatformFactAttribute.ShouldSkip(_platform, _architecture, LicenseRequired, NightlyBuildOnly);
             }
         }
     }

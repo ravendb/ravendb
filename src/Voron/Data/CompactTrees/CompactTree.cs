@@ -870,7 +870,7 @@ namespace Voron.Data.CompactTrees
                 // TODO: Check if the valueBufferLength is bigger, shouldn't we be able to just update if the encoding is actually smaller?
                 if (len == valueBufferLength)
                 {
-                    Debug.Assert(valueBufferLength <= sizeof(long));
+                    Debug.Assert(valueBufferLength <= 10);
                     Unsafe.CopyBlockUnaligned(valuePtr, valueBufferPtr, (uint)valueBufferLength);
                     return;
                 }

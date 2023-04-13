@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
                     };
                     await session.StoreAsync(user);
                     await session.SaveChangesAsync();
-                    
+
                     userId = user.Id;
                 }
 
@@ -55,7 +56,11 @@ namespace SlowTests.Issues
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(0, stats.SkippedResults);
                     Assert.Equal(1, users.Count);
-                    Assert.Equal(userId, users[0]);
+
+                    var idComparer = options.SearchEngineMode is RavenSearchEngineMode.Corax
+                        ? StringComparer.OrdinalIgnoreCase
+                        : StringComparer.Ordinal;
+                    Assert.Equal(userId, users[0], comparer: idComparer);
                 }
 
                 store.Maintenance.ForTesting(() => new StopIndexOperation(stats.IndexName))
@@ -77,9 +82,17 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, stats.TotalResults);
 
-                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
-
-                    Assert.Equal(0, users.Count);
+                    if (options.SearchEngineMode is RavenSearchEngineMode.Corax)
+                    {
+                        //Corax only: This is not valid since Corax's AutoIndexes are stored. 
+                        Assert.Equal(0, stats.SkippedResults);
+                        Assert.Equal(1, users.Count);
+                    }
+                    else
+                    {
+                        Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+                        Assert.Equal(0, users.Count);
+                    }
                 }
             }
         }
@@ -110,6 +123,11 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
+                var isCorax = options.SearchEngineMode is RavenSearchEngineMode.Corax;
+                var idComparer = isCorax
+                    ? StringComparer.OrdinalIgnoreCase
+                    : StringComparer.Ordinal;
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.Query<User, UserIndex>()
@@ -121,7 +139,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(0, stats.SkippedResults);
                     Assert.Equal(1, users.Count);
-                    Assert.Equal(userId, users[0]);
+                    Assert.Equal(userId, users[0], comparer: idComparer);
                 }
 
                 store.Maintenance.ForTesting(() => new StopIndexOperation(index.IndexName))
@@ -144,7 +162,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(0, stats.SkippedResults);
                     Assert.Equal(1, users.Count);
-                    Assert.Equal(name, users[0]);
+                    Assert.Equal(name, users[0], idComparer);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -154,10 +172,19 @@ namespace SlowTests.Issues
                         .Where(x => x.Name == name)
                         .Select(x => x.Id) // projected from the document
                         .ToListAsync();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
-                    Assert.Equal(0, users.Count);
+
+                    if (isCorax)
+                    {
+                        Assert.Equal(0, stats.SkippedResults);
+                        Assert.Equal(1, users.Count);
+                    }
+                    else
+                    {
+                        Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+                        Assert.Equal(0, users.Count);
+                    }
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -169,12 +196,21 @@ namespace SlowTests.Issues
                         {
                             x.Id, // projected from the document
                             x.Name // projected from the index
-                        }) 
+                        })
                         .ToListAsync();
 
                     Assert.Equal(1, stats.TotalResults);
-                    Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
-                    Assert.Equal(0, users.Count);
+
+                    if (isCorax)
+                    {
+                        Assert.Equal(0, stats.SkippedResults);
+                        Assert.Equal(1, users.Count);
+                    }
+                    else
+                    {
+                        Assert.Equal(options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 0, stats.SkippedResults);
+                        Assert.Equal(0, users.Count);
+                    }
                 }
             }
         }
@@ -234,7 +270,7 @@ namespace SlowTests.Issues
                     session.Delete(userId);
                     await session.SaveChangesAsync();
                 }
-WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.Query<User, UserIndexPartialStore>()
@@ -243,7 +279,8 @@ WaitForUserToContinueTheTest(store);
                         .Select(user => new
                         {
                             user.Name, // stored field
-                            user.LastName // not stored field
+                            user.LastName, // not stored field
+                            user.AddressId //made-up field for corax, has no impact on lucene projection
                         })
                         .ToListAsync();
 
@@ -276,10 +313,10 @@ WaitForUserToContinueTheTest(store);
             public UserIndex()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name
-                    };
+                               select new
+                               {
+                                   user.Name
+                               };
 
                 StoreAllFields(FieldStorage.Yes);
             }
@@ -290,11 +327,11 @@ WaitForUserToContinueTheTest(store);
             public UserIndexPartialStore()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name,
-                        user.LastName
-                    };
+                               select new
+                               {
+                                   user.Name,
+                                   user.LastName
+                               };
 
                 Store(x => x.Name, FieldStorage.Yes);
             }

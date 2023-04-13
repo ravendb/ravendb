@@ -60,6 +60,7 @@ namespace Voron.Data.CompactTrees
 
                 _currentSample++;
                 key = keyScope.Key.Decoded();
+                keyScope.Dispose();
                 return true;
 
 
