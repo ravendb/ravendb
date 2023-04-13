@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
+using Orders;
 using Raven.Client.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit;
@@ -19,17 +20,23 @@ namespace SlowTests.Sharding.Issues
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                        session.Store(new Order(), $"orders/{i}");
+
+                    session.SaveChanges();
+                }
 
                 // all document Ids in 'Orders' collection don't contain a '$suffix'
                 var operation = await store.Operations.SendAsync(new PatchByQueryOperation("from Orders update { put(\"orders/\", this) }"));
                 var result = await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromMinutes(1));
-                Assert.Equal(830, result.Total);
+                Assert.Equal(10, result.Total);
 
                 // some document Ids in 'Orders' collection contains a '$suffix'
                 operation = await store.Operations.SendAsync(new PatchByQueryOperation("from Orders update { put(\"orders/\", this) }"));
                 result = await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromMinutes(1));
-                Assert.Equal(1660, result.Total);
+                Assert.Equal(20, result.Total);
             }
         }
     }
