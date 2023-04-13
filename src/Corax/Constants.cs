@@ -45,10 +45,6 @@ namespace Corax
 
         public static class IndexWriter
         {
-            // This is the schema version for the indexes. 
-            public const long SchemaVersion = 54_006;
-            
-            
             public static ReadOnlySpan<byte> DoubleTreeSuffix => DoubleTreeSuffixBytes.AsSpan();
             private static readonly byte[] DoubleTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'D' };
 
@@ -56,7 +52,7 @@ namespace Corax
             private static readonly byte[] LongTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'L' };
 
             
-            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice, DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex;
+            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex;
             public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const short ShortKnownFieldMask = unchecked((short)0x8000);
             public const byte ByteKnownFieldMask = unchecked((byte)0x80);
@@ -70,7 +66,6 @@ namespace Corax
                     Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
                     Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
                     Slice.From(ctx, "SuggestionFields", ByteStringType.Immutable, out SuggestionsFieldsSlice);
-                    Slice.From(ctx, "IndexVersion", ByteStringType.Immutable, out IndexVersionSlice);
                     Slice.From(ctx, "DynamicFieldsAnalyzers", ByteStringType.Immutable, out DynamicFieldsAnalyzersSlice);
                     Slice.From(ctx, "NumberOfTermsInIndex", ByteStringType.Immutable, out NumberOfTermsInIndex);
                 }
