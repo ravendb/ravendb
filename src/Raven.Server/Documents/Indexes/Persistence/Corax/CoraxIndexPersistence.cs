@@ -113,26 +113,6 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
     public override void Initialize(StorageEnvironment environment)
     {
-        using (var tx = environment.WriteTransaction())
-        {
-            var metadataTree = tx.ReadTree(global::Corax.Constants.IndexMetadataSlice);
-            var version = metadataTree?.ReadInt64(global::Corax.Constants.IndexWriter.IndexVersionSlice);
-            if (version.HasValue)
-            {
-                var currentCoraxVersion = global::Corax.Constants.IndexWriter.SchemaVersion;
-                if (version.Value != currentCoraxVersion)
-                {
-                    
-                    throw new CoraxInvalidIndexVersionException(
-                        $"Index was built on Corax version {version.ToString()}. The current version {currentCoraxVersion} uses different structures than its predecessors. To use Corax, please restart the entire index.");
-                }
-            }
-            else
-            {
-                tx.CreateTree(global::Corax.Constants.IndexMetadataSlice).Add(global::Corax.Constants.IndexWriter.IndexVersionSlice, global::Corax.Constants.IndexWriter.SchemaVersion);
-                tx.Commit();
-            }
-        }
     }
 
     public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
@@ -163,7 +143,6 @@ public class CoraxIndexPersistence : IndexPersistenceBase
     }
     #endregion
     
-
     public override IndexWriteOperationBase OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext)
     {
         if (_index.Type == IndexType.MapReduce || _index.Type == IndexType.JavaScriptMapReduce)
