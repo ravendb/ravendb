@@ -17,8 +17,8 @@ public class RavenDB_19544 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Lucene)]
     public async Task CanGetSpatialDistanceOnIndex_MapReduce(Options options)
     {
         using (var store = GetDocumentStore(options))
@@ -55,8 +55,8 @@ public class RavenDB_19544 : RavenTestBase
     }
 
 
-    [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
     public async Task CanGetSpatialDistanceOnIndex_Map(Options options)
     {
         using (var store = GetDocumentStore(options))

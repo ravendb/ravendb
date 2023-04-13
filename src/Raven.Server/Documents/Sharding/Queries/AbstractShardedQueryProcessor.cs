@@ -221,18 +221,21 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     protected virtual void AssertQueryExecution()
     {
-        AssertUsingCustomSorters();
+        AssertOrdering();
     }
 
-    private void AssertUsingCustomSorters()
+    private void AssertOrdering()
     {
-        if (Query.Metadata.OrderBy == null)
+        if (Query.Metadata.OrderBy == null || Query.Metadata.OrderBy.Length == 0)
             return;
 
         foreach (var field in Query.Metadata.OrderBy)
         {
             if (field.OrderingType == OrderByFieldType.Custom)
                 throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
+
+            if (field.OrderingType == OrderByFieldType.Distance && IndexType.IsMapReduce())
+                throw new NotSupportedInShardingException("Distance sorting is not supported for Map-Reduce indexes in sharding as of yet");
         }
     }
 
