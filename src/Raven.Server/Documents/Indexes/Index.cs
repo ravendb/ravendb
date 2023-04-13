@@ -681,12 +681,13 @@ namespace Raven.Server.Documents.Indexes
                 : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, null,
                     documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
 
-            InitializeOptions(options, documentDatabase, name);
+            var searchEngineType = Type.IsAuto() ? configuration.AutoIndexingEngineType : configuration.StaticIndexingEngineType;
+            InitializeOptions(options, documentDatabase, name, searchEngineType: searchEngineType);
 
             return options;
         }
 
-        private static void InitializeOptions(StorageEnvironmentOptions options, DocumentDatabase documentDatabase, string name, bool schemaUpgrader = true)
+        private static void InitializeOptions(StorageEnvironmentOptions options, DocumentDatabase documentDatabase, string name, bool schemaUpgrader = true, SearchEngineType searchEngineType = SearchEngineType.None)
         {
             options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(name, s, e);
@@ -715,19 +716,20 @@ namespace Raven.Server.Documents.Indexes
 
             if (schemaUpgrader)
             {
+                options.SchemaVersion = SchemaUpgrader.CurrentVersion.GetIndexVersionAndStorageType(searchEngineType).Version;
                 options.OnVersionReadingTransaction = tx =>
                 {
-                    SearchEngineType searchEngineType = SearchEngineType.None;
+                    var searchEngineTypeFromSchema = SearchEngineType.None;
                     var configurationTree = tx.ReadTree(IndexStorage.IndexSchema.ConfigurationTree);
                     if (configurationTree != null)
                     {
                         var result = configurationTree.Read(IndexStorage.IndexSchema.SearchEngineType);
                         if (result != null)
-                            if (Enum.TryParse(result.Reader.ToStringValue(), out searchEngineType) == false)
-                                searchEngineType = SearchEngineType.None;
+                            if (Enum.TryParse(result.Reader.ToStringValue(), out searchEngineTypeFromSchema) == false)
+                                searchEngineTypeFromSchema = SearchEngineType.None;
                     }
 
-                    var currentVersion = SchemaUpgrader.CurrentVersion.GetIndexVersionAndStorageType(searchEngineType);
+                    var currentVersion = SchemaUpgrader.CurrentVersion.GetIndexVersionAndStorageType(searchEngineTypeFromSchema);
                     options.SchemaVersion = currentVersion.Version;
                     options.SchemaUpgrader = SchemaUpgrader.Upgrader(currentVersion.Type, null, null, null);
                 };
