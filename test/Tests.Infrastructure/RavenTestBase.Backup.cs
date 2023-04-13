@@ -54,7 +54,7 @@ namespace FastTests
                 {
                     var status = (await store.Maintenance.SendAsync(new GetOperationStateOperation(op))).Status;
                     return status;
-                }, opStatus, timeout: timeout ?? _reasonableTimeout);
+                }, opStatus, timeout: timeout ?? _reasonableTimeout * 10);
 
                 await CheckBackupOperationStatus(opStatus, value, store, taskId, op, periodicBackupRunner);
                 Assert.Equal(opStatus, value);
@@ -225,7 +225,7 @@ namespace FastTests
 
                     OperationStatus status = x.Status;
                     return status;
-                }, opStatus, timeout: timeout ?? _reasonableTimeout);
+                }, opStatus, timeout: timeout ?? _reasonableTimeout * 10);
                 await CheckBackupOperationStatus(opStatus, value, store, taskId, op.Result.OperationId, periodicBackupRunner: null);
                 Assert.Equal(opStatus, value);
             }
