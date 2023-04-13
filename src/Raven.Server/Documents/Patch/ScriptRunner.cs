@@ -1125,19 +1125,8 @@ namespace Raven.Server.Documents.Patch
                 if (id?[^1] != _database.IdentityPartsSeparator)
                     return id;
 
-                var originalId = (args[1].AsObject() as BlittableObjectInstance)?.DocumentId;
-                var builder = new StringBuilder(id);
-                var index = originalId.IndexOf('$');
-                if (index != -1)
-                    originalId = originalId[index..originalId.Length];
-                else
-                    builder.Append('$');
-
-                builder.Append(originalId)
-                    .Append('$')
-                    .Append(_database.IdentityPartsSeparator);
-
-                return builder.ToString();
+                var originalId = (args[1].AsObject() as BlittableObjectInstance)!.DocumentId;
+                return ShardHelper.GenerateStickyId(id, originalId, _database.IdentityPartsSeparator);
             }
 
             private static void AssertValidId()
