@@ -100,6 +100,7 @@ find /build -type f -exec chmod 644 {} +
 dpkg-buildpackage -us -uc -b 
 
 cp -v "/build/$GENERATEDFILENAME" "$OUTPUT_DIR/$PACKAGEFILENAME"
+chmod a+rw "$OUTPUT_DIR/$PACKAGEFILENAME"
 
 echo "Package contents:"
 dpkg -c "${OUTPUT_DIR}/${PACKAGEFILENAME}" | tee $OUTPUT_DIR/deb_contents.txt
