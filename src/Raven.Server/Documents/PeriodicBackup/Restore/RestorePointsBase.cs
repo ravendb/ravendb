@@ -18,13 +18,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public static Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
         public static Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?)", RegexOptions.Compiled);
 
-        private readonly List<RestorePoint> _list;
+        private readonly SortedList<DateTime, RestorePoint> _sortedList;
         private readonly TransactionOperationContext _context;
 
         protected RestorePointsBase(TransactionOperationContext context)
         {
             _context = context;
-            _list = new List<RestorePoint>();
+            _sortedList = new SortedList<DateTime, RestorePoint>(new DescendedDateComparer());
         }
 
         public abstract Task<RestorePoints> FetchRestorePoints(string path);
@@ -104,10 +104,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             foreach (var path in paths)
             {
-                await FetchRestorePoints(path, assertLegacyBackups);
+                await FetchRestorePointsInternal(path, assertLegacyBackups);
             }
 
-            foreach (var restorePointGroup in _list.GroupBy(x => x.Location))
+            foreach (var restorePointGroup in _sortedList.Values.GroupBy(x => x.Location))
             {
                 var count = restorePointGroup.Count();
                 foreach (var restorePoint in restorePointGroup)
@@ -116,11 +116,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             return new RestorePoints
             {
-                List = _list.OrderBy(p => p.DateTime, new DescendedDateComparer()).ToList()
+                List = _sortedList.Values.ToList() 
             };
         }
 
-        private async Task FetchRestorePoints(string path, bool assertLegacyBackups)
+        private async Task FetchRestorePointsInternal(string path, bool assertLegacyBackups)
         {
             var fileInfos = (await GetFiles(path))
                 .Where(filePath =>
@@ -187,9 +187,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
 
                 firstFile = false;
+
+                while (_sortedList.ContainsKey(fileInfo.LastModified))
+                {
+                    fileInfo.LastModified = fileInfo.LastModified.AddMilliseconds(1);
+                }
+
                 var folderDetails = ParseFolderNameFrom(fileInfo.DirectoryPath);
 
-                _list.Add(new RestorePoint
+                _sortedList.Add(fileInfo.LastModified, new RestorePoint
                 {
                     DateTime = fileInfo.LastModified,
                     Location = fileInfo.DirectoryPath,
