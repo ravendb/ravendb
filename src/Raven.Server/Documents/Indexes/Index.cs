@@ -715,8 +715,22 @@ namespace Raven.Server.Documents.Indexes
 
             if (schemaUpgrader)
             {
-                options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
-                options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null, null);
+                options.OnVersionReadingTransaction = tx =>
+                {
+                    SearchEngineType searchEngineType = SearchEngineType.None;
+                    var configurationTree = tx.ReadTree(IndexStorage.IndexSchema.ConfigurationTree);
+                    if (configurationTree != null)
+                    {
+                        var result = configurationTree.Read(IndexStorage.IndexSchema.SearchEngineType);
+                        if (result != null)
+                            if (Enum.TryParse(result.Reader.ToStringValue(), out searchEngineType) == false)
+                                searchEngineType = SearchEngineType.None;
+                    }
+
+                    var currentVersion = SchemaUpgrader.CurrentVersion.GetIndexVersionAndStorageType(searchEngineType);
+                    options.SchemaVersion = currentVersion.Version;
+                    options.SchemaUpgrader = SchemaUpgrader.Upgrader(currentVersion.Type, null, null, null);
+                };
             }
 
             if (options is not StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)

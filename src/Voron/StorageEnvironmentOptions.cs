@@ -177,6 +177,8 @@ namespace Voron
         public int SchemaVersion { get; set; }
 
         public UpgraderDelegate SchemaUpgrader { get; set; }
+        
+        public Action<Transaction> OnVersionReadingTransaction { get; set; }
 
         public Action<StorageEnvironment> BeforeSchemaUpgrade { get; set; }
 

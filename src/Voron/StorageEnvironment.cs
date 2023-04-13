@@ -365,6 +365,7 @@ namespace Voron
                         SchemaErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
 
                     schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+                    Options.OnVersionReadingTransaction?.Invoke(readTx);
                 }
 
                 if (Options.SchemaVersion != 0 &&
