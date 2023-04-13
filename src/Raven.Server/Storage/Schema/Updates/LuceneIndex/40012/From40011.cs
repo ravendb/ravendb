@@ -2,13 +2,13 @@
 using Voron.Data;
 using Voron.Data.Tables;
 
-namespace Raven.Server.Storage.Schema.Updates.Index
+namespace Raven.Server.Storage.Schema.Updates.LuceneIndex
 {
     public class From40011 : ISchemaUpdate
     {
         public int From => 40_011;
         public int To => 40_012;
-        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Index;
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.LuceneIndex;
 
         public bool Update(UpdateStep step)
         {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Voron;
@@ -18,7 +19,15 @@ namespace Raven.Server.Storage.Schema
 
             public const int DocumentsVersion = 50_002;
 
-            public const int IndexVersion = 54_000;
+            public const int LuceneIndexVersion = 54_000;
+
+            public const int CoraxIndexVersion = 60_000;
+
+            public static (int Version, StorageType Type) GetIndexVersionAndStorageType(SearchEngineType type) => type switch
+            {
+                SearchEngineType.Corax => (CoraxIndexVersion, StorageType.CoraxIndex),
+                _ => (LuceneIndexVersion, StorageType.LuceneIndex)
+            };
         }
 
         private static readonly int[] SkippedDocumentsVersion = { 40_012 };
@@ -28,7 +37,8 @@ namespace Raven.Server.Storage.Schema
             Server,
             Configuration,
             Documents,
-            Index,
+            LuceneIndex,
+            CoraxIndex
         }
 
         private class InternalUpgrader
@@ -85,7 +95,8 @@ namespace Raven.Server.Storage.Schema
                             throw new NotSupportedException(
                                 $"Documents schema upgrade from version {currentVersion} is not supported, use the recovery tool to dump the data and then import it into a new database");
                         break;
-                    case StorageType.Index:
+                    case StorageType.CoraxIndex:
+                    case StorageType.LuceneIndex:
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(_storageType), _storageType, null);
@@ -142,9 +153,11 @@ namespace Raven.Server.Storage.Schema
                         else if (currentVersion == 17)
                             currentVersion += 42_000;
                         break;
-                    case StorageType.Index:
+                    case StorageType.LuceneIndex:
                         if (currentVersion >= 10 && currentVersion <= 12)
                             currentVersion += 40_000;
+                        break;
+                    case StorageType.CoraxIndex:
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(_storageType), storageType, null);

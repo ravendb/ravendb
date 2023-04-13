@@ -3,13 +3,13 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 
-namespace Raven.Server.Storage.Schema.Updates.Index
+namespace Raven.Server.Storage.Schema.Updates.LuceneIndex
 {
     public unsafe class From40010 : ISchemaUpdate
     {
         public int From => 40_010;
         public int To => 40_011;
-        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Index;
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.LuceneIndex;
 
         public bool Update(UpdateStep step)
         {

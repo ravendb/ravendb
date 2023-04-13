@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Storage.Schema.Updates.Index
+﻿namespace Raven.Server.Storage.Schema.Updates.LuceneIndex
 {
     public unsafe class From5000 : ISchemaUpdate
     {
@@ -6,7 +6,7 @@
 
         public int To => 54_000;
 
-        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Index;
+        public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.LuceneIndex;
 
         public bool Update(UpdateStep step)
         {
