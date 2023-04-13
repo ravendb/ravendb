@@ -8,6 +8,10 @@ $ErrorActionPreference = "Stop"
 
 . ".\common.ps1"
 
+if ($env:DRY_RUN) {
+    $DryRun=$True
+}
+
 function PushImagesToDockerHub($imageTags) {
     write-host "Pushing images to Docker Hub."
     foreach ($tag in $imageTags) {
