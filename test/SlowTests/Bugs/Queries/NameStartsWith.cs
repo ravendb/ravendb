@@ -14,7 +14,7 @@ namespace SlowTests.Bugs.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void can_search_for_mrs_shaba(Options options)
         {
             using (var documentStore = GetDocumentStore(options))

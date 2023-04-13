@@ -13,7 +13,7 @@ namespace FastTests.Client.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "We do not allow the Search analyzer to be used for anything other than Search(), because it could produce many terms and we don't know how to build query on them.")]
         public void CanDoPrefixQueryOnAnalyzedFields(Options options)
         {

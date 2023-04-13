@@ -21,7 +21,7 @@ namespace SlowTests.Bugs
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanSkipTransformResults(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -58,7 +58,7 @@ namespace SlowTests.Bugs
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanSkipTransformResults_Lucene(Options options)
         {
             using (var store = GetDocumentStore(options))

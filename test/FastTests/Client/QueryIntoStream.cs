@@ -20,7 +20,7 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryWithToStream(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -47,7 +47,7 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void DocumentQueryWithToStream(Options options)
         {
             using (var store = GetDocumentStore(options))

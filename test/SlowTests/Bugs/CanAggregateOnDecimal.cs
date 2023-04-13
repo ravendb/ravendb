@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes;
 using System.Linq;
 using Raven.Client.Documents.Operations;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -53,7 +54,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void MapOnly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -72,8 +73,12 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
                 Indexes.WaitForIndexing(store);
-                var stats = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.False(stats.Indexes.Any(i => i.State == IndexState.Error));
+
+                store.Maintenance.ForTesting(() => new GetStatisticsOperation()).AssertAll((key, stats) =>
+                {
+                    Assert.False(stats.Indexes.Any(i => i.State == IndexState.Error));
+                });
+
                 using (var session = store.OpenSession())
                 {
                     var bankTotal = session.Query<BankTotal, DecimalAggregationMap>()
@@ -87,7 +92,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Reduce(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -109,8 +114,11 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
                 Indexes.WaitForIndexing(store);
-                var stats = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.False(stats.Indexes.Any(i => i.State == IndexState.Error));
+
+                store.Maintenance.ForTesting(() => new GetStatisticsOperation()).AssertAll((key, stats) =>
+                {
+                    Assert.False(stats.Indexes.Any(i => i.State == IndexState.Error));
+                });
 
                 using (var session = store.OpenSession())
                 {
