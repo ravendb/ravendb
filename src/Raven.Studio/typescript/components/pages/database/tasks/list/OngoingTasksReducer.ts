@@ -39,11 +39,25 @@ import { WritableDraft } from "immer/dist/types/types-external";
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
+import SubscriptionConnectionsDetails = Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails;
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
     tasks: OngoingTasksResult;
     type: "TasksLoaded";
+}
+
+interface ActionTaskLoaded {
+    location: databaseLocationSpecifier;
+    task: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails;
+    type: "SubscriptionInfoLoaded";
+}
+
+interface ActionSubscriptionConnectionDetailsLoaded {
+    type: "SubscriptionConnectionDetailsLoaded";
+    subscriptionId: number;
+    loadError?: string;
+    details?: SubscriptionConnectionsDetails;
 }
 
 interface ActionProgressLoaded {
@@ -62,9 +76,20 @@ interface OngoingTasksState {
     tasks: OngoingTaskInfo[];
     locations: databaseLocationSpecifier[];
     replicationHubs: OngoingTaskHubDefinitionInfo[];
+    subscriptionConnectionDetails: SubscriptionConnectionsDetailsWithId[];
 }
 
-type OngoingTaskReducerAction = ActionTasksLoaded | ActionProgressLoaded | ActionTasksLoadError;
+export type SubscriptionConnectionsDetailsWithId = SubscriptionConnectionsDetails & {
+    SubscriptionId: number;
+    LoadError?: string;
+};
+
+type OngoingTaskReducerAction =
+    | ActionTasksLoaded
+    | ActionProgressLoaded
+    | ActionTasksLoadError
+    | ActionTaskLoaded
+    | ActionSubscriptionConnectionDetailsLoaded;
 
 const serverWidePrefix = "Server Wide";
 
@@ -287,49 +312,75 @@ function initNodesInfo(locations: databaseLocationSpecifier[]): OngoingTaskNodeI
     }));
 }
 
+const mapTask = (incomingTask: OngoingTask, incomingLocation: databaseLocationSpecifier, state: OngoingTasksState) => {
+    const incomingTaskType = TaskUtils.ongoingTaskToStudioTaskType(incomingTask);
+    const existingTask = state.tasks.find(
+        (x) => x.shared.taskType === incomingTaskType && x.shared.taskId === incomingTask.TaskId
+    );
+
+    const nodesInfo = existingTask ? existingTask.nodesInfo : initNodesInfo(state.locations);
+    const existingNodeInfo = existingTask
+        ? existingTask.nodesInfo.find((x) => databaseLocationComparator(x.location, incomingLocation))
+        : null;
+
+    const newNodeInfo: OngoingTaskNodeInfo = {
+        location: incomingLocation,
+        status: "success",
+        details: mapNodeInfo(incomingTask),
+    };
+
+    if (existingNodeInfo) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { location, status, details, ...restProps } = existingNodeInfo;
+        // retain other props - like etlProgress
+        Object.assign(newNodeInfo, restProps);
+    }
+
+    return {
+        shared: mapSharedInfo(incomingTask),
+        nodesInfo: [
+            ...nodesInfo.map((x) => (databaseLocationComparator(x.location, newNodeInfo.location) ? newNodeInfo : x)),
+        ],
+    };
+};
+
 export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerAction> = (
     state: OngoingTasksState,
     action: OngoingTaskReducerAction
 ): OngoingTasksState => {
     switch (action.type) {
+        case "SubscriptionInfoLoaded": {
+            const incomingTask = action.task;
+            const incomingLocation = action.location;
+
+            return produce(state, (draft) => {
+                const existingTask = draft.tasks.find(
+                    (x) => x.shared.taskType === "Subscription" && x.shared.taskId === incomingTask.SubscriptionId
+                );
+
+                if (existingTask) {
+                    existingTask.shared.taskState = incomingTask.Disabled ? "Disabled" : "Enabled";
+                    existingTask.shared.responsibleNodeTag = incomingTask.ResponsibleNode?.NodeTag;
+
+                    const existingNodeInfo = existingTask.nodesInfo.find((x) =>
+                        databaseLocationComparator(x.location, incomingLocation)
+                    );
+
+                    if (existingNodeInfo?.details) {
+                        existingNodeInfo.details.responsibleNode = incomingTask.ResponsibleNode?.NodeTag;
+                    }
+                }
+            });
+        }
+
         case "TasksLoaded": {
             const incomingLocation = action.location;
             const incomingTasks = action.tasks;
 
             return produce(state, (draft) => {
-                const newTasks = incomingTasks.OngoingTasks.map((incomingTask) => {
-                    const incomingTaskType = TaskUtils.ongoingTaskToStudioTaskType(incomingTask);
-                    const existingTask = state.tasks.find(
-                        (x) => x.shared.taskType === incomingTaskType && x.shared.taskId === incomingTask.TaskId
-                    );
-
-                    const nodesInfo = existingTask ? existingTask.nodesInfo : initNodesInfo(state.locations);
-                    const existingNodeInfo = existingTask
-                        ? existingTask.nodesInfo.find((x) => databaseLocationComparator(x.location, incomingLocation))
-                        : null;
-
-                    const newNodeInfo: OngoingTaskNodeInfo = {
-                        location: incomingLocation,
-                        status: "success",
-                        details: mapNodeInfo(incomingTask),
-                    };
-
-                    if (existingNodeInfo) {
-                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                        const { location, status, details, ...restProps } = existingNodeInfo;
-                        // retain other props - like etlProgress
-                        Object.assign(newNodeInfo, restProps);
-                    }
-
-                    return {
-                        shared: mapSharedInfo(incomingTask),
-                        nodesInfo: [
-                            ...nodesInfo.map((x) =>
-                                databaseLocationComparator(x.location, newNodeInfo.location) ? newNodeInfo : x
-                            ),
-                        ],
-                    };
-                });
+                const newTasks = incomingTasks.OngoingTasks.map((incomingTask) =>
+                    mapTask(incomingTask, incomingLocation, state)
+                );
 
                 newTasks.sort((a: OngoingTaskInfo, b: OngoingTaskInfo) =>
                     genUtils.sortAlphaNumeric(a.shared.taskName, b.shared.taskName)
@@ -376,6 +427,31 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                 });
             });
         }
+
+        case "SubscriptionConnectionDetailsLoaded": {
+            const incomingDetails = action.details;
+            const subscriptionId = action.subscriptionId;
+            const loadError = action.loadError;
+
+            return produce(state, (draft) => {
+                const existingIdx = draft.subscriptionConnectionDetails.findIndex(
+                    (x) => x.SubscriptionId === subscriptionId
+                );
+
+                const itemToSet: SubscriptionConnectionsDetailsWithId = {
+                    ...incomingDetails,
+                    SubscriptionId: subscriptionId,
+                    LoadError: loadError,
+                };
+
+                if (existingIdx !== -1) {
+                    draft.subscriptionConnectionDetails[existingIdx] = itemToSet;
+                } else {
+                    draft.subscriptionConnectionDetails.push(itemToSet);
+                }
+            });
+        }
+
         case "ProgressLoaded": {
             const incomingProgress = action.progress;
             const incomingLocation = action.location;
@@ -407,5 +483,6 @@ export const ongoingTasksReducerInitializer = (locations: databaseLocationSpecif
         tasks: [],
         replicationHubs: [],
         locations,
+        subscriptionConnectionDetails: [],
     };
 };

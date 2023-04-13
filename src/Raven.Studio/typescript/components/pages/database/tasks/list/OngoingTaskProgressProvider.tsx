@@ -22,7 +22,7 @@ export function OngoingTaskProgressProvider(props: OngoingTaskProgressProviderPr
         });
     };
 
-    useInterval(loadProgress, 3_000);
+    useInterval(loadProgress, 8_000);
     useTimeout(loadProgress, 500);
 
     return null;

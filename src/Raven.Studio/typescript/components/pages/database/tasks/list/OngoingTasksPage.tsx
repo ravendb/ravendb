@@ -189,6 +189,39 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         toggleState: toggleOngoingTask,
     };
 
+    const refreshSubscriptionInfo = async (taskId: number, taskName: string) => {
+        const loadTasks = tasks.locations.map(async (location) => {
+            const task = await tasksService.getSubscriptionTaskInfo(database, location, taskId, taskName);
+
+            dispatch({
+                type: "SubscriptionInfoLoaded",
+                location,
+                task,
+            });
+
+            return task;
+        });
+
+        const taskInfo = await Promise.all(loadTasks);
+
+        const targetNode = taskInfo.find((x) => x.ResponsibleNode.NodeTag);
+        try {
+            const details = await tasksService.getSubscriptionConnectionDetails(database, null, taskId, taskName);
+
+            dispatch({
+                type: "SubscriptionConnectionDetailsLoaded",
+                subscriptionId: taskId,
+                details,
+            });
+        } catch (e) {
+            dispatch({
+                type: "SubscriptionConnectionDetailsLoaded",
+                subscriptionId: taskId,
+                loadError: "Failed to get client connection details",
+            });
+        }
+    };
+
     return (
         <div>
             {progressEnabled && <OngoingTaskProgressProvider db={database} onEtlProgress={onEtlProgress} />}
@@ -374,9 +407,28 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                 Subscription
                             </HrHeader>
 
-                            {subscriptions.map((x) => (
-                                <SubscriptionPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
-                            ))}
+                            {subscriptions.map((x) => {
+                                const connectionDetails = tasks.subscriptionConnectionDetails.find(
+                                    (details) => x.shared.taskId === details.SubscriptionId
+                                );
+
+                                return (
+                                    <SubscriptionPanel
+                                        {...sharedPanelProps}
+                                        connections={connectionDetails}
+                                        onToggleDetails={async (newState) => {
+                                            if (newState) {
+                                                await refreshSubscriptionInfo(x.shared.taskId, x.shared.taskName);
+                                            }
+                                        }}
+                                        refreshSubscriptionInfo={() =>
+                                            refreshSubscriptionInfo(x.shared.taskId, x.shared.taskName)
+                                        }
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                    />
+                                );
+                            })}
                         </div>
                     )}
 

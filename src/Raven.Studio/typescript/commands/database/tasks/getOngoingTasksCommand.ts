@@ -4,9 +4,9 @@ import endpoints = require("endpoints");
 
 class getOngoingTasksCommand extends commandBase {
 
-    private db: database;
+    private readonly db: database;
 
-    private location: databaseLocationSpecifier;
+    private readonly location: databaseLocationSpecifier;
 
     constructor(db: database, location: databaseLocationSpecifier) {
         super();
