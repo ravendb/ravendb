@@ -1088,7 +1088,7 @@ from 'Users' as u select output(u)", query.ToString());
 	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
-from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName desc select output(u)", query.ToString());
+from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by u.LastName desc select output(u)", query.ToString());
 
                     var queryResult = query.ToList();
 

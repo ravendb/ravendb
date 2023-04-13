@@ -124,7 +124,10 @@ namespace Raven.Client.Documents.Session.Tokens
         
         public OrderByToken AddAlias(string alias)
         {
-            if (_fieldName == "id()")
+            if (_fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                return this;
+
+            if (_fieldName.Contains("(")) // we must not alias RQL methods
                 return this;
             
             var aliasedName = $"{alias}.{_fieldName}";

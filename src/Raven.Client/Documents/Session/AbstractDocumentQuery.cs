@@ -1935,45 +1935,39 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <param name = "fromAlias">The alias</param>
         public void AddFromAliasToWhereTokens(string fromAlias)
         {
-            if (string.IsNullOrEmpty(fromAlias))
-                throw new InvalidOperationException("Alias cannot be null or empty");
-
             var tokens = GetCurrentWhereTokens();
-            var current = tokens.First;
-            while (current != null)
-            {
-                if (current.Value is WhereToken w)
-                    current.Value = w.AddAlias(fromAlias);
-                current = current.Next;
-            }
+            AddFromAliasToTokens(fromAlias, tokens);
         }
 
         public void AddFromAliasToOrderByTokens(string fromAlias)
         {
-            if (string.IsNullOrEmpty(fromAlias))
-                throw new InvalidOperationException("Alias cannot be null or empty");
-
             var tokens = GetCurrentOrderByTokens();
-            var current = tokens.First;
-            while (current != null)
-            {
-                if (current.Value is OrderByToken w)
-                    current.Value = w.AddAlias(fromAlias);
-                current = current.Next;
-            }
+            AddFromAliasToTokens(fromAlias, tokens);
         }
 
         public void AddFromAliasToFilterTokens(string fromAlias)
         {
+            var tokens = GetCurrentFilterTokens();
+            AddFromAliasToTokens(fromAlias, tokens);
+        }
+
+        private void AddFromAliasToTokens(string fromAlias, LinkedList<QueryToken> tokens)
+        {
             if (string.IsNullOrEmpty(fromAlias))
                 throw new InvalidOperationException("Alias cannot be null or empty");
 
-            var tokens = GetCurrentFilterTokens();
             var current = tokens.First;
             while (current != null)
             {
-                if (current.Value is WhereToken w)
-                    current.Value = w.AddAlias(fromAlias);
+                switch (current.Value)
+                {
+                    case WhereToken w:
+                        current.Value = w.AddAlias(fromAlias);
+                        break;
+                    case OrderByToken o:
+                        current.Value = o.AddAlias(fromAlias);
+                        break;
+                }
                 current = current.Next;
             }
         }
