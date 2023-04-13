@@ -40,7 +40,7 @@ namespace FastTests.Client
          */
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void RawQuery_with_transformation_function_should_work(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -123,7 +123,7 @@ namespace FastTests.Client
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void LinqQuery_with_transformation_function_should_work(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -200,7 +200,7 @@ namespace FastTests.Client
 
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Query_Simple(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -241,7 +241,7 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void StringComparisonStringOrdinalWorks(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -310,7 +310,7 @@ namespace FastTests.Client
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void StringComparisonStringCompareOrdinalWorks(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -540,7 +540,7 @@ namespace FastTests.Client
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryWithWhere_WhenUsingStringEqualsWhitParameterExpression_ShouldWork(Options options)
         {
             const string constStrToQuery = "Tarzan";
@@ -758,7 +758,7 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Query_With_Customize(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -816,7 +816,7 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Query_By_Index(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -51,7 +51,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanEnumerateQueryOnDriversIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -77,7 +77,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanEnumerateDummiedMapResult(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -107,7 +107,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanCountByQueryOnDriversIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -241,97 +241,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     private BlittableJsonReaderObject RewriteQueryIfNeeded(BlittableJsonReaderObject queryTemplate)
     {
-        var queryChanges = QueryChanges.None;
-
-        if (Query.Offset is > 0)
-            queryChanges |= QueryChanges.RewriteForPaging;
-
         var query = Query.Metadata.Query;
-        var isProjectionQuery = query.Select?.Count > 0 ||
-                                query.SelectFunctionBody.FunctionText != null;
 
-        List<string> groupByFields = null;
-
-        if (IndexType.IsMapReduce() || IsAutoMapReduceQuery)
-        {
-            if (query.Filter != null)
-                queryChanges |= QueryChanges.RewriteForFilterInMapReduce;
-
-            if (query.Limit != null)
-            {
-                groupByFields = GetGroupByFields();
-
-                if (query.CachedOrderBy != null)
-                {
-                    queryChanges |= QueryChanges.UseCachedOrderByFieldsInMapReduce;
-                }
-                if (query.OrderBy == null)
-                {
-                    // we have a limit but not an order by
-                    // we need to add the group by fields in order to get correct results
-                    queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
-                }
-                else
-                {
-                    // we have a limit and order by fields
-                    // we need to get all results if the order by isn't done on the group by fields
-                    foreach (var orderByField in Query.Metadata.OrderByFieldNames)
-                    {
-                        if (groupByFields.Contains(orderByField) == false)
-                        {
-                            // we found an order by field that isn't a group by field, we must get all the results
-                            queryChanges |= QueryChanges.RewriteForLimitWithOrderByInMapReduce;
-                            break;
-                        }
-                    }
-
-                    // we are missing some group by fields
-                    if (queryChanges.HasFlag(QueryChanges.RewriteForLimitWithOrderByInMapReduce) == false &&
-                        Query.Metadata.OrderByFieldNames.Count != groupByFields.Count)
-                    {
-                        queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
-                    }
-                }
-            }
-        }
-
-        queryChanges |= QueryChanges.RewriteForProjectionFromMapReduceIndex;
-        queryChanges |= QueryChanges.RewriteForProjectionFromAutoMapReduceQuery;
-
-        if (isProjectionQuery == false)
-        {
-            queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
-            queryChanges &= ~QueryChanges.RewriteForProjectionFromAutoMapReduceQuery;
-        }
-        else
-        {
-            if (IndexType.IsMapReduce() == false)
-                queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
-
-            if (IsAutoMapReduceQuery == false)
-            {
-                queryChanges &= ~QueryChanges.RewriteForProjectionFromAutoMapReduceQuery;
-            }
-            else
-            {
-                if (query.Select?.Count > 0)
-                {
-                    var hasAlias = false;
-
-                    foreach (var selectField in query.Select)
-                    {
-                        if (selectField.Alias is not null)
-                        {
-                            hasAlias = true;
-                            break;
-                        }
-                    }
-
-                    if (hasAlias == false)
-                        queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
-                }
-            }
-        }
+        var queryChanges = DetectChangesForQueryRewrite(query, out var groupByFields);
 
         if (queryChanges == QueryChanges.None)
             return queryTemplate;
@@ -492,6 +404,106 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
             queryChanges &= ~QueryChanges.RewriteForPaging;
         }
+    }
+
+    private QueryChanges DetectChangesForQueryRewrite(Query query, out List<string> groupByFields)
+    {
+        var queryChanges = QueryChanges.None;
+
+        if (Query.Offset is > 0)
+            queryChanges |= QueryChanges.RewriteForPaging;
+
+        
+        var isProjectionQuery = query.Select?.Count > 0 ||
+                                query.SelectFunctionBody.FunctionText != null;
+
+        groupByFields = null;
+
+        if (IndexType.IsMapReduce() || IsAutoMapReduceQuery)
+        {
+            if (query.Filter != null)
+                queryChanges |= QueryChanges.RewriteForFilterInMapReduce;
+
+            if (query.Limit != null)
+            {
+                groupByFields = GetGroupByFields();
+
+                if (query.CachedOrderBy != null)
+                {
+                    queryChanges |= QueryChanges.UseCachedOrderByFieldsInMapReduce;
+                }
+                if (query.OrderBy == null)
+                {
+                    if (groupByFields.Count > 0) // we can have `group by 1` - then we don't have any field names
+                    {
+                        // we have a limit but not an order by
+                        // we need to add the group by fields in order to get correct results
+                        queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
+                    }
+                }
+                else
+                {
+                    // we have a limit and order by fields
+                    // we need to get all results if the order by isn't done on the group by fields
+                    foreach (var orderByField in Query.Metadata.OrderByFieldNames)
+                    {
+                        if (groupByFields.Contains(orderByField) == false)
+                        {
+                            // we found an order by field that isn't a group by field, we must get all the results
+                            queryChanges |= QueryChanges.RewriteForLimitWithOrderByInMapReduce;
+                            break;
+                        }
+                    }
+
+                    // we are missing some group by fields
+                    if (queryChanges.HasFlag(QueryChanges.RewriteForLimitWithOrderByInMapReduce) == false &&
+                        Query.Metadata.OrderByFieldNames.Count != groupByFields.Count)
+                    {
+                        queryChanges |= QueryChanges.UpdateOrderByFieldsInMapReduce;
+                    }
+                }
+            }
+        }
+
+        queryChanges |= QueryChanges.RewriteForProjectionFromMapReduceIndex;
+        queryChanges |= QueryChanges.RewriteForProjectionFromAutoMapReduceQuery;
+
+        if (isProjectionQuery == false)
+        {
+            queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
+            queryChanges &= ~QueryChanges.RewriteForProjectionFromAutoMapReduceQuery;
+        }
+        else
+        {
+            if (IndexType.IsMapReduce() == false)
+                queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
+
+            if (IsAutoMapReduceQuery == false)
+            {
+                queryChanges &= ~QueryChanges.RewriteForProjectionFromAutoMapReduceQuery;
+            }
+            else
+            {
+                if (query.Select?.Count > 0)
+                {
+                    var hasAlias = false;
+
+                    foreach (var selectField in query.Select)
+                    {
+                        if (selectField.Alias is not null)
+                        {
+                            hasAlias = true;
+                            break;
+                        }
+                    }
+
+                    if (hasAlias == false)
+                        queryChanges &= ~QueryChanges.RewriteForProjectionFromMapReduceIndex;
+                }
+            }
+        }
+
+        return queryChanges;
     }
 
     private List<string> GetGroupByFields()
