@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public WhereToken AddAlias(string alias)
         {
-            if (FieldName == "id()")
+            if (FieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 return this;
 
             return new WhereToken
