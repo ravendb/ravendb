@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public override Task<RestorePoints> FetchRestorePoints(string path, int? shardNumber = null)
         {
-            return FetchRestorePointsForPath(path, assertLegacyBackups: true);
+            return FetchRestorePointsForPath(path, assertLegacyBackups: true, shardNumber);
         }
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)

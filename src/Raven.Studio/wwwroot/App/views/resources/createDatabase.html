@@ -73,6 +73,7 @@
         <h3>Backup Source Configuration</h3>
         <div class="form-group row" data-bind="validationElement: source">
             <div class="col-md-4">
+                <!-- TODO: allow other sources for sharded databases -->
                 <label class="control-label" data-bind="text: enableSharding() ? localServerCredentials().backupStorageTypeText : 'Source'"></label>
             </div>
             <div class="col-md-8" data-bind="visible: !enableSharding()">

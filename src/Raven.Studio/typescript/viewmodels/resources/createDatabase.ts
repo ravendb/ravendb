@@ -455,14 +455,15 @@ class createDatabase extends dialogViewModelBase {
 
             const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
 
-            // TODO: kalczur
             let allShardingBackupDirectoriesValid = true;
 
-            this.databaseModel.restore.shardingBackupDirectories().forEach(x => {
-                if (!this.isValid(x.validationGroup)) {
-                    allShardingBackupDirectoriesValid = false
-                }
-            });
+            if (this.databaseModel.restore.enableSharding()) {
+                this.databaseModel.restore.shardingBackupDirectories().forEach(x => {
+                    if (!this.isValid(x.validationGroup)) {
+                        allShardingBackupDirectoriesValid = false
+                    }
+                });
+            }
 
             const allValid = globalValid && _.every(sectionsValidityList, x => !!x) && allShardingBackupDirectoriesValid;
 
