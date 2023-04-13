@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React from "react";
 import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import classNames from "classnames";
 import {
@@ -7,7 +7,6 @@ import {
     OngoingTaskNodeInfo,
     OngoingTaskSubscriptionInfo,
 } from "components/models/tasks";
-import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { Icon } from "components/common/Icon";
 
@@ -36,23 +35,19 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     );
 
     const hasError = !!nodeInfo.details?.error;
-    const [node, setNode] = useState<HTMLDivElement>();
 
     return (
-        <div ref={setNode}>
-            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}>
-                {sharded && shard}
-                <div className={classNames("node", { top: !sharded })}>
-                    {!sharded && <i className="icon-node"></i>}
+        <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}>
+            {sharded && shard}
+            <div className={classNames("node", { top: !sharded })}>
+                {!sharded && <i className="icon-node"></i>}
 
-                    {nodeInfo.location.nodeTag}
-                </div>
-                <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
-                <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
-                <SubscriptionTaskProgress task={task} nodeInfo={nodeInfo} />
-                {node && <SubscriptionTaskProgressTooltip target={node} nodeInfo={nodeInfo} task={task} />}
-            </DistributionItem>
-        </div>
+                {nodeInfo.location.nodeTag}
+            </div>
+            <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
+            <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
+            <SubscriptionTaskProgress task={task} nodeInfo={nodeInfo} />
+        </DistributionItem>
     );
 }
 
@@ -118,25 +113,6 @@ export function SubscriptionTaskProgress(props: SubscriptionTaskProgressProps) {
         <ProgressCircle state="running" icon="check">
             OK
         </ProgressCircle>
-    );
-}
-
-interface SubscriptionTaskProgressTooltipProps {
-    target: HTMLElement;
-    nodeInfo: OngoingTaskNodeInfo;
-    task: OngoingTaskInfo;
-}
-
-function SubscriptionTaskProgressTooltip(props: SubscriptionTaskProgressTooltipProps) {
-    const { target } = props;
-    return (
-        <PopoverWithHover rounded="true" target={target} placement="top">
-            <div className="ongoing-tasks-details-tooltip">
-                <ul>
-                    <li>include clients details (ip port, Strategy, worker id?)</li>
-                </ul>
-            </div>
-        </PopoverWithHover>
     );
 }
 

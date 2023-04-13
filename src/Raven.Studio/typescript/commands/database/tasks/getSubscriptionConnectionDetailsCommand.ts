@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getSubscriptionConnectionDetailsCommand extends commandBase {
 
-    constructor(private db: database, private taskId: number, private taskName: string, private baseUrl: string) {
+    constructor(private db: database, private location: databaseLocationSpecifier, private taskId: number, private taskName: string) {
         super();
     }
     
@@ -21,7 +21,7 @@ class getSubscriptionConnectionDetailsCommand extends commandBase {
 
         // Note: The 'relative url' has to be prefixed with the 'base url' 
         //       because the connection info (held by the responsible node) might Not be in the server that is on the current browser location
-        return this.query<any>(url, args, this.db, null, null, 9000, this.baseUrl);
+        return this.query<any>(url, args, this.db, null, null, 9000);
     }
 }
 

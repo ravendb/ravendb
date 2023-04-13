@@ -21,7 +21,7 @@ export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
     onDelete: (task: OngoingTaskSharedInfo) => void;
     toggleState: (task: OngoingTaskSharedInfo, enable: boolean) => void;
-    onToggleDetails?: () => void;
+    onToggleDetails?: (newState: boolean) => void;
 }
 
 export interface ICanShowTransformationScriptPreview {
@@ -83,8 +83,8 @@ export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelP
 
     const toggleDetails = useCallback(() => {
         toggleDetailsVisible();
-        onToggleDetails?.();
-    }, [onToggleDetails, toggleDetailsVisible]);
+        onToggleDetails?.(!detailsVisible);
+    }, [onToggleDetails, toggleDetailsVisible, detailsVisible]);
 
     return {
         detailsVisible,
