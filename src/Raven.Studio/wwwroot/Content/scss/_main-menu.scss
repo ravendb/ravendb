@@ -317,17 +317,13 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
                 &:hover {
                     .level-1 {
                         transition-delay: 0.35s;
-                        a:not(.disabled) {
-                            transition: opacity 0s 0.35s, background-color 0.1s;
+                        a {
+                            transition: background-color 0.1s;
                         }
                     }
                     //Hover on submenu
                     .level-1:not(:hover) {
                         transform: translateX(calc(100% - $gutter));
-                        a:not(.disabled) {
-                            opacity: 0;
-                            transition-delay: 0;
-                        }
                     }
                     a.active:hover + .level-1 {
                         animation: none;
@@ -342,6 +338,11 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
                     }
                 }
             }
+        }
+    }
+    &:not(.collapse-menu) #main-menu {
+        .level-0 {
+            overflow-x: hidden;
         }
     }
     &.collapse-menu #main-menu {
