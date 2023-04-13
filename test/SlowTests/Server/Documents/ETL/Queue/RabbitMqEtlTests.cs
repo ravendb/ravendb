@@ -640,6 +640,41 @@ output('test output')"
         }
     }
 
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding | RavenTestCategory.Etl)]
+    public async Task ShouldSkipUnsupportedFeaturesInShardingOnImport_RabbitMqEtl()
+    {
+        using (var srcStore = GetDocumentStore())
+        using (var dstStore = Sharding.GetDocumentStore())
+        {
+            var config = SetupQueueEtlToRabbitMq(srcStore,
+                DefaultScript, DefaultCollections, new List<EtlQueue>()
+                {
+                    new()
+                    {
+                        Name = "Orders",
+                        DeleteProcessedDocuments = true
+                    }
+                }, connectionString: "amqp://abc:guest@localhost:1234/");
+
+            var record = await srcStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(srcStore.Database));
+
+            Assert.NotNull(record.QueueEtls);
+            Assert.Equal(1, record.QueueEtls.Count);
+            
+            var exportFile = GetTempFileName();
+
+            var exportOperation = await srcStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            var operation = await dstStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            record = await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstStore.Database));
+
+            Assert.Empty(record.QueueEtls);
+        }
+    }
+
     private class Order
     {
         public string Id { get; set; }

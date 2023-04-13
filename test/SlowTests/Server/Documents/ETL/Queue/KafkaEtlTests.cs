@@ -474,6 +474,50 @@ output('test output')"
         }
     }
 
+    [RequiresKafkaRetryFact]
+    public async Task ShouldSkipUnsupportedFeaturesInShardingOnImport_kafkaEtl()
+    {
+        using (var srcStore = GetDocumentStore())
+        using (var dstStore = Sharding.GetDocumentStore())
+        {
+            var config = SetupQueueEtlToKafka(srcStore, DefaultScript, DefaultCollections);
+            var etlDone = WaitForEtl(srcStore, (n, statistics) => statistics.LoadSuccesses != 0);
+
+            using (var session = srcStore.OpenSession())
+            {
+                session.Store(new Order
+                {
+                    Id = "orders/1-A",
+                    OrderLines = new List<OrderLine>
+                    {
+                        new OrderLine { Cost = 3, Product = "Milk", Quantity = 2 },
+                        new OrderLine { Cost = 4, Product = "Bear", Quantity = 1 },
+                    }
+                });
+                session.SaveChanges();
+            }
+
+            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), srcStore.Database, config);
+
+            var record = await srcStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(srcStore.Database));
+
+            Assert.NotNull(record.QueueEtls);
+            Assert.Equal(1, record.QueueEtls.Count);
+
+            var exportFile = GetTempFileName();
+
+            var exportOperation = await srcStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            var operation = await dstStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            record = await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstStore.Database));
+
+            Assert.Empty(record.QueueEtls);
+        }
+    }
+
     private class Order
     {
         public string Id { get; set; }
