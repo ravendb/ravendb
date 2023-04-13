@@ -15,6 +15,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     {
         private readonly RavenConfiguration _configuration;
         private readonly IRavenAzureClient _client;
+        
         public AzureRestorePoints(RavenConfiguration configuration, TransactionOperationContext context, AzureSettings azureSettings) : base(context)
         {
             _configuration = configuration;
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override ParsedBackupFolderName ParseFolderNameFrom(string path)
         {
             var arr = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var lastFolderName = arr.Length > 0 ? arr[arr.Length - 1] : string.Empty;
+            var lastFolderName = arr.Length > 0 ? arr[^1] : string.Empty;
 
             return ParseFolderName(lastFolderName);
         }
