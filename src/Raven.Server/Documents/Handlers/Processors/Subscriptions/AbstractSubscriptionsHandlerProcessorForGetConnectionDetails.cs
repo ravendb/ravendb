@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.TcpHandlers;
@@ -11,7 +12,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        public AbstractSubscriptionsHandlerProcessorForGetConnectionDetails([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractSubscriptionsHandlerProcessorForGetConnectionDetails([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
@@ -30,10 +31,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var details = GetConnectionDetails(context, subscriptionName);
-
-                if (details == null)
-                    return;
+                var details = GetConnectionDetails(context, subscriptionName) ?? new SubscriptionConnectionsDetails()
+                {
+                    Results = new List<SubscriptionConnectionDetails>(),
+                    SubscriptionMode = "None"
+                };
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
