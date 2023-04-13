@@ -499,7 +499,7 @@ public class RavenIntegration : RavenTestBase
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanUpdateDynamicFields(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         var user = new User() {Name = "TestDoc", Dict = new Dictionary<string, string>() {{"secret_field", "maciej"}}};
         using (var session = store.OpenSession())
         {

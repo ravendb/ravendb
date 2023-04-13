@@ -16,6 +16,7 @@ using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Containers;
@@ -570,7 +571,7 @@ namespace Corax
         }
         
        /// <returns>Encoded entryId</returns>
-        public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data)
+        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data)
         {
             if (TryGetEntryTermId(field, key, out var idInTree) == false)
             {
@@ -612,6 +613,13 @@ namespace Corax
                 UpdateModifiedTermsOnly(context, ref oldEntryReader, data, fieldBinding, entryId);
             }
 
+            // In the case of dynamic "update", there are some challenges. We may not know what fields exist in both index entries, so we would need to create a cache of one of them
+            // (since we need to enumerate through them) and check if it is the same as in the other entry. Also proceed Remove/Insert of unique fields. 
+            // Fortunately, since we have the "EntriesModification" struct, we can be certain that removing and adding the same item in one batch will be a no-op at the end.
+            // In conclusion, implementing this as "RemoveOldDynamicFields" and "IndexDynamicFields" methods would be a sufficient solution for now.
+            RemoveOldDynamicFields();
+            IndexDynamicFields(data);
+            
             // now we can update the actual details here...
             var space = Container.GetMutable(Transaction.LowLevelTransaction, entryId);
             buf.Slice(0, idLen).CopyTo(space);
@@ -623,6 +631,36 @@ namespace Corax
             space.Clear(); // remove any extra data from old value
           
             return idInTree;
+            
+            void RemoveOldDynamicFields()
+            {
+                var oldDynamicFieldIterator = new IndexEntryReader.DynamicFieldEnumerator(oldEntryReader);
+                while (oldDynamicFieldIterator.MoveNext())
+                {
+                    var dynamicIndexedField = GetDynamicIndexedField(context, ref oldDynamicFieldIterator);
+                    if (dynamicIndexedField.FieldIndexingMode is FieldIndexingMode.No)
+                        continue;
+                    RemoveSingleTerm(dynamicIndexedField, oldEntryReader.GetFieldReaderFor(oldDynamicFieldIterator.CurrentFieldName), entryId);
+                }
+            }
+
+            void IndexDynamicFields(Span<byte> newEntry)
+            {
+                fixed (byte* buffer = newEntry)
+                {
+                    var newEntryReader = new IndexEntryReader(buffer, newEntry.Length);
+                    var newDynamicIterator = new IndexEntryReader.DynamicFieldEnumerator(newEntryReader);
+                    while (newDynamicIterator.MoveNext())
+                    {
+                        var dynamicIndexedField = GetDynamicIndexedField(context, ref newDynamicIterator);
+                        if (dynamicIndexedField.FieldIndexingMode is FieldIndexingMode.No)
+                            continue;
+                    
+                        var indexer = new TermIndexer(this, context, newEntryReader.GetFieldReaderFor(newDynamicIterator.CurrentFieldName), dynamicIndexedField, entryId);
+                        indexer.InsertToken();            
+                    }
+                }
+            }
         }
 
         private unsafe void UpdateModifiedTermsOnly(ByteStringContext context, ref IndexEntryReader oldEntryReader, Span<byte> newEntryData,
