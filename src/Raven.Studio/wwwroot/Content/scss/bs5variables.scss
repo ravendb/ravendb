@@ -612,7 +612,7 @@ $input-bg: $well-bg !default;
 $input-disabled-bg: transparent !default;
 $input-disabled-border-color: $border-color-disabled !default;
 
-$input-color: $text-color !default;
+$input-color: $text-color-var !default;
 $input-border-color: $border-color-light !default;
 $input-border-width: $input-btn-border-width !default;
 $input-box-shadow: $box-shadow-inset !default;
@@ -623,7 +623,7 @@ $input-border-radius-lg: $border-radius-lg !default;
 
 $input-focus-bg: $input-bg !default;
 $input-focus-border-color: tint-color($component-active-bg, 50%) !default;
-$input-focus-color: $input-color !default;
+$input-focus-color: $text-emphasis-var !default;
 $input-focus-width: $input-btn-focus-width !default;
 $input-focus-box-shadow: $input-btn-focus-box-shadow !default;
 
