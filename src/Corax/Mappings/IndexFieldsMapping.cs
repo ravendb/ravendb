@@ -41,6 +41,12 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>, IDisposable
         return TryGetByFieldName(slicedName, out binding);
     }
 
+    public bool TryGetByFieldName(ByteStringContext context, Span<byte> fieldName, out IndexFieldBinding binding)
+    {
+        using var _ = Slice.From(context, fieldName, out var slicedName);
+        return TryGetByFieldName(slicedName, out binding);
+    }
+    
     public bool TryGetByFieldName(string fieldName, out IndexFieldBinding binding) => _fieldsByString.TryGetValue(fieldName, out binding);
 
     public bool ContainsField(string fieldName) => _fieldsByString.ContainsKey(fieldName);
