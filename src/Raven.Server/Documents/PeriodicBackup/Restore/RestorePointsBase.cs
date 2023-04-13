@@ -15,8 +15,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public abstract class RestorePointsBase : IDisposable
     {
-        public static Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
-        public static Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?)", RegexOptions.Compiled);
+        public static Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?(-[0-9]{7})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
+        public static Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?(-[0-9]{7})?)", RegexOptions.Compiled);
 
         private readonly SortedList<DateTime, RestorePoint> _sortedList;
         private readonly TransactionOperationContext _context;
@@ -54,8 +54,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 return new ParsedBackupFolderName
                 {
                     BackupTimeAsString = match.Groups[1].Value,
-                    DatabaseName = match.Groups[3].Value,
-                    NodeTag = match.Groups[4].Value
+                    DatabaseName = match.Groups[4].Value,
+                    NodeTag = match.Groups[5].Value
                 };
             }
 
