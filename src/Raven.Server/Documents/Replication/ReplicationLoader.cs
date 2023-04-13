@@ -1629,7 +1629,7 @@ namespace Raven.Server.Documents.Replication
             using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate, DocumentConventions.DefaultForServer))
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
-                var cmd = new GetTcpInfoCommand(_server.Server.WebUrl, ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
+                var cmd = new GetTcpInfoCommand(_server.GetNodeHttpServerUrl(), ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
                 try
                 {
                     requestExecutor.ExecuteWithCancellationToken(cmd, ctx, _shutdownToken);
