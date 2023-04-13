@@ -29,11 +29,6 @@ namespace Raven.Server.Utils
             return AsyncHelpers.RunSync(() => GetTcpInfoAsync(url, databaseName, tag, certificate, token));
         }
 
-        public static TcpConnectionInfo GetTcpInfo(string senderUrl, string url, string databaseName, string tag, X509Certificate2 certificate, CancellationToken token)
-        {
-            return AsyncHelpers.RunSync(() => GetTcpInfoAsync(senderUrl, url, databaseName, tag, certificate, token));
-        }
-
         public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string tag, X509Certificate2 certificate, CancellationToken token)
         {
             return await GetTcpInfoAsync(url, databaseName, null, default, tag, certificate, token);

@@ -23,7 +23,7 @@ namespace Raven.Server.Web.System
 
         private bool CanConnectViaPrivateTcpUrl()
         {
-            var senderUrl = GetStringQueryString("senderUrl", false);
+            var senderUrl = GetStringQueryString("senderUrl", required: false);
             if (string.IsNullOrEmpty(senderUrl))
                 return true;
 
