@@ -41,7 +41,8 @@ export class localServerCredentials extends restoreSettings {
     backupDirectory = ko.observable<string>();
     folderContent = ko.pureComputed(() => this.backupDirectory());
 
-    fetchRestorePointsCommand = (backupDirectory: string = this.backupDirectory(), shardNumber: number = null) => getRestorePointsCommand.forServerLocal(backupDirectory, true, shardNumber);
+    fetchRestorePointsCommand = (backupDirectory: string = this.backupDirectory(), shardNumber: number = null) =>
+        getRestorePointsCommand.forServerLocal(backupDirectory, true, shardNumber);
 
     getFolderPathOptions(backupDirectory: string = this.backupDirectory()) {
         return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forServerLocal(backupDirectory, true))
@@ -55,8 +56,8 @@ export class localServerCredentials extends restoreSettings {
         return localConfiguration;
     }
 
-    isValid(backupDirectory: string = this.backupDirectory()): boolean {
-        return !!_.trim(backupDirectory);
+    isValid(): boolean {
+        return !!_.trim(this.backupDirectory());
     }
 
     onCredentialsChange(onChange: () => void) {

@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected Task<RestorePoints> FetchRestorePointsForPath(string path, bool assertLegacyBackups, int? shardNumber = null)
         {
-            return FetchRestorePointsForPaths(new[] { path }, assertLegacyBackups);
+            return FetchRestorePointsForPaths(new[] { path }, assertLegacyBackups, shardNumber);
         }
 
         protected async Task<RestorePoints> FetchRestorePointsForPaths(IEnumerable<string> paths, bool assertLegacyBackups, int? shardNumber = null)
@@ -141,9 +141,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         }
                     }
 
-                    var containsShardNumber = shardNumber == null || filePath.DirectoryPath.Contains($"${shardNumber}-");
+                    var shardDirectoryPathCondition = shardNumber == null || filePath.DirectoryPath.Contains($"${shardNumber}-");
 
-                    return IsBackupOrSnapshot(filePath.FullPath) && containsShardNumber;
+                    return IsBackupOrSnapshot(filePath.FullPath) && shardDirectoryPathCondition;
                 })
                 .OrderBy(x => Path.GetFileNameWithoutExtension(x.FullPath))
                 .ThenBy(x => Path.GetExtension(x.FullPath), PeriodicBackupFileExtensionComparer.Instance)

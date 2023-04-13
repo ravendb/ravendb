@@ -401,10 +401,10 @@ class databaseCreationModel {
         return groups.find(x => x.databaseName === databaseName);
     }
 
-    getRestorePoint(group: RestorePointsGroup, databaseName: string, date?: string): restorePoint {
-        const formatedDate = moment(date).format(generalUtils.dateFormat);
+    getRestorePoint(group: RestorePointsGroup, databaseName: string, date: string): restorePoint {
+        const formattedDate = moment(date).format(generalUtils.dateFormat);
 
-        return group.restorePoints.find(x => DatabaseUtils.shardGroupKey(x.databaseName()) === databaseName && x.dateTime === formatedDate);
+        return group.restorePoints.find(x => DatabaseUtils.shardGroupKey(x.databaseName()) === databaseName && x.dateTime === formattedDate);
     }
 
     async fetchShardingRestorePoints() {
@@ -413,12 +413,12 @@ class databaseCreationModel {
         
         const groups: RestorePointsGroup[] = [];
         let shardNumber = 0;
-        const direcotryPaths = this.restore.shardingBackupDirectories().map(x => x.directoryPath());
+        const directoryPaths = this.restore.shardingBackupDirectories().map(x => x.directoryPath());
 
-        for await (const direcotryPath of direcotryPaths) {
+        for await (const directoryPath of directoryPaths) {
             try {
                 const restorePoints: RestorePoints = await this.restoreSourceObject()
-                    .fetchRestorePointsCommand(direcotryPath, shardNumber)
+                    .fetchRestorePointsCommand(directoryPath, shardNumber)
                     .execute();
 
                 restorePoints.List.forEach(rp => {
@@ -706,7 +706,6 @@ class databaseCreationModel {
             }
         });
 
-        // TODO: remove this.restore.enableSharding()
         this.restore.selectedRestorePoint.extend({
             validation: [
                 {
@@ -814,7 +813,7 @@ class databaseCreationModel {
         
         const restorePoint = this.restore.selectedRestorePoint();
         
-        let encryptionSettings = null as Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings;
+        let encryptionSettings: Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings = null;
         let databaseEncryptionKey = null;
         
         if (restorePoint.isEncrypted) {

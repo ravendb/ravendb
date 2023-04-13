@@ -15,7 +15,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public override Task<RestorePoints> FetchRestorePoints(string directoryPath, int? shardNumber = null)
         {
-            // TODO: kalczur tests?
             var directories = Directory.GetDirectories(directoryPath)
                 .OrderBy(x => x)
                 .ToList();
