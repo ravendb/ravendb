@@ -4,8 +4,20 @@ import endpoints = require("endpoints");
 
 class getSubscriptionConnectionDetailsCommand extends commandBase {
 
-    constructor(private db: database, private taskId: number, private taskName: string, private nodeTag?: string) {
+    private readonly db: database;
+
+    private readonly taskId: number;
+
+    private readonly taskName: string;
+
+    private readonly nodeTag?: string;
+
+    constructor(db: database, taskId: number, taskName: string, nodeTag?: string) {
         super();
+        this.nodeTag = nodeTag;
+        this.taskName = taskName;
+        this.taskId = taskId;
+        this.db = db;
     }
     
     execute(): JQueryPromise<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails> {

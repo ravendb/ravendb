@@ -138,7 +138,6 @@ interface BackupsPageProps {
 
 export function BackupsPage(props: BackupsPageProps) {
     const { database } = props;
-    const locations = database.getLocations();
     const { canReadWriteDatabase, isClusterAdminOrClusterNode, isAdminAccessOrAbove } = useAccessManager();
 
     const { tasksService } = useServices();
@@ -147,7 +146,7 @@ export function BackupsPage(props: BackupsPageProps) {
         data: null,
     });
 
-    const [tasks, dispatch] = useReducer(ongoingTasksReducer, locations, ongoingTasksReducerInitializer);
+    const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {

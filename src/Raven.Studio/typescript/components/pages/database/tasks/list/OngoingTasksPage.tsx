@@ -1,12 +1,10 @@
 ﻿import database from "models/resources/database";
 import React, { useCallback, useEffect, useReducer, useState } from "react";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { useServices } from "hooks/useServices";
 import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "./OngoingTasksReducer";
 import { useAccessManager } from "hooks/useAccessManager";
 import createOngoingTask from "viewmodels/database/tasks/createOngoingTask";
 import app from "durandal/app";
-import useTimeout from "hooks/useTimeout";
 import appUrl from "common/appUrl";
 import { ExternalReplicationPanel } from "../panels/ExternalReplicationPanel";
 import {
@@ -21,7 +19,6 @@ import {
     OngoingTaskReplicationSinkInfo,
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlInfo,
-    OngoingTaskSubscriptionInfo,
 } from "components/models/tasks";
 import { RavenEtlPanel } from "../panels/RavenEtlPanel";
 import { SqlEtlPanel } from "../panels/SqlEtlPanel";
@@ -55,8 +52,6 @@ interface OngoingTasksPageProps {
 export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const { database } = props;
 
-    const locations = database.getLocations();
-
     const { canReadWriteDatabase, isClusterAdminOrClusterNode } = useAccessManager();
 
     const { value: progressEnabled, setTrue: startTrackingProgress } = useBoolean(false);
@@ -65,7 +60,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
 
     const [definitionCache] = useState(() => new etlScriptDefinitionCache(database));
 
-    const [tasks, dispatch] = useReducer(ongoingTasksReducer, locations, ongoingTasksReducerInitializer);
+    const [tasks, dispatch] = useReducer(ongoingTasksReducer, database, ongoingTasksReducerInitializer);
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
@@ -88,31 +83,23 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     );
 
     const reload = useCallback(async () => {
-        const loadTasks = tasks.locations.map((location) => fetchTasks(location));
+        // if database is sharded we need to load from both orchestrator and target node point of view
+        // in case of non-sharded - we have single level: node
+
+        if (database.isSharded()) {
+            const orchestratorTasks = database.nodes().map((node) => fetchTasks({ nodeTag: node.tag }));
+            await Promise.all(orchestratorTasks);
+        }
+
+        const loadTasks = tasks.locations.map(fetchTasks);
         await Promise.all(loadTasks);
-    }, [tasks, fetchTasks]);
+    }, [tasks, fetchTasks, database]);
 
     useInterval(reload, 10_000);
 
-    const loadMissing = async () => {
-        if (tasks.tasks.length > 0) {
-            const loadTasks = tasks.tasks[0].nodesInfo.map(async (nodeInfo) => {
-                if (nodeInfo.status === "idle") {
-                    await fetchTasks(nodeInfo.location);
-                }
-            });
-
-            await Promise.all(loadTasks);
-        }
-    };
-
-    useTimeout(loadMissing, 3_000);
-
     useEffect(() => {
-        const nodeTag = clusterTopologyManager.default.localNodeTag();
-        const initialLocation = database.getFirstLocation(nodeTag);
-
-        fetchTasks(initialLocation);
+        // noinspection JSIgnoredPromiseFromCall
+        reload();
     }, [fetchTasks, database]);
 
     const addNewOngoingTask = useCallback(() => {
@@ -171,9 +158,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         (x) => x.shared.taskType === "ElasticSearchEtl"
     ) as OngoingTaskElasticSearchEtlInfo[];
     const backups = tasks.tasks.filter((x) => x.shared.taskType === "Backup") as OngoingTaskPeriodicBackupInfo[];
-    const subscriptions = tasks.tasks.filter(
-        (x) => x.shared.taskType === "Subscription"
-    ) as OngoingTaskSubscriptionInfo[];
+    const subscriptions = tasks.subscriptions;
     const replicationHubs = tasks.tasks.filter(
         (x) => x.shared.taskType === "PullReplicationAsHub"
     ) as OngoingTaskReplicationHubInfo[];
@@ -256,9 +241,11 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     </div>
                 </div>
                 <div className="scroll flex-grow">
-                    {tasks.tasks.length === 0 && tasks.replicationHubs.length === 0 && (
-                        <EmptySet>No tasks have been created for this Database Group.</EmptySet>
-                    )}
+                    {tasks.tasks.length === 0 &&
+                        tasks.replicationHubs.length === 0 &&
+                        tasks.subscriptions.length === 0 && (
+                            <EmptySet>No tasks have been created for this Database Group.</EmptySet>
+                        )}
 
                     {externalReplications.length > 0 && (
                         <div key="external-replications">
