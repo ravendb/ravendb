@@ -301,38 +301,9 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
     {
         foreach (var subscriptionState in RequestHandler.Database.SubscriptionStorage.GetAllSubscriptionsFromServerStore(context))
         {
-            var tag = ServerStore.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
-            OngoingTaskConnectionStatus connectionStatus;
-            if (tag != _server.NodeTag)
-            {
-                connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
-            }
-            else if (_database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var connectionsState))
-            {
-                connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
-            }
-            else
-            {
-                connectionStatus = OngoingTaskConnectionStatus.NotActive;
-            }
+            (OngoingTaskConnectionStatus connectionStatus, string responsibleNodeTag) = _database.SubscriptionStorage.GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionState.SubscriptionId, subscriptionState, databaseRecord);
 
-            yield return new OngoingTaskSubscription
-            {
-                // Supply only needed fields for List View
-                ResponsibleNode = new NodeId
-                {
-                    NodeTag = tag,
-                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                },
-                TaskName = subscriptionState.SubscriptionName,
-                TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                MentorNode = subscriptionState.MentorNode,
-                PinToMentorNode = subscriptionState.PinToMentorNode,
-                TaskId = subscriptionState.SubscriptionId,
-                Query = subscriptionState.Query,
-                TaskConnectionStatus = connectionStatus,
-                //TODO: client ack, connect time + change vectors?
-            };
+            yield return OngoingTaskSubscription.From(subscriptionState, connectionStatus, clusterTopology, responsibleNodeTag);
         }
     }
 
@@ -387,21 +358,12 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
         return ValueTask.FromResult(process);
     }
 
-    protected override ValueTask<OngoingTaskConnectionStatus> GetSubscriptionConnectionStatusAsync(DatabaseRecord record, SubscriptionState subscriptionState, long key,
+    protected override OngoingTaskConnectionStatus GetSubscriptionConnectionStatus(DatabaseRecord record, SubscriptionState subscriptionState, long subscriptionId,
         out string tag)
     {
-        tag = ServerStore.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
-        OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
-        if (tag != ServerStore.NodeTag)
-        {
-            connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
-        }
-        else if (RequestHandler.Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(key, out var connectionsState))
-        {
-            connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
-        }
+        (OngoingTaskConnectionStatus connectionStatus, tag) = RequestHandler.Database.SubscriptionStorage.GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionId, subscriptionState, record);
 
-        return ValueTask.FromResult(connectionStatus);
+        return connectionStatus;
     }
 
     protected List<IAbstractIncomingReplicationHandler> GetIncomingHandlers() => RequestHandler.Database.ReplicationLoader.IncomingHandlers.ToList();

@@ -32,13 +32,9 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         {
             var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
 
-            yield return new OngoingTaskSubscription
-            {
-                TaskName = subscriptionState.SubscriptionName,
-                TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                TaskId = subscriptionState.SubscriptionId,
-                Query = subscriptionState.Query,
-            };
+            (OngoingTaskConnectionStatus connectionStatus, string responsibleNodeTag) = RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionState.SubscriptionId, subscriptionState, databaseRecord);
+
+            yield return OngoingTaskSubscription.From(subscriptionState, connectionStatus, clusterTopology, responsibleNodeTag);
         }
     }
 
@@ -233,14 +229,10 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         return ValueTask.FromResult(res);
     }
 
-    protected override ValueTask<OngoingTaskConnectionStatus> GetSubscriptionConnectionStatusAsync(DatabaseRecord record, SubscriptionState subscriptionState, long key,
-        out string tag)
+    protected override OngoingTaskConnectionStatus GetSubscriptionConnectionStatus(DatabaseRecord record, SubscriptionState subscriptionState, long subscriptionId, out string tag)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "RavenDB-19069 implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13113");
-
-        tag = null;
-        OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
-        return ValueTask.FromResult(connectionStatus);
+        (OngoingTaskConnectionStatus connectionStatus, tag) = RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionId, subscriptionState, record);
+        return connectionStatus;
     }
 
     protected override ValueTask<OngoingTaskConnectionStatus> GetEtlTaskConnectionStatusAsync<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)

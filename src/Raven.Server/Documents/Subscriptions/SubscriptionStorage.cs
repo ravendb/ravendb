@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -91,16 +93,6 @@ namespace Raven.Server.Documents.Subscriptions
                 yield return state;
         }
 
-        public SubscriptionState GetSubscriptionFromServerStoreById(long id)
-        {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
-            using (serverStoreContext.OpenReadTransaction())
-            {
-                var subscriptionState = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateById(serverStoreContext, _databaseName, id);
-                return subscriptionState;
-            }
-        }
-
         public string GetResponsibleNode(TransactionOperationContext serverContext, string name)
         {
             var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(serverContext, _databaseName, name);
@@ -130,13 +122,23 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected override string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus)
         {
-            return  _serverStore.WhoseTaskIsIt(databaseRecord.Topology, taskStatus, taskStatus);
+            return _serverStore.WhoseTaskIsIt(databaseRecord.Topology, taskStatus, taskStatus);
         }
 
         protected override bool SubscriptionChangeVectorHasChanges(SubscriptionConnectionsState state, SubscriptionState taskStatus)
         {
             return taskStatus.LastClientConnectionTime == null &&
                    taskStatus.ChangeVectorForNextBatchStartingPoint != state.LastChangeVectorSent;
+        }
+
+        public override (OngoingTaskConnectionStatus ConnectionStatus, string ResponsibleNodeTag) GetSubscriptionConnectionStatusAndResponsibleNode(
+            long subscriptionId, 
+            SubscriptionState state,
+            [NotNull] DatabaseRecord databaseRecord)
+        {
+            if (databaseRecord == null) throw new ArgumentNullException(nameof(databaseRecord));
+
+            return GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionId, state, databaseRecord.Topology);
         }
 
         public bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex)
@@ -289,21 +291,6 @@ namespace Raven.Server.Documents.Subscriptions
 
             GetRunningSubscriptionInternal(history, subscription, subscriptionConnectionsState);
             return subscription;
-        }
-
-        public bool TryGetRunningSubscriptionConnectionsState(long subscriptionId, out SubscriptionConnectionsState connections)
-        {
-            connections = null;
-
-            if (_subscriptions.TryGetValue(subscriptionId, out var concurrentSubscription) == false)
-                return false;
-
-            if (concurrentSubscription == null)
-                return false;
-
-            connections = concurrentSubscription;
-
-            return true;
         }
 
         public class SubscriptionGeneralDataAndStats : SubscriptionState
