@@ -1,7 +1,7 @@
 import MockInstance = jest.MockInstance;
 import { createValue } from "test/mocks/utils";
 
-type ServiceMocks<T extends object> = {
+export type ServiceMocks<T extends object> = {
     [K in keyof T]: T[K] extends (...args: any) => any ? jest.MockInstance<ReturnType<T[K]>, Parameters<T[K]>> : never;
 };
 
@@ -31,13 +31,16 @@ export abstract class AutoMockService<T extends object> {
     }
 
     private static getMethods(obj: object) {
-        //TODO: only services methods! + check if it is service!
         const properties = new Set<string>();
         let currentObj = obj;
         do {
-            Object.getOwnPropertyNames(currentObj).map((item) => properties.add(item));
+            Object.getOwnPropertyNames(currentObj).forEach((item) => {
+                if (item !== "constructor") {
+                    properties.add(item);
+                }
+            });
             currentObj = Object.getPrototypeOf(currentObj);
-        } while (currentObj);
+        } while (currentObj && currentObj !== Object.prototype);
         return [...properties.keys()].filter((item) => typeof (obj as any)[item as any] === "function");
     }
 

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getSubscriptionConnectionDetailsCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier, private taskId: number, private taskName: string) {
+    constructor(private db: database, private taskId: number, private taskName: string, private nodeTag?: string) {
         super();
     }
     
@@ -17,8 +17,8 @@ class getSubscriptionConnectionDetailsCommand extends commandBase {
 
     private getConnectionDetails(): JQueryPromise<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails> {
         const url = endpoints.databases.subscriptions.subscriptionsConnectionDetails;
-        const args = { id: this.taskId, name: this.taskName };
-
+        const args = { id: this.taskId, name: this.taskName, nodeTag: this.nodeTag };
+        
         // Note: The 'relative url' has to be prefixed with the 'base url' 
         //       because the connection info (held by the responsible node) might Not be in the server that is on the current browser location
         return this.query<any>(url, args, this.db, null, null, 9000);

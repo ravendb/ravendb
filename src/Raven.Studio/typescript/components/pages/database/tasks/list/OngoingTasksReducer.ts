@@ -49,7 +49,7 @@ interface ActionTasksLoaded {
 
 interface ActionTaskLoaded {
     location: databaseLocationSpecifier;
-    task: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails;
+    task: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
     type: "SubscriptionInfoLoaded";
 }
 
@@ -368,6 +368,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
 
                     if (existingNodeInfo?.details) {
                         existingNodeInfo.details.responsibleNode = incomingTask.ResponsibleNode?.NodeTag;
+                        existingNodeInfo.details.taskConnectionStatus = incomingTask.TaskConnectionStatus;
                     }
                 }
             });
