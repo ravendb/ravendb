@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Should_Throw_Offset_Cannot_Be_Negative()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_Throw_Offset_Cannot_Be_Negative(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Index();
                 index.Execute(store);

@@ -1,4 +1,5 @@
 ﻿using Lucene.Net.Search;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -66,7 +67,20 @@ public sealed class ShardedLuceneIndexReadOperation : LuceneIndexReadOperation
 
                     throw new NotSupportedInShardingException("Ordering by score is not supported in sharding");
                 default:
-                    result.AddStringOrderByField(_searcher.IndexReader.GetStringValueFor(field.OrderByName, doc, _state));
+                    string stringValue = _searcher.IndexReader.GetStringValueFor(field.OrderByName, doc, _state);
+
+                    switch (stringValue)
+                    {
+                        case Constants.Documents.Indexing.Fields.NullValue:
+                            stringValue = null;
+                            break;
+
+                        case Constants.Documents.Indexing.Fields.EmptyString:
+                            stringValue = string.Empty;
+                            break;
+                    }
+
+                    result.AddStringOrderByField(stringValue);
                     break;
             }
         }

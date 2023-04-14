@@ -19,7 +19,7 @@ public class RavenDB_18377 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
     public void EnumerableSavedAsValue(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -38,7 +38,7 @@ public class RavenDB_18377 : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
     public void ArrayInIndex(Options options)
     {
         using var store = GetDocumentStore(options);

@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,10 +41,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectDecimalFromIndex()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanProjectDecimalFromIndex(Options options)
         {
-            using (DocumentStore store = GetDocumentStore())
+            using (DocumentStore store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new AverageIndex());
 

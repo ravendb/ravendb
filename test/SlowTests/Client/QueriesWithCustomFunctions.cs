@@ -389,8 +389,9 @@ from 'Users' as u select output(u)", query.ToString());
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
-                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
-                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+
+                    Assert.Contains("Jerry Garcia", queryResult.Select(x => x.FullName));
+                    Assert.Contains("Bob Weir", queryResult.Select(x => x.FullName));
                 }
             }
         }
@@ -426,8 +427,8 @@ from 'Users' as u select output(u)", query.ToString());
                     var queryResult = await query.ToListAsync();
 
                     Assert.Equal(2, queryResult.Count);
-                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
-                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                    Assert.Contains("Jerry Garcia", queryResult.Select(x => x.FullName));
+                    Assert.Contains("Bob Weir", queryResult.Select(x => x.FullName));
                 }
             }
         }
@@ -463,8 +464,8 @@ from 'Users' as u select output(u)", query.ToString());
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
-                    Assert.Equal("Jerry Garcia", queryResult[0].FullName);
-                    Assert.Equal("Bob Weir", queryResult[1].FullName);
+                    Assert.Contains("Jerry Garcia", queryResult.Select(x => x.FullName));
+                    Assert.Contains("Bob Weir", queryResult.Select(x => x.FullName));
                 }
             }
         }

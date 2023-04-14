@@ -55,7 +55,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanProjectStoredStringFieldThatLooksLikeLargeNumberUsingJsProjection(Options options)
         {
             var id = "080034951900720231";
@@ -95,13 +95,13 @@ namespace SlowTests.Issues
 
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanExtractStoredNumberFieldsUsingJsProjection(Options options)
         {
             long l = 9007199254740990;
             double d = 1.7976931348623157e+308;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MyIndex().Execute(store);
 

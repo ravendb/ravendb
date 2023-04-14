@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-20149")]
         public void ShouldWork(Options options)
         {

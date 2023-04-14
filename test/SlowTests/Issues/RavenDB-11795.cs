@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void SearchBooking_ProjectionWithDateTimeToStringAndFormat_ReturnsResult(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -62,7 +62,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void DateToStringWithInvariantCulture(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
 
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void DateToStringWithCurrentCulture(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -145,7 +145,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void DateToStringWithFormatAndCurrentCulture(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -186,7 +186,7 @@ namespace SlowTests.Issues
 
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void DateToStringWithFormatAndInvariantCulture(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -226,7 +226,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void NumberToStringWithFormat(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -265,7 +265,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void NumberToStringWithInvariantCulture(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -305,7 +305,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void NumberToStringWithCurrentCulture(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -345,7 +345,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void NumberToStringWithFormatAndCulture(Options options)
         {
             using (var store = GetDocumentStore(options))

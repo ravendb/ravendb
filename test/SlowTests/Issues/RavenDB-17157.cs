@@ -52,10 +52,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void OnSessionCreated_WaitForIndexesAfterSaveChanges_Test()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void OnSessionCreated_WaitForIndexesAfterSaveChanges_Test(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.OnSessionCreated += (sender, sessionCreatedEventArgs) =>
                 {
