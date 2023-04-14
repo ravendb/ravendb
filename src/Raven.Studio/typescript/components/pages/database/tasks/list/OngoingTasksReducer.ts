@@ -374,19 +374,17 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
     switch (action.type) {
         case "SubscriptionInfoLoaded": {
             const incomingTask = action.task;
-            const incomingLocation = action.location;
+            const incomingLocation = action.nodeTag;
 
             return produce(state, (draft) => {
-                const existingTask = draft.tasks.find(
-                    (x) => x.shared.taskType === "Subscription" && x.shared.taskId === incomingTask.SubscriptionId
-                );
+                const existingTask = draft.subscriptions.find((x) => x.shared.taskId === incomingTask.SubscriptionId);
 
                 if (existingTask) {
                     existingTask.shared.taskState = incomingTask.Disabled ? "Disabled" : "Enabled";
                     existingTask.shared.responsibleNodeTag = incomingTask.ResponsibleNode?.NodeTag;
 
                     const existingNodeInfo = existingTask.nodesInfo.find((x) =>
-                        databaseLocationComparator(x.location, incomingLocation)
+                        databaseLocationComparator(x.location, { nodeTag: incomingLocation })
                     );
 
                     if (existingNodeInfo?.details) {
@@ -395,7 +393,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     }
                 }
             });
-        }*/
+        }
 
         case "TasksLoaded": {
             const incomingLocation = action.location;

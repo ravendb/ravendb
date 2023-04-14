@@ -45,6 +45,8 @@ function ChangeVectorInfo(props: ChangeVectorInfoProps) {
       for sharded: we have change vector per each shard!
      */
 
+    //TODO: can we have both fields filled in?
+
     if (info.changeVectorForNextBatchStartingPoint) {
         return <div>{info.changeVectorForNextBatchStartingPoint}</div>;
     }
@@ -126,6 +128,18 @@ function ConnectedClients(props: ConnectedClientsProps) {
     if (connections.LoadError) {
         return <Alert color="warning">{connections.LoadError}</Alert>;
     }
+
+    //TODO: do we need proxy for that?
+    const disconnectSubscription = async (workerId: string) => {
+        try {
+            await dropSubscription(workerId);
+        } finally {
+            await refreshSubscriptionInfo();
+        }
+    };
+
+    //TODO: create L&F for connections section!
+
     return (
         <div>
             <h3>Connected clients</h3>
