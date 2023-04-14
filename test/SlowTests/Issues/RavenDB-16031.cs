@@ -13,8 +13,7 @@ namespace SlowTests.Issues
     public class RavenDB_16031 : RavenTestBase
     {
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19402")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))

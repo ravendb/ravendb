@@ -29,7 +29,7 @@ namespace SlowTests.Core.Commands
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanDoSimpleQueryOnDatabase(Options options)
         {
             const string indexName = "CompaniesByName";
@@ -73,7 +73,7 @@ namespace SlowTests.Core.Commands
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanProcessLongQueryString(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -147,8 +147,7 @@ namespace SlowTests.Core.Commands
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetFacets(Options options)
         {
             using (var store = GetDocumentStore(options))

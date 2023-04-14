@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,11 +28,12 @@ namespace SlowTests.Issues
                     select new {_ = item.Fields.Select(f => CreateField("Fields_" + f.Key, f.Value))};
             }
         }
-        
-        [Fact]
-        public void CanUseFieldStartingWithNumber_InDynamicQuery()
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseFieldStartingWithNumber_InDynamicQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var s = store.OpenSession())
             {
@@ -39,11 +41,12 @@ namespace SlowTests.Issues
                 Assert.Equal("from 'Items' where Fields.1-A = $p0", q);
             }
         }
-        
-        [Fact]
-        public void CanUseFieldWithSlash_InDynamicQuery()
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseFieldWithSlash_InDynamicQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var s = store.OpenSession())
             {
@@ -51,11 +54,12 @@ namespace SlowTests.Issues
                 Assert.Equal("from 'Items' where Fields.'users/1-A' = $p0", q);
             }
         }
-        
-        [Fact]
-        public void CanUseFieldStartingWithNumber_InStatic()
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseFieldStartingWithNumber_InStatic(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             new Index().Execute(store);
             using (var s = store.OpenSession())
             {
@@ -63,9 +67,10 @@ namespace SlowTests.Issues
                 Assert.Equal("from index 'Index' where Fields_1-A = $p0", q.ToString());
             }
         }
-        
-        [Fact]
-        public void CanUseFieldsWithSlash_InStatic()
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseFieldsWithSlash_InStatic(Options options)
         {
             using var store = GetDocumentStore();
             new Index().Execute(store);

@@ -18,6 +18,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded, Skip = "RavenDB-20319 Sharding - Queries - Dynamic fields creation during reduce part in-map reduce indexes")]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19388")]
         public void CreateFieldsShouldNotDisplayAsIgnored(Options options)
         {

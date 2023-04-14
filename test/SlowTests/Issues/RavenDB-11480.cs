@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                 Map = companies => from c in companies
                                    select new
                                    {
-                                       OrderId = "orders/1-A"
+                                       OrderId = "orders/1-A$companies/1-A"
                                    };
 
                 Store("OrderId", FieldStorage.Yes);
@@ -78,7 +78,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanLoadOnStoredField(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -90,12 +90,12 @@ namespace SlowTests.Issues
                     session.Store(new Company
                     {
                         Name = "HR"
-                    });
+                    }, "companies/1-A");
 
                     session.Store(new Order
                     {
                         Company = "HR-Order"
-                    }, "orders/1-A");
+                    }, "orders/1-A$companies/1-A");
 
                     session.SaveChanges();
                 }
@@ -116,7 +116,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void IndexWithDynamicFieldsShouldNotTryToExtractBySourceAliasIfFieldIsMissing(Options options)
         {
             using (var store = GetDocumentStore(options))

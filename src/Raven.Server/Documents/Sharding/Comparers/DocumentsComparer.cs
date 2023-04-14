@@ -77,9 +77,9 @@ public class DocumentsComparer : IComparer<BlittableJsonReaderObject>
                     if (xVal == null && yVal == null)
                         return 0;
                     if (xVal == null)
-                        return 1;
-                    if (yVal == null)
                         return -1;
+                    if (yVal == null)
+                        return 1;
                     return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
                 }
             case OrderByFieldType.Random:
@@ -107,7 +107,7 @@ public class DocumentsComparer : IComparer<BlittableJsonReaderObject>
         if (metadata.TryGet(Constants.Documents.Metadata.Sharding.Querying.OrderByFields, out BlittableJsonReaderArray orderByFields) == false)
             ThrowIfCannotFindOrderByFields(metadata);
 
-        return orderByFields[index].ToString();
+        return orderByFields[index]?.ToString();
     }
 
     private bool TryGetLongValue(BlittableJsonReaderObject blittable, string fieldName, int index, out long value)

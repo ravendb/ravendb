@@ -65,7 +65,7 @@ namespace FastTests.Client
                             new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 3 },
                             new OrderLine{ PricePerUnit = (decimal)1.5, Quantity = 3 }
                         }
-                    });
+                    }, "orders/1$companies/1");
                     session.Store(new Order
                     {
                         Company = "companies/1",
@@ -73,7 +73,7 @@ namespace FastTests.Client
                         {
                             new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 5 },
                         }
-                    });
+                    }, "orders/2$companies/1");
                     session.Store(new Order
                     {
                         Company = "companies/2",
@@ -83,7 +83,7 @@ namespace FastTests.Client
                             new OrderLine{ PricePerUnit = (decimal)8.0, Quantity = 3, Discount = (decimal)3.5},
                             new OrderLine{ PricePerUnit = (decimal)1.8, Quantity = 2 }
                         }
-                    });
+                    }, "orders/3$companies/2");
                     session.SaveChanges();
                 }
 
@@ -148,7 +148,7 @@ namespace FastTests.Client
                             new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 3 },
                             new OrderLine{ PricePerUnit = (decimal)1.5, Quantity = 3 }
                         }
-                    });
+                    }, "orders/1$companies/1");
                     session.Store(new Order
                     {
                         Company = "companies/1",
@@ -156,7 +156,7 @@ namespace FastTests.Client
                         {
                             new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 5 },
                         }
-                    });
+                    }, "orders/2$companies/1");
                     session.Store(new Order
                     {
                         Company = "companies/2",
@@ -166,7 +166,7 @@ namespace FastTests.Client
                             new OrderLine{ PricePerUnit = (decimal)8.0, Quantity = 3, Discount = (decimal)3.5},
                             new OrderLine{ PricePerUnit = (decimal)1.8, Quantity = 2 }
                         }
-                    });
+                    }, "orders/3$companies/2");
                     session.SaveChanges();
                 }
 
