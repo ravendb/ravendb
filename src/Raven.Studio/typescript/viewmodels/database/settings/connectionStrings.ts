@@ -192,7 +192,7 @@ class connectionStrings extends viewModelBase {
     }
     
     private processData(result: Raven.Server.Web.System.OngoingTasksResult) {
-        const tasksThatUseConnectionStrings = result.OngoingTasksList.filter((task) =>
+        const tasksThatUseConnectionStrings = result.OngoingTasks.filter((task) =>
             task.TaskType === "RavenEtl" ||
             task.TaskType === "SqlEtl" ||
             task.TaskType === "OlapEtl" ||

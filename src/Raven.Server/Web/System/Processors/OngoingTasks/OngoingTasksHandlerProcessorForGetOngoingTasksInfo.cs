@@ -368,7 +368,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
 
     protected List<IAbstractIncomingReplicationHandler> GetIncomingHandlers() => RequestHandler.Database.ReplicationLoader.IncomingHandlers.ToList();
 
-    protected override int SubscriptionsCount => (int)_database.SubscriptionStorage.GetAllSubscriptionsCount();
+    protected override long SubscriptionsCount => (int)_database.SubscriptionStorage.GetAllSubscriptionsCount();
 
     private OngoingTaskPullReplicationAsHub GetPullReplicationAsHubTaskInfo(ClusterTopology clusterTopology, ExternalReplication ex)
     {

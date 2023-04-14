@@ -16,7 +16,7 @@ namespace Raven.Server.Web.System.Processors.OngoingTasks
 
         protected override async ValueTask HandleCurrentNodeAsync()
         {
-            await GetOngoingTaskInfoInternalAsync();
+            await HandleOngoingTaskInfoAsync();
         }
 
         protected override Task HandleRemoteNodeAsync(ProxyCommand<OngoingTasksResult> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);

@@ -480,7 +480,7 @@ namespace RachisTests.DatabaseCluster
             List<OngoingTask> tasks;
             using (var processor = await Databases.InstantiateOutgoingTaskProcessor(databaseName, leader))
             {
-                tasks = processor.GetOngoingTasksInternal().OngoingTasksList;
+                tasks = processor.GetOngoingTasksInternal().OngoingTasks;
             }
 
             Assert.Equal(1, tasks.Count);
@@ -531,7 +531,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var processor = await Databases.InstantiateOutgoingTaskProcessor(databaseName, leader))
             {
-                tasks = processor.GetOngoingTasksInternal().OngoingTasksList;
+                tasks = processor.GetOngoingTasksInternal().OngoingTasks;
             }
 
             Assert.Equal(1, tasks.Count);
@@ -567,7 +567,7 @@ namespace RachisTests.DatabaseCluster
                 await DeleteOngoingTask((DocumentStore)store, watcher.TaskId, OngoingTaskType.Replication);
                 using (var processor = await Databases.InstantiateOutgoingTaskProcessor(databaseName, leader))
                 {
-                    tasks = processor.GetOngoingTasksInternal().OngoingTasksList;
+                    tasks = processor.GetOngoingTasksInternal().OngoingTasks;
                 }
                 Assert.Equal(0, tasks.Count);
             }
@@ -945,11 +945,11 @@ namespace RachisTests.DatabaseCluster
                     using (var processor = await Databases.InstantiateOutgoingTaskProcessor(srcDB, server))
                     {
                         Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
                                   null,
                             true));
 
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
                             .DestinationUrl;
 
                         // fail the node to to where the data is sent

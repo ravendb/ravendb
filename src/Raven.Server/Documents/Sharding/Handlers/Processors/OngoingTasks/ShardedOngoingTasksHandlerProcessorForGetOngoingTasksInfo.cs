@@ -158,14 +158,7 @@ internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInf
         }
     }
 
-    protected override int SubscriptionsCount
-    {
-        get
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19069 Fix SubscriptionsCount");
-            return -1;
-        }
-    }
+    protected override long SubscriptionsCount => (int)RequestHandler.DatabaseContext.SubscriptionsStorage.GetAllSubscriptionsCount();
 
     protected override ValueTask<(string Url, OngoingTaskConnectionStatus Status)> GetReplicationTaskConnectionStatusAsync<T>(DatabaseTopology databaseTopology,
         ClusterTopology clusterTopology, T replication, Dictionary<string, RavenConnectionString> connectionStrings,

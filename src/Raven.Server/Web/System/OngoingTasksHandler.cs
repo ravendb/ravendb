@@ -187,14 +187,14 @@ namespace Raven.Server.Web.System
 
     public class OngoingTasksResult : IDynamicJson
     {
-        public List<OngoingTask> OngoingTasksList { get; set; }
+        public List<OngoingTask> OngoingTasks { get; set; }
         public int SubscriptionsCount { get; set; }
 
         public List<PullReplicationDefinition> PullReplications { get; set; }
 
         public OngoingTasksResult()
         {
-            OngoingTasksList = new List<OngoingTask>();
+            OngoingTasks = new List<OngoingTask>();
             PullReplications = new List<PullReplicationDefinition>();
         }
 
@@ -202,7 +202,7 @@ namespace Raven.Server.Web.System
         {
             return new DynamicJsonValue
             {
-                [nameof(OngoingTasksList)] = new DynamicJsonArray(OngoingTasksList.Select(x => x.ToJson())),
+                [nameof(OngoingTasks)] = new DynamicJsonArray(OngoingTasks.Select(x => x.ToJson())),
                 [nameof(SubscriptionsCount)] = SubscriptionsCount,
                 [nameof(PullReplications)] = new DynamicJsonArray(PullReplications.Select(x => x.ToJson()))
             };

@@ -33,7 +33,7 @@ export const EmptyView: ComponentStory<typeof BackupsPage> = () => {
 
     tasksService.withGetTasks((dto) => {
         dto.SubscriptionsCount = 0;
-        dto.OngoingTasksList = [];
+        dto.OngoingTasks = [];
         dto.PullReplications = [];
     });
     tasksService.withGetProgress((dto) => {
@@ -75,7 +75,7 @@ export const PeriodicBackupTemplate = (args: {
             ongoingTask.TaskState = "Disabled";
         }
         args.customizeTask?.(ongoingTask);
-        x.OngoingTasksList = [ongoingTask];
+        x.OngoingTasks = [ongoingTask];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });

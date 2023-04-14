@@ -4,10 +4,13 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Raven.Server.Web.System;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
@@ -17,8 +20,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override ValueTask HandleCurrentNodeAsync() => throw new System.NotImplementedException();
-        
+        protected override ValueTask HandleCurrentNodeAsync()
+        {
+            return HandleOngoingTaskInfoAsync();
+        }
+
         protected override Task HandleRemoteNodeAsync(ProxyCommand<OngoingTasksResult> command, OperationCancelToken token)
         {
             var shardNumber = GetShardNumber();
@@ -32,12 +38,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
             return new GetOngoingTaskInfoCommand(taskId, taskName, type);
         }
 
-        public override async ValueTask ExecuteAsync()
-        {
-            await GetOngoingTaskInfoInternalAsync();
-        }
-
-        protected override bool SupportsCurrentNode => false;
+        protected override bool SupportsCurrentNode => true;
     }
 
     internal class GetOngoingTaskInfoCommand : RavenCommand<OngoingTasksResult>
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
                 ? $"{node.Url}/databases/{node.Database}/task?taskName={Uri.EscapeDataString(_taskName)}&type={_type}"
                 : $"{node.Url}/databases/{node.Database}/task?key={_taskId}&type={_type}";
 
-            var request = new HttpRequestMessage {Method = HttpMethod.Get};
+            var request = new HttpRequestMessage { Method = HttpMethod.Get };
 
             return request;
         }

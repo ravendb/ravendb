@@ -297,7 +297,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
             const incomingTasks = action.tasks;
 
             return produce(state, (draft) => {
-                const newTasks = incomingTasks.OngoingTasksList.map((incomingTask) => {
+                const newTasks = incomingTasks.OngoingTasks.map((incomingTask) => {
                     const incomingTaskType = TaskUtils.ongoingTaskToStudioTaskType(incomingTask);
                     const existingTask = state.tasks.find(
                         (x) => x.shared.taskType === incomingTaskType && x.shared.taskId === incomingTask.TaskId

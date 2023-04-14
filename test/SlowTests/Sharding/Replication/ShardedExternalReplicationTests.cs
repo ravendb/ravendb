@@ -586,11 +586,11 @@ namespace SlowTests.Sharding.Replication
                     using (var processor = await Databases.InstantiateOutgoingTaskProcessor(srcDB, server))
                     {
                         Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
                                   null,
                             true));
 
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
                             .DestinationUrl;
 
                         // fail the node to to where the data is sent
@@ -686,11 +686,11 @@ namespace SlowTests.Sharding.Replication
                     using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
                     {
                         Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
                                   null,
                             true));
 
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
                             .DestinationUrl;
 
                         // fail the node to to where the data is sent
@@ -774,11 +774,11 @@ namespace SlowTests.Sharding.Replication
                     using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
                     {
                         Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
                                   null,
                             true));
 
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
                             .DestinationUrl;
 
                         // fail the node to to where the data is sent
@@ -860,11 +860,11 @@ namespace SlowTests.Sharding.Replication
                     using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
                     {
                         Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
                                   null,
                             true));
 
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
                             .DestinationUrl;
 
                         // fail the node to to where the data is sent
@@ -950,11 +950,11 @@ namespace SlowTests.Sharding.Replication
                     using (var processor = await Databases.InstantiateOutgoingTaskProcessor(srcDB, server))
                     {
                         Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
                                   null,
                             true));
 
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
                             .DestinationUrl;
 
                         // fail the node to to where the data is sent
