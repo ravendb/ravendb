@@ -182,6 +182,9 @@ namespace TypingsGenerator
             
             var configuration = new ConfigurationExporter();
             configuration.Create(targetDir);
+
+            var icons = new IconsExporter();
+            icons.Create(studioDir, targetDir);
         }
 
         private static Scripter ConfigureTypes(Scripter scripter)
