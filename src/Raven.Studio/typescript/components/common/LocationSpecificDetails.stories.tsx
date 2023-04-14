@@ -9,6 +9,7 @@ import {
 import { StatePill } from "./StatePill";
 import { NamedProgress, NamedProgressItem } from "./NamedProgress";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import { Icon } from "./Icon";
 
 export default {
     title: "Bits/Location Specific Details",
@@ -29,7 +30,7 @@ const Template = (args: { withProgress: boolean; shardedLocation: boolean }) => 
                         <StatePill color="success">I&apos;m feeling good!</StatePill>
                     </LocationSpecificDetailsItem>
                     <LocationSpecificDetailsItem>
-                        <i className="icon-list" /> 1,234,567 entries
+                        <Icon icon="list" className="me-1" /> 1,234,567 entries
                     </LocationSpecificDetailsItem>
                 </LocationSpecificDetailsItemsContainer>
 

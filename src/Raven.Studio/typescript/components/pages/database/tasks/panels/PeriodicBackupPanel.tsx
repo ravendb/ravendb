@@ -31,6 +31,7 @@ import app from "durandal/app";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
 import { Badge, Collapse } from "reactstrap";
+import { Icon } from "components/common/Icon";
 
 type PeriodicBackupPanelProps = BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> & { forceReload: () => void };
 
@@ -192,7 +193,7 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
                         disabled={!!backupNowBlockReason}
                         title={backupNowBlockReason ?? "Click to trigger the backup task now"}
                     >
-                        <i className="icon-backups"></i>
+                        <Icon icon="backup" className="me-1" />
                         <span>{backupNowInProgress ? "Show backup progress" : "Backup now"}</span>
                     </Badge>
                 )}
@@ -209,9 +210,9 @@ function BackupEncryption(props: { encrypted: boolean }) {
     return (
         <div className="me-3">
             {props.encrypted ? (
-                <i className="icon-encryption text-success" title="Backup is encrypted" />
+                <Icon icon="encryption" color="success" title="Backup is encrypted" />
             ) : (
-                <i className="icon-unlock text-gray" title="Backup is not encrypted" />
+                <Icon icon="unlock" color="muted" title="Backup is not encrypted" />
             )}
         </div>
     );

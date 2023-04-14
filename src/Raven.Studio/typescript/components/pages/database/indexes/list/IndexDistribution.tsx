@@ -13,6 +13,7 @@ import {
 import assertUnreachable from "../../../../utils/assertUnreachable";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { Button } from "reactstrap";
+import { Icon } from "components/common/Icon";
 
 interface IndexDistributionProps {
     index: IndexSharedInfo;
@@ -38,7 +39,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         <div className="top shard">
             {nodeInfo.location.shardNumber != null && (
                 <>
-                    <i className="icon-shard" />
+                    <Icon icon="shard" className="me-1"></Icon>
                     {nodeInfo.location.shardNumber}
                 </>
             )}
@@ -52,7 +53,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
             <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}>
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
-                    {!sharded && <i className="icon-node"></i>}
+                    {!sharded && <Icon icon="node" className="me-1"></Icon>}
 
                     {nodeInfo.location.nodeTag}
                 </div>
@@ -122,17 +123,17 @@ export function IndexDistribution(props: IndexDistributionProps) {
                 <div className="top"></div>
                 {sharded && (
                     <div className="node">
-                        <i className="icon-node" /> Node
+                        <Icon icon="node" className="me-1"></Icon> Node
                     </div>
                 )}
                 <div>
-                    <i className="icon-list" /> Entries
+                    <Icon icon="list" className="me-1"></Icon> Entries
                 </div>
                 <div>
-                    <i className="icon-warning" /> Errors
+                    <Icon icon="warning" className="me-1"></Icon> Errors
                 </div>
                 <div>
-                    <i />
+                    <Icon icon="" className="me-1" />
                     Status
                 </div>
             </DistributionLegend>
@@ -155,13 +156,13 @@ interface IndexProgressProps {
 function iconForState(status: Raven.Client.Documents.Indexes.IndexRunningStatus) {
     switch (status) {
         case "Disabled":
-            return "icon-stop";
+            return "stop";
         case "Paused":
-            return "icon-pause";
+            return "pause";
         case "Pending":
-            return "icon-waiting";
+            return "waiting";
         case "Running":
-            return "icon-check";
+            return "check";
         default:
             assertUnreachable(status);
     }
@@ -192,14 +193,14 @@ export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
 
     if (index.nodesInfo.some((x) => x.status === "failure")) {
         return (
-            <ProgressCircle inline state="failed" icon="icon-cancel">
+            <ProgressCircle inline state="failed" icon="cancel">
                 Load error
             </ProgressCircle>
         );
     }
     if (index.nodesInfo.some((x) => x.details?.faulty)) {
         return (
-            <ProgressCircle inline state="failed" icon="icon-cancel">
+            <ProgressCircle inline state="failed" icon="cancel">
                 Faulty
             </ProgressCircle>
         );
@@ -207,7 +208,7 @@ export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
 
     if (index.nodesInfo.some((x) => x.details?.state === "Error")) {
         return (
-            <ProgressCircle inline state="failed" icon="icon-cancel">
+            <ProgressCircle inline state="failed" icon="cancel">
                 Error
             </ProgressCircle>
         );
@@ -248,7 +249,7 @@ export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
     }
 
     return (
-        <ProgressCircle inline state="success" icon="icon-check">
+        <ProgressCircle inline state="success" icon="check">
             up to date
         </ProgressCircle>
     );
@@ -259,7 +260,7 @@ export function IndexProgress(props: IndexProgressProps) {
 
     if (nodeInfo.status === "failure") {
         return (
-            <ProgressCircle state="failed" icon="icon-cancel">
+            <ProgressCircle state="failed" icon="cancel">
                 Load error
             </ProgressCircle>
         );
@@ -271,7 +272,7 @@ export function IndexProgress(props: IndexProgressProps) {
 
     if (nodeInfo.details.faulty) {
         return (
-            <ProgressCircle state="failed" icon="icon-cancel">
+            <ProgressCircle state="failed" icon="cancel">
                 Faulty
             </ProgressCircle>
         );
@@ -279,7 +280,7 @@ export function IndexProgress(props: IndexProgressProps) {
 
     if (nodeInfo.details.state === "Error") {
         return (
-            <ProgressCircle state="failed" icon="icon-cancel">
+            <ProgressCircle state="failed" icon="cancel">
                 Error
             </ProgressCircle>
         );

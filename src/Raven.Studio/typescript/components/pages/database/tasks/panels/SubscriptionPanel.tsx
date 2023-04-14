@@ -22,6 +22,7 @@ import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
 import moment from "moment";
 import { Collapse } from "reactstrap";
+import { Icon } from "components/common/Icon";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo>;
 
@@ -44,7 +45,7 @@ function Details(props: SubscriptionPanelProps) {
             <RichPanelDetailItem label="Last Batch Ack Time">{lastBatchAckTime}</RichPanelDetailItem>
             <RichPanelDetailItem label="Last Client Connection Time">{lastClientConnectionTime}</RichPanelDetailItem>
             <RichPanelDetailItem label="Change vector for next batch">
-                <i className="icon-info text-info"></i>
+                <Icon icon="info" color="info" />
             </RichPanelDetailItem>
         </RichPanelDetails>
     );

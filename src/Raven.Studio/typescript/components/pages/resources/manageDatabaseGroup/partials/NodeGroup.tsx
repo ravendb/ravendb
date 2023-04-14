@@ -31,6 +31,7 @@ import {
     DatabaseGroupNode,
 } from "components/common/DatabaseGroup";
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
+import { Icon } from "components/common/Icon";
 
 export interface NodeGroupProps {
     db: DatabaseSharedInfo;
@@ -101,7 +102,7 @@ export function NodeGroup(props: NodeGroupProps) {
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelName>
-                        <i className="icon-dbgroup me-2" /> Database Group
+                        <Icon icon="dbgroup" className="me-1" /> Database Group
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
@@ -143,7 +144,7 @@ export function NodeGroup(props: NodeGroupProps) {
                                         disabled={!addNodeEnabled}
                                         onClick={addNode}
                                     >
-                                        <i className="icon-plus me-1" />
+                                        <Icon icon="plus" className="me-1" />
                                         Add node
                                     </Button>
                                 </DatabaseGroupActions>

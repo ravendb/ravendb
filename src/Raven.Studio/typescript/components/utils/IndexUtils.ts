@@ -56,13 +56,13 @@ export default class IndexUtils {
             case "AutoMapReduce":
             case "JavaScriptMapReduce":
             case "MapReduce":
-                return "icon-map-reduce";
+                return "map-reduce";
             case "Faulty":
-                return "icon-danger";
+                return "danger";
             case "AutoMap":
             case "JavaScriptMap":
             case "Map":
-                return "icon-map";
+                return "map";
             //TODO: handle other types
             default:
                 return "";

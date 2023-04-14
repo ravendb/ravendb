@@ -4,6 +4,7 @@ import { StatePill } from "./StatePill";
 import { boundCopy } from "../utils/common";
 import { Spinner } from "reactstrap";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import { Icon } from "./Icon";
 
 export default {
     title: "Bits/State Pills",
@@ -21,10 +22,10 @@ const Template = () => {
 
             <div className="hstack gap-2">
                 <StatePill>
-                    <i className="icon-coffee" /> Neutral
+                    <Icon icon="coffee" className="me-1" /> Neutral
                 </StatePill>
                 <StatePill color="primary">
-                    <i className="icon-raven" /> Primary
+                    <Icon icon="raven" className="me-1" /> Primary
                 </StatePill>
             </div>
 
@@ -33,19 +34,19 @@ const Template = () => {
 
             <div className="hstack gap-2">
                 <StatePill color="secondary">
-                    <i className="icon-zombie" /> Secondary
+                    <Icon icon="zombie" className="me-1" /> Secondary
                 </StatePill>
                 <StatePill color="success">
-                    <i className="icon-check" /> Success!
+                    <Icon icon="check" className="me-1" /> Success!
                 </StatePill>
                 <StatePill color="warning">
-                    <i className="icon-warning" /> Warning
+                    <Icon icon="warning" className="me-1" /> Warning
                 </StatePill>
                 <StatePill color="danger">
-                    <i className="icon-danger" /> Danger
+                    <Icon icon="danger" className="me-1" /> Danger
                 </StatePill>
                 <StatePill color="info">
-                    <i className="icon-help" /> Info
+                    <Icon icon="help" className="me-1" /> Info
                 </StatePill>
             </div>
 
@@ -54,13 +55,13 @@ const Template = () => {
 
             <div className="hstack gap-2">
                 <StatePill color="shard">
-                    <i className="icon-shard" /> Shard
+                    <Icon icon="shard" className="me-1" /> Shard
                 </StatePill>
                 <StatePill color="node">
-                    <i className="icon-node" /> Node
+                    <Icon icon="node" className="me-1" /> Node
                 </StatePill>
                 <StatePill color="orchestrator">
-                    <i className="icon-orchestrator" /> Orchestrator
+                    <Icon icon="orchestrator" className="me-1" /> Orchestrator
                 </StatePill>
                 <StatePill color="progress">
                     <Spinner size="xs" /> Progress

@@ -8,6 +8,7 @@ import {
 } from "./LocationDistribution";
 import { ProgressCircle } from "./ProgressCircle";
 import { boundCopy } from "../utils/common";
+import { Icon } from "./Icon";
 
 export default {
     title: "Bits/Location Distribution",
@@ -21,16 +22,16 @@ const Template = (args: { withSummary: boolean; withLegend: boolean }) => {
                 <DistributionLegend>
                     <div className="top"></div>
                     <div className="node">
-                        <i className="icon-node" /> Node
+                        <Icon icon="node" className="me-1" /> Node
                     </div>
                     <div>
-                        <i className="icon-list" /> Entries
+                        <Icon icon="list" className="me-1" /> Entries
                     </div>
                     <div>
-                        <i className="icon-warning" /> Errors
+                        <Icon icon="warning" className="me-1" /> Errors
                     </div>
                     <div>
-                        <i />
+                        <Icon icon="" className="me-1" />
                         Status
                     </div>
                 </DistributionLegend>
@@ -47,23 +48,23 @@ const Template = (args: { withSummary: boolean; withLegend: boolean }) => {
             <DistributionItem loading></DistributionItem>
             <DistributionItem>
                 <div className="top node">
-                    <i className="icon-node" /> A
+                    <Icon icon="node" className="me-1" /> A
                 </div>
                 <div>5</div>
                 <div>2</div>
                 <div>2</div>
-                <ProgressCircle state="success" icon="icon-check">
+                <ProgressCircle state="success" icon="check">
                     up to date
                 </ProgressCircle>
             </DistributionItem>
             <DistributionItem>
                 <div className="top node">
-                    <i className="icon-node" /> B
+                    <Icon icon="node" className="me-1" /> B
                 </div>
                 <div>5</div>
                 <div>2</div>
                 <div>2</div>
-                <ProgressCircle state="failed" icon="icon-cancel">
+                <ProgressCircle state="failed" icon="cancel">
                     error
                 </ProgressCircle>
             </DistributionItem>

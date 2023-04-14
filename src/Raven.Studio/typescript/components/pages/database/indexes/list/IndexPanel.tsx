@@ -39,6 +39,7 @@ import {
 import assertUnreachable from "../../../../utils/assertUnreachable";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
+import { Icon } from "components/common/Icon";
 
 interface IndexPanelProps {
     database: database;
@@ -228,19 +229,19 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                             {updatingLocalPriority && <Spinner size="sm" className="me-2" />}
                                             {!updatingLocalPriority && index.priority === "Normal" && (
                                                 <span>
-                                                    <i className="icon-check" />
+                                                    <Icon icon="check" className="me-1"></Icon>
                                                     <span>Normal Priority</span>
                                                 </span>
                                             )}
                                             {!updatingLocalPriority && index.priority === "Low" && (
                                                 <span>
-                                                    <i className="icon-coffee" />
+                                                    <Icon icon="coffee" className="me-1"></Icon>
                                                     <span>Low Priority</span>
                                                 </span>
                                             )}
                                             {!updatingLocalPriority && index.priority === "High" && (
                                                 <span>
-                                                    <i className="icon-force" />
+                                                    <Icon icon="force" className="me-1"></Icon>
                                                     <span>High Priority</span>
                                                 </span>
                                             )}
@@ -248,13 +249,13 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
                                         <DropdownMenu>
                                             <DropdownItem onClick={(e) => setPriority(e, "Low")} title="Low">
-                                                <i className="icon-coffee" /> <span>Low Priority</span>
+                                                <Icon icon="coffee" className="me-1"></Icon> <span>Low Priority</span>
                                             </DropdownItem>
                                             <DropdownItem onClick={(e) => setPriority(e, "Normal")} title="Normal">
-                                                <i className="icon-check" /> <span>Normal Priority</span>
+                                                <Icon icon="check" className="me-1"></Icon> <span>Normal Priority</span>
                                             </DropdownItem>
                                             <DropdownItem onClick={(e) => setPriority(e, "High")} title="High">
-                                                <i className="icon-force" /> <span>High Priority</span>
+                                                <Icon icon="force" className="me-1"></Icon> <span>High Priority</span>
                                             </DropdownItem>
                                         </DropdownMenu>
                                     </UncontrolledDropdown>
@@ -272,19 +273,19 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                                 {updatingLockMode && <Spinner size="sm" className="me-2" />}
                                                 {index.lockMode === "Unlock" && (
                                                     <span>
-                                                        <i className="icon-unlock" />
+                                                        <Icon icon="unlock" className="me-1"></Icon>
                                                         <span>Unlocked</span>
                                                     </span>
                                                 )}
                                                 {index.lockMode === "LockedIgnore" && (
                                                     <span>
-                                                        <i className="icon-lock" />
+                                                        <Icon icon="lock" className="me-1"></Icon>
                                                         <span>Locked</span>
                                                     </span>
                                                 )}
                                                 {index.lockMode === "LockedError" && (
                                                     <span>
-                                                        <i className="icon-lock-error" />
+                                                        <Icon icon="lock-error" className="me-1"></Icon>
                                                         <span>Locked (Error)</span>
                                                     </span>
                                                 )}
@@ -295,20 +296,21 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                                     onClick={(e) => setLockMode(e, "Unlock")}
                                                     title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes()."
                                                 >
-                                                    <i className="icon-unlock" /> <span>Unlock</span>
+                                                    <Icon icon="unlock" className="me-1"></Icon> <span>Unlock</span>
                                                 </DropdownItem>
                                                 <DropdownItem divider />
                                                 <DropdownItem
                                                     onClick={(e) => setLockMode(e, "LockedIgnore")}
                                                     title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored."
                                                 >
-                                                    <i className="icon-lock" /> <span>Lock</span>
+                                                    <Icon icon="lock" className="me-1"></Icon> <span>Lock</span>
                                                 </DropdownItem>
                                                 <DropdownItem
                                                     onClick={(e) => setLockMode(e, "LockedError")}
                                                     title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it."
                                                 >
-                                                    <i className="icon-lock-error" /> <span>Lock (Error)</span>
+                                                    <Icon icon="lock-error" className="me-1"></Icon>{" "}
+                                                    <span>Lock (Error)</span>
                                                 </DropdownItem>
                                             </DropdownMenu>
                                         </UncontrolledDropdown>
@@ -329,17 +331,18 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
                                 <DropdownMenu>
                                     <DropdownItem onClick={enableIndexing} title="Enable indexing">
-                                        <i className="icon-play" /> <span>Enable indexing</span>
+                                        <Icon icon="play" className="me-1"></Icon> <span>Enable indexing</span>
                                     </DropdownItem>
                                     <DropdownItem onClick={disableIndexing} title="Disable indexing">
-                                        <i className="icon-cancel text-danger" /> <span>Disable indexing</span>
+                                        <Icon icon="disabled" color="danger" className="me-1"></Icon>{" "}
+                                        <span>Disable indexing</span>
                                     </DropdownItem>
                                     <DropdownItem divider />
                                     <DropdownItem onClick={resumeIndexing} title="Resume indexing">
-                                        <i className="icon-play" /> <span>Resume indexing</span>
+                                        <Icon icon="play" className="me-1"></Icon> <span>Resume indexing</span>
                                     </DropdownItem>
                                     <DropdownItem onClick={pauseIndexing} title="Pause until restart">
-                                        <i className="icon-pause text-warning" />{" "}
+                                        <Icon icon="pause" color="warning" className="me-1"></Icon>{" "}
                                         <span>Pause indexing until restart</span>
                                     </DropdownItem>
                                 </DropdownMenu>
@@ -349,7 +352,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         {!IndexUtils.hasAnyFaultyNode(index) && (
                             <ButtonGroup className="me-1">
                                 <Button variant="secondary" href={queryUrl}>
-                                    <i className="icon-search" />
+                                    <Icon icon="search" className="me-1"></Icon>
                                     <span>Query</span>
                                 </Button>
 
@@ -359,7 +362,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                     <DropdownMenu end>
                                         <DropdownItem href={termsUrl}>
                                             {" "}
-                                            <i className="icon-terms" /> Terms{" "}
+                                            <Icon icon="terms" className="me-1"></Icon> Terms{" "}
                                         </DropdownItem>
                                     </DropdownMenu>
                                 </UncontrolledDropdown>
@@ -369,12 +372,12 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         <ButtonGroup className="me-1">
                             {!IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
                                 <Button href={editUrl} title="Edit index">
-                                    <i className="icon-edit" />
+                                    <Icon icon="edit"></Icon>
                                 </Button>
                             )}
                             {(IndexUtils.isAutoIndex(index) || canReadOnlyDatabase(database)) && (
                                 <Button href={editUrl} title="View index">
-                                    <i className="icon-preview" />
+                                    <Icon icon="preview"></Icon>
                                 </Button>
                             )}
                         </ButtonGroup>
@@ -388,15 +391,15 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         {canReadWriteDatabase(database) && (
                             <ButtonGroup className="me-1">
                                 <Button color="warning" onClick={resetIndex} title="Reset index (rebuild)">
-                                    <i className="icon-reset-index" />
+                                    <Icon icon="reset-index"></Icon>
                                 </Button>
                                 <Button color="danger" onClick={deleteIndex} title="Delete the index">
-                                    <i className="icon-trash" />
+                                    <Icon icon="trash"></Icon>
                                 </Button>
                             </ButtonGroup>
                         )}
                         <Button color="secondary" onClick={togglePanelCollapsed} title="Toggle distribution details">
-                            <i className={panelCollapsed ? "icon-arrow-down" : "icon-arrow-up"} />
+                            <Icon icon={panelCollapsed ? "arrow-down" : "arrow-up"}></Icon>
                         </Button>
                     </RichPanelActions>
                 </RichPanelHeader>
@@ -407,12 +410,12 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 {index.reduceOutputCollectionName &&
                                     !index.patternForReferencesToReduceOutputCollection && (
                                         <span>
-                                            <i className="icon-output-collection" />
+                                            <Icon icon="output-collection"></Icon>
                                         </span>
                                     )}
                                 {index.patternForReferencesToReduceOutputCollection && (
                                     <span>
-                                        <i className="icon-reference-pattern" />
+                                        <Icon icon="reference-pattern"></Icon>
                                     </span>
                                 )}
                                 <UncontrolledTooltip target={reduceOutputId} animation placement="right">
@@ -462,12 +465,12 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         </RichPanelDetailItem>
                     )}
                     <RichPanelDetailItem className={isFaulty ? "text-danger" : ""}>
-                        <i className={IndexUtils.indexTypeIcon(index.type)} />
+                        <Icon icon={IndexUtils.indexTypeIcon(index.type)}></Icon>
                         {IndexUtils.formatType(index.type)}
                     </RichPanelDetailItem>
                     <IndexSourceTypeComponent sourceType={index.sourceType} />
                     <RichPanelDetailItem>
-                        <i className="icon-search" />
+                        <Icon icon="search"></Icon>
                         {index.searchEngine}
                     </RichPanelDetailItem>
 
@@ -495,19 +498,19 @@ function IndexSourceTypeComponent(props: { sourceType: IndexSourceType }) {
         <RichPanelDetailItem>
             {sourceType === "Counters" && (
                 <>
-                    <i className="icon-new-counter" title="Index source: Counters" />
+                    <Icon icon="new-counter" title="Index source: Counters"></Icon>
                     Counters
                 </>
             )}
             {sourceType === "TimeSeries" && (
                 <>
-                    <i className="icon-timeseries" title="Index source: Time Series" />
+                    <Icon icon="timeseries" title="Index source: Time Series"></Icon>
                     Time Series
                 </>
             )}
             {sourceType === "Documents" && (
                 <>
-                    <i className="icon-documents" title="Index source: Documents" />
+                    <Icon icon="documents" title="Index source: Documents"></Icon>
                     Documents
                 </>
             )}
@@ -528,7 +531,7 @@ function InlineDetails(props: InlineDetailsProps) {
     return (
         <>
             <RichPanelDetailItem>
-                <i className="icon-list" />
+                <Icon icon="list"></Icon>
                 Entries
                 <div className="value">{estimatedEntries}</div>
             </RichPanelDetailItem>
@@ -537,7 +540,7 @@ function InlineDetails(props: InlineDetailsProps) {
                     "text-danger": errorsCount > 0,
                 })}
             >
-                <i className="icon-warning" />
+                <Icon icon="warning"></Icon>
                 Errors
                 <div className="value">{errorsCount.toLocaleString()}</div>
             </RichPanelDetailItem>

@@ -1,6 +1,7 @@
 ﻿import { Alert, Button } from "reactstrap";
 import React from "react";
 import { FlexGrow } from "components/common/FlexGrow";
+import { Icon } from "./Icon";
 
 interface LoadErrorProps {
     error?: string;
@@ -21,7 +22,7 @@ export function LoadError(props: LoadErrorProps) {
                 <FlexGrow />
                 {refresh && (
                     <Button onClick={refresh}>
-                        <i className="icon-refresh" /> Refresh
+                        <Icon icon="refresh" className="me-1" /> Refresh
                     </Button>
                 )}
             </div>

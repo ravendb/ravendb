@@ -46,6 +46,7 @@ import { Badge, Button } from "reactstrap";
 import { FlexGrow } from "../../../../../components/common/FlexGrow";
 import { HrHeader } from "../../../../../components/common/HrHeader";
 import { EmptySet } from "../../../../../components/common/EmptySet";
+import { Icon } from "components/common/Icon";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -195,7 +196,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                 <div className="flex-header flex-horizontal">
                     {canReadWriteDatabase(database) && (
                         <Button onClick={addNewOngoingTask} color="primary">
-                            <i className="icon-plus me-1"></i>
+                            <Icon icon="plus" className="me-1" />
                             Add a Database Task
                         </Button>
                     )}
@@ -210,7 +211,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                 href={serverWideTasksUrl}
                                 title="Go to the Server-Wide Tasks view"
                             >
-                                <i className="icon-server-wide-tasks me-1" />
+                                <Icon icon="server-wide-tasks" className="me-1" />
                                 Server-Wide Tasks
                             </Button>
                         )}
@@ -224,7 +225,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {externalReplications.length > 0 && (
                         <div key="external-replications">
                             <HrHeader className="external-replication" count={externalReplications.length}>
-                                <i className="icon-external-replication me-1" />
+                                <Icon icon="external-replication" className="me-1" />
                                 External Replication
                             </HrHeader>
 
@@ -237,7 +238,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {ravenEtls.length > 0 && (
                         <div key="raven-etls">
                             <HrHeader className="ravendb-etl" count={ravenEtls.length}>
-                                <i className="icon-etl me-1" />
+                                <Icon icon="etl" className="me-1" />
                                 RavenDB ETL
                             </HrHeader>
 
@@ -256,7 +257,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {sqlEtls.length > 0 && (
                         <div key="sql-etls">
                             <HrHeader className="sql-etl" count={sqlEtls.length}>
-                                <i className="icon-sql-etl me-1" />
+                                <Icon icon="sql-etl" className="me-1" />
                                 SQL ETL
                             </HrHeader>
 
@@ -275,7 +276,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {olapEtls.length > 0 && (
                         <div key="olap-etls">
                             <HrHeader className="olap-etl" count={olapEtls.length}>
-                                <i className="icon-olap-etl me-1" />
+                                <Icon icon="olap-etl" className="me-1" />
                                 OLAP ETL
                             </HrHeader>
 
@@ -294,7 +295,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {kafkaEtls.length > 0 && (
                         <div key="kafka-etls">
                             <HrHeader className="kafka-etl" count={kafkaEtls.length}>
-                                <i className="icon-kafka-etl me-1" />
+                                <Icon icon="kafka-etl" className="me-1" />
                                 KAFKA ETL
                             </HrHeader>
 
@@ -313,7 +314,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {rabbitMqEtls.length > 0 && (
                         <div key="rabbitmq-etls">
                             <HrHeader className="rabbitmq-etl" count={rabbitMqEtls.length}>
-                                <i className="icon-rabbitmq-etl me-1" />
+                                <Icon icon="rabbitmq-etl" className="me-1" />
                                 RABBITMQ ETL
                             </HrHeader>
 
@@ -332,7 +333,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {elasticSearchEtls.length > 0 && (
                         <div key="elastic-search-etls">
                             <HrHeader className="elastic-etl" count={elasticSearchEtls.length}>
-                                <i className="icon-elastic-search-etl me-1" />
+                                <Icon icon="elastic-search-etl" className="me-1" />
                                 Elasticsearch ETL
                             </HrHeader>
 
@@ -351,7 +352,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {backups.length > 0 && (
                         <div key="backups">
                             <HrHeader className="periodic-backup" count={backups.length}>
-                                <i className="icon-backups me-1" />
+                                <Icon icon="backup" className="me-1" />
                                 Periodic Backup
                             </HrHeader>
 
@@ -369,7 +370,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {subscriptions.length > 0 && (
                         <div key="subscriptions">
                             <HrHeader className="subscription" count={subscriptions.length}>
-                                <i className="icon-subscription me-1" />
+                                <Icon icon="subscription" className="me-1" />
                                 Subscription
                             </HrHeader>
 
@@ -382,7 +383,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {hubDefinitions.length > 0 && (
                         <div key="replication-hubs">
                             <HrHeader className="pull-replication-hub" count={hubDefinitions.length}>
-                                <i className="icon-pull-replication-hub me-1" />
+                                <Icon icon="pull-replication-hub" className="me-1" />
                                 Replication Hub
                             </HrHeader>
 
@@ -402,7 +403,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {replicationSinks.length > 0 && (
                         <div key="replication-sinks">
                             <HrHeader className="pull-replication-sink" count={replicationSinks.length}>
-                                <i className="icon-pull-replication-agent me-1" />
+                                <Icon icon="pull-replication-agent" className="me-1" />
                                 Replication Sink
                             </HrHeader>
 

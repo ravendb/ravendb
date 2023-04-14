@@ -16,6 +16,7 @@ import { ConfirmResetIndex } from "components/pages/database/indexes/list/Confir
 import { getAllIndexes, useIndexesPage } from "components/pages/database/indexes/list/useIndexesPage";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { NoIndexes } from "components/pages/database/indexes/list/partials/NoIndexes";
+import { Icon } from "components/common/Icon";
 
 interface IndexesPageProps {
     database: database;
@@ -155,7 +156,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                 <Card className="sidebyside-actions px-5 py-2 bg-faded-warning">
                                                     <div className="flex-horizontal">
                                                         <div className="title me-4">
-                                                            <i className="icon-swap" /> Side by side
+                                                            <Icon icon="swap" className="me-1"></Icon> Side by side
                                                         </div>
                                                         <Button
                                                             color="warning"
@@ -167,7 +168,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                             {swapNowProgress.includes(index.name) ? (
                                                                 <Spinner size={"sm"} />
                                                             ) : (
-                                                                <i className="icon-force me-1" />
+                                                                <Icon icon="force" className="me-1"></Icon>
                                                             )}{" "}
                                                             Swap now
                                                         </Button>

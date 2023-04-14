@@ -16,6 +16,7 @@ import {
     LocationSpecificDetailsItemsContainer,
 } from "components/common/LocationSpecificDetails";
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
+import { Icon } from "components/common/Icon";
 
 interface IndexProgressTooltipProps {
     target: HTMLElement;
@@ -33,7 +34,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
             <PopoverWithHover target={target} placement="top">
                 <div className="text-danger flex-horizontal">
                     <div className="flex-start text-warning">
-                        <i className="icon-warning"></i>
+                        <Icon icon="warning"></Icon>
                     </div>
                     <div>
                         <div>Unable to load index status:</div>
@@ -58,25 +59,27 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                         </StatePill>
                     </LocationSpecificDetailsItem>
                     <LocationSpecificDetailsItem>
-                        <i className="icon-list" /> {nodeInfo.details.entriesCount.toLocaleString()} entries
+                        <Icon icon="list" className="me-1"></Icon> {nodeInfo.details.entriesCount.toLocaleString()}{" "}
+                        entries
                     </LocationSpecificDetailsItem>
                     <LocationSpecificDetailsItem
                         className={classNames("errors", {
                             "text-danger": nodeInfo.details.errorCount > 0,
                         })}
                     >
-                        <i className="icon-warning" /> {nodeInfo.details.errorCount.toLocaleString()} errors
+                        <Icon icon="warning" className="me-sm-1"></Icon> {nodeInfo.details.errorCount.toLocaleString()}{" "}
+                        errors
                     </LocationSpecificDetailsItem>
                     {nodeInfo.details.stale ? (
                         <LocationSpecificDetailsItem className="status updating">
-                            <i className="icon-waiting" />{" "}
+                            <Icon icon="waiting" className="me-xl-1"></Icon>{" "}
                             <a href="#" onClick={withPreventDefault(() => showStaleReason(nodeInfo.location))}>
                                 {formatTimeLeftToProcess(nodeInfo.progress?.global, nodeInfo.details)}
                             </a>
                         </LocationSpecificDetailsItem>
                     ) : (
                         <LocationSpecificDetailsItem className="status">
-                            <i className="icon-check" /> Up to date
+                            <Icon icon="check"></Icon> Up to date
                         </LocationSpecificDetailsItem>
                     )}
                 </LocationSpecificDetailsItemsContainer>

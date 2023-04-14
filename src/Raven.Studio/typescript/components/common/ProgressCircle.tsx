@@ -10,6 +10,7 @@ export interface ProgressCircleProps {
 
 import React, { ReactNode } from "react";
 import "./ProgressCircle.scss";
+import { Icon } from "./Icon";
 
 const stateIndicatorProgressRadius = 13;
 const circumference = 2 * Math.PI * stateIndicatorProgressRadius;
@@ -24,7 +25,7 @@ export function ProgressCircle(props: ProgressCircleProps) {
                 {children}
             </div>
             <div className="state-indicator">
-                {icon && <i className={icon} />}
+                {icon && <Icon icon={icon} />}
                 {progress != null && (
                     <svg className="progress-ring">
                         <circle strokeDashoffset={circumference * (1.0 - progress)} />

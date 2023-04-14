@@ -279,8 +279,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 className="ms-1"
                                 disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
                             >
-                                <Icon icon="dbgroup" addon="settings" className="me-2" />
-                                Manage group
+                                <span>
+                                    <Icon icon="dbgroup" addon="settings" className="me-1" /> Manage group
+                                </span>
                             </Button>
 
                             {isAdminAccessOrAbove(db) && (
@@ -315,7 +316,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         )}
                                         {canDisableIndexing && (
                                             <DropdownItem onClick={() => onToggleDisableIndexing(true)}>
-                                                <Icon icon="stop" className="me-1" /> Disable indexing
+                                                <Icon icon="disabled" className="me-1" /> Disable indexing
                                             </DropdownItem>
                                         )}
                                         {canEnableIndexing && (

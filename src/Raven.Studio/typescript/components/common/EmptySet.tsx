@@ -1,4 +1,5 @@
 ﻿import React, { ReactNode } from "react";
+import { Icon } from "./Icon";
 
 interface EmptySetProps {
     children?: ReactNode | ReactNode[];
@@ -9,7 +10,7 @@ export function EmptySet(props: EmptySetProps) {
 
     return (
         <div className="text-center mb-2">
-            <i className="icon-xl icon-empty-set text-muted"></i>
+            <Icon icon="empty-set" color="muted" className="icon-xl"></Icon>
             <div className="lead">{children}</div>
         </div>
     );

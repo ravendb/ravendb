@@ -22,6 +22,7 @@ import {
     LocationDistribution,
 } from "./LocationDistribution";
 import { ProgressCircle } from "./ProgressCircle";
+import { Icon } from "./Icon";
 
 export default {
     title: "Bits/Rich Panel",
@@ -47,31 +48,31 @@ const Template = (args: { withCheckbox: boolean }) => {
                 <RichPanelActions>
                     <Button>Actions are placed here</Button>
                     <Button className="ms-1" color="shard" onClick={toggleOpen} outline={!open}>
-                        <i className="icon-sharding" />
+                        <Icon icon="sharding" />
                     </Button>
                 </RichPanelActions>
             </RichPanelHeader>
 
             <RichPanelDetails>
                 <RichPanelDetailItem>
-                    <i className="icon-check" />
+                    <Icon icon="check" className="me-1" />
                     Detail #1
                 </RichPanelDetailItem>
                 <RichPanelDetailItem>
-                    <i className="icon-warning" /> Detail #2
+                    <Icon icon="warning" className="me-1" /> Detail #2
                 </RichPanelDetailItem>
                 <RichPanelDetailItem size="sm">
-                    <i className="icon-warning" /> Detail small
+                    <Icon icon="warning" className="me-1" /> Detail small
                 </RichPanelDetailItem>
 
                 <RichPanelDetailItem label="label">
-                    <i className="icon-warning" /> Detail with label
+                    <Icon icon="warning" className="me-1" /> Detail with label
                 </RichPanelDetailItem>
                 <RichPanelDetailItem
                     size="sm"
                     label={
                         <>
-                            <i className="icon-processor" />
+                            <Icon icon="processor" className="me-1" />
                             label with icon
                         </>
                     }
@@ -80,7 +81,7 @@ const Template = (args: { withCheckbox: boolean }) => {
                 </RichPanelDetailItem>
                 <div className="rich-panel-details-right">
                     <RichPanelDetailItem label="Other">
-                        <i className="icon-star" /> Detail placed right
+                        <Icon icon="star" className="me-1" /> Detail placed right
                     </RichPanelDetailItem>
                 </div>
             </RichPanelDetails>
@@ -90,16 +91,16 @@ const Template = (args: { withCheckbox: boolean }) => {
                     <DistributionLegend>
                         <div className="top"></div>
                         <div className="node">
-                            <i className="icon-node" /> Node
+                            <Icon icon="node" className="me-1" /> Node
                         </div>
                         <div>
-                            <i className="icon-list" /> Entries
+                            <Icon icon="list" className="me-1" /> Entries
                         </div>
                         <div>
-                            <i className="icon-warning" /> Errors
+                            <Icon icon="warning" className="me-1" /> Errors
                         </div>
                         <div>
-                            <i />
+                            <Icon icon="" className="me-1" />
                             Status
                         </div>
                     </DistributionLegend>
@@ -115,23 +116,23 @@ const Template = (args: { withCheckbox: boolean }) => {
                     <DistributionItem loading></DistributionItem>
                     <DistributionItem>
                         <div className="top node">
-                            <i className="icon-node" /> A
+                            <Icon icon="node" className="me-1" /> A
                         </div>
                         <div>5</div>
                         <div>2</div>
                         <div>2</div>
-                        <ProgressCircle state="success" icon="icon-check">
+                        <ProgressCircle state="success" icon="check">
                             up to date
                         </ProgressCircle>
                     </DistributionItem>
                     <DistributionItem>
                         <div className="top node">
-                            <i className="icon-node" /> B
+                            <Icon icon="node" className="me-1" /> B
                         </div>
                         <div>5</div>
                         <div>2</div>
                         <div>2</div>
-                        <ProgressCircle state="failed" icon="icon-cancel">
+                        <ProgressCircle state="failed" icon="cancel">
                             error
                         </ProgressCircle>
                     </DistributionItem>

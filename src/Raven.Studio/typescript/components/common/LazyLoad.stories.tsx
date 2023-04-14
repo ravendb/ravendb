@@ -22,6 +22,7 @@ import {
 } from "./LocationDistribution";
 import { ProgressCircle } from "./ProgressCircle";
 import { LazyLoad } from "./LazyLoad";
+import { Icon } from "./Icon";
 
 export default {
     title: "Bits/LazyLoad",
@@ -41,7 +42,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                 <RichPanelActions>
                     <Button>Actions are placed here</Button>
                     <Button className="ms-1" color="shard" onClick={toggleOpen} outline={!open}>
-                        <i className="icon-sharding" />
+                        <Icon icon="sharding" />
                     </Button>
                 </RichPanelActions>
             </RichPanelHeader>
@@ -49,24 +50,24 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
             <RichPanelDetails>
                 <LazyLoad active={args.loadingActive}>
                     <RichPanelDetailItem>
-                        <i className="icon-check" />
+                        <Icon icon="check" className="me-1" />
                         <span>Detail item #1</span>
                     </RichPanelDetailItem>
                 </LazyLoad>
 
                 <LazyLoad active={args.loadingActive}>
                     <RichPanelDetailItem>
-                        <i className="icon-warning" /> Detail #2
+                        <Icon icon="warning" className="me-1" /> Detail #2
                     </RichPanelDetailItem>
                 </LazyLoad>
                 <LazyLoad active={args.loadingActive}>
                     <RichPanelDetailItem size="sm">
-                        <i className="icon-warning" /> <span>Detail small</span>
+                        <Icon icon="warning" className="me-1" /> <span>Detail small</span>
                     </RichPanelDetailItem>
                 </LazyLoad>
                 <LazyLoad active={args.loadingActive}>
                     <RichPanelDetailItem label="label">
-                        <i className="icon-warning" /> <span>Detail with label</span>
+                        <Icon icon="warning" className="me-1" /> <span>Detail with label</span>
                     </RichPanelDetailItem>
                 </LazyLoad>
                 <LazyLoad active={args.loadingActive}>
@@ -74,7 +75,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                         size="sm"
                         label={
                             <>
-                                <i className="icon-processor" />
+                                <Icon icon="processor" className="me-1" />
                                 label with icon
                             </>
                         }
@@ -85,7 +86,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                 <div className="rich-panel-details-right">
                     <LazyLoad active={args.loadingActive}>
                         <RichPanelDetailItem label="Other">
-                            <i className="icon-star" /> Detail placed right
+                            <Icon icon="star" className="me-1" /> Detail placed right
                         </RichPanelDetailItem>
                     </LazyLoad>
                 </div>
@@ -96,16 +97,16 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                     <DistributionLegend>
                         <div className="top"></div>
                         <div className="node">
-                            <i className="icon-node" /> Node
+                            <Icon icon="node" className="me-1" /> Node
                         </div>
                         <div>
-                            <i className="icon-list" /> Entries
+                            <Icon icon="list" className="me-1" /> Entries
                         </div>
                         <div>
-                            <i className="icon-warning" /> Errors
+                            <Icon icon="warning" className="me-1" /> Errors
                         </div>
                         <div>
-                            <i />
+                            <Icon icon="" className="me-1" />
                             Status
                         </div>
                     </DistributionLegend>
@@ -120,46 +121,46 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
 
                     <DistributionItem loading={args.loadingActive}>
                         <div className="top node">
-                            <i className="icon-node" /> A
+                            <Icon icon="node" className="me-1" /> A
                         </div>
                         <div>5</div>
                         <div>2</div>
                         <div>2</div>
-                        <ProgressCircle state="success" icon="icon-check">
+                        <ProgressCircle state="success" icon="check">
                             up to date
                         </ProgressCircle>
                     </DistributionItem>
 
                     <DistributionItem>
                         <div className="top node">
-                            <i className="icon-node" /> A
+                            <Icon icon="node" className="me-1" /> A
                         </div>
                         <div>5</div>
                         <div>2</div>
                         <div>2</div>
-                        <ProgressCircle state="success" icon="icon-check">
+                        <ProgressCircle state="success" icon="check">
                             up to date
                         </ProgressCircle>
                     </DistributionItem>
                     <DistributionItem>
                         <div className="top node">
-                            <i className="icon-node" /> A
+                            <Icon icon="node" className="me-1" /> A
                         </div>
                         <div>5</div>
                         <div>2</div>
                         <div>2</div>
-                        <ProgressCircle state="success" icon="icon-check">
+                        <ProgressCircle state="success" icon="check">
                             up to date
                         </ProgressCircle>
                     </DistributionItem>
                     <DistributionItem>
                         <div className="top node">
-                            <i className="icon-node" /> B
+                            <Icon icon="node" className="me-1" /> B
                         </div>
                         <div>5</div>
                         <div>2</div>
                         <div>2</div>
-                        <ProgressCircle state="failed" icon="icon-cancel">
+                        <ProgressCircle state="failed" icon="cancel">
                             error
                         </ProgressCircle>
                     </DistributionItem>

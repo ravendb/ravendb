@@ -9,6 +9,7 @@ import classNames from "classnames";
 import { StickyHeader } from "components/common/StickyHeader";
 import React from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
+import { Icon } from "components/common/Icon";
 
 export function StatsHeader() {
     const dispatch = useAppDispatch();
@@ -25,7 +26,7 @@ export function StatsHeader() {
                         onClick={() => dispatch(toggleDetails())}
                         title="Click to load detailed statistics"
                     >
-                        <i className={classNames(detailsVisible ? "icon-collapse-vertical" : "icon-expand-vertical")} />
+                        <Icon icon={detailsVisible ? "collapse-vertical" : "expand-vertical"} className="me-1" />
                         <span>{detailsVisible ? "Hide" : "Show"} detailed database &amp; indexing stats</span>
                     </Button>
                 </Col>
@@ -37,7 +38,7 @@ export function StatsHeader() {
                         disabled={spinnerRefresh}
                         title="Click to refresh stats"
                     >
-                        {spinnerRefresh ? <Spinner size="sm" /> : <i className="icon-refresh"></i>}
+                        {spinnerRefresh ? <Spinner size="sm" /> : <Icon icon="refresh" />}
                         <span>Refresh</span>
                     </Button>
                 </Col>

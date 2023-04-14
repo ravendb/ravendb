@@ -5,6 +5,7 @@ import { useDrop } from "react-dnd";
 import { NodeInfo } from "components/models/databases";
 import { DatabaseGroup, DatabaseGroupList } from "components/common/DatabaseGroup";
 import { Radio } from "components/common/Checkbox";
+import { Icon } from "components/common/Icon";
 
 interface ReorderNodesControlsProps {
     sortableMode: boolean;
@@ -29,16 +30,16 @@ export function ReorderNodesControls(props: ReorderNodesControlsProps) {
 
     return !sortableMode ? (
         <Button disabled={canSort} onClick={enableReorder} className="me-2">
-            <i className="icon-reorder me-1" /> Reorder nodes
+            <Icon icon="reorder" className="me-1" /> Reorder nodes
         </Button>
     ) : (
         <>
             <Button color="success" onClick={onSaveClicked} disabled={saving}>
-                {saving ? <Spinner size="sm" /> : <i className="icon-save" />}
+                {saving ? <Spinner size="sm" /> : <Icon icon="save" className="me-1" />}
                 <span>Save reorder</span>
             </Button>
             <Button onClick={cancelReorder} className="ms-1">
-                <i className="icon-cancel" />
+                <Icon icon="cancel" className="me-1" />
                 <span>Cancel</span>
             </Button>
         </>

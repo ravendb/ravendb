@@ -19,6 +19,8 @@ import { shallowEqual } from "react-redux";
 import appUrl from "common/appUrl";
 import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessReasons";
 import app from "durandal/app";
+import { Icon } from "components/common/Icon";
+import { EmptySet } from "components/common/EmptySet";
 
 interface IndexBlockProps {
     children: (locationData: PerLocationIndexStats, location: databaseLocationSpecifier) => JSX.Element;
@@ -77,7 +79,7 @@ function IndexStatistics(props: { indexName: string; database: database }) {
                                     </a>
                                 ) : (
                                     <div title="Index up to date">
-                                        <i className="icon-check text-success" />
+                                        <Icon icon="check" color="success" />
                                     </div>
                                 )
                             }
@@ -246,7 +248,7 @@ function DetailsBlock(props: IndexBlockProps): JSX.Element {
                 if (status === "failure") {
                     return (
                         <td key={key} className="text-danger">
-                            <i className="icon-cancel" title="Load error" />
+                            <Icon icon="cancel" title="Load error" />
                         </td>
                     );
                 }
@@ -292,12 +294,7 @@ export function IndexesDatabaseStats(props: { database: database }) {
         <section className="mt-6">
             <h2 className="on-base-background">Indexes Stats</h2>
 
-            {noData && (
-                <div className="text-center">
-                    <i className="icon-xl icon-empty-set text-muted"></i>
-                    <h2 className="text-muted">No indexes have been created for this database.</h2>
-                </div>
-            )}
+            {noData && <EmptySet>No indexes have been created for this database.</EmptySet>}
 
             {mapIndexNames.length > 0 && (
                 <Card className="p-4" key="maps">

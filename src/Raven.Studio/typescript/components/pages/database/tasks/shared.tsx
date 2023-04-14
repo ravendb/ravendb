@@ -22,6 +22,7 @@ import {
     DropdownToggle,
     UncontrolledDropdown,
 } from "reactstrap";
+import { Icon } from "components/common/Icon";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     db: database;
@@ -115,12 +116,12 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
                 {usingNotPreferredNode ? (
                     <>
                         <span className="text-danger pulse" title="User preferred node for this task">
-                            <i className="icon-cluster-node me-1" />
+                            <Icon icon="cluster-node" className="me-1" />
                             {preferredMentor}
                         </span>
 
                         <span className="text-success" title="Cluster node that is temporary responsible for this task">
-                            <i className="icon-arrow-right pulse text-danger me-1" />
+                            <Icon icon="arrow-right" color="danger" className="pulse me-1" />
                             {currentNode}
                         </span>
                     </>
@@ -132,7 +133,7 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
                                 : "Cluster node that is responsible for this task"
                         }
                     >
-                        <i className="icon-cluster-node me-1" />
+                        <Icon icon="cluster-node" className="me-1" />
                         {currentNode}
                     </span>
                 )}
@@ -142,7 +143,7 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
 
     return (
         <div title="No node is currently handling this task">
-            <i className="icon-cluster-node" /> N/A
+            <Icon icon="cluster-node" className="me-1" /> N/A
         </div>
     );
 }
@@ -175,10 +176,10 @@ export function OngoingTaskStatus(props: {
             </DropdownToggle>
             <DropdownMenu>
                 <DropdownItem onClick={withPreventDefault(() => toggleState(true))}>
-                    <i className="icon-play me-1" /> Enable
+                    <Icon icon="play" className="me-1" /> Enable
                 </DropdownItem>
                 <DropdownItem onClick={withPreventDefault(() => toggleState(false))}>
-                    <i className="icon-stop me-1" />
+                    <Icon icon="disabled" className="me-1" />
                     Disable
                 </DropdownItem>
             </DropdownMenu>
@@ -199,18 +200,18 @@ export function OngoingTaskActions(props: {
         <div className="actions">
             <ButtonGroup className="ms-1">
                 <Button onClick={toggleDetails} title="Click for details">
-                    <i className="icon-info" />
+                    <Icon icon="info" />
                 </Button>
                 {!task.shared.serverWide && (
                     <Button onClick={onEdit} title="Edit task">
-                        <i className="icon-edit" />
+                        <Icon icon="edit" />
                     </Button>
                 )}
             </ButtonGroup>
 
             {!task.shared.serverWide && (
                 <Button color="danger" className="ms-1" disabled={!canEdit} onClick={onDelete} title="Delete task">
-                    <i className="icon-trash" />
+                    <Icon icon="trash" />
                 </Button>
             )}
         </div>
@@ -241,7 +242,7 @@ export function ConnectionStringItem(props: {
 
     return (
         <RichPanelDetailItem label="Connection String">
-            <i className="icon-danger text-danger"></i>
+            <Icon icon="danger" color="danger" className="me-1" />
             <span className="text-danger">This connection string is not defined.</span>
         </RichPanelDetailItem>
     );
@@ -257,7 +258,7 @@ export function EmptyScriptsWarning(props: { task: AnyEtlOngoingTaskInfo }) {
     return (
         <RichPanelDetailItem className="text-warning">
             <small>
-                <i className="icon-warning" />
+                <Icon icon="warning" className="me-1" />
                 Following scripts don&apos;t match any documents: {emptyScripts.join(", ")}
             </small>
         </RichPanelDetailItem>

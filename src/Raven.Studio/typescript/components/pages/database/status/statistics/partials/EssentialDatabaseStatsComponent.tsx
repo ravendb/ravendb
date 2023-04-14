@@ -5,6 +5,7 @@ import { LazyLoad } from "components/common/LazyLoad";
 import { refresh, selectEssentialStats } from "components/pages/database/status/statistics/logic/statisticsSlice";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { LoadError } from "components/common/LoadError";
+import { Icon } from "components/common/Icon";
 
 interface EssentialDatabaseStatsComponentProps {
     rawJsonUrl: string;
@@ -37,7 +38,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             href={rawJsonUrl}
                             title="Show raw output"
                         >
-                            <i className="icon-link"></i>
+                            <Icon icon="link" />
                         </Button>
                     </h2>
                 </Col>
@@ -47,7 +48,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <Col sm="6" lg="4" xl="3">
                         <div className="stats-item">
                             <div className="name">
-                                <i className="icon-documents"></i> <span>Documents Count</span>
+                                <Icon icon="documents" className="me-1" /> <span>Documents Count</span>
                             </div>
                             <LazyLoad active={!stats}>
                                 <div className="value">
@@ -65,7 +66,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <Col sm="6" lg="4" xl="3">
                         <div className="stats-item">
                             <div className="name">
-                                <i className="icon-new-counter"></i>
+                                <Icon icon="new-counter" className="me-1" />
                                 <span>Counters Count</span>
                             </div>
                             <LazyLoad active={!stats}>
@@ -84,7 +85,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <Col sm="6" lg="4" xl="3">
                         <div className="stats-item">
                             <div className="name">
-                                <i className="icon-attachment"></i>
+                                <Icon icon="attachment" className="me-1" />
                                 <span>Attachments Count</span>
                             </div>
                             <LazyLoad active={!stats}>
@@ -105,7 +106,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <Col sm="6" lg="4" xl="3">
                         <div className="stats-item">
                             <div className="name">
-                                <i className="icon-indexing"></i>
+                                <Icon icon="indexing" className="me-1" />
                                 <span>Indexes Count</span>
                             </div>
                             <LazyLoad active={!stats}>
@@ -124,7 +125,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <Col sm="6" lg="4" xl="3">
                         <div className="stats-item">
                             <div className="name">
-                                <i className="icon-revisions"></i>
+                                <Icon icon="revisions" className="me-1" />
                                 <span>Revisions Count</span>
                             </div>
                             <LazyLoad active={!stats}>
@@ -143,7 +144,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <Col sm="6" lg="4" xl="3">
                         <div className="stats-item">
                             <div className="name">
-                                <i className="icon-conflicts"></i>
+                                <Icon icon="conflicts" className="me-1" />
                                 <span>Conflicts Count</span>
                             </div>
                             <LazyLoad active={!stats}>
@@ -164,7 +165,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <Col sm="6" lg="4" xl="3">
                         <div className="stats-item">
                             <div className="name">
-                                <i className="icon-zombie"></i>
+                                <Icon icon="zombie" className="me-1" />
                                 <span>Tombstones Count</span>
                             </div>
                             <LazyLoad active={!stats}>
@@ -185,10 +186,10 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                     <Col sm="6" lg="4" xl="3">
                         <div className="stats-item">
                             <div className="name">
-                                <i className="icon-timeseries-settings"></i>
+                                <Icon icon="timeseries-settings" className="me-1" />
                                 <span>Time Series Segments Count</span>
                                 <span id="js-timeseries-segments" className="margin-left margin-left-sm has-info-icon">
-                                    <i className="icon-info text-info"></i>
+                                    <Icon icon="info" color="info" />
                                 </span>
                                 <UncontrolledTooltip target="js-timeseries-segments">
                                     <ul>

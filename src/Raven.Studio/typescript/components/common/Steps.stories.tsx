@@ -5,6 +5,7 @@ import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Button, Card } from "reactstrap";
 import { FlexGrow } from "./FlexGrow";
 import classNames from "classnames";
+import { Icon } from "./Icon";
 
 export default {
     title: "Bits/Steps",
@@ -61,17 +62,17 @@ export function StepsExample() {
             <div className="d-flex my-4">
                 {!isFirstStep && (
                     <Button onClick={prevStep}>
-                        <i className="icon-arrow-left" /> Back
+                        <Icon icon="arrow-left" className="me-1" /> Back
                     </Button>
                 )}
                 <FlexGrow />
                 {isLastStep ? (
                     <Button color="success">
-                        <i className="icon-rocket me-1" /> Finish
+                        <Icon icon="rocket" className="me-1" /> Finish
                     </Button>
                 ) : (
                     <Button color="primary" onClick={nextStep} disabled={isLastStep}>
-                        Next <i className="icon-arrow-right" />
+                        Next <Icon icon="arrow-right" className="ms-1" />
                     </Button>
                 )}
             </div>

@@ -17,6 +17,7 @@ import {
     openCreateDatabaseFromRestoreDialog,
     toggleDatabases,
 } from "components/common/shell/databaseSliceActions";
+import { Icon } from "components/common/Icon";
 
 interface DatabasesToolbarActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -120,13 +121,13 @@ export function DatabasesToolbarActions({
             {canCreateNewDatabase && (
                 <UncontrolledDropdown group>
                     <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>
-                        <i className="icon-new-database" />
+                        <Icon icon="database" addon="plus" className="me-1"></Icon>
                         <span>New database</span>
                     </Button>
                     <DropdownToggle color="primary" caret></DropdownToggle>
                     <DropdownMenu>
                         <DropdownItem onClick={() => dispatch(openCreateDatabaseFromRestoreDialog())}>
-                            <i className="icon-restore-backup" /> New database from backup (Restore)
+                            <Icon icon="restore-backup" className="me-1"></Icon> New database from backup (Restore)
                         </DropdownItem>
                     </DropdownMenu>
                 </UncontrolledDropdown>
@@ -142,7 +143,7 @@ export function DatabasesToolbarActions({
                 <ButtonGroupWithLabel label="Selection" className="margin-left-sm gap-1">
                     {isOperatorOrAbove() && (
                         <Button color="danger" onClick={onDelete} disabled={!canDeleteSelection || deleteChanges}>
-                            {deleteChanges ? <Spinner size="sm" /> : <i className="icon-trash" />}
+                            {deleteChanges ? <Spinner size="sm" /> : <Icon icon="trash" className="me-1"></Icon>}
                             <span>Delete</span>
                         </Button>
                     )}
@@ -154,16 +155,16 @@ export function DatabasesToolbarActions({
                                 disabled={!anythingSelected || toggleChanges}
                                 title="Set the status (enabled/disabled) of selected databases"
                             >
-                                {toggleChanges ? <Spinner size="sm" /> : <i className="icon-play" />}
+                                {toggleChanges ? <Spinner size="sm" /> : <Icon icon="play" className="me-1"></Icon>}
                                 <span>Set state...</span>
                             </DropdownToggle>
                             <DropdownMenu>
                                 <DropdownItem title="Enable" onClick={() => onToggleDatabases(true)}>
-                                    <i className="icon-unlock"></i>
+                                    <Icon icon="unlock" className="me-1"></Icon>
                                     <span>Enable</span>
                                 </DropdownItem>
                                 <DropdownItem title="Disable" onClick={() => onToggleDatabases(false)}>
-                                    <i className="icon-lock"></i>
+                                    <Icon icon="lock" className="me-1"></Icon>
                                     <span>Disable</span>
                                 </DropdownItem>
                             </DropdownMenu>
@@ -177,7 +178,7 @@ export function DatabasesToolbarActions({
                                 caret
                                 disabled={!anythingSelected || lockChanges}
                             >
-                                {lockChanges ? <Spinner size="sm" /> : <i className="icon-lock" />}
+                                {lockChanges ? <Spinner size="sm" /> : <Icon icon="lock" className="me-1"></Icon>}
 
                                 <span>Set delete lock mode...</span>
                             </DropdownToggle>
@@ -186,21 +187,21 @@ export function DatabasesToolbarActions({
                                     onClick={() => onChangeLockMode("Unlock")}
                                     title="Allow to delete selected databases"
                                 >
-                                    <i className="icon-trash-cutout icon-addon-check"></i>
+                                    <Icon icon="trash" addon="check" className="me-1"></Icon>
                                     <span>Allow databases delete</span>
                                 </DropdownItem>
                                 <DropdownItem
                                     onClick={() => onChangeLockMode("PreventDeletesIgnore")}
                                     title="Prevent deletion of selected databases. An error will not be thrown if an app attempts to delete."
                                 >
-                                    <i className="icon-trash-cutout icon-addon-cancel"></i>
+                                    <Icon icon="trash" addon="cancel" className="me-1"></Icon>
                                     <span>Prevent databases delete</span>
                                 </DropdownItem>
                                 <DropdownItem
                                     onClick={() => onChangeLockMode("PreventDeletesError")}
                                     title="Prevent deletion of selected databases. An error will be thrown if an app attempts to delete."
                                 >
-                                    <i className="icon-trash-cutout icon-addon-exclamation"></i>
+                                    <Icon icon="trash" addon="exclamation" className="me-1"></Icon>
                                     <span>Prevent databases delete (Error)</span>
                                 </DropdownItem>
                             </DropdownMenu>

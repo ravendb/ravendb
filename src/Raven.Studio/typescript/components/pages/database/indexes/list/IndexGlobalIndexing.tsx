@@ -1,4 +1,5 @@
-﻿import React from "react";
+﻿import { Icon } from "components/common/Icon";
+import React from "react";
 import { Button } from "reactstrap";
 
 export default function IndexGlobalIndexing() {
@@ -11,7 +12,7 @@ export default function IndexGlobalIndexing() {
                                        attr: { title: 'Pause indexing process for ALL indexes until restart - On node ' + localNodeTag() },
                                        enable: !spinners.globalStartStop() && $root.globalIndexingStatus() !== 'Disabled', css: { 'btn-spinner': spinners.globalStartStop() }"
             >
-                <i className="icon-pause me-1" />
+                <Icon icon="pause" className="me-1"></Icon>
                 Pause indexing until restart - Local node
             </Button>
             <Button
@@ -20,7 +21,7 @@ export default function IndexGlobalIndexing() {
                 title="Resume indexing process"
                 data-bind="click: startIndexing, visible: $root.globalIndexingStatus() === 'Paused', enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }"
             >
-                <i className="icon-play me-1" />
+                <Icon icon="play" className="me-1"></Icon>
                 Resume indexing
             </Button>
         </div>
