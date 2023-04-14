@@ -175,12 +175,13 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     };
 
     const refreshSubscriptionInfo = async (taskId: number, taskName: string) => {
-        const loadTasks = tasks.locations.map(async (location) => {
-            const task = await tasksService.getSubscriptionTaskInfo(database, location, taskId, taskName);
+        const loadTasks = database.nodes().map(async (nodeInfo) => {
+            const nodeTag = nodeInfo.tag;
+            const task = await tasksService.getSubscriptionTaskInfo(database, taskId, taskName, nodeTag);
 
             dispatch({
                 type: "SubscriptionInfoLoaded",
-                location,
+                nodeTag,
                 task,
             });
 
@@ -192,7 +193,14 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         const targetNode = taskInfo.find((x) => x.ResponsibleNode.NodeTag);
 
         try {
-            const details = await tasksService.getSubscriptionConnectionDetails(database, taskId, taskName, targetNode);
+            // ask only responsible node for connection details
+            // if case of sharded database it points to responsible orchestrator
+            const details = await tasksService.getSubscriptionConnectionDetails(
+                database,
+                taskId,
+                taskName,
+                targetNode.ResponsibleNode.NodeTag
+            );
 
             dispatch({
                 type: "SubscriptionConnectionDetailsLoaded",

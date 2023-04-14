@@ -20,6 +20,16 @@ export default class TasksService {
     async dropSubscription(db: database, taskId: number, taskName: string, workerId: string = null) {
         return new dropSubscriptionConnectionCommand(db, taskId, taskName, workerId).execute();
     }
+
+    async getSubscriptionTaskInfo(
+        db: database,
+        taskId: number,
+        taskName: string,
+        nodeTag?: string
+    ): Promise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription> {
+        return getOngoingTaskInfoCommand.forSubscription(db, taskId, taskName, nodeTag).execute();
+    }
+
     async getSubscriptionConnectionDetails(db: database, taskId: number, taskName: string, nodeTag: string) {
         return new getSubscriptionConnectionDetailsCommand(db, taskId, taskName, nodeTag).execute();
     }
