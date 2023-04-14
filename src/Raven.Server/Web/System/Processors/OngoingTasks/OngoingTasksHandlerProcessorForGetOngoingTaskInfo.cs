@@ -5,7 +5,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 using Raven.Server.ServerWide;
 using Raven.Server.Web.Http;
-using NotImplementedException = System.NotImplementedException;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks
 {

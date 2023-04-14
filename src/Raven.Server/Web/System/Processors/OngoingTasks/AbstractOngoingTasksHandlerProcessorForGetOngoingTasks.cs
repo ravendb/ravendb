@@ -531,25 +531,9 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
 
     protected OngoingTaskSubscription GetSubscriptionTaskInfo(DatabaseRecord record, ClusterTopology clusterTopology, SubscriptionState subscriptionState, long key)
     {
-        var connectionStatus = GetSubscriptionConnectionStatusAsync(record, subscriptionState, key, out var tag).Result;
+        var connectionStatus = GetSubscriptionConnectionStatus(record, subscriptionState, key, out var tag);
 
-        return new OngoingTaskSubscription
-        {
-            TaskName = subscriptionState.SubscriptionName,
-            TaskId = subscriptionState.SubscriptionId,
-            Query = subscriptionState.Query,
-            ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
-            ChangeVectorForNextBatchStartingPointPerShard = subscriptionState.ShardingState?.ChangeVectorForNextBatchStartingPointPerShard,
-            SubscriptionId = subscriptionState.SubscriptionId,
-            SubscriptionName = subscriptionState.SubscriptionName,
-            LastBatchAckTime = subscriptionState.LastBatchAckTime,
-            Disabled = subscriptionState.Disabled,
-            LastClientConnectionTime = subscriptionState.LastClientConnectionTime,
-            MentorNode = subscriptionState.MentorNode,
-            PinToMentorNode = subscriptionState.PinToMentorNode,
-            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
-            TaskConnectionStatus = connectionStatus
-        };
+        return OngoingTaskSubscription.From(subscriptionState, connectionStatus, clusterTopology, tag);
     }
 
     protected abstract IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
@@ -566,7 +550,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
         where T : ExternalReplicationBase;
     protected abstract ValueTask<PeriodicBackupStatus> GetBackupStatusAsync(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration,
         out string responsibleNodeTag, out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted);
-    protected abstract ValueTask<OngoingTaskConnectionStatus> GetSubscriptionConnectionStatusAsync(DatabaseRecord record, SubscriptionState subscriptionState, long key, out string tag);
+    protected abstract OngoingTaskConnectionStatus GetSubscriptionConnectionStatus(DatabaseRecord record, SubscriptionState subscriptionState, long subscriptionId, out string tag);
     protected abstract ValueTask<RavenEtl> GetProcess(RavenEtlConfiguration config);
     protected abstract ValueTask<OngoingTaskConnectionStatus> GetEtlTaskConnectionStatusAsync<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag,
         out string error)
