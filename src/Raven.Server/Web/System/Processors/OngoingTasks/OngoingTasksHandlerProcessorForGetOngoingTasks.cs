@@ -7,7 +7,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
-using NotImplementedException = System.NotImplementedException;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks
 {

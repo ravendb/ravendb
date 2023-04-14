@@ -26,7 +26,6 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -61,7 +60,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                 }
 
                 clusterTopology = server.GetClusterTopology(context);
-                ongoingTasksResult.OngoingTasksList.AddRange(CollectSubscriptionTasks(context, clusterTopology, databaseRecord));
+                ongoingTasksResult.OngoingTasks.AddRange(CollectSubscriptionTasks(context, clusterTopology, databaseRecord));
             }
 
             foreach (var tasks in new[]
@@ -73,10 +72,10 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                          CollectBackupTasks(context, clusterTopology, databaseRecord)
                      })
             {
-                ongoingTasksResult.OngoingTasksList.AddRange(tasks);
+                ongoingTasksResult.OngoingTasks.AddRange(tasks);
             }
 
-            ongoingTasksResult.SubscriptionsCount = SubscriptionsCount;
+            ongoingTasksResult.SubscriptionsCount = (int)SubscriptionsCount;
 
             ongoingTasksResult.PullReplications = databaseRecord.HubPullReplications.ToList();
 
@@ -84,7 +83,131 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
         }
     }
 
-    protected async ValueTask GetOngoingTaskInfoInternalAsync()
+    protected virtual IDynamicJson GetOngoingTaskInfo(TransactionOperationContext context, long taskId, string taskName, OngoingTaskType type, DatabaseRecord record, DatabaseTopology topology, ClusterTopology clusterTopology)
+    {
+        switch (type)
+        {
+            case OngoingTaskType.Replication:
+
+                var watcher = taskName != null
+                    ? record.ExternalReplications.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : record.ExternalReplications.Find(x => x.TaskId == taskId);
+
+                if (watcher == null)
+                    return null;
+
+                return GetExternalReplicationInfo(topology, clusterTopology, watcher, record.RavenConnectionStrings);
+
+            case OngoingTaskType.PullReplicationAsHub:
+                throw new BadRequestException("Getting task info for " + OngoingTaskType.PullReplicationAsHub + " is not supported");
+
+            case OngoingTaskType.PullReplicationAsSink:
+                var sinkReplication = record.SinkPullReplications.Find(x => x.TaskId == taskId);
+
+                if (sinkReplication == null)
+                    return null;
+
+                return GetPullReplicationAsSinkInfo(topology, clusterTopology, record, sinkReplication);
+
+            case OngoingTaskType.Backup:
+
+                var backupConfiguration = taskName != null ?
+                    record.PeriodicBackups.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : record.PeriodicBackups?.Find(x => x.TaskId == taskId);
+
+                if (backupConfiguration == null)
+                    return null;
+
+                return GetOngoingTaskBackup(taskId, record, backupConfiguration, clusterTopology);
+
+            case OngoingTaskType.SqlEtl:
+
+                var sqlEtl = taskName != null ?
+                    record.SqlEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : record.SqlEtls?.Find(x => x.TaskId == taskId);
+
+                if (sqlEtl == null)
+                    return null;
+
+                return GetSqlEtlTaskInfo(record, clusterTopology, sqlEtl);
+
+            case OngoingTaskType.OlapEtl:
+
+                var olapEtl = taskName != null
+                    ? record.OlapEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : record.OlapEtls?.Find(x => x.TaskId == taskId);
+
+                if (olapEtl == null)
+                    return null;
+
+                return GetOlapEtlTaskInfo(record, clusterTopology, olapEtl);
+
+            case OngoingTaskType.QueueEtl:
+
+                var queueEtl = taskName != null
+                    ? record.QueueEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : record.QueueEtls?.Find(x => x.TaskId == taskId);
+
+                if (queueEtl == null)
+                    return null;
+
+                return GetQueueEtlTaskInfo(record, clusterTopology, queueEtl);
+
+            case OngoingTaskType.RavenEtl:
+
+                var ravenEtl = taskName != null ?
+                    record.RavenEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : record.RavenEtls?.Find(x => x.TaskId == taskId);
+
+                if (ravenEtl == null)
+                    return null;
+
+                return GetRavenEtlTaskInfo(record, clusterTopology, ravenEtl);
+
+            case OngoingTaskType.ElasticSearchEtl:
+
+                var elasticSearchEtl = taskName != null ?
+                    record.ElasticSearchEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : record.ElasticSearchEtls?.Find(x => x.TaskId == taskId);
+
+                if (elasticSearchEtl == null)
+                    return null;
+
+                return GetElasticSearchEtTaskInfo(record, clusterTopology, elasticSearchEtl);
+
+            case OngoingTaskType.Subscription:
+
+                return GetSubscriptionTaskInfo(context, taskId, taskName, record, topology, clusterTopology);
+            default:
+                return null;
+        }
+    }
+
+    protected IDynamicJson GetSubscriptionTaskInfo(TransactionOperationContext context, long taskId, string taskName, DatabaseRecord record, DatabaseTopology topology, ClusterTopology clusterTopology)
+    {
+        SubscriptionState subscriptionState = null;
+        if (taskName == null)
+        {
+            subscriptionState = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, RequestHandler.DatabaseName, taskId);
+        }
+        else
+        {
+            try
+            {
+                subscriptionState = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, RequestHandler.DatabaseName, taskName);
+            }
+            catch (SubscriptionDoesNotExistException)
+            {
+            }
+        }
+
+        if (subscriptionState == null)
+            return null;
+
+        return GetSubscriptionTaskInfo(record, clusterTopology, subscriptionState, taskId);
+    }
+
+    protected async ValueTask HandleOngoingTaskInfoAsync()
     {
         var (key, taskName, type) = TryGetParameters();
 
@@ -102,162 +225,15 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                 if (dbTopology == null)
                     throw new InvalidOperationException($"The database record '{RequestHandler.DatabaseName}' doesn't contain topology.");
 
-                switch (type)
+                var taskInfo = GetOngoingTaskInfo(context, key, taskName, type, record, dbTopology, clusterTopology);
+
+                if (taskInfo == null)
                 {
-                    case OngoingTaskType.Replication:
-
-                        var watcher = taskName != null
-                            ? record.ExternalReplications.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
-                            : record.ExternalReplications.Find(x => x.TaskId == key);
-
-                        if (watcher == null)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            break;
-                        }
-
-                        var externalReplicationInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher, record.RavenConnectionStrings);
-                        await WriteResultAsync(context, externalReplicationInfo);
-                        break;
-
-                    case OngoingTaskType.PullReplicationAsHub:
-                        throw new BadRequestException("Getting task info for " + OngoingTaskType.PullReplicationAsHub + " is not supported");
-
-                    case OngoingTaskType.PullReplicationAsSink:
-                        var sinkReplication = record.SinkPullReplications.Find(x => x.TaskId == key);
-                        if (sinkReplication == null)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            break;
-                        }
-
-                        var sinkInfo = GetPullReplicationAsSinkInfo(dbTopology, clusterTopology, record, sinkReplication);
-                        await WriteResultAsync(context, sinkInfo);
-                        break;
-
-                    case OngoingTaskType.Backup:
-
-                        var backupConfiguration = taskName != null ?
-                            record.PeriodicBackups.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
-                            : record.PeriodicBackups?.Find(x => x.TaskId == key);
-
-                        if (backupConfiguration == null)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            break;
-                        }
-
-                        var backupTaskInfo = GetOngoingTaskBackup(key, record, backupConfiguration, clusterTopology);
-                        await WriteResultAsync(context, backupTaskInfo);
-                        break;
-
-                    case OngoingTaskType.SqlEtl:
-
-                        var sqlEtl = taskName != null ?
-                            record.SqlEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
-                            : record.SqlEtls?.Find(x => x.TaskId == key);
-
-                        if (sqlEtl == null)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            break;
-                        }
-
-                        var sqlTaskInfo = GetSqlEtlTaskInfo(record, clusterTopology, sqlEtl);
-                        await WriteResultAsync(context, sqlTaskInfo);
-                        break;
-
-                    case OngoingTaskType.OlapEtl:
-
-                        var olapEtl = taskName != null ?
-                            record.OlapEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
-                            : record.OlapEtls?.Find(x => x.TaskId == key);
-
-                        if (olapEtl == null)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            break;
-                        }
-
-                        var olapTaskInfo = GetOlapEtlTaskInfo(record, clusterTopology, olapEtl);
-                        await WriteResultAsync(context, olapTaskInfo);
-                        break;
-
-                    case OngoingTaskType.QueueEtl:
-
-                        var queueEtl = taskName != null ?
-                            record.QueueEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
-                            : record.QueueEtls?.Find(x => x.TaskId == key);
-
-                        if (queueEtl == null)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            break;
-                        }
-
-                        var queueTaskInfo = GetQueueEtlTaskInfo(record, clusterTopology, queueEtl);
-                        await WriteResultAsync(context, queueTaskInfo);
-                        break;
-
-                    case OngoingTaskType.RavenEtl:
-
-                        var ravenEtl = taskName != null ?
-                            record.RavenEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
-                            : record.RavenEtls?.Find(x => x.TaskId == key);
-
-                        if (ravenEtl == null)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            break;
-                        }
-
-                        var ravenTaskInfo = GetRavenEtlTaskInfo(record, clusterTopology, ravenEtl);
-                        await WriteResultAsync(context, ravenTaskInfo);
-                        break;
-
-                    case OngoingTaskType.ElasticSearchEtl:
-
-                        var elasticSearchEtl = taskName != null ?
-                            record.ElasticSearchEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
-                            : record.ElasticSearchEtls?.Find(x => x.TaskId == key);
-
-                        if (elasticSearchEtl == null)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            break;
-                        }
-
-                        var elasticSearchEtlInfo = GetElasticSearchEtTaskInfo(record, clusterTopology, elasticSearchEtl);
-                        await WriteResultAsync(context, elasticSearchEtlInfo);
-                        break;
-
-                    case OngoingTaskType.Subscription:
-                        SubscriptionState subscriptionState = null;
-                        if (taskName == null)
-                        {
-                            subscriptionState = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, RequestHandler.DatabaseName, key);
-                        }
-                        else
-                        {
-                            try
-                            {
-                                subscriptionState = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, RequestHandler.DatabaseName, taskName);
-                            }
-                            catch (SubscriptionDoesNotExistException)
-                            {
-                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                break;
-                            }
-                        }
-
-                        var subscriptionStateInfo = GetSubscriptionTaskInfo(record, clusterTopology, subscriptionState, key);
-                        await WriteResultAsync(context, subscriptionStateInfo);
-                        break;
-
-                    default:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        break;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
                 }
+
+                await WriteResultAsync(context, taskInfo);
             }
         }
     }
@@ -529,7 +505,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
         };
     }
 
-    protected OngoingTaskSubscription GetSubscriptionTaskInfo(DatabaseRecord record, ClusterTopology clusterTopology, SubscriptionState subscriptionState, long key)
+    private OngoingTaskSubscription GetSubscriptionTaskInfo(DatabaseRecord record, ClusterTopology clusterTopology, SubscriptionState subscriptionState, long key)
     {
         var connectionStatus = GetSubscriptionConnectionStatus(record, subscriptionState, key, out var tag);
 
@@ -555,6 +531,6 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
     protected abstract ValueTask<OngoingTaskConnectionStatus> GetEtlTaskConnectionStatusAsync<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag,
         out string error)
         where T : ConnectionString;
-    protected abstract int SubscriptionsCount { get; }
+    protected abstract long SubscriptionsCount { get; }
     protected abstract DatabaseTopology GetTopology(DatabaseRecord record);
 }

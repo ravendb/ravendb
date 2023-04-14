@@ -323,16 +323,6 @@ namespace Raven.Server.Documents.Subscriptions
             return _subscriptions.Count(x => x.Value.IsSubscriptionActive());
         }
 
-        public long GetAllSubscriptionsCount()
-        {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(_databaseName))
-                    .Count();
-            }
-        }
-
         private static void SetSubscriptionHistory(SubscriptionConnectionsState subscriptionConnectionsState, SubscriptionGeneralDataAndStats subscriptionData)
         {
             subscriptionData.RecentConnections = subscriptionConnectionsState.RecentConnections;

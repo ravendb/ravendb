@@ -705,9 +705,9 @@ class databaseGroupGraph {
     }
 
     private updateTasks() {
-        const newTasksIds = this.ongoingTasksCache.OngoingTasksList.map(x => databaseGroupGraph.getUniqueTaskId(x));
+        const newTasksIds = this.ongoingTasksCache.OngoingTasks.map(x => databaseGroupGraph.getUniqueTaskId(x));
         
-        this.ongoingTasksCache.OngoingTasksList.forEach(taskDto => {
+        this.ongoingTasksCache.OngoingTasks.forEach(taskDto => {
             const responsibleNode = taskDto.ResponsibleNode ? this.data.databaseNodes.find(x => x.tag === taskDto.ResponsibleNode.NodeTag) : null;
             
             const taskUniqueId = databaseGroupGraph.getUniqueTaskId(taskDto);
