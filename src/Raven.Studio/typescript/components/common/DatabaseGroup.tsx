@@ -9,6 +9,7 @@ import genUtils from "common/generalUtils";
 import assertUnreachable from "components/utils/assertUnreachable";
 
 import "./DatabaseGroup.scss";
+import { Icon } from "./Icon";
 
 interface DatabaseGroupProps extends HTMLAttributes<HTMLDivElement> {
     children?: ReactNode | ReactNode[];
@@ -43,11 +44,11 @@ interface DatabaseGroupNodeProps extends HTMLAttributes<HTMLDivElement> {
 
 export function DatabaseGroupNode(props: DatabaseGroupNodeProps) {
     const { children, icon, color } = props;
-    const nodeIcon = icon ? " icon-" + icon : "icon-node";
-    const nodeColor = color ? "text-" + color : "text-node";
+    const nodeIcon = icon ? icon : "node";
+    const nodeColor = color ? color : "node";
     return (
         <div className="dbgroup-node">
-            <i className={classNames(nodeIcon, nodeColor, "me-1")} /> {children ? <strong>{children}</strong> : null}
+            <Icon icon={nodeIcon} color={nodeColor} className="me-1" /> {children ? <strong>{children}</strong> : null}
         </div>
     );
 }
@@ -76,11 +77,11 @@ export function DatabaseGroupType(props: DatabaseGroupTypeProps) {
 
         switch (type) {
             case "Member":
-                return "icon-dbgroup-member";
+                return "dbgroup-member";
             case "Promotable":
-                return "icon-dbgroup-promotable";
+                return "dbgroup-promotable";
             case "Rehab":
-                return "icon-dbgroup-rehab";
+                return "dbgroup-rehab";
             default:
                 assertUnreachable(type);
         }
@@ -100,7 +101,7 @@ export function DatabaseGroupType(props: DatabaseGroupTypeProps) {
     return (
         <div className="dbgroup-type">
             <div title={node.type} className="mb-1">
-                <i className={classNames(cssIcon(node), "me-1")} /> {node.type}
+                <Icon icon={cssIcon(node)} className="me-1" /> {node.type}
             </div>
             <div>
                 <Badge color={nodeBadgeColor(node)} className="ms-1">
@@ -110,7 +111,7 @@ export function DatabaseGroupType(props: DatabaseGroupTypeProps) {
                             className="ms-1"
                             title="Database group node that is responsible for caught up of this node"
                         >
-                            <i className="icon-node"></i>
+                            <Icon icon="node"></Icon>
                             <strong className="text-reset"> {node.responsibleNode}</strong>
                         </span>
                     )}
@@ -141,13 +142,13 @@ export function DatabaseGroupError(props: DatabaseGroupErrorProps) {
     return lastErrorShort ? (
         <div className="dbgroup-error position-relative">
             <div className="text-danger">
-                <i className="icon-warning me-1" /> Error
+                <Icon icon="warning" className="me-1" /> Error
             </div>
 
-            <small>
+            <small className="d-flex flex-column">
                 {lastErrorShort}
                 <a className="link stretched-link ms-2" title="Click to see error details" onClick={showErrorsDetails}>
-                    Error Details <i className="icon-info" />
+                    Error Details <Icon icon="info" />
                 </a>
             </small>
             <div></div>

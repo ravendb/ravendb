@@ -1,5 +1,6 @@
 import React from "react";
 import classNames from "classnames";
+import { Icon } from "./Icon";
 
 interface ToggleProps {
     className?: string;
@@ -15,8 +16,8 @@ export function RadioToggle({ className }: ToggleProps) {
             <input type="radio" id="radio-toggle-right-2" name="time-estimation" value="monthly" />
             <label htmlFor="radio-toggle-right-2">Feature</label>
             <div className="toggle-knob">
-                <i className="icon-bug"></i>
-                <i className="icon-experimental"></i>
+                <Icon icon="bug" />
+                <Icon icon="experimental" />
             </div>
         </div>
     );

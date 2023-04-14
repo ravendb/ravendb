@@ -2,6 +2,7 @@
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
+import { Icon } from "components/common/Icon";
 
 interface OngoingTaskEtlProgressTooltipProps {
     target: HTMLElement;
@@ -18,7 +19,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
             <PopoverWithHover target={target} placement="top">
                 <div className="text-danger flex-horizontal">
                     <div className="flex-start text-warning">
-                        <i className="icon-warning"></i>
+                        <Icon icon="warning" />
                     </div>
                     <div>
                         <div>Unable to load task status:</div>
@@ -47,7 +48,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                                     title="Show script preview"
                                     onClick={() => showPreview(transformationScriptProgress.transformationName)}
                                 >
-                                    <i className="icon-preview" />
+                                    <Icon icon="preview" />
                                 </button>
                             </div>
                         );

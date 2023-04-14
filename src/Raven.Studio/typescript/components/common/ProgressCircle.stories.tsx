@@ -13,11 +13,11 @@ const Template = () => {
         <div>
             <h3>Regular:</h3>
 
-            <ProgressCircle state="success" icon="icon-check">
+            <ProgressCircle state="success" icon="check">
                 OK
             </ProgressCircle>
 
-            <ProgressCircle state="running" icon="icon-pause" progress={0.75}>
+            <ProgressCircle state="running" icon="pause" progress={0.75}>
                 Paused
             </ProgressCircle>
 
@@ -27,17 +27,17 @@ const Template = () => {
 
             <ProgressCircle state="running">Running</ProgressCircle>
 
-            <ProgressCircle state="failed" icon="icon-cancel">
+            <ProgressCircle state="failed" icon="cancel">
                 Error
             </ProgressCircle>
 
             <h3>Inline</h3>
 
-            <ProgressCircle state="success" icon="icon-check" inline>
+            <ProgressCircle state="success" icon="check" inline>
                 OK
             </ProgressCircle>
 
-            <ProgressCircle state="running" icon="icon-pause" progress={0.75} inline>
+            <ProgressCircle state="running" icon="pause" progress={0.75} inline>
                 Paused
             </ProgressCircle>
 
@@ -49,7 +49,7 @@ const Template = () => {
                 Running
             </ProgressCircle>
 
-            <ProgressCircle state="failed" icon="icon-cancel" inline>
+            <ProgressCircle state="failed" icon="cancel" inline>
                 Error
             </ProgressCircle>
         </div>

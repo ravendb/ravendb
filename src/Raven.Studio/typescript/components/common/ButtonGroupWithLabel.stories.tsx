@@ -3,6 +3,7 @@ import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Button } from "reactstrap";
 import { ButtonGroupWithLabel } from "./ButtonGroupWithLabel";
+import { Icon } from "./Icon";
 
 export default {
     title: "Bits/Buttons",
@@ -15,11 +16,11 @@ export function GroupWithLabel() {
         <>
             <ButtonGroupWithLabel label="Button group with label">
                 <Button color="danger">
-                    <i className="icon-trash"></i>
+                    <Icon icon="trash" className="me-1" />
                     <span>Delete</span>
                 </Button>
                 <Button>
-                    <i className="icon-lock"></i>
+                    <Icon icon="lock" className="me-1" />
                     <span>Set delete lock mode</span>
                 </Button>
             </ButtonGroupWithLabel>

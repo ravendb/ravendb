@@ -32,6 +32,7 @@ import {
 } from "components/common/DatabaseGroup";
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import { Icon } from "components/common/Icon";
 
 export interface ShardsGroupProps {
     db: DatabaseSharedInfo;
@@ -108,7 +109,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelName>
-                        <i className="icon-shard text-shard me-2" /> Shard #{shardName}
+                        <Icon icon="shard" color="shard" className="me-1" /> Shard #{shardName}
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
@@ -150,7 +151,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
                                         disabled={!addNodeEnabled}
                                         onClick={addNode}
                                     >
-                                        <i className="icon-plus me-1" />
+                                        <Icon icon="plus" className="me-1" />
                                         Add node
                                     </Button>
                                 </DatabaseGroupActions>

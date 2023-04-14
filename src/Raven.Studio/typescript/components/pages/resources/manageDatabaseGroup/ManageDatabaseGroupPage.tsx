@@ -18,6 +18,7 @@ import { StickyHeader } from "components/common/StickyHeader";
 import { useAppSelector } from "components/store";
 import { ShardedDatabaseSharedInfo } from "components/models/databases";
 import { selectDatabaseByName } from "components/common/shell/databaseSliceSelectors";
+import { Icon } from "components/common/Icon";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -109,7 +110,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                     <FlexGrow />
                     {db.isSharded() && (
                         <Button color="shard" onClick={addNewShard}>
-                            <i className="icon-shard icon-addon-plus me-1" />
+                            <Icon icon="shard" addon="plus" className="me-1" />
                             Add Shard
                         </Button>
                     )}

@@ -12,6 +12,7 @@ import { selectLocalNodeTag } from "components/common/shell/clusterSlice";
 import { selectDatabaseState, selectTopLevelState } from "components/common/shell/databaseSliceSelectors";
 import { openNotificationCenterForDatabase } from "components/common/shell/databaseSliceActions";
 import { Badge } from "reactstrap";
+import { Icon } from "components/common/Icon";
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
@@ -105,14 +106,14 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     const alertSection = (
         <React.Fragment>
-            <i className="icon-warning me-1" /> {alerts.toLocaleString()} Alerts
+            <Icon icon="warning" className="me-1" /> {alerts.toLocaleString()} Alerts
             {localAlerts !== alerts ? <span> ({localAlerts} local)</span> : null}
         </React.Fragment>
     );
 
     const performanceHintsSection = (
         <React.Fragment>
-            <i className="icon-rocket me-1" /> {performanceHints.toLocaleString()} Performance hints
+            <Icon icon="rocket" className="me-1" /> {performanceHints.toLocaleString()} Performance hints
             {localPerformanceHints !== performanceHints ? <span> ({localPerformanceHints} local)</span> : null}
         </React.Fragment>
     );
@@ -123,34 +124,34 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 <div className="encryption">
                     {db.encrypted && (
                         <span title="This database is encrypted">
-                            <i className="icon-key text-success" />
+                            <Icon icon="key" color="success" />
                         </span>
                     )}
                     {!db.encrypted && (
                         <span title="This database is not encrypted">
-                            <i className="icon-unencrypted text-muted" />
+                            <Icon icon="unencrypted" color="muted" />
                         </span>
                     )}
                 </div>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <a href={storageReportUrl} target={linksTarget}>
-                    <i className="icon-drive me-1" /> {genUtils.formatBytesToSize(totalSize)}
+                    <Icon icon="drive" className="me-1" /> {genUtils.formatBytesToSize(totalSize)}
                 </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <a href={documentsUrl} target={linksTarget}>
-                    <i className="icon-documents me-1" /> {totalDocuments.toLocaleString()}
+                    <Icon icon="documents" className="me-1" /> {totalDocuments.toLocaleString()}
                 </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <a href={indexingListUrl} target={linksTarget}>
-                    <i className="icon-index me-1" /> {db.indexesCount}
+                    <Icon icon="index" className="me-1" /> {db.indexesCount}
                 </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem title="Click to navigate to Backups view" className="text-danger">
                 <a href={backupUrl} target={linksTarget} className={"text-" + backupStatus.color}>
-                    <i className="icon-backup me-1" />
+                    <Icon icon="backup" className="me-1" />
                     {backupStatus.text}
                 </a>
             </RichPanelDetailItem>
@@ -163,7 +164,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     >
                         <Badge color="faded-danger" className="d-flex align-items-center lh-base rounded-pill">
                             <a href={indexingErrorsUrl} target={linksTarget} className="no-decor">
-                                <i className="icon-exclamation me-1" /> {indexingErrors} Indexing errors
+                                <Icon icon="exclamation" className="me-1" /> {indexingErrors} Indexing errors
                             </a>
                         </Badge>
                     </RichPanelDetailItem>
@@ -175,7 +176,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     >
                         <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
                             <a href={indexingListUrl} target={linksTarget} className="no-decor">
-                                <i className="icon-pause me-1" /> Indexing paused
+                                <Icon icon="pause" className="me-1" /> Indexing paused
                             </a>
                         </Badge>
                     </RichPanelDetailItem>
@@ -184,7 +185,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     <RichPanelDetailItem key="indexing-disabled" title="Indexing is disabled">
                         <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
                             <a href={indexingListUrl} target={linksTarget} className="no-decor">
-                                <i className="icon-disabled me-1" /> Indexing disabled
+                                <Icon icon="disabled" className="me-1" /> Indexing disabled
                             </a>
                         </Badge>
                     </RichPanelDetailItem>
@@ -229,7 +230,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 {hasAnyLoadError && (
                     <RichPanelDetailItem key="load-error">
                         <Badge color="faded-danger" className="d-flex align-items-center lh-base rounded-pill pulse">
-                            <i className="icon-danger me-1" /> Database has load errors!
+                            <Icon icon="danger" className="me-1" /> Database has load errors!
                         </Badge>
                     </RichPanelDetailItem>
                 )}

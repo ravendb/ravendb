@@ -30,6 +30,7 @@ import {
     DatabaseGroupNode,
 } from "components/common/DatabaseGroup";
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
+import { Icon } from "components/common/Icon";
 
 export interface OrchestratorsGroupProps {
     db: DatabaseSharedInfo;
@@ -96,7 +97,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
             <RichPanelHeader className="bg-faded-orchestrator">
                 <RichPanelInfo>
                     <RichPanelName className="text-orchestrator">
-                        <i className="icon-orchestrator me-2" /> Orchestrators
+                        <Icon icon="orchestrator" className="me-1" /> Orchestrators
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
@@ -138,7 +139,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                                         disabled={!addNodeEnabled}
                                         onClick={addNode}
                                     >
-                                        <i className="icon-plus me-1" />
+                                        <Icon icon="plus" className="me-1" />
                                         Add node
                                     </Button>
                                 </DatabaseGroupActions>

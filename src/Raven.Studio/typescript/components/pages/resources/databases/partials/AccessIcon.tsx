@@ -1,27 +1,16 @@
-﻿import assertUnreachable from "components/utils/assertUnreachable";
+﻿import { Icon } from "components/common/Icon";
+import assertUnreachable from "components/utils/assertUnreachable";
 import React from "react";
 
 export function AccessIcon(props: { dbAccess: databaseAccessLevel }) {
     const { dbAccess } = props;
     switch (dbAccess) {
         case "DatabaseAdmin":
-            return (
-                <span title="Admin Access">
-                    <i className="icon-access-admin"/>
-                </span>
-            );
+            return <Icon icon="access-admin" title="Admin Access"></Icon>;
         case "DatabaseReadWrite":
-            return (
-                <span title="Read/Write Access">
-                    <i className="icon-access-read-write"/>
-                </span>
-            );
+            return <Icon icon="access-read-write" title="Read/Write Access"></Icon>;
         case "DatabaseRead":
-            return (
-                <span title="Read-only Access">
-                    <i className="icon-access-read"/>
-                </span>
-            );
+            return <Icon icon="access-read" title="Read-only Access"></Icon>;
         default:
             assertUnreachable(dbAccess);
     }

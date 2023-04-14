@@ -20,6 +20,7 @@ import {
     DatabaseGroupNode,
     DatabaseGroupType,
 } from "components/common/DatabaseGroup";
+import { Icon } from "components/common/Icon";
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;
@@ -43,7 +44,7 @@ export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps)
                     className="rounded-pill"
                     onClick={() => deleteFromGroup(node.tag)}
                 >
-                    <i className="icon-cancel" /> Remove
+                    <Icon icon="cancel" className="me-1" /> Remove
                 </Button>
             </DatabaseGroupActions>
             <DatabaseGroupError node={node} />
@@ -73,18 +74,18 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                 {canDelete ? (
                     <UncontrolledDropdown key="can-delete">
                         <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
-                            <i className="icon-disconnected me-1" />
+                            <Icon icon="disconnected" className="me-1" />
                             Delete from group
                         </DropdownToggle>
                         <DropdownMenu>
                             <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
-                                <i className="icon-disconnected" />
+                                <Icon icon="disconnected" className="me-1" />
                                 <span>Soft Delete</span>&nbsp;
                                 <br />
                                 <small>stop replication and keep database files on the node</small>
                             </DropdownItem>
                             <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
-                                <i className="icon-trash text-danger"></i>{" "}
+                                <Icon icon="trash" color="danger" className="me-1" />{" "}
                                 <span className="text-danger">Hard Delete</span>
                                 <br />
                                 &nbsp;<small>stop replication and remove database files on the node</small>
@@ -95,16 +96,12 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                     <React.Fragment key="cannot-delete">
                         <UncontrolledDropdown id={deleteLockId}>
                             <DropdownToggle color="danger" caret disabled size="xs" className="rounded-pill">
-                                <i
-                                    className={classNames(
-                                        "icon-trash",
-                                        {
-                                            "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
-                                            "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
-                                        },
-                                        "me-1"
-                                    )}
-                                />
+                                {databaseLockMode === "PreventDeletesError" && (
+                                    <Icon icon="trash" addon="exclamation" className="me-1" />
+                                )}
+                                {databaseLockMode === "PreventDeletesIgnore" && (
+                                    <Icon icon="trash" addon="cancel" className="me-1" />
+                                )}
                                 Delete from group
                             </DropdownToggle>
                         </UncontrolledDropdown>
@@ -143,7 +140,7 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
             <DatabaseGroupActions>
                 <UncontrolledDropdown key="advanced">
                     <DropdownToggle caret outline size="xs" color="secondary" className="rounded-pill">
-                        <i className="icon-debug-advanced" />
+                        <Icon icon="debug-advanced" className="me-1" />
                         Advanced
                     </DropdownToggle>
                     <DropdownMenu>
@@ -155,18 +152,18 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                 {canDelete ? (
                     <UncontrolledDropdown key="can-delete" className="mt-1">
                         <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
-                            <i className="icon-disconnected" />
+                            <Icon icon="disconnected" className="me-1" />
                             Delete from group
                         </DropdownToggle>
                         <DropdownMenu>
                             <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
-                                <i className="icon-trash" />
+                                <Icon icon="trash" className="me-1" />
                                 <span>Soft Delete</span>&nbsp;
                                 <br />
                                 <small>stop replication and keep database files on the node</small>
                             </DropdownItem>
                             <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
-                                <i className="icon-alerts text-danger"></i>{" "}
+                                <Icon icon="alerts" color="danger" className="me-1" />{" "}
                                 <span className="text-danger">Hard Delete</span>
                                 <br />
                                 &nbsp;<small>stop replication and remove database files on the node</small>
@@ -177,12 +174,12 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                     <React.Fragment key="cannot-delete">
                         <UncontrolledDropdown id={deleteLockId} className="mt-1">
                             <DropdownToggle color="danger" caret disabled outline size="xs" className="rounded-pill">
-                                <i
-                                    className={classNames("icon-trash-cutout", {
-                                        "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
-                                        "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
-                                    })}
-                                />
+                                {databaseLockMode === "PreventDeletesError" && (
+                                    <Icon icon="trash" addon="exclamation" className="me-1" />
+                                )}
+                                {databaseLockMode === "PreventDeletesIgnore" && (
+                                    <Icon icon="trash" addon="cancel" className="me-1" />
+                                )}
                                 Delete from group
                             </DropdownToggle>
                         </UncontrolledDropdown>

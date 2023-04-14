@@ -4,6 +4,7 @@ import classNames from "classnames";
 import { withPreventDefault } from "components/utils/common";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { Button, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import { Icon } from "components/common/Icon";
 
 interface IndexToolbarActionProps {
     selectedIndexes: string[];
@@ -70,7 +71,7 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                     onClick={deleteSelectedIndexes}
                     className="margin-right-xxs"
                 >
-                    <i className="icon-trash" />
+                    <Icon icon="trash" className="me-1"></Icon>
                     <span>Delete</span>
                 </Button>
                 <UncontrolledDropdown>
@@ -81,23 +82,23 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                         data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges()"
                     >
                         {globalLockChanges && <Spinner size="sm" className="margin-right-xs" />}
-                        {!globalLockChanges && <i className="icon-play" />}
+                        {!globalLockChanges && <Icon icon="play" className="me-1"></Icon>}
                         <span>Set indexing state...</span>
                     </DropdownToggle>
 
                     <DropdownMenu>
                         <DropdownItem onClick={withPreventDefault(enableSelectedIndexes)} title="Enable indexing">
-                            <i className="icon-play" /> <span>Enable</span>
+                            <Icon icon="play" className="me-1"></Icon> <span>Enable</span>
                         </DropdownItem>
                         <DropdownItem onClick={withPreventDefault(disableSelectedIndexes)} title="Disable indexing">
-                            <i className="icon-cancel text-danger" /> <span>Disable</span>
+                            <Icon icon="disabled" color="danger" className="me-1"></Icon> <span>Disable</span>
                         </DropdownItem>
                         <DropdownItem divider />
                         <DropdownItem onClick={withPreventDefault(resumeSelectedIndexes)} title="Resume indexing">
-                            <i className="icon-play" /> <span>Resume</span>
+                            <Icon icon="play" className="me-1"></Icon> <span>Resume</span>
                         </DropdownItem>
                         <DropdownItem onClick={withPreventDefault(pauseSelectedIndexes)} title="Pause indexing">
-                            <i className="icon-pause text-warning" /> <span>Pause</span>
+                            <Icon icon="pause" color="warning" className="me-1"></Icon> <span>Pause</span>
                         </DropdownItem>
                     </DropdownMenu>
                 </UncontrolledDropdown>
@@ -109,27 +110,27 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                         data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges()"
                     >
                         {globalLockChanges && <Spinner size="sm" className="margin-right-xs" />}
-                        {!globalLockChanges && <i className="icon-lock" />}
+                        {!globalLockChanges && <Icon icon="lock" className="me-1"></Icon>}
                         <span>Set lock mode...</span>
                     </DropdownToggle>
 
                     <DropdownMenu>
                         <DropdownItem onClick={unlockSelectedIndexes} title="Unlock selected indexes">
-                            <i className="icon-unlock" /> <span>Unlock</span>
+                            <Icon icon="unlock" className="me-1"></Icon> <span>Unlock</span>
                         </DropdownItem>
                         <DropdownItem onClick={lockSelectedIndexes} title="Lock selected indexes">
-                            <i className="icon-lock" /> <span>Lock</span>
+                            <Icon icon="lock" className="me-1"></Icon> <span>Lock</span>
                         </DropdownItem>
                         <DropdownItem divider />
                         <DropdownItem onClick={lockErrorSelectedIndexes} title="Lock (Error) selected indexes">
-                            <i className="icon-lock-error" /> <span>Lock (Error)</span>
+                            <Icon icon="lock-error" className="me-1"></Icon> <span>Lock (Error)</span>
                         </DropdownItem>
                     </DropdownMenu>
                 </UncontrolledDropdown>
             </div>
 
             <Button color="primary" href={newIndexUrl}>
-                <i className="icon-plus" />
+                <Icon icon="plus" className="me-1"></Icon>
                 <span>New index</span>
             </Button>
         </div>

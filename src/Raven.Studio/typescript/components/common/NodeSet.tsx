@@ -3,6 +3,7 @@ import classNames from "classnames";
 import { Card } from "reactstrap";
 
 import "./NodeSet.scss";
+import { Icon } from "./Icon";
 
 interface NodeSetProps {
     children?: ReactNode | ReactNode[];
@@ -41,11 +42,11 @@ interface NodeSetItemProps {
 export function NodeSetLabel(props: NodeSetItemProps) {
     const { children, icon, color, ...rest } = props;
 
-    const colorClass = color ? "text-" + color : undefined;
+    const colorClass = color ? color : undefined;
 
     return (
         <div className="node-set-label align-self-center" {...rest}>
-            {icon && <i className={classNames("icon-" + icon, colorClass)} />}
+            {icon && <Icon icon={icon} color={colorClass} />}
             <strong className="node-set-label-name">{children}</strong>
         </div>
     );
@@ -53,11 +54,11 @@ export function NodeSetLabel(props: NodeSetItemProps) {
 
 export function NodeSetItem(props: NodeSetItemProps) {
     const { children, icon, color, extraIconClassName, ...rest } = props;
-    const colorClass = color ? "text-" + color : undefined;
+    const colorClass = color ? color : undefined;
 
     return (
         <div className="node-set-item" {...rest}>
-            {icon && <i className={classNames("icon-" + icon, colorClass, extraIconClassName)} />}
+            {icon && <Icon icon={icon} color={colorClass} className={extraIconClassName} />}
             <strong className="node-set-item-name">{children}</strong>
         </div>
     );

@@ -7,6 +7,7 @@ import genUtils from "common/generalUtils";
 import { SizeOnDisk } from "components/pages/resources/databases/partials/SizeOnDisk";
 import { DatabaseLoadError } from "components/pages/resources/databases/partials/DatabaseLoadError";
 import { selectDatabaseState } from "components/common/shell/databaseSliceSelectors";
+import { Icon } from "components/common/Icon";
 
 interface DatabaseDistributionProps {
     db: DatabaseSharedInfo;
@@ -28,29 +29,29 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                 <div className="top"></div>
                 {sharded && (
                     <div className="node">
-                        <i className="icon-node" /> Node
+                        <Icon icon="node" className="me-1"></Icon> Node
                     </div>
                 )}
                 <div>
-                    <i className="icon-list" /> Documents
+                    <Icon icon="list" className="me-1"></Icon> Documents
                 </div>
                 <div>
-                    <i className="icon-warning" /> Indexing Errors
+                    <Icon icon="warning" className="me-1"></Icon> Indexing Errors
                 </div>
                 <div>
-                    <i className="icon-indexing" /> Indexing Status
+                    <Icon icon="indexing" className="me-1"></Icon> Indexing Status
                 </div>
                 <div>
-                    <i className="icon-alerts" /> Alerts
+                    <Icon icon="alerts" className="me-1"></Icon> Alerts
                 </div>
                 <div>
-                    <i className="icon-info" /> Performance Hints
+                    <Icon icon="info" className="me-1"></Icon> Performance Hints
                 </div>
                 <div>
-                    <i className="icon-storage" /> Size on disk
+                    <Icon icon="storage" className="me-1"></Icon> Size on disk
                 </div>
                 <div>
-                    <i className="icon-recent" /> Uptime
+                    <Icon icon="recent" className="me-1"></Icon> Uptime
                 </div>
             </DistributionLegend>
 
@@ -59,7 +60,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     <div className="top shard">
                         {localState.location.shardNumber != null && (
                             <>
-                                <i className="icon-shard" />
+                                <Icon icon="shard" className="me-1"></Icon>
                                 {localState.location.shardNumber}
                             </>
                         )}
@@ -75,7 +76,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     >
                         {sharded && shard}
                         <div className={classNames("node", { top: !sharded })}>
-                            {!sharded && <i className="icon-node"></i>}
+                            {!sharded && <Icon icon="node" className="me-1"></Icon>}
 
                             {localState.location.nodeTag}
                         </div>

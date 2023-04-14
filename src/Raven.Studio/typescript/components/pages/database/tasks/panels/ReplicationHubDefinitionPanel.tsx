@@ -19,6 +19,7 @@ import { useAccessManager } from "hooks/useAccessManager";
 import { ReplicationHubConnectedSinkPanel } from "./ReplicationHubConnectedSinkPanel";
 import genUtils from "common/generalUtils";
 import { Collapse } from "reactstrap";
+import { EmptySet } from "components/common/EmptySet";
 
 interface ReplicationHubPanelProps {
     db: database;
@@ -55,14 +56,7 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
                     ))}
                 </div>
             )}
-            <div className="margin-left">
-                {connectedSinks.length === 0 && (
-                    <h5 className="text-warning padding-sm">
-                        <i className="icon-empty-set"></i>
-                        <span>No sinks connected</span>
-                    </h5>
-                )}
-            </div>
+            <div className="margin-left">{connectedSinks.length === 0 && <EmptySet>No sinks connected</EmptySet>}</div>
         </div>
     );
 }

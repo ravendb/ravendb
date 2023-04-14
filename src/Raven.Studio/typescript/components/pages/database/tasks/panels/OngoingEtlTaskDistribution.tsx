@@ -4,6 +4,7 @@ import classNames from "classnames";
 import { AnyEtlOngoingTaskInfo, OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { OngoingEtlTaskProgressTooltip } from "../list/OngoingEtlTaskProgressTooltip";
+import { Icon } from "components/common/Icon";
 
 interface OngoingEtlTaskDistributionProps {
     task: AnyEtlOngoingTaskInfo;
@@ -24,7 +25,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         <div className="top shard">
             {nodeInfo.location.shardNumber != null && (
                 <>
-                    <i className="icon-shard" />
+                    <Icon icon="shard" className="me-1" />
                     {nodeInfo.location.shardNumber}
                 </>
             )}
@@ -40,12 +41,12 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
             <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"} key={key}>
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
-                    {!sharded && <i className="icon-node"></i>}
+                    {!sharded && <Icon icon="node" className="me-1" />}
 
                     {nodeInfo.location.nodeTag}
                 </div>
                 <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
-                <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
+                <div>{hasError ? <Icon icon="warning" color="danger" /> : "-"}</div>
                 <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
             </DistributionItem>
             {node && (
@@ -83,17 +84,17 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
                     <div className="top"></div>
                     {sharded && (
                         <div className="node">
-                            <i className="icon-node" /> Node
+                            <Icon icon="node" className="me-1" /> Node
                         </div>
                     )}
                     <div>
-                        <i className="icon-connected" /> Status
+                        <Icon icon="connected" className="me-1" /> Status
                     </div>
                     <div>
-                        <i className="icon-warning" /> Error
+                        <Icon icon="warning" className="me-1" /> Error
                     </div>
                     <div>
-                        <i />
+                        <Icon icon="" className="me-1" />
                         Status
                     </div>
                 </DistributionLegend>
@@ -116,7 +117,7 @@ export function OngoingEtlTaskProgress(props: OngoingEtlTaskProgressProps) {
 
     if (nodeInfo.etlProgress.every((x) => x.completed) && task.shared.taskState === "Enabled") {
         return (
-            <ProgressCircle state="success" icon="icon-check">
+            <ProgressCircle state="success" icon="check">
                 up to date
             </ProgressCircle>
         );
@@ -130,7 +131,7 @@ export function OngoingEtlTaskProgress(props: OngoingEtlTaskProgressProps) {
     const anyDisabled = nodeInfo.etlProgress.some((x) => x.disabled);
 
     return (
-        <ProgressCircle state="running" icon={anyDisabled ? "icon-stop" : null} progress={percentage}>
+        <ProgressCircle state="running" icon={anyDisabled ? "stop" : null} progress={percentage}>
             {anyDisabled ? "Disabled" : "Running"}
         </ProgressCircle>
     );

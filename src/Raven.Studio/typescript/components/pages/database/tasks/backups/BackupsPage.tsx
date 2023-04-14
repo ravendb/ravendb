@@ -17,9 +17,10 @@ import genUtils from "common/generalUtils";
 import moment from "moment";
 import { Button, Card, CardHeader, Row, Spinner } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
-import { RichPanelDetailItem, RichPanelDetails } from "components/common/RichPanel";
+import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "components/common/RichPanel";
 import { FlexGrow } from "components/common/FlexGrow";
 import { EmptySet } from "components/common/EmptySet";
+import { Icon } from "components/common/Icon";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;
@@ -97,8 +98,8 @@ function ManualBackup(props: ManualBackupProps) {
         : "Never backed up";
 
     return (
-        <Card className="destination-item recent-backup">
-            <CardHeader className="flex-horizontal p-2">
+        <RichPanel className="destination-item recent-backup">
+            <RichPanelHeader className="flex-horizontal p-2">
                 <RichPanelDetails className="p-0">
                     <RichPanelDetailItem label="Recent Backup" title={lastFullBackupHumanized}>
                         {lastFullBackupHumanized}
@@ -113,21 +114,21 @@ function ManualBackup(props: ManualBackupProps) {
                 <div className="flex-horizontal align-items-center p-2">
                     {backup.encrypted ? (
                         <div title="Backup is encrypted">
-                            <i className="icon-encryption text-success"></i>
+                            <Icon icon="encryption" color="success" />
                         </div>
                     ) : (
                         <div title="Backup is not encrypted">
-                            <i className="icon-unlock text-gray"></i>
+                            <Icon icon="unlock" color="muted" />
                         </div>
                     )}
 
                     <div className="text-node ms-3" title="Cluster node that created this backup">
-                        <i className="icon-cluster-node"></i>
+                        <Icon icon="cluster-node" className="me-1" />
                         <span>{backup.nodeTag}</span>
                     </div>
                 </div>
-            </CardHeader>
-        </Card>
+            </RichPanelHeader>
+        </RichPanel>
     );
 }
 
@@ -279,22 +280,21 @@ export function BackupsPage(props: BackupsPageProps) {
                             onClick={navigateToRestoreDatabase}
                             title="Navigate to creating a new database from a backup"
                         >
-                            <i className="icon-restore-backup" />
-                            <span>Restore a database from a backup</span>
+                            <Icon icon="restore-backup" className="me-1" /> Restore a database from a backup
                         </Button>
                     </div>
                 )}
 
                 <div className="flex-shrink-0">
                     <HrHeader>
-                        <i className="icon-backup"></i>
+                        <Icon icon="backup" className="me-1" />
                         <span>Manual Backup</span>
                     </HrHeader>
 
                     {isAdminAccessOrAbove(database) && (
                         <div className="mb-1 flex-shrink-0">
                             <Button color="primary" title="Backup the database now" onClick={createManualBackup}>
-                                <i className="icon-backup" /> Create a Backup
+                                <Icon icon="backup" className="me-1" /> Create a Backup
                             </Button>
                         </div>
                     )}
@@ -319,7 +319,7 @@ export function BackupsPage(props: BackupsPageProps) {
                             )
                         }
                     >
-                        <i className="icon-manage-ongoing-tasks"></i>
+                        <Icon icon="manage-ongoing-tasks" className="me-1" />
                         <span>Periodic Backup ({backups.length})</span>
                     </HrHeader>
                     {canReadWriteDatabase(database) && (
@@ -329,7 +329,7 @@ export function BackupsPage(props: BackupsPageProps) {
                                 onClick={createNewPeriodicBackupTask}
                                 title="Create an ongoing periodic backup task"
                             >
-                                <i className="icon-backups" /> Create a Periodic Backup
+                                <Icon icon="backup" className="me-1" /> Create a Periodic Backup
                             </Button>
                         </div>
                     )}
