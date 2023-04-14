@@ -204,7 +204,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
         if (subscriptionState == null)
             return null;
 
-        return GetSubscriptionTaskInfo(record, clusterTopology, subscriptionState, taskId);
+        return GetSubscriptionTaskInfo(record, clusterTopology, subscriptionState, subscriptionState.SubscriptionId);
     }
 
     protected async ValueTask HandleOngoingTaskInfoAsync()
@@ -505,9 +505,9 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
         };
     }
 
-    private OngoingTaskSubscription GetSubscriptionTaskInfo(DatabaseRecord record, ClusterTopology clusterTopology, SubscriptionState subscriptionState, long key)
+    private OngoingTaskSubscription GetSubscriptionTaskInfo(DatabaseRecord record, ClusterTopology clusterTopology, SubscriptionState subscriptionState, long subscriptionId)
     {
-        var connectionStatus = GetSubscriptionConnectionStatus(record, subscriptionState, key, out var tag);
+        var connectionStatus = GetSubscriptionConnectionStatus(record, subscriptionState, subscriptionId, out var tag);
 
         return OngoingTaskSubscription.From(subscriptionState, connectionStatus, clusterTopology, tag);
     }
