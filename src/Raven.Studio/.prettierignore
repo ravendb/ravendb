@@ -30,3 +30,4 @@ wwwroot/icons
 # autogen
 typescript/configuration.ts 
 typescript/endpoints.ts
+typescript/icons.ts

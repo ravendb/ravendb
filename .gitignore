@@ -79,9 +79,11 @@ src/Raven.Studio/wwwroot/dist/
 # compat - old location for easier between between 5.2 (and ealier) and 5.3+
 src/Raven.Studio/typescript/endpoints.ts 
 src/Raven.Studio/typescript/configuration.ts
+src/Raven.Studio/typescript/icons.ts
 
 src/Raven.Studio/typings/server/endpoints.ts
 src/Raven.Studio/typings/server/configuration.ts
+src/Raven.Studio/typings/server/icons.ts
 src/Raven.Studio/typings/server/include.ts
 src/Raven.Studio/typings/**/*.d.ts
 !src/Raven.Studio/typings/npmTypes.d.ts
