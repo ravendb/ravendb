@@ -1,5 +1,5 @@
 import React from "react";
-import { Control, Controller, ControllerProps, FieldPath, FieldValues } from "react-hook-form";
+import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
 import { Input, InputProps, Label } from "reactstrap";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
@@ -33,33 +33,35 @@ export function FormInput<
 >(props: FormElementProps<TFieldValues, TName> & InputProps) {
     const { control, name, defaultValue, rules, shouldUnregister, children, type, ...restInputProps } = props;
 
+    const {
+        field: { onChange, onBlur, value },
+        fieldState: { error, invalid },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
     const canBeChecked = type === "checkbox" || type === "switch";
 
     return (
-        <Controller
-            name={name}
-            control={control}
-            rules={rules}
-            defaultValue={defaultValue}
-            shouldUnregister={shouldUnregister}
-            render={({ field: { onChange, onBlur, value }, fieldState: { error, invalid } }) => (
-                <div>
-                    <Input
-                        onBlur={onBlur}
-                        onChange={onChange}
-                        value={value === undefined ? "" : value}
-                        invalid={invalid}
-                        type={type}
-                        checked={canBeChecked && value}
-                        {...restInputProps}
-                    >
-                        {children}
-                    </Input>
-                    {/* TODO: error message styling */}
-                    {error && <div className="text-danger small">{error.message}</div>}
-                </div>
-            )}
-        />
+        <div>
+            <Input
+                onBlur={onBlur}
+                onChange={onChange}
+                value={value === undefined ? "" : value}
+                invalid={invalid}
+                type={type}
+                checked={canBeChecked && value}
+                {...restInputProps}
+            >
+                {children}
+            </Input>
+            {/* TODO: error message styling */}
+            {error && <div className="text-danger small">{error.message}</div>}
+        </div>
     );
 }
 
