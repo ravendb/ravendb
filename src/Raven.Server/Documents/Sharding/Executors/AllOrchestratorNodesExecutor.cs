@@ -3,14 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Executors;
 
@@ -19,7 +15,7 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
     private readonly ServerStore _store;
     private readonly DatabaseRecord _record;
 
-    private ClusterTopology _clusterTopology;
+    private readonly ClusterTopology _clusterTopology;
 
     private Dictionary<string, RequestExecutor> _current = new Dictionary<string, RequestExecutor>(StringComparer.OrdinalIgnoreCase);
     private AllNodesExecutorState _state;
@@ -34,9 +30,9 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
         UpdateExecutors(_clusterTopology, _record.Sharding.Orchestrator.Topology);
     }
 
-    public async Task<TResult> ExecuteForNodeAsync<TResult>(RavenCommand<TResult> command, string tag, CancellationToken token = default)
+    public async Task<TResult> ExecuteForNodeAsync<TResult>(RavenCommand<TResult> command, string nodeTag, CancellationToken token = default)
     {
-        var executor = _current[tag];
+        var executor = GetRequestExecutorForNode(nodeTag);
         using (executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
         {
             await executor.ExecuteAsync(command, ctx, token: token);
@@ -44,10 +40,14 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
         }
     }
 
-    public RequestExecutor GetRequestExecutorForNode(string tag)
+    public bool TryGetRequestExecutorForNode(string nodeTag, out RequestExecutor requestExecutor) => _current.TryGetValue(nodeTag, out requestExecutor);
+
+    public RequestExecutor GetRequestExecutorForNode(string nodeTag)
     {
-        _current.TryGetValue(tag, out var executor);
-        return executor;
+        if (TryGetRequestExecutorForNode(nodeTag, out var requestExecutor))
+            return requestExecutor;
+
+        throw new InvalidOperationException($"There is no request executor available for node '{nodeTag}'.");
     }
 
     private void UpdateExecutors(ClusterTopology clusterTopology, OrchestratorTopology orchestrator)

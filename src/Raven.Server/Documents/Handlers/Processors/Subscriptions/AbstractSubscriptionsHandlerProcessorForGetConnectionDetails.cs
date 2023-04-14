@@ -2,13 +2,16 @@
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Http;
+using Raven.Server.Documents.Commands.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal abstract class AbstractSubscriptionsHandlerProcessorForGetConnectionDetails<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractSubscriptionsHandlerProcessorForGetConnectionDetails<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<SubscriptionConnectionsDetails, TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
@@ -16,17 +19,21 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
         {
         }
 
+        protected override bool SupportsCurrentNode => true;
+
         protected abstract SubscriptionConnectionsDetails GetConnectionDetails(TransactionOperationContext context, string subscriptionName);
 
-        public override async ValueTask ExecuteAsync()
-        {
-            var subscriptionName = RequestHandler.GetStringQueryString("name", false);
+        protected string GetName() => RequestHandler.GetStringQueryString("name");
 
-            if (string.IsNullOrEmpty(subscriptionName))
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                return;
-            }
+        protected override RavenCommand<SubscriptionConnectionsDetails> CreateCommandForNode(string nodeTag)
+        {
+            var name = GetName();
+            return new GetSubscriptionConnectionsDetailsCommand(name, nodeTag);
+        }
+
+        protected override async ValueTask HandleCurrentNodeAsync()
+        {
+            var subscriptionName = GetName();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -34,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 var details = GetConnectionDetails(context, subscriptionName) ?? new SubscriptionConnectionsDetails()
                 {
                     Results = new List<SubscriptionConnectionDetails>(),
-                    SubscriptionMode = "None"
+                    SubscriptionMode = SubscriptionMode.None
                 };
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))

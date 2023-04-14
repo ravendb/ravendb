@@ -481,7 +481,7 @@ namespace Raven.Server.Documents.TcpHandlers
     public class SubscriptionConnectionsDetails
     {
         public List<SubscriptionConnectionDetails> Results;
-        public string SubscriptionMode;
+        public SubscriptionMode SubscriptionMode;
 
         public DynamicJsonValue ToJson()
         {
