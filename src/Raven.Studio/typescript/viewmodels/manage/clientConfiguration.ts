@@ -4,6 +4,8 @@ import saveGlobalClientConfigurationCommand = require("commands/resources/saveGl
 import getGlobalClientConfigurationCommand = require("commands/resources/getGlobalClientConfigurationCommand");
 import eventsCollector = require("common/eventsCollector");
 
+// TODO: remove this + related files after complete react component
+
 class clientConfiguration extends viewModelBase {
 
     view = require("views/manage/clientConfiguration.html");

@@ -1,12 +1,13 @@
 ﻿import appUrl = require("common/appUrl");
+import { bridgeToReact } from "common/reactUtils";
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
+import ClientConfiguration from "components/pages/resources/manageServer/clientConfiguration/ClientConfiguration";
 
 export = getManageServerMenuItem;
 
 function getManageServerMenuItem() {
-     
     const items: menuItem[] = [
         new leafMenuItem({
             route: 'admin/settings/cluster',
@@ -26,7 +27,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/clientConfiguration',
-            moduleId: require("viewmodels/manage/clientConfiguration"),
+            moduleId: bridgeToReact(ClientConfiguration, "nonShardedView"),
             title: 'Client Configuration',
             nav: true,
             css: 'icon-client-configuration',
