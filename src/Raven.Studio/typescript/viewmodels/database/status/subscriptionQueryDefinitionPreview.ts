@@ -12,7 +12,7 @@ class subscriptionQueryDefinitionPreview extends dialogViewModelBase {
         loading: ko.observable<boolean>(true)
     };
     
-    constructor(task: JQueryPromise<Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails>) {
+    constructor(task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription>) {
         super();
 
         aceEditorBindingHandler.install();

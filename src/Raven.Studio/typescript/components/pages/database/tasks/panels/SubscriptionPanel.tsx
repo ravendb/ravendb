@@ -30,6 +30,7 @@ import { Icon } from "components/common/Icon";
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
     connections: SubscriptionConnectionsDetailsWithId | undefined;
+    dropSubscription: (workerId?: string) => void;
 };
 
 interface ChangeVectorInfoProps {
@@ -111,10 +112,12 @@ function Details(props: SubscriptionPanelProps) {
 
 interface ConnectedClientsProps {
     connections: SubscriptionConnectionsDetailsWithId;
+    dropSubscription: (workerId?: string) => void;
+    refreshSubscriptionInfo: () => void;
 }
 
 function ConnectedClients(props: ConnectedClientsProps) {
-    const { connections } = props;
+    const { connections, dropSubscription, refreshSubscriptionInfo } = props;
 
     if (!connections) {
         return null;
@@ -129,6 +132,7 @@ function ConnectedClients(props: ConnectedClientsProps) {
             Subscription mode: {connections.SubscriptionMode}
             <hr />
             Clients:
+            {connections.Results.length === 0 && <div className="text-warning">No clients connected.</div>}
             {connections.Results.map((connection) => (
                 <div>
                     <div>Client URI: {connection.ClientUri}</div>
@@ -152,7 +156,7 @@ function ConnectedClients(props: ConnectedClientsProps) {
 }
 
 export function SubscriptionPanel(props: SubscriptionPanelProps) {
-    const { db, data, connections } = props;
+    const { db, data, connections, dropSubscription, refreshSubscriptionInfo } = props;
 
     const { canReadWriteDatabase } = useAccessManager();
     const { forCurrentDatabase } = useAppUrls();
@@ -186,7 +190,11 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
             <Collapse isOpen={detailsVisible}>
                 <Details {...props} />
                 <SubscriptionTaskDistribution task={data} />
-                <ConnectedClients connections={connections} />
+                <ConnectedClients
+                    dropSubscription={dropSubscription}
+                    refreshSubscriptionInfo={refreshSubscriptionInfo}
+                    connections={connections}
+                />
             </Collapse>
         </RichPanel>
     );

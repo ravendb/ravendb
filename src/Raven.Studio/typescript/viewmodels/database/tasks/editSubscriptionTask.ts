@@ -93,14 +93,14 @@ class editSubscriptionTask extends shardViewModelBase {
             // 1.1 Get general info
             ongoingTaskInfoCommand.forSubscription(this.db, args.taskId, args.taskName)
                 .execute()
-                .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) => {
                     this.editedSubscription(new ongoingTaskSubscriptionEdit(result));
 
                     deferred.resolve();
 
                     // 1.2 Check if connection is live
                     this.editedSubscription().liveConnection(false);
-                    new subscriptionConnectionDetailsCommand(this.db, args.taskId, args.taskName, this.editedSubscription().responsibleNode().NodeUrl)
+                    new subscriptionConnectionDetailsCommand(this.db, args.taskId, args.taskName, this.editedSubscription().responsibleNode().NodeTag)
                         .execute()
                         .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails) => {
                             this.editedSubscription().liveConnection(!!result.Results.length);

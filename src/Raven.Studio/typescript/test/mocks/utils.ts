@@ -1,4 +1,6 @@
-﻿import { MockedValue } from "test/mocks/services/AutoMockService";
+﻿import { MockedValue, ServiceMocks } from "test/mocks/services/AutoMockService";
+import { mockServices } from "test/mocks/services/MockServices";
+import Mock = jest.Mock;
 
 export function createValue<T>(value: MockedValue<T>, defaultValue: T): T {
     if (value instanceof Function) {
@@ -8,4 +10,44 @@ export function createValue<T>(value: MockedValue<T>, defaultValue: T): T {
     } else {
         return value ?? defaultValue;
     }
+}
+
+type DebugItem = {
+    serviceName: string;
+    methodName: string;
+    hasImplementation: boolean;
+    callsCount: number;
+};
+
+/**
+ * Displays info about mocks which being called, but implementation wasn't provided
+ */
+export function debugMocks() {
+    const context = mockServices.context;
+    const services = Object.keys(context);
+
+    const results: DebugItem[] = [];
+
+    services.forEach((serviceName) => {
+        const mockService = (context as any)[serviceName] as ServiceMocks<any>;
+        const mockMethods = Object.keys(mockService);
+        mockMethods.forEach((methodName) => {
+            const mockMethod = mockService[methodName] as Mock;
+            const callsCount = mockMethod.mock.calls.length;
+            const hasImplementation = !!mockMethod.getMockImplementation();
+
+            results.push({
+                serviceName,
+                methodName,
+                callsCount,
+                hasImplementation,
+            });
+        });
+    });
+
+    const info = results
+        .filter((x) => x.callsCount > 0 && !x.hasImplementation)
+        .map((x) => x.serviceName + "::" + x.methodName + ": calls = " + x.callsCount);
+
+    console.warn("Following mocks were called but not implemented: \r\n" + info.join("\r\n"));
 }

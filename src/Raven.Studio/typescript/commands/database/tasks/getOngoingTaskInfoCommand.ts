@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication |
-                                          Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails |
+                                          Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
@@ -13,7 +13,7 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails> extends commandBase {
 
     private readonly db: database;
-    private readonly location: databaseLocationSpecifier;
+    private readonly nodeTag: string;
 
     private readonly taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
 
@@ -24,14 +24,14 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
     private readonly reportFailure: boolean = true;
 
     public constructor(db: database, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
-                        location: databaseLocationSpecifier, taskId: number, taskName?: string, reportFailure = true) {
+                        nodeTag: string | undefined, taskId: number, taskName?: string, reportFailure = true) {
           super();
         this.reportFailure = reportFailure;
         this.taskName = taskName;
         this.taskId = taskId;
         this.taskType = taskType;
         this.db = db;
-        this.location = location;
+        this.nodeTag = nodeTag;
     }
 
     execute(): JQueryPromise<T> {
@@ -48,7 +48,7 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
        
         const args = {
             ...this.getArgsToUse(),
-            ...this.location
+            nodeTag: this.nodeTag
         };
 
         return this.query<T>(url, args, this.db);
@@ -62,8 +62,8 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink>(db, "PullReplicationAsSink", null, taskId);
     }
 
-    static forSubscription(db: database, location: databaseLocationSpecifier, taskId: number, taskName: string) {
-        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails>(db, "Subscription", location, taskId, taskName);
+    static forSubscription(db: database, taskId: number, taskName: string, nodeTag?: string) {
+        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription>(db, "Subscription", nodeTag, taskId, taskName);
     }
 
     static forBackup(db: database, taskId: number, reportFailure = true) { 

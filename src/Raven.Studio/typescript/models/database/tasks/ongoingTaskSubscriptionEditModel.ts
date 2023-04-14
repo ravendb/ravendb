@@ -24,7 +24,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         return "Subscription";
     }
     
-    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) {
         super();
         
         this.query(dto.Query);
@@ -60,8 +60,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         });
     }   
 
-    updateDetails(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
-        const dtoEditModel = dto as Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails;
+    updateDetails(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) {
+        const dtoEditModel = dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 
         const state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState = dtoEditModel.Disabled ? 'Disabled' : 'Enabled';
         const emptyNodeId: Raven.Client.ServerWide.Operations.NodeId = { NodeTag: "", NodeUrl: "", ResponsibleNode: "" };
@@ -159,9 +159,14 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 LastClientConnectionTime: null,
                 LastBatchAckTime: null,
                 MentorNode: null,
-                NodeTag: null,
                 PinToMentorNode: false,
-                ShardingState: null
+                TaskId: null,
+                Error: null,
+                TaskName: null,
+                TaskState: "Enabled",
+                TaskType: "Subscription",
+                TaskConnectionStatus: "Active",
+                ChangeVectorForNextBatchStartingPointPerShard: null
             });
     }
 }

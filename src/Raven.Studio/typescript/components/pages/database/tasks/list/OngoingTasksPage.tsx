@@ -205,8 +205,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         const taskInfo = await Promise.all(loadTasks);
 
         const targetNode = taskInfo.find((x) => x.ResponsibleNode.NodeTag);
+
         try {
-            const details = await tasksService.getSubscriptionConnectionDetails(database, null, taskId, taskName);
+            const details = await tasksService.getSubscriptionConnectionDetails(database, taskId, taskName, targetNode);
 
             dispatch({
                 type: "SubscriptionConnectionDetailsLoaded",
@@ -220,6 +221,10 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                 loadError: "Failed to get client connection details",
             });
         }
+    };
+
+    const dropSubscription = async (taskId: number, taskName: string, workerId: string) => {
+        await tasksService.dropSubscription(database, taskId, taskName, workerId);
     };
 
     return (
@@ -416,6 +421,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                     <SubscriptionPanel
                                         {...sharedPanelProps}
                                         connections={connectionDetails}
+                                        dropSubscription={(workerId) =>
+                                            dropSubscription(x.shared.taskId, x.shared.taskName, workerId)
+                                        }
                                         onToggleDetails={async (newState) => {
                                             if (newState) {
                                                 await refreshSubscriptionInfo(x.shared.taskId, x.shared.taskName);
