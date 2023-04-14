@@ -34,6 +34,7 @@ namespace Corax.Queries
             term = _searcher.TermQuery(_field, _terms[_termIndex]);
             return true;
         }
+        
         public QueryInspectionNode Inspect()
         {
             return new QueryInspectionNode($"{nameof(InTermProvider)}",

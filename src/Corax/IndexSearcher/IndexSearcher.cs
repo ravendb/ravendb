@@ -140,11 +140,25 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return data.Slice(len, size);
     }
 
+    internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, ReadOnlySpan<char> term)
+    {
+        if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
+            return Constants.EmptyStringSlice;
+
+        if (term.SequenceEqual(Constants.NullValueCharSpan.Span))
+            return Constants.NullValueSlice;
+
+        using var _ = Allocator.Allocate(Encodings.Utf8.GetByteCount(term), out Span<byte> termBuffer);
+        var byteCount = Encodings.Utf8.GetBytes(term, termBuffer);
+        ApplyAnalyzer(binding, termBuffer.Slice(0, byteCount), out var encodedTerm);
+        return encodedTerm;
+    }
+
     //Function used to generate Slice from query parameters.
     //We cannot dispose them before the whole query is executed because they are an integral part of IQueryMatch.
     //We know that the Slices are automatically disposed when the transaction is closed so we don't need to track them.
     [SkipLocalsInit]
-    internal Slice EncodeAndApplyAnalyzer(FieldMetadata binding, string term)
+    internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, string term)
     {
         if (term is null)
             return default;
@@ -246,12 +260,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return disposable;
     }
 
-    public AllEntriesMatch AllEntries()
-    {
-        return new AllEntriesMatch(this, _transaction);
-    }
-
-    public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
+    public AllEntriesMatch AllEntries() => new AllEntriesMatch(this, _transaction);
+   public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
 
     public long GetTermAmountInField(FieldMetadata field)
     {

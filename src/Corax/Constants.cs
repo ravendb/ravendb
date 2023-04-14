@@ -7,7 +7,12 @@ namespace Corax
     public static class Constants
     {
         public const string NullValue = "NULL_VALUE";
+        public static readonly ReadOnlyMemory<char> NullValueCharSpan = new(Constants.NullValue.ToCharArray());
+        
+        
         public const string EmptyString = "EMPTY_STRING";
+        public static readonly ReadOnlyMemory<char> EmptyStringCharSpan = new(Constants.EmptyString.ToCharArray());
+        
         public const string IndexMetadata = "@index_metadata";
         public const string IndexTimeFields = "@index_time_fields";
         public const string DocumentBoost = "@document_boost";
@@ -88,12 +93,12 @@ namespace Corax
             public const byte Wildcard = (byte)'*';
 
             [Flags]
-            internal enum SearchMatchOptions
+            public enum SearchMatchOptions
             {
                 TermMatch = 0,
                 StartsWith = 1,
                 EndsWith = 2,
-                Contains = 4
+                Contains = StartsWith | EndsWith
             }
 
             public enum Operator

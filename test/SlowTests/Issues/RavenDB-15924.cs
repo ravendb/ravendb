@@ -15,8 +15,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-20149")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldWork(Options options)
         {
             using var store = GetDocumentStore(options);
