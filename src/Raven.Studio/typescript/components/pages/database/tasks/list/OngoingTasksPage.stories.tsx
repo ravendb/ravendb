@@ -43,7 +43,7 @@ export const EmptyView: ComponentStory<typeof OngoingTasksPage> = () => {
 
     tasksService.withGetTasks((dto) => {
         dto.SubscriptionsCount = 0;
-        dto.OngoingTasksList = [];
+        dto.OngoingTasks = [];
         dto.PullReplications = [];
     });
     tasksService.withGetProgress((dto) => {
@@ -84,7 +84,7 @@ export const ExternalReplicationTemplate = (args: {
             ongoingTask.TaskState = "Disabled";
         }
         args.customizeTask?.(ongoingTask);
-        x.OngoingTasksList = [ongoingTask];
+        x.OngoingTasks = [ongoingTask];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
@@ -125,7 +125,7 @@ export const SubscriptionTemplate = (args: {
             ongoingTask.TaskState = "Disabled";
         }
         args.customizeTask?.(ongoingTask);
-        x.OngoingTasksList = [ongoingTask];
+        x.OngoingTasks = [ongoingTask];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
@@ -159,7 +159,7 @@ export const RavenEtlTemplate = (args: {
             ravenEtl.TaskState = "Disabled";
         }
         args.customizeTask?.(ravenEtl);
-        x.OngoingTasksList = [ravenEtl];
+        x.OngoingTasks = [ravenEtl];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
@@ -200,7 +200,7 @@ export const SqlTemplate = (args: {
             sqlEtl.TaskState = "Disabled";
         }
         args.customizeTask?.(sqlEtl);
-        x.OngoingTasksList = [sqlEtl];
+        x.OngoingTasks = [sqlEtl];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
@@ -241,7 +241,7 @@ export const OlapTemplate = (args: {
             etl.TaskState = "Disabled";
         }
         args.customizeTask?.(etl);
-        x.OngoingTasksList = [etl];
+        x.OngoingTasks = [etl];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
@@ -282,7 +282,7 @@ export const ElasticSearchTemplate = (args: {
             etl.TaskState = "Disabled";
         }
         args.customizeTask?.(etl);
-        x.OngoingTasksList = [etl];
+        x.OngoingTasks = [etl];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
@@ -323,7 +323,7 @@ export const KafkaTemplate = (args: {
             etl.TaskState = "Disabled";
         }
         args.customizeTask?.(etl);
-        x.OngoingTasksList = [etl];
+        x.OngoingTasks = [etl];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
@@ -364,7 +364,7 @@ export const RabbitTemplate = (args: {
             etl.TaskState = "Disabled";
         }
         args.customizeTask?.(etl);
-        x.OngoingTasksList = [etl];
+        x.OngoingTasks = [etl];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
@@ -403,7 +403,7 @@ export const ReplicationSinkTemplate = (args: {
             sinkListItem.TaskState = "Disabled";
         }
         args.customizeTask?.(sinkListItem);
-        x.OngoingTasksList = [sinkListItem];
+        x.OngoingTasks = [sinkListItem];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });
@@ -441,7 +441,7 @@ export const ReplicationHubTemplate = (args: {
         });
 
         args.customizeTask?.(listItem);
-        x.OngoingTasksList = args.withOutConnections ? [] : [listItem];
+        x.OngoingTasks = args.withOutConnections ? [] : [listItem];
         x.PullReplications = x.PullReplications.filter((x) =>
             args.withOutConnections ? x.Name === "EmptyHub" : x.Name !== "EmptyHub"
         );
@@ -480,7 +480,7 @@ export const PeriodicBackupTemplate = (args: {
             ongoingTask.TaskState = "Disabled";
         }
         args.customizeTask?.(ongoingTask);
-        x.OngoingTasksList = [ongoingTask];
+        x.OngoingTasks = [ongoingTask];
         x.PullReplications = [];
         x.SubscriptionsCount = 0;
     });

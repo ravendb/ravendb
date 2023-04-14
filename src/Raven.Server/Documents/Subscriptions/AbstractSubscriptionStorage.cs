@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -37,6 +38,16 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
     protected abstract string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus);
     protected abstract bool SubscriptionChangeVectorHasChanges(TState state, SubscriptionState taskStatus);
 
+    public long GetAllSubscriptionsCount()
+    {
+        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            return ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(_databaseName))
+                .Count();
+        }
+    }
+
     public bool DropSubscriptionConnections(long subscriptionId, SubscriptionException ex)
     {
         if (_subscriptions.TryGetValue(subscriptionId, out TState state) == false)
@@ -49,7 +60,6 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
 
         return true;
     }
-
 
     private bool DeleteAndSetException(long subscriptionId, SubscriptionException ex)
     {

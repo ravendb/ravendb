@@ -23,7 +23,7 @@ export class TasksStubs {
         emptyPullReplicationDefinition.Name = "EmptyHub";
 
         return {
-            OngoingTasksList: [
+            OngoingTasks: [
                 TasksStubs.getRavenEtlListItem(),
                 TasksStubs.getSqlListItem(),
                 TasksStubs.getOlapListItem(),

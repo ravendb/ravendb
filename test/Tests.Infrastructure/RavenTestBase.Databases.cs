@@ -70,7 +70,7 @@ public partial class RavenTestBase
             {
                 using (var processor = await InstantiateOutgoingTaskProcessor(database, server))
                 {
-                    foreach (var task in processor.GetOngoingTasksInternal().OngoingTasksList)
+                    foreach (var task in processor.GetOngoingTasksInternal().OngoingTasks)
                     {
                         if (tasks.ContainsKey(task.TaskId) == false && task.TaskConnectionStatus != OngoingTaskConnectionStatus.NotOnThisNode)
                             tasks.Add(task.TaskId, task);

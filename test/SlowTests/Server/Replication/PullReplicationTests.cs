@@ -479,11 +479,11 @@ namespace SlowTests.Server.Replication
                 using (var processor = await Databases.InstantiateOutgoingTaskProcessor(minionDB, server))
                 {
                     Assert.True(WaitForValue(
-                        () => ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl !=
+                        () => ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl !=
                               null,
                         true));
 
-                    var watcherTaskUrl = ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl;
+                    var watcherTaskUrl = ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl;
                     // dispose the hub node, from which we are currently pulling
                     await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
                 }
@@ -575,7 +575,7 @@ namespace SlowTests.Server.Replication
                 using (var processor = await Databases.InstantiateOutgoingTaskProcessor(minionDB, minionServer))
                 {
                     Assert.True(WaitForValue(
-                        () => ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
+                        () => ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
                         true));
                 }
                
@@ -622,10 +622,10 @@ namespace SlowTests.Server.Replication
 
                 using (var processor = await Databases.InstantiateOutgoingTaskProcessor(hub.Database, hubServer))
                 {
-                    await AssertWaitForTrueAsync(() => Task.FromResult(processor.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
+                    await AssertWaitForTrueAsync(() => Task.FromResult(processor.GetOngoingTasksInternal().OngoingTasks.Exists(x =>
                         x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink1.Database, StringComparison.OrdinalIgnoreCase) &&
                         t.DestinationUrl == sink1.Urls.FirstOrDefault())));
-                    await AssertWaitForTrueAsync(() => Task.FromResult(processor.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
+                    await AssertWaitForTrueAsync(() => Task.FromResult(processor.GetOngoingTasksInternal().OngoingTasks.Exists(x =>
                         x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink2.Database, StringComparison.OrdinalIgnoreCase) &&
                         t.DestinationUrl == sink2.Urls.FirstOrDefault())));
                 }
@@ -692,7 +692,7 @@ namespace SlowTests.Server.Replication
                 using (var processor = await Databases.InstantiateOutgoingTaskProcessor(minionDB, server))
                 {
                     Assert.True(WaitForValue(
-                        () => ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
+                        () => ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
                         true));
                 }
                
