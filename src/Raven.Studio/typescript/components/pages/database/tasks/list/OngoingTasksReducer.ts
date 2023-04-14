@@ -18,6 +18,7 @@ import {
     OngoingTaskReplicationSinkSharedInfo,
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlSharedInfo,
+    OngoingTaskSubscriptionInfo,
     OngoingTaskSubscriptionSharedInfo,
 } from "components/models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
@@ -40,6 +41,7 @@ import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import SubscriptionConnectionsDetails = Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails;
+import database from "models/resources/database";
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -48,7 +50,7 @@ interface ActionTasksLoaded {
 }
 
 interface ActionTaskLoaded {
-    location: databaseLocationSpecifier;
+    nodeTag: string;
     task: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
     type: "SubscriptionInfoLoaded";
 }
@@ -74,7 +76,9 @@ interface ActionTasksLoadError {
 
 interface OngoingTasksState {
     tasks: OngoingTaskInfo[];
+    subscriptions: OngoingTaskSubscriptionInfo[];
     locations: databaseLocationSpecifier[];
+    orchestrators: string[];
     replicationHubs: OngoingTaskHubDefinitionInfo[];
     subscriptionConnectionDetails: SubscriptionConnectionsDetailsWithId[];
 }
@@ -304,7 +308,22 @@ function mapNodeInfo(task: OngoingTask): OngoingTaskNodeInfoDetails {
     }
 }
 
-function initNodesInfo(locations: databaseLocationSpecifier[]): OngoingTaskNodeInfo[] {
+function initNodesInfo(
+    taskType: StudioTaskType,
+    locations: databaseLocationSpecifier[],
+    orchestrators: string[]
+): OngoingTaskNodeInfo[] {
+    const sharded = orchestrators.length > 0;
+    if (sharded && taskType === "Subscription") {
+        return orchestrators.map((nodeTag) => ({
+            location: {
+                nodeTag,
+            },
+            status: "idle",
+            details: null,
+        }));
+    }
+
     return locations.map((l) => ({
         location: l,
         status: "idle",
@@ -314,11 +333,15 @@ function initNodesInfo(locations: databaseLocationSpecifier[]): OngoingTaskNodeI
 
 const mapTask = (incomingTask: OngoingTask, incomingLocation: databaseLocationSpecifier, state: OngoingTasksState) => {
     const incomingTaskType = TaskUtils.ongoingTaskToStudioTaskType(incomingTask);
-    const existingTask = state.tasks.find(
+
+    const existingTasksSource = incomingTask.TaskType === "Subscription" ? state.subscriptions : state.tasks;
+    const existingTask = existingTasksSource.find(
         (x) => x.shared.taskType === incomingTaskType && x.shared.taskId === incomingTask.TaskId
     );
 
-    const nodesInfo = existingTask ? existingTask.nodesInfo : initNodesInfo(state.locations);
+    const nodesInfo = existingTask
+        ? existingTask.nodesInfo
+        : initNodesInfo(incomingTaskType, state.locations, state.orchestrators);
     const existingNodeInfo = existingTask
         ? existingTask.nodesInfo.find((x) => databaseLocationComparator(x.location, incomingLocation))
         : null;
@@ -372,11 +395,12 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     }
                 }
             });
-        }
+        }*/
 
         case "TasksLoaded": {
             const incomingLocation = action.location;
             const incomingTasks = action.tasks;
+            const sharded = state.orchestrators.length > 0;
 
             return produce(state, (draft) => {
                 const newTasks = incomingTasks.OngoingTasks.map((incomingTask) =>
@@ -387,7 +411,17 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     genUtils.sortAlphaNumeric(a.shared.taskName, b.shared.taskName)
                 );
 
-                draft.tasks = newTasks;
+                // since endpoint returns information about subscription from (orchestrator <-> target node) point of view
+                // we only update subscriptions info when data comes from non-sharded db or sharded db but at node level
+
+                if (!sharded || (sharded && incomingLocation.shardNumber != null))
+                    draft.tasks = newTasks.filter((x) => x.shared.taskType !== "Subscription");
+
+                if (!sharded || (sharded && incomingLocation.shardNumber == null)) {
+                    draft.subscriptions = newTasks.filter(
+                        (x) => x.shared.taskType === "Subscription"
+                    ) as OngoingTaskSubscriptionInfo[];
+                }
 
                 draft.replicationHubs = incomingTasks.PullReplications.map((incomingTask) => {
                     return {
@@ -479,11 +513,16 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
     return state;
 };
 
-export const ongoingTasksReducerInitializer = (locations: databaseLocationSpecifier[]): OngoingTasksState => {
+export const ongoingTasksReducerInitializer = (database: database): OngoingTasksState => {
+    const locations = database.getLocations();
+    const orchestrators = database.isSharded() ? database.nodes().map((x) => x.tag) : [];
+
     return {
         tasks: [],
+        subscriptions: [],
         replicationHubs: [],
         locations,
+        orchestrators,
         subscriptionConnectionDetails: [],
     };
 };
