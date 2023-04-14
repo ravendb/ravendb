@@ -18,7 +18,7 @@ public class RavenDB_18426 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void ProjectionIdTest(Options options)
     {
         using (var store = GetDocumentStore(options))

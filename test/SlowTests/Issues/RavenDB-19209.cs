@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using SlowTests.MailingList;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ public class RavenDB_19209 : RavenTestBase
     {
     }
 
-    [Fact]
-    public void FacetByFieldDocumentQuery()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void FacetByFieldDocumentQuery(Options options)
     {
-        using var store = GetSampleDatabase();
+        using var store = GetSampleDatabase(options);
         {
             using var session = store.OpenSession();
             var q = session.Advanced.DocumentQuery<Workspace, CamelCaseIndex>().AggregateBy(builder => builder.ByField(i => i.CamelCase));
@@ -33,10 +35,11 @@ public class RavenDB_19209 : RavenTestBase
         }
     }
 
-    [Fact]
-    public void NumericalFacetViaDocumentQuery()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void NumericalFacetViaDocumentQuery(Options options)
     {
-        using var store = GetSampleDatabase();
+        using var store = GetSampleDatabase(options);
         {
             using var session = store.OpenSession();
             var q = session.Advanced.DocumentQuery<Workspace, CamelCaseIndex>().AggregateBy(builder =>
@@ -48,10 +51,11 @@ public class RavenDB_19209 : RavenTestBase
         }
     }
 
-    [Fact]
-    public void NumericalFacet()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void NumericalFacet(Options options)
     {
-        using var store = GetSampleDatabase();
+        using var store = GetSampleDatabase(options);
         using (var session = store.OpenSession())
         {
             var q = session.Query<Workspace, CamelCaseIndex>().AggregateBy(builder =>
@@ -64,10 +68,11 @@ public class RavenDB_19209 : RavenTestBase
     }
 
 
-    [Fact]
-    public void CamelCaseInStaticIndexes()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void CamelCaseInStaticIndexes(Options options)
     {
-        using var store = GetSampleDatabase();
+        using var store = GetSampleDatabase(options);
 
         using (var session = store.OpenSession())
         {
@@ -99,10 +104,11 @@ public class RavenDB_19209 : RavenTestBase
         public int NumericalValue { get; set; }
     }
 
-    [Fact]
-    public void ShouldGetResultOnQuery()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void ShouldGetResultOnQuery(Options options)
     {
-        using var store = GetSampleDatabase();
+        using var store = GetSampleDatabase(options);
 
         using (var session = store.OpenSession())
         {
@@ -112,10 +118,11 @@ public class RavenDB_19209 : RavenTestBase
         }
     }
 
-    [Fact]
-    public void ShouldGetUserIdentityResultOnQuery()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void ShouldGetUserIdentityResultOnQuery(Options options)
     {
-        using (var store = CamelCaseStoreWithCustomConvention())
+        using (var store = CamelCaseStoreWithCustomConvention(options))
         {
             using (var session = store.OpenSession())
             {
@@ -133,43 +140,39 @@ public class RavenDB_19209 : RavenTestBase
         }
     }
 
-    private IDocumentStore CamelCaseStoreWithCustomConvention()
+    private IDocumentStore CamelCaseStoreWithCustomConvention(Options options)
     {
-        var options = new Options()
+        options.ModifyDocumentStore = ss =>
         {
-            ModifyDocumentStore = ss =>
+            ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
             {
-                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                CustomizeJsonSerializer = serializer =>
                 {
-                    CustomizeJsonSerializer = serializer =>
-                    {
-                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                    }
-                };
-                ss.Conventions.PropertyNameConverter = mi => $"{Char.ToLower(mi.Name[0])}{mi.Name.Substring(1)}";
-                ss.Conventions.ShouldApplyPropertyNameConverter = info => true;
-            }
+                    serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                }
+            };
+            ss.Conventions.PropertyNameConverter = mi => $"{Char.ToLower(mi.Name[0])}{mi.Name.Substring(1)}";
+            ss.Conventions.ShouldApplyPropertyNameConverter = info => true;
         };
 
         return GetDocumentStore(options);
     }
 
-    private IDocumentStore GetSampleDatabase()
+    private IDocumentStore GetSampleDatabase(Options options)
     {
-        var store = GetDocumentStore(new Options
+        options.ModifyDocumentStore = documentStore =>
         {
-            ModifyDocumentStore = documentStore =>
+            documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
             {
-                documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                CustomizeJsonSerializer = (serializer) =>
                 {
-                    CustomizeJsonSerializer = (serializer) =>
-                    {
-                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                    }
-                };
-                documentStore.Conventions.PropertyNameConverter = mi => $"{char.ToLower(mi.Name[0])}{mi.Name[1..]}";
-            }
-        });
+                    serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                }
+            };
+            documentStore.Conventions.PropertyNameConverter = mi => $"{char.ToLower(mi.Name[0])}{mi.Name[1..]}";
+        };
+
+        var store = GetDocumentStore(options);
         using (var session = store.OpenSession())
         {
             var workspace1 = new Workspace {Domain = "Encom", CamelCase = "SuperSecretTest", NumericalValue = 1};

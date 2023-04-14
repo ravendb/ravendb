@@ -57,7 +57,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void RangeQueryFailsAgainstServer(Options options)
         {
             using (var store = GetDocumentStore(options))
