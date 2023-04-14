@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Corax;
 using Corax.Mappings;
 using FastTests.Voron;
@@ -64,7 +65,7 @@ public class RawCoraxFlag : StorageTest
         {
             using IndexSearcher searcher = new IndexSearcher(Env, _analyzers);
             ;
-            var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, "1", Constants.Search.Operator.Or, false);
+            var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, new List<string>(){"1"}, null, Constants.Search.Operator.Or);
             Assert.Equal(1, match.Fill(mem));
             var result = searcher.GetEntryReaderFor(mem[0]);
             result.GetFieldReaderFor(fieldName).Read(out Span<byte> blittableBinary);
@@ -125,7 +126,7 @@ public class RawCoraxFlag : StorageTest
         Span<long> mem = stackalloc long[1024];
         {
             using IndexSearcher searcher = new IndexSearcher(Env, _analyzers);
-            var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, "1", Constants.Search.Operator.Or, false);
+            var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, new List<string>(){"1"}, null, Constants.Search.Operator.Or);
             Assert.Equal(1, match.Fill(mem));
             var result = searcher.GetEntryReaderFor(mem[0]);
             result.GetFieldReaderFor(1).Read(out Span<byte> blittableBinary);

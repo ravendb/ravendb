@@ -104,7 +104,9 @@ public partial class IndexSearcher
             termKey = null;
         }
 
-        return TermQuery(field, termKey, terms);
+        return termKey is null 
+            ? TermMatch.CreateEmpty(this, Allocator) 
+            : TermQuery(field, termKey, terms);
     }
     
     //Should be already analyzed...
