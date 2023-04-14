@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,10 +33,11 @@ namespace SlowTests.Issues
             public string SomeData { get; set; }
         }
 
-        [Fact]
-        public void TimeSpan_Can_Get_Range_Under_A_Day()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TimeSpan_Can_Get_Range_Under_A_Day(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -56,10 +58,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TimeSpan_Can_Get_Range_Over_A_Day()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TimeSpan_Can_Get_Range_Over_A_Day(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -80,10 +83,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TimeSpan_Can_Get_Range_Mixed_Days()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TimeSpan_Can_Get_Range_Mixed_Days(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -128,10 +132,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TimeSpan_Can_Get_Range_Negatives()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TimeSpan_Can_Get_Range_Negatives(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -152,10 +157,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Sort_On_TimeSpans()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Sort_On_TimeSpans(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -192,10 +198,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Sort_On_TimeSpans_With_Nulls()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Sort_On_TimeSpans_With_Nulls(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -226,10 +233,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void Can_Sort_On_Ints_With_Nulls()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Sort_On_Ints_With_Nulls(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -260,10 +268,11 @@ namespace SlowTests.Issues
 
             }
         }
-        [Fact]
-        public void Can_Sort_On_Short_With_Nulls()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Sort_On_Short_With_Nulls(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -292,10 +301,11 @@ namespace SlowTests.Issues
                 }
             }
         }
-        [Fact]
-        public void Can_Sort_On_Float_With_Nulls()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Sort_On_Float_With_Nulls(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -327,10 +337,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Sort_On_Double_With_Nulls()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Sort_On_Double_With_Nulls(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -362,10 +373,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Sort_On_String_With_Nulls()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Sort_On_String_With_Nulls(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -397,8 +409,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Sort_On_TimeSpans_With_Nulls_Using_MultiMap_Idx()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Sort_On_TimeSpans_With_Nulls_Using_MultiMap_Idx(Options options)
         {
             using (var documentStore = GetDocumentStore())
             {

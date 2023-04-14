@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,8 +33,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWhenContainsAnyIsEmpty()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryWhenContainsAnyIsEmpty(Options options)
         {
             var noPets = new string[0];
             var coolPets = new[] { "Brian", "Garfield", "Nemo" };
@@ -41,7 +43,7 @@ namespace SlowTests.Issues
 
             var sadUser = new User { Name = "Michael", Pets = noPets };
             var happyUser = new User { Name = "Maxim", Pets = coolPets };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByNameAndPets().Execute(store);
 
