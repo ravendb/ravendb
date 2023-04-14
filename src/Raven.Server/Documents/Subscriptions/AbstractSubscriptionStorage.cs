@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -48,7 +50,7 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
         return true;
     }
 
-    
+
     private bool DeleteAndSetException(long subscriptionId, SubscriptionException ex)
     {
         if (_subscriptions.TryRemove(subscriptionId, out TState state) == false)
@@ -152,6 +154,39 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
     public void ReleaseSubscriptionsSemaphore()
     {
         _concurrentConnectionsSemiSemaphore.Release();
+    }
+
+    public abstract (OngoingTaskConnectionStatus ConnectionStatus, string ResponsibleNodeTag) GetSubscriptionConnectionStatusAndResponsibleNode(long subscriptionId, SubscriptionState state, DatabaseRecord databaseRecord);
+
+    protected (OngoingTaskConnectionStatus ConnectionStatus, string ResponsibleNodeTag) GetSubscriptionConnectionStatusAndResponsibleNode(
+        long subscriptionId,
+        [NotNull] SubscriptionState state,
+        [NotNull] DatabaseTopology topology)
+    {
+        if (state == null)
+            throw new ArgumentNullException(nameof(state));
+        if (topology == null)
+            throw new ArgumentNullException(nameof(topology));
+        if (subscriptionId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(subscriptionId));
+
+        var tag = _serverStore.WhoseTaskIsIt(topology, state, state);
+        OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
+        if (tag != _serverStore.NodeTag)
+        {
+            connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
+        }
+        else if (TryGetRunningSubscriptionConnectionsState(subscriptionId, out var connectionsState))
+        {
+            connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
+        }
+
+        return (connectionStatus, tag);
+    }
+
+    public bool TryGetRunningSubscriptionConnectionsState(long subscriptionId, out TState connections)
+    {
+        return _subscriptions.TryGetValue(subscriptionId, out connections) && connections != null;
     }
 
     public void LowMemory(LowMemorySeverity lowMemorySeverity)

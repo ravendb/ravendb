@@ -7,7 +7,9 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
 
@@ -101,6 +103,36 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;
             return json;
         }
+
+        internal static OngoingTaskSubscription From(SubscriptionState state, OngoingTaskConnectionStatus connectionStatus, ClusterTopology clusterTopology, string responsibleNodeTag)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            if (clusterTopology == null)
+                throw new ArgumentNullException(nameof(clusterTopology));
+
+            return new OngoingTaskSubscription
+            {
+                TaskName = state.SubscriptionName,
+                TaskId = state.SubscriptionId,
+                Query = state.Query,
+                ChangeVectorForNextBatchStartingPoint = state.ChangeVectorForNextBatchStartingPoint,
+                ChangeVectorForNextBatchStartingPointPerShard = state.ShardingState?.ChangeVectorForNextBatchStartingPointPerShard,
+                SubscriptionId = state.SubscriptionId,
+                SubscriptionName = state.SubscriptionName,
+                LastBatchAckTime = state.LastBatchAckTime,
+                Disabled = state.Disabled,
+                LastClientConnectionTime = state.LastClientConnectionTime,
+                MentorNode = state.MentorNode,
+                PinToMentorNode = state.PinToMentorNode,
+                ResponsibleNode = new NodeId
+                {
+                    NodeTag = responsibleNodeTag,
+                    NodeUrl = clusterTopology.GetUrlFromTag(responsibleNodeTag)
+                },
+                TaskConnectionStatus = connectionStatus
+            };
+        }
     }
 
     public class OngoingTaskReplication : OngoingTask
@@ -165,7 +197,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string ConnectionStringName { get; set; }
 
         public string CertificatePublicKey { get; set; }
-        
+
         public string AccessName { get; set; }
         public string[] AllowedHubToSinkPaths { get; set; }
         public string[] AllowedSinkToHubPaths { get; set; }
@@ -279,7 +311,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return json;
         }
     }
-    
+
     public class OngoingTaskOlapEtlListView : OngoingTask
     {
         public OngoingTaskOlapEtlListView()
@@ -319,7 +351,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return json;
         }
     }
-    
+
     public class OngoingTaskElasticSearchEtlListView : OngoingTask
     {
         public OngoingTaskElasticSearchEtlListView()
@@ -336,7 +368,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(NodesUrls)] = NodesUrls;
-            
+
             return json;
         }
     }
@@ -359,7 +391,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return json;
         }
     }
-    
+
     public class OngoingTaskQueueEtlListView : OngoingTask
     {
         public OngoingTaskQueueEtlListView()
@@ -378,7 +410,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(BrokerType)] = BrokerType;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(Url)] = Url;
-            
+
             return json;
         }
     }
@@ -401,7 +433,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return json;
         }
     }
- 
+
     public class OngoingTaskBackup : OngoingTask
     {
         public BackupType BackupType { get; set; }
