@@ -156,7 +156,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                 <Card className="sidebyside-actions px-5 py-2 bg-faded-warning">
                                                     <div className="flex-horizontal">
                                                         <div className="title me-4">
-                                                            <Icon icon="swap" className="me-1"></Icon> Side by side
+                                                            <Icon icon="swap" /> Side by side
                                                         </div>
                                                         <Button
                                                             color="warning"
@@ -168,7 +168,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                             {swapNowProgress.includes(index.name) ? (
                                                                 <Spinner size={"sm"} />
                                                             ) : (
-                                                                <Icon icon="force" className="me-1"></Icon>
+                                                                <Icon icon="force" />
                                                             )}{" "}
                                                             Swap now
                                                         </Button>

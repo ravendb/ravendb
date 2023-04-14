@@ -193,7 +193,7 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
                         disabled={!!backupNowBlockReason}
                         title={backupNowBlockReason ?? "Click to trigger the backup task now"}
                     >
-                        <Icon icon="backup" className="me-1" />
+                        <Icon icon="backup" />
                         <span>{backupNowInProgress ? "Show backup progress" : "Backup now"}</span>
                     </Badge>
                 )}
@@ -210,9 +210,9 @@ function BackupEncryption(props: { encrypted: boolean }) {
     return (
         <div className="me-3">
             {props.encrypted ? (
-                <Icon icon="encryption" color="success" title="Backup is encrypted" />
+                <Icon icon="encryption" color="success" title="Backup is encrypted" margin="m-0" />
             ) : (
-                <Icon icon="unlock" color="muted" title="Backup is not encrypted" />
+                <Icon icon="unlock" color="muted" title="Backup is not encrypted" margin="m-0" />
             )}
         </div>
     );

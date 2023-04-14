@@ -34,7 +34,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
             <PopoverWithHover target={target} placement="top">
                 <div className="text-danger flex-horizontal">
                     <div className="flex-start text-warning">
-                        <Icon icon="warning"></Icon>
+                        <Icon icon="warning" margin="m-0" />
                     </div>
                     <div>
                         <div>Unable to load index status:</div>
@@ -59,27 +59,25 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                         </StatePill>
                     </LocationSpecificDetailsItem>
                     <LocationSpecificDetailsItem>
-                        <Icon icon="list" className="me-1"></Icon> {nodeInfo.details.entriesCount.toLocaleString()}{" "}
-                        entries
+                        <Icon icon="list" /> {nodeInfo.details.entriesCount.toLocaleString()} entries
                     </LocationSpecificDetailsItem>
                     <LocationSpecificDetailsItem
                         className={classNames("errors", {
                             "text-danger": nodeInfo.details.errorCount > 0,
                         })}
                     >
-                        <Icon icon="warning" className="me-sm-1"></Icon> {nodeInfo.details.errorCount.toLocaleString()}{" "}
-                        errors
+                        <Icon icon="warning" margin="me-sm-1" /> {nodeInfo.details.errorCount.toLocaleString()} errors
                     </LocationSpecificDetailsItem>
                     {nodeInfo.details.stale ? (
                         <LocationSpecificDetailsItem className="status updating">
-                            <Icon icon="waiting" className="me-xl-1"></Icon>{" "}
+                            <Icon icon="waiting" margin="me-xl-1" />{" "}
                             <a href="#" onClick={withPreventDefault(() => showStaleReason(nodeInfo.location))}>
                                 {formatTimeLeftToProcess(nodeInfo.progress?.global, nodeInfo.details)}
                             </a>
                         </LocationSpecificDetailsItem>
                     ) : (
                         <LocationSpecificDetailsItem className="status">
-                            <Icon icon="check"></Icon> Up to date
+                            <Icon icon="check" margin="m-0" /> Up to date
                         </LocationSpecificDetailsItem>
                     )}
                 </LocationSpecificDetailsItemsContainer>

@@ -7,7 +7,7 @@ export function DatabaseLoadError(props: { error: string }) {
 
     return (
         <strong className="text-danger" ref={tooltipRef}>
-            <Icon icon="exclamation" className="me-1"></Icon> Load error
+            <Icon icon="exclamation" /> Load error
             <PopoverWithHover target={tooltipRef.current} placement="top">
                 <div className="p-2">Unable to load database: {props.error}</div>
             </PopoverWithHover>

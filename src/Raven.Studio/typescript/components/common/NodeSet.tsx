@@ -4,6 +4,7 @@ import { Card } from "reactstrap";
 
 import "./NodeSet.scss";
 import { Icon } from "./Icon";
+import IconName from "typings/server/icons";
 
 interface NodeSetProps {
     children?: ReactNode | ReactNode[];
@@ -33,7 +34,7 @@ export function NodeSetListCard(props: { children?: ReactNode | ReactNode[] }) {
 
 interface NodeSetItemProps {
     children?: ReactNode | ReactNode[];
-    icon?: string;
+    icon?: IconName;
     color?: string;
     title?: string;
     extraIconClassName?: string;
@@ -42,7 +43,7 @@ interface NodeSetItemProps {
 export function NodeSetLabel(props: NodeSetItemProps) {
     const { children, icon, color, ...rest } = props;
 
-    const colorClass = color ? color : undefined;
+    const colorClass = color ?? undefined;
 
     return (
         <div className="node-set-label align-self-center" {...rest}>
@@ -54,7 +55,7 @@ export function NodeSetLabel(props: NodeSetItemProps) {
 
 export function NodeSetItem(props: NodeSetItemProps) {
     const { children, icon, color, extraIconClassName, ...rest } = props;
-    const colorClass = color ? color : undefined;
+    const colorClass = color ?? undefined;
 
     return (
         <div className="node-set-item" {...rest}>

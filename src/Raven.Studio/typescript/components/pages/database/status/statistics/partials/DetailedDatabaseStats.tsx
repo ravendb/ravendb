@@ -26,7 +26,7 @@ export function DetailedDatabaseStats() {
                     if (status === "failure") {
                         return (
                             <td key={genUtils.formatLocation(location)} className="text-danger">
-                                <Icon icon="cancel" title="Load error" />
+                                <Icon icon="cancel" title="Load error" margin="m-0" />
                             </td>
                         );
                     }
@@ -65,13 +65,13 @@ export function DetailedDatabaseStats() {
                     <tbody>
                         <tr>
                             <td>
-                                <Icon icon="database-id" className="me-1" /> <span>Database ID</span>
+                                <Icon icon="database-id" /> <span>Database ID</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.DatabaseId}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="vector" className="me-1" /> <span>Database Change Vector</span>
+                                <Icon icon="vector" /> <span>Database Change Vector</span>
                             </td>
                             <DetailsBlock>
                                 {(data, location) => {
@@ -107,7 +107,7 @@ export function DetailedDatabaseStats() {
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="storage" className="me-1" />
+                                <Icon icon="storage" />
                                 <span>Size On Disk</span>
                             </td>
                             <DetailsBlock>
@@ -148,56 +148,56 @@ export function DetailedDatabaseStats() {
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="etag" className="me-1" />
+                                <Icon icon="etag" />
                                 <span>Last Document ETag</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.LastDocEtag}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="etag" className="me-1" />
+                                <Icon icon="etag" />
                                 <span>Last Database ETag</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.LastDatabaseEtag}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="server" className="me-1" />
+                                <Icon icon="server" />
                                 <span>Architecture</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.Is64Bit ? "64 Bit" : "32 Bit"}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="documents" className="me-1" />
+                                <Icon icon="documents" />
                                 <span>Documents </span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.CountOfDocuments.toLocaleString()}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="new-counter" className="me-1" />
+                                <Icon icon="new-counter" />
                                 <span>Counters</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.CountOfCounterEntries.toLocaleString()}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="identities" className="me-1" />
+                                <Icon icon="identities" />
                                 <span>Identities</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.CountOfIdentities.toLocaleString()}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="indexing" className="me-1" />
+                                <Icon icon="indexing" />
                                 <span>Indexes</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.CountOfIndexes.toLocaleString()}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="revisions" className="me-1" />
+                                <Icon icon="revisions" />
                                 <span>Revisions</span>
                             </td>
                             <DetailsBlock>
@@ -206,7 +206,7 @@ export function DetailedDatabaseStats() {
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="conflicts" className="me-1" />
+                                <Icon icon="conflicts" />
                                 <span>Conflicts</span>
                             </td>
                             <DetailsBlock>
@@ -215,7 +215,7 @@ export function DetailedDatabaseStats() {
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="attachment" className="me-1" />
+                                <Icon icon="attachment" />
                                 <span>Attachments</span>
                             </td>
                             <DetailsBlock>
@@ -238,21 +238,21 @@ export function DetailedDatabaseStats() {
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="cmp-xchg" className="me-1" />
+                                <Icon icon="cmp-xchg" />
                                 <span>Compare Exchange</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.CountOfCompareExchange.toLocaleString()}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="zombie" className="me-1" />
+                                <Icon icon="zombie" />
                                 <span>Tombstones</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.CountOfTombstones.toLocaleString()}</>}</DetailsBlock>
                         </tr>
                         <tr>
                             <td>
-                                <Icon icon="timeseries-settings" className="me-1" />
+                                <Icon icon="timeseries-settings" />
                                 <span>Time Series Segments</span>
                             </td>
                             <DetailsBlock>

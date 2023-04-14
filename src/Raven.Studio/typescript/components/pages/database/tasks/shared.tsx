@@ -116,12 +116,12 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
                 {usingNotPreferredNode ? (
                     <>
                         <span className="text-danger pulse" title="User preferred node for this task">
-                            <Icon icon="cluster-node" className="me-1" />
+                            <Icon icon="cluster-node" />
                             {preferredMentor}
                         </span>
 
                         <span className="text-success" title="Cluster node that is temporary responsible for this task">
-                            <Icon icon="arrow-right" color="danger" className="pulse me-1" />
+                            <Icon icon="arrow-right" color="danger" className="pulse" />
                             {currentNode}
                         </span>
                     </>
@@ -133,7 +133,7 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
                                 : "Cluster node that is responsible for this task"
                         }
                     >
-                        <Icon icon="cluster-node" className="me-1" />
+                        <Icon icon="cluster-node" />
                         {currentNode}
                     </span>
                 )}
@@ -143,7 +143,7 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
 
     return (
         <div title="No node is currently handling this task">
-            <Icon icon="cluster-node" className="me-1" /> N/A
+            <Icon icon="cluster-node" /> N/A
         </div>
     );
 }
@@ -176,10 +176,10 @@ export function OngoingTaskStatus(props: {
             </DropdownToggle>
             <DropdownMenu>
                 <DropdownItem onClick={withPreventDefault(() => toggleState(true))}>
-                    <Icon icon="play" className="me-1" /> Enable
+                    <Icon icon="play" /> Enable
                 </DropdownItem>
                 <DropdownItem onClick={withPreventDefault(() => toggleState(false))}>
-                    <Icon icon="disabled" className="me-1" />
+                    <Icon icon="stop" />
                     Disable
                 </DropdownItem>
             </DropdownMenu>
@@ -200,18 +200,18 @@ export function OngoingTaskActions(props: {
         <div className="actions">
             <ButtonGroup className="ms-1">
                 <Button onClick={toggleDetails} title="Click for details">
-                    <Icon icon="info" />
+                    <Icon icon="info" margin="m-0" />
                 </Button>
                 {!task.shared.serverWide && (
                     <Button onClick={onEdit} title="Edit task">
-                        <Icon icon="edit" />
+                        <Icon icon="edit" margin="m-0" />
                     </Button>
                 )}
             </ButtonGroup>
 
             {!task.shared.serverWide && (
                 <Button color="danger" className="ms-1" disabled={!canEdit} onClick={onDelete} title="Delete task">
-                    <Icon icon="trash" />
+                    <Icon icon="trash" margin="m-0" />
                 </Button>
             )}
         </div>
@@ -242,7 +242,7 @@ export function ConnectionStringItem(props: {
 
     return (
         <RichPanelDetailItem label="Connection String">
-            <Icon icon="danger" color="danger" className="me-1" />
+            <Icon icon="danger" color="danger" />
             <span className="text-danger">This connection string is not defined.</span>
         </RichPanelDetailItem>
     );
@@ -258,7 +258,7 @@ export function EmptyScriptsWarning(props: { task: AnyEtlOngoingTaskInfo }) {
     return (
         <RichPanelDetailItem className="text-warning">
             <small>
-                <Icon icon="warning" className="me-1" />
+                <Icon icon="warning" />
                 Following scripts don&apos;t match any documents: {emptyScripts.join(", ")}
             </small>
         </RichPanelDetailItem>

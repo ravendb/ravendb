@@ -22,7 +22,7 @@ export function LoadError(props: LoadErrorProps) {
                 <FlexGrow />
                 {refresh && (
                     <Button onClick={refresh}>
-                        <Icon icon="refresh" className="me-1" /> Refresh
+                        <Icon icon="refresh" /> Refresh
                     </Button>
                 )}
             </div>

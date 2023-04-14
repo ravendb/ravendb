@@ -23,8 +23,8 @@ export class Steps extends React.Component<StepsProps> {
             const stepItem = (
                 <div key={"step-" + i} className={classes} onClick={() => onClick(i)}>
                     <div className="step-bullet">
-                        <Icon icon="arrow-thin-bottom" className="bullet-icon-active" />
-                        <Icon icon="check" className="bullet-icon-done" />
+                        <Icon icon="arrow-thin-bottom" margin="m-0" className="bullet-icon-active" />
+                        <Icon icon="check" margin="m-0" className="bullet-icon-done" />
                     </div>
                     <span className="steps-label small-label">{stepName}</span>
                 </div>

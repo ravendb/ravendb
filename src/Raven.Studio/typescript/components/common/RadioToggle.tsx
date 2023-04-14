@@ -16,8 +16,8 @@ export function RadioToggle({ className }: ToggleProps) {
             <input type="radio" id="radio-toggle-right-2" name="time-estimation" value="monthly" />
             <label htmlFor="radio-toggle-right-2">Feature</label>
             <div className="toggle-knob">
-                <Icon icon="bug" />
-                <Icon icon="experimental" />
+                <Icon icon="bug" margin="m-0" />
+                <Icon icon="experimental" margin="m-0" />
             </div>
         </div>
     );

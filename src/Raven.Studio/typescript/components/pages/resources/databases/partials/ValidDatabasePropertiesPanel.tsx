@@ -106,14 +106,14 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     const alertSection = (
         <React.Fragment>
-            <Icon icon="warning" className="me-1" /> {alerts.toLocaleString()} Alerts
+            <Icon icon="warning" /> {alerts.toLocaleString()} Alerts
             {localAlerts !== alerts ? <span> ({localAlerts} local)</span> : null}
         </React.Fragment>
     );
 
     const performanceHintsSection = (
         <React.Fragment>
-            <Icon icon="rocket" className="me-1" /> {performanceHints.toLocaleString()} Performance hints
+            <Icon icon="rocket" /> {performanceHints.toLocaleString()} Performance hints
             {localPerformanceHints !== performanceHints ? <span> ({localPerformanceHints} local)</span> : null}
         </React.Fragment>
     );
@@ -124,34 +124,34 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 <div className="encryption">
                     {db.encrypted && (
                         <span title="This database is encrypted">
-                            <Icon icon="key" color="success" />
+                            <Icon icon="key" color="success" margin="m-0" />
                         </span>
                     )}
                     {!db.encrypted && (
                         <span title="This database is not encrypted">
-                            <Icon icon="unencrypted" color="muted" />
+                            <Icon icon="unencrypted" color="muted" margin="m-0" />
                         </span>
                     )}
                 </div>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <a href={storageReportUrl} target={linksTarget}>
-                    <Icon icon="drive" className="me-1" /> {genUtils.formatBytesToSize(totalSize)}
+                    <Icon icon="drive" /> {genUtils.formatBytesToSize(totalSize)}
                 </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <a href={documentsUrl} target={linksTarget}>
-                    <Icon icon="documents" className="me-1" /> {totalDocuments.toLocaleString()}
+                    <Icon icon="documents" /> {totalDocuments.toLocaleString()}
                 </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <a href={indexingListUrl} target={linksTarget}>
-                    <Icon icon="index" className="me-1" /> {db.indexesCount}
+                    <Icon icon="index" /> {db.indexesCount}
                 </a>
             </RichPanelDetailItem>
             <RichPanelDetailItem title="Click to navigate to Backups view" className="text-danger">
                 <a href={backupUrl} target={linksTarget} className={"text-" + backupStatus.color}>
-                    <Icon icon="backup" className="me-1" />
+                    <Icon icon="backup" />
                     {backupStatus.text}
                 </a>
             </RichPanelDetailItem>
@@ -164,7 +164,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     >
                         <Badge color="faded-danger" className="d-flex align-items-center lh-base rounded-pill">
                             <a href={indexingErrorsUrl} target={linksTarget} className="no-decor">
-                                <Icon icon="exclamation" className="me-1" /> {indexingErrors} Indexing errors
+                                <Icon icon="exclamation" /> {indexingErrors} Indexing errors
                             </a>
                         </Badge>
                     </RichPanelDetailItem>
@@ -176,7 +176,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     >
                         <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
                             <a href={indexingListUrl} target={linksTarget} className="no-decor">
-                                <Icon icon="pause" className="me-1" /> Indexing paused
+                                <Icon icon="pause" /> Indexing paused
                             </a>
                         </Badge>
                     </RichPanelDetailItem>
@@ -185,7 +185,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     <RichPanelDetailItem key="indexing-disabled" title="Indexing is disabled">
                         <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
                             <a href={indexingListUrl} target={linksTarget} className="no-decor">
-                                <Icon icon="disabled" className="me-1" /> Indexing disabled
+                                <Icon icon="stop" /> Indexing disabled
                             </a>
                         </Badge>
                     </RichPanelDetailItem>
@@ -230,7 +230,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 {hasAnyLoadError && (
                     <RichPanelDetailItem key="load-error">
                         <Badge color="faded-danger" className="d-flex align-items-center lh-base rounded-pill pulse">
-                            <Icon icon="danger" className="me-1" /> Database has load errors!
+                            <Icon icon="danger" /> Database has load errors!
                         </Badge>
                     </RichPanelDetailItem>
                 )}

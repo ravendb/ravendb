@@ -45,7 +45,7 @@ function Details(props: SubscriptionPanelProps) {
             <RichPanelDetailItem label="Last Batch Ack Time">{lastBatchAckTime}</RichPanelDetailItem>
             <RichPanelDetailItem label="Last Client Connection Time">{lastClientConnectionTime}</RichPanelDetailItem>
             <RichPanelDetailItem label="Change vector for next batch">
-                <Icon icon="info" color="info" />
+                <Icon icon="info" color="info" margin="m-0" />
             </RichPanelDetailItem>
         </RichPanelDetails>
     );

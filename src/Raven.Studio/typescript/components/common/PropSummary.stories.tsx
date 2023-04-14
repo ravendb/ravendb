@@ -17,25 +17,25 @@ export function PropertySummary() {
             <PropSummary>
                 <PropSummaryItem>
                     <PropSummaryName>
-                        <Icon icon="encryption" className="me-1" /> Encryption
+                        <Icon icon="encryption" /> Encryption
                     </PropSummaryName>
                     <PropSummaryValue color="danger">OFF</PropSummaryValue>
                 </PropSummaryItem>
                 <PropSummaryItem>
                     <PropSummaryName>
-                        <Icon icon="replication" className="me-1" /> Replication
+                        <Icon icon="replication" /> Replication
                     </PropSummaryName>
                     <PropSummaryValue color="danger">OFF</PropSummaryValue>
                 </PropSummaryItem>
                 <PropSummaryItem>
                     <PropSummaryName>
-                        <Icon icon="sharding" className="me-1" /> Sharding
+                        <Icon icon="sharding" /> Sharding
                     </PropSummaryName>
                     <PropSummaryValue color="danger">OFF</PropSummaryValue>
                 </PropSummaryItem>
                 <PropSummaryItem>
                     <PropSummaryName>
-                        <Icon icon="path" className="me-1" /> <strong>Default</strong> paths
+                        <Icon icon="path" /> <strong>Default</strong> paths
                     </PropSummaryName>
                 </PropSummaryItem>
             </PropSummary>

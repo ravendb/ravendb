@@ -102,7 +102,7 @@ export function NodeGroup(props: NodeGroupProps) {
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelName>
-                        <Icon icon="dbgroup" className="me-1" /> Database Group
+                        <Icon icon="dbgroup" /> Database Group
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
@@ -144,7 +144,7 @@ export function NodeGroup(props: NodeGroupProps) {
                                         disabled={!addNodeEnabled}
                                         onClick={addNode}
                                     >
-                                        <Icon icon="plus" className="me-1" />
+                                        <Icon icon="plus" />
                                         Add node
                                     </Button>
                                 </DatabaseGroupActions>

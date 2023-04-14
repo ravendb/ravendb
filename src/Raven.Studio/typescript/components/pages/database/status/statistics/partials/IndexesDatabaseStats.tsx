@@ -79,7 +79,7 @@ function IndexStatistics(props: { indexName: string; database: database }) {
                                     </a>
                                 ) : (
                                     <div title="Index up to date">
-                                        <Icon icon="check" color="success" />
+                                        <Icon icon="check" color="success" margin="m-0" />
                                     </div>
                                 )
                             }
@@ -248,7 +248,7 @@ function DetailsBlock(props: IndexBlockProps): JSX.Element {
                 if (status === "failure") {
                     return (
                         <td key={key} className="text-danger">
-                            <Icon icon="cancel" title="Load error" />
+                            <Icon icon="cancel" title="Load error" margin="m-0" />
                         </td>
                     );
                 }

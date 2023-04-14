@@ -41,7 +41,7 @@ export function LicenseRestrictions(props: LicenseRestrictionsProps): JSX.Elemen
                                         size="xs"
                                         className="rounded-pill"
                                     >
-                                        Licensing options <Icon icon="newtab" />
+                                        Licensing options <Icon icon="newtab" margin="ms-1" />
                                     </Button>
                                 </div>
                             </>

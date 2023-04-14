@@ -30,16 +30,16 @@ export function ReorderNodesControls(props: ReorderNodesControlsProps) {
 
     return !sortableMode ? (
         <Button disabled={canSort} onClick={enableReorder} className="me-2">
-            <Icon icon="reorder" className="me-1" /> Reorder nodes
+            <Icon icon="reorder" /> Reorder nodes
         </Button>
     ) : (
         <>
             <Button color="success" onClick={onSaveClicked} disabled={saving}>
-                {saving ? <Spinner size="sm" /> : <Icon icon="save" className="me-1" />}
+                {saving ? <Spinner size="sm" /> : <Icon icon="save" />}
                 <span>Save reorder</span>
             </Button>
             <Button onClick={cancelReorder} className="ms-1">
-                <Icon icon="cancel" className="me-1" />
+                <Icon icon="cancel" />
                 <span>Cancel</span>
             </Button>
         </>

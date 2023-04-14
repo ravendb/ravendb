@@ -10,7 +10,7 @@ export function EmptySet(props: EmptySetProps) {
 
     return (
         <div className="text-center mb-2">
-            <Icon icon="empty-set" color="muted" className="icon-xl"></Icon>
+            <Icon icon="empty-set" color="muted" className="icon-xl" margin="m-0" />
             <div className="lead">{children}</div>
         </div>
     );

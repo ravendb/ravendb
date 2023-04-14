@@ -44,7 +44,7 @@ export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps)
                     className="rounded-pill"
                     onClick={() => deleteFromGroup(node.tag)}
                 >
-                    <Icon icon="cancel" className="me-1" /> Remove
+                    <Icon icon="cancel" /> Remove
                 </Button>
             </DatabaseGroupActions>
             <DatabaseGroupError node={node} />
@@ -74,19 +74,18 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                 {canDelete ? (
                     <UncontrolledDropdown key="can-delete">
                         <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
-                            <Icon icon="disconnected" className="me-1" />
+                            <Icon icon="disconnected" />
                             Delete from group
                         </DropdownToggle>
                         <DropdownMenu>
                             <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
-                                <Icon icon="disconnected" className="me-1" />
+                                <Icon icon="disconnected" />
                                 <span>Soft Delete</span>&nbsp;
                                 <br />
                                 <small>stop replication and keep database files on the node</small>
                             </DropdownItem>
                             <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
-                                <Icon icon="trash" color="danger" className="me-1" />{" "}
-                                <span className="text-danger">Hard Delete</span>
+                                <Icon icon="trash" color="danger" /> <span className="text-danger">Hard Delete</span>
                                 <br />
                                 &nbsp;<small>stop replication and remove database files on the node</small>
                             </DropdownItem>
@@ -97,11 +96,9 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                         <UncontrolledDropdown id={deleteLockId}>
                             <DropdownToggle color="danger" caret disabled size="xs" className="rounded-pill">
                                 {databaseLockMode === "PreventDeletesError" && (
-                                    <Icon icon="trash" addon="exclamation" className="me-1" />
+                                    <Icon icon="trash" addon="exclamation" />
                                 )}
-                                {databaseLockMode === "PreventDeletesIgnore" && (
-                                    <Icon icon="trash" addon="cancel" className="me-1" />
-                                )}
+                                {databaseLockMode === "PreventDeletesIgnore" && <Icon icon="trash" addon="cancel" />}
                                 Delete from group
                             </DropdownToggle>
                         </UncontrolledDropdown>
@@ -140,7 +137,7 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
             <DatabaseGroupActions>
                 <UncontrolledDropdown key="advanced">
                     <DropdownToggle caret outline size="xs" color="secondary" className="rounded-pill">
-                        <Icon icon="debug-advanced" className="me-1" />
+                        <Icon icon="debug-advanced" />
                         Advanced
                     </DropdownToggle>
                     <DropdownMenu>
@@ -152,19 +149,18 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                 {canDelete ? (
                     <UncontrolledDropdown key="can-delete" className="mt-1">
                         <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
-                            <Icon icon="disconnected" className="me-1" />
+                            <Icon icon="disconnected" />
                             Delete from group
                         </DropdownToggle>
                         <DropdownMenu>
                             <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
-                                <Icon icon="trash" className="me-1" />
+                                <Icon icon="trash" />
                                 <span>Soft Delete</span>&nbsp;
                                 <br />
                                 <small>stop replication and keep database files on the node</small>
                             </DropdownItem>
                             <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
-                                <Icon icon="alerts" color="danger" className="me-1" />{" "}
-                                <span className="text-danger">Hard Delete</span>
+                                <Icon icon="alerts" color="danger" /> <span className="text-danger">Hard Delete</span>
                                 <br />
                                 &nbsp;<small>stop replication and remove database files on the node</small>
                             </DropdownItem>
@@ -175,11 +171,9 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                         <UncontrolledDropdown id={deleteLockId} className="mt-1">
                             <DropdownToggle color="danger" caret disabled outline size="xs" className="rounded-pill">
                                 {databaseLockMode === "PreventDeletesError" && (
-                                    <Icon icon="trash" addon="exclamation" className="me-1" />
+                                    <Icon icon="trash" addon="exclamation" />
                                 )}
-                                {databaseLockMode === "PreventDeletesIgnore" && (
-                                    <Icon icon="trash" addon="cancel" className="me-1" />
-                                )}
+                                {databaseLockMode === "PreventDeletesIgnore" && <Icon icon="trash" addon="cancel" />}
                                 Delete from group
                             </DropdownToggle>
                         </UncontrolledDropdown>

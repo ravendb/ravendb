@@ -114,16 +114,16 @@ function ManualBackup(props: ManualBackupProps) {
                 <div className="flex-horizontal align-items-center p-2">
                     {backup.encrypted ? (
                         <div title="Backup is encrypted">
-                            <Icon icon="encryption" color="success" />
+                            <Icon icon="encryption" color="success" margin="m-0" />
                         </div>
                     ) : (
                         <div title="Backup is not encrypted">
-                            <Icon icon="unlock" color="muted" />
+                            <Icon icon="unlock" color="muted" margin="m-0" />
                         </div>
                     )}
 
                     <div className="text-node ms-3" title="Cluster node that created this backup">
-                        <Icon icon="cluster-node" className="me-1" />
+                        <Icon icon="cluster-node" />
                         <span>{backup.nodeTag}</span>
                     </div>
                 </div>
@@ -280,21 +280,21 @@ export function BackupsPage(props: BackupsPageProps) {
                             onClick={navigateToRestoreDatabase}
                             title="Navigate to creating a new database from a backup"
                         >
-                            <Icon icon="restore-backup" className="me-1" /> Restore a database from a backup
+                            <Icon icon="restore-backup" /> Restore a database from a backup
                         </Button>
                     </div>
                 )}
 
                 <div className="flex-shrink-0">
                     <HrHeader>
-                        <Icon icon="backup" className="me-1" />
+                        <Icon icon="backup" />
                         <span>Manual Backup</span>
                     </HrHeader>
 
                     {isAdminAccessOrAbove(database) && (
                         <div className="mb-1 flex-shrink-0">
                             <Button color="primary" title="Backup the database now" onClick={createManualBackup}>
-                                <Icon icon="backup" className="me-1" /> Create a Backup
+                                <Icon icon="backup" /> Create a Backup
                             </Button>
                         </div>
                     )}
@@ -319,7 +319,7 @@ export function BackupsPage(props: BackupsPageProps) {
                             )
                         }
                     >
-                        <Icon icon="manage-ongoing-tasks" className="me-1" />
+                        <Icon icon="manage-ongoing-tasks" />
                         <span>Periodic Backup ({backups.length})</span>
                     </HrHeader>
                     {canReadWriteDatabase(database) && (
@@ -329,7 +329,7 @@ export function BackupsPage(props: BackupsPageProps) {
                                 onClick={createNewPeriodicBackupTask}
                                 title="Create an ongoing periodic backup task"
                             >
-                                <Icon icon="backup" className="me-1" /> Create a Periodic Backup
+                                <Icon icon="backup" /> Create a Periodic Backup
                             </Button>
                         </div>
                     )}
