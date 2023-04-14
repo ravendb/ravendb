@@ -49,6 +49,7 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Studio;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
@@ -290,6 +291,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, CleanupTombstonesCommand.Response> CleanupTombstonesResponse = GenerateJsonDeserializationRoutine<CleanupTombstonesCommand.Response>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetTombstonesStateCommand.Response> GetTombstonesStateResponse = GenerateJsonDeserializationRoutine<GetTombstonesStateCommand.Response>();
+
+        internal static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionsDetails> SubscriptionConnectionsDetails = GenerateJsonDeserializationRoutine<SubscriptionConnectionsDetails>();
 
         public class Parameters
         {

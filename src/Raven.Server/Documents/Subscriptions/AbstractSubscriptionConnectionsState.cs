@@ -48,7 +48,7 @@ public abstract class AbstractSubscriptionConnectionsState : IDisposable
         _waitForMoreDocuments.Reset();
         return t;
     }
-    
+
     public static IEnumerable<ResendItem> GetResendItems(ClusterOperationContext context, string database, long id)
     {
         var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
@@ -101,7 +101,7 @@ public abstract class AbstractSubscriptionConnectionsState : IDisposable
             }
         }
     }
-    
+
     public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionKeyPrefix(ClusterOperationContext context, string database, long subscriptionId, SubscriptionType type, out ByteString prefix)
     {
         using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
@@ -117,7 +117,7 @@ public abstract class AbstractSubscriptionConnectionsState : IDisposable
         changeVector = null;
         var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
         using (GetDatabaseAndSubscriptionAndDocumentKey(context, database, subscriptionId, documentId, out var key))
-        using (Slice.External(context.Allocator,key, out var keySlice))
+        using (Slice.External(context.Allocator, key, out var keySlice))
         {
             if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
                 return false;
@@ -178,7 +178,7 @@ public abstract class AbstractSubscriptionConnectionsState : IDisposable
         pkSlice.CopyTo(key.Ptr + position);
         return rc;
     }
-        
+
     private static unsafe void PopulatePrefix(long subscriptionId, SubscriptionType type, ref ByteString prefix, ref Slice dbName, out int position)
     {
         dbName.CopyTo(prefix.Ptr);
@@ -220,9 +220,9 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
 
     public bool IsConcurrent => _connections.FirstOrDefault()?.Strategy == SubscriptionOpeningStrategy.Concurrent;
 
-    private readonly ConcurrentSet<TSubscriptionConnection> _pendingConnections = new ();
-    private readonly ConcurrentQueue<TSubscriptionConnection> _recentConnections = new ();
-    private readonly ConcurrentQueue<TSubscriptionConnection> _rejectedConnections = new ();
+    private readonly ConcurrentSet<TSubscriptionConnection> _pendingConnections = new();
+    private readonly ConcurrentQueue<TSubscriptionConnection> _recentConnections = new();
+    private readonly ConcurrentQueue<TSubscriptionConnection> _rejectedConnections = new();
     public IEnumerable<TSubscriptionConnection> RecentConnections => _recentConnections;
     public IEnumerable<TSubscriptionConnection> RecentRejectedConnections => _rejectedConnections;
     public ConcurrentSet<TSubscriptionConnection> PendingConnections => _pendingConnections;
@@ -302,11 +302,10 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
     {
         var subscriptionConnectionsDetails = new SubscriptionConnectionsDetails
         {
-            Results = new List<SubscriptionConnectionDetails>()
+            Results = new List<SubscriptionConnectionDetails>(),
+            SubscriptionMode = IsConcurrent ? SubscriptionMode.Concurrent : SubscriptionMode.Single
         };
 
-        subscriptionConnectionsDetails.SubscriptionMode = IsConcurrent? "Concurrent" : "Single";
-            
         foreach (var connection in _connections)
         {
             subscriptionConnectionsDetails.Results.Add(
@@ -345,7 +344,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
     {
         return _subscriptionActivelyWorkingLock.WaitAsync(millisecondsTimeout);
     }
-        
+
     public void ReleaseSubscriptionActiveLock()
     {
         _subscriptionActivelyWorkingLock.Release();
@@ -355,7 +354,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
     {
         try
         {
-            if (TryRegisterFirstConnection(incomingConnection)) 
+            if (TryRegisterFirstConnection(incomingConnection))
                 return GetDisposingAction();
 
             if (IsConcurrent)
@@ -409,7 +408,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
         var current = _connections;
         if (current.IsEmpty)
         {
-            var firstConnection = new ConcurrentSet<TSubscriptionConnection> {incomingConnection};
+            var firstConnection = new ConcurrentSet<TSubscriptionConnection> { incomingConnection };
             return Interlocked.CompareExchange(ref _connections, firstConnection, current) == current;
         }
 
@@ -439,9 +438,9 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
                     throw new SubscriptionInUseException(
                         $"Subscription {currentConnection?.Options.SubscriptionName} is occupied, connection cannot be opened");
                 case SubscriptionOpeningStrategy.TakeOver:
-                    
+
                     ValidateTakeOver(currentConnection);
-                    
+
                     if (currentConnection != null)
                     {
                         DropSingleConnection(currentConnection, new SubscriptionInUseException("Closed by TakeOver"));
@@ -488,9 +487,9 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
     private bool TryAddConnection(TSubscriptionConnection connection)
     {
         int oldMax = _maxConcurrentConnections;
-        if (_connections.TryAdd(connection) == false)  
+        if (_connections.TryAdd(connection) == false)
             return false;
-            
+
         var newMax = Math.Max(oldMax, _connections.Count);
         while (newMax > oldMax)
         {
@@ -502,7 +501,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
 
         return true;
     }
-    
+
     public void RegisterRejectedConnection(TSubscriptionConnection connection, SubscriptionException exception = null)
     {
         if (exception != null && connection.ConnectionException == null)
