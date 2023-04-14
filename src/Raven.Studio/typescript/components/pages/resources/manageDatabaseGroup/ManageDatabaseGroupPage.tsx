@@ -110,7 +110,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                     <FlexGrow />
                     {db.isSharded() && (
                         <Button color="shard" onClick={addNewShard}>
-                            <Icon icon="shard" addon="plus" className="me-1" />
+                            <Icon icon="shard" addon="plus" />
                             Add Shard
                         </Button>
                     )}

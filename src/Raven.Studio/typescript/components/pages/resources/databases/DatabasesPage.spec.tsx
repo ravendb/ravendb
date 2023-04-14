@@ -10,7 +10,7 @@ const { Single, Cluster, Sharded, DifferentNodeStates, WithLoadError, WithDiffer
 const selectors = {
     disableButton: "Disable",
     enableButton: "Enable",
-    pauseIndexing: "Pause indexing",
+    pauseIndexing: "Pause indexing until restart",
     disableIndexing: "Disable indexing",
     compactDatabase: "Compact database",
 };

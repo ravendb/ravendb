@@ -26,7 +26,7 @@ export function StatsHeader() {
                         onClick={() => dispatch(toggleDetails())}
                         title="Click to load detailed statistics"
                     >
-                        <Icon icon={detailsVisible ? "collapse-vertical" : "expand-vertical"} className="me-1" />
+                        <Icon icon={detailsVisible ? "collapse-vertical" : "expand-vertical"} />
                         <span>{detailsVisible ? "Hide" : "Show"} detailed database &amp; indexing stats</span>
                     </Button>
                 </Col>
@@ -38,7 +38,7 @@ export function StatsHeader() {
                         disabled={spinnerRefresh}
                         title="Click to refresh stats"
                     >
-                        {spinnerRefresh ? <Spinner size="sm" /> : <Icon icon="refresh" />}
+                        {spinnerRefresh ? <Spinner size="sm" /> : <Icon icon="refresh" margin="m-0" />}
                         <span>Refresh</span>
                     </Button>
                 </Col>

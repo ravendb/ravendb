@@ -35,7 +35,7 @@ const TemplatePanel = (args: {
             <Card className="p-4">
                 <div>
                     <Button color="primary" onClick={toggleCreateDatabase}>
-                        <Icon icon="database" addon="plus" className="me-1" /> New Database
+                        <Icon icon="database" addon="plus" /> New Database
                     </Button>
                 </div>
             </Card>

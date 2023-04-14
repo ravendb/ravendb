@@ -1,17 +1,20 @@
 ﻿import React, { HTMLAttributes } from "react";
 import classNames from "classnames";
+import IconName from "typings/server/icons";
 
 interface IconProps extends HTMLAttributes<HTMLDivElement> {
-    icon: string;
-    addon?: string;
+    icon: IconName;
+    addon?: IconName;
     color?: string;
+    margin?: string;
     className?: string;
 }
 
 export function Icon(props: IconProps) {
-    const { icon, addon, color, className, ...rest } = props;
+    const { icon, addon, color, margin, className, ...rest } = props;
     const iconClasses = "icon-" + icon;
     const addonClasses = addon ? "icon-addon-" + addon : null;
     const colorClasses = color ? "text-" + color : null;
-    return <i className={classNames(iconClasses, addonClasses, colorClasses, className)} {...rest} />;
+    const marginClass = margin ?? "me-1";
+    return <i className={classNames(iconClasses, addonClasses, colorClasses, marginClass, className)} {...rest} />;
 }

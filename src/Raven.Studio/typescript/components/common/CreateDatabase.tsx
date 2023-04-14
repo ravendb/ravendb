@@ -255,24 +255,24 @@ export function CreateDatabase(props: CreateDatabaseProps) {
                     <Button onClick={toggleCreateFromBackup} className="rounded-pill">
                         {createFromBackup ? (
                             <>
-                                <Icon icon="database" addon="star me-1" /> Create new database
+                                <Icon icon="database" addon="star" /> Create new database
                             </>
                         ) : (
                             <>
-                                <Icon icon="database" addon="arrow-up me-1" /> Create from backup
+                                <Icon icon="database" addon="arrow-up" /> Create from backup
                             </>
                         )}
                     </Button>
                 ) : (
                     <Button onClick={prevStep} className="rounded-pill">
-                        <Icon icon="arrow-thin-left" className="me-1" /> Back
+                        <Icon icon="arrow-thin-left" /> Back
                     </Button>
                 )}
                 <FlexGrow />
                 {showQuickCreate && (
                     <>
                         <Button className="rounded-pill me-1" id="QuickCreateButton">
-                            <Icon icon="star" className="me-1" />
+                            <Icon icon="star" />
                             Quick Create
                         </Button>
 
@@ -285,7 +285,7 @@ export function CreateDatabase(props: CreateDatabaseProps) {
                             <PropSummary>
                                 <PropSummaryItem>
                                     <PropSummaryName>
-                                        <Icon icon="encryption" className="me-1" /> Encryption
+                                        <Icon icon="encryption" /> Encryption
                                     </PropSummaryName>
                                     {encryptionEnabled ? (
                                         <PropSummaryValue color="success"> ON</PropSummaryValue>
@@ -296,7 +296,7 @@ export function CreateDatabase(props: CreateDatabaseProps) {
 
                                 <PropSummaryItem>
                                     <PropSummaryName>
-                                        <Icon icon="replication" className="me-1" /> Replication
+                                        <Icon icon="replication" /> Replication
                                     </PropSummaryName>
                                     {replicationFactor > 1 ? (
                                         <PropSummaryValue color="success"> ON</PropSummaryValue>
@@ -307,7 +307,7 @@ export function CreateDatabase(props: CreateDatabaseProps) {
 
                                 <PropSummaryItem>
                                     <PropSummaryName>
-                                        <Icon icon="sharding" className="me-1" /> Sharding
+                                        <Icon icon="sharding" /> Sharding
                                     </PropSummaryName>
                                     {shardingEnabled ? (
                                         <PropSummaryValue color="success"> ON</PropSummaryValue>
@@ -319,7 +319,7 @@ export function CreateDatabase(props: CreateDatabaseProps) {
                                 {manualNodeSelection && (
                                     <PropSummaryItem>
                                         <PropSummaryName>
-                                            <Icon icon="node" className="me-1" /> Manual node selection
+                                            <Icon icon="node" /> Manual node selection
                                         </PropSummaryName>
                                         <PropSummaryValue color="success"> ON</PropSummaryValue>
                                     </PropSummaryItem>
@@ -329,12 +329,12 @@ export function CreateDatabase(props: CreateDatabaseProps) {
                                     <PropSummaryName>
                                         {useDefaultPaths ? (
                                             <>
-                                                <Icon icon="path" className="me-1" /> <strong>Default</strong> paths
+                                                <Icon icon="path" /> <strong>Default</strong> paths
                                             </>
                                         ) : (
                                             <>
-                                                <Icon icon="path" className="me-1" />{" "}
-                                                <strong className="text-sucess">Custom</strong> paths
+                                                <Icon icon="path" /> <strong className="text-success">Custom</strong>{" "}
+                                                paths
                                             </>
                                         )}
                                     </PropSummaryName>
@@ -346,11 +346,11 @@ export function CreateDatabase(props: CreateDatabaseProps) {
 
                 {isLastStep ? (
                     <Button color="success" className="rounded-pill">
-                        <Icon icon="rocket" className="me-1" /> Finish
+                        <Icon icon="rocket" /> Finish
                     </Button>
                 ) : (
                     <Button color="primary" className="rounded-pill" onClick={nextStep} disabled={isLastStep}>
-                        Next <Icon icon="arrow-thin-right" className="ms-1" />
+                        Next <Icon icon="arrow-thin-right" margin="ms-1" />
                     </Button>
                 )}
             </ModalFooter>
@@ -387,10 +387,10 @@ export function StepCreateNew(props: StepCreateNewProps) {
                                 message={
                                     <>
                                         <p className="lead text-warning">
-                                            <Icon icon="unsecure" /> Authentication is off
+                                            <Icon icon="unsecure" margin="m-0" /> Authentication is off
                                         </p>
                                         <p>
-                                            <strong>Encription at Rest</strong> is only possible when authentication is
+                                            <strong>Encryption at Rest</strong> is only possible when authentication is
                                             enabled and a server certificate has been defined.
                                         </p>
                                         <p>
@@ -407,7 +407,7 @@ export function StepCreateNew(props: StepCreateNewProps) {
                                     disabled={!serverAuthentication}
                                 >
                                     <span className="lead">
-                                        <Icon icon="encryption" className="me-1" />
+                                        <Icon icon="encryption" />
                                         Encrypt at Rest
                                     </span>
                                 </Switch>
@@ -417,7 +417,7 @@ export function StepCreateNew(props: StepCreateNewProps) {
                                 isAvailable={licenseProps.encryption}
                                 featureName={
                                     <strong className="text-primary">
-                                        <Icon icon="storage" addon="encryption" /> Storage encryption
+                                        <Icon icon="storage" addon="encryption" margin="m-0" /> Storage encryption
                                     </strong>
                                 }
                             >
@@ -429,14 +429,14 @@ export function StepCreateNew(props: StepCreateNewProps) {
                                     disabled={!licenseProps.encryption}
                                 >
                                     <span className="lead">
-                                        <Icon icon="encryption" className="me-1" />
+                                        <Icon icon="encryption" />
                                         Encrypt at Rest
                                     </span>
                                 </Switch>
                             </LicenseRestrictions>
                         )}
 
-                        <Icon icon="info" color="info" id="encryptionInfo" className="ms-1" />
+                        <Icon icon="info" color="info" id="encryptionInfo" margin="ms-1" />
                     </div>
                     <UncontrolledPopover
                         target="encryptionInfo"
@@ -474,23 +474,23 @@ export function StepEncryption(props: StepEncryptionProps) {
                     <InputGroup>
                         <Input value="13a5f83gy71ws032nm69" />
                         <Button title="Copy to clipboard">
-                            <Icon icon="copy-to-clipboard" />
+                            <Icon icon="copy-to-clipboard" margin="m-0" />
                         </Button>
                     </InputGroup>
                     <Row className="mt-2">
                         <Col>
                             <Button block color="primary" size="sm">
-                                <Icon icon="download" className="me-1" /> Download encryption key
+                                <Icon icon="download" /> Download encryption key
                             </Button>
                         </Col>
                         <Col>
                             <Button block size="sm">
-                                <Icon icon="print" className="me-1" /> Print encryption key
+                                <Icon icon="print" /> Print encryption key
                             </Button>
                         </Col>
                     </Row>
                     <Alert color="warning" className="d-flex align-items-center mt-2">
-                        <Icon icon="warning" className="fs-2 me-2" />
+                        <Icon icon="warning" margin="me-2" className="fs-2" />
                         <div>
                             Save the key in a safe place. It will not be available again. If you lose this key you could
                             lose access to your data
@@ -501,7 +501,7 @@ export function StepEncryption(props: StepEncryptionProps) {
                     <img src={qrImg} alt="" />
                     <div className="text-center mt-1">
                         <small id="qrInfo" className="text-info">
-                            <Icon icon="info" /> what's this?
+                            <Icon icon="info" margin="m-0" /> what's this?
                         </small>
                     </div>
                     <UncontrolledPopover target="qrInfo" placement="top" trigger="hover" container="PopoverContainer">
@@ -576,14 +576,14 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
             <Row className="my-4">
                 <Col className="text-end">
                     <span id="ReplicationInfo">
-                        <Icon icon="info" color="info" /> Available nodes:{" "}
-                        <Icon icon="node" color="node" className="ms-1" /> <strong>{availableNodes}</strong>
+                        <Icon icon="info" color="info" margin="m-0" /> Available nodes:{" "}
+                        <Icon icon="node" color="node" margin="ms-1" /> <strong>{availableNodes}</strong>
                     </span>
                 </Col>
                 <Col>
                     <div>
                         <span id="ShardingInfo">
-                            <Icon icon="info" color="info" /> What is sharding?
+                            <Icon icon="info" color="info" margin="m-0" /> What is sharding?
                         </span>
                     </div>
                     <div>
@@ -591,7 +591,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                             isAvailable={licenseProps.sharding}
                             featureName={
                                 <strong className="text-shard">
-                                    <Icon icon="sharding" /> Sharding
+                                    <Icon icon="sharding" margin="m-0" /> Sharding
                                 </strong>
                             }
                             className="d-inline-block"
@@ -605,7 +605,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                             >
                                 Enable{" "}
                                 <strong className="text-shard">
-                                    <Icon icon="sharding" /> Sharding
+                                    <Icon icon="sharding" margin="m-0" /> Sharding
                                 </strong>
                             </Switch>
                         </LicenseRestrictions>
@@ -618,7 +618,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                     <div>
                         Add more{" "}
                         <strong className="text-node">
-                            <Icon icon="node" /> Instance nodes
+                            <Icon icon="node" margin="m-0" /> Instance nodes
                         </strong>{" "}
                         in <a href="#">Manage cluster</a> view
                     </div>
@@ -629,13 +629,13 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                 <PopoverBody>
                     <p>
                         <strong className="text-shard">
-                            <Icon icon="sharding" /> Sharding
+                            <Icon icon="sharding" margin="m-0" /> Sharding
                         </strong>{" "}
                         is a database partitioning technique that breaks up large databases into smaller, more
                         manageable pieces called{" "}
                         <strong className="text-shard">
                             {" "}
-                            <Icon icon="shard" />
+                            <Icon icon="shard" margin="m-0" />
                             shards
                         </strong>
                         .
@@ -645,7 +645,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                         <strong>horizontal scalability and improved performance</strong>.
                     </p>
                     <a href="#">
-                        Learn more TODO <Icon icon="newtab" />
+                        Learn more TODO <Icon icon="newtab" margin="m-0" />
                     </a>
                 </PopoverBody>
             </UncontrolledPopover>
@@ -705,7 +705,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                                 Data will be divided into{" "}
                                 <strong>
                                     {shardCount}
-                                    <Icon icon="shard" /> Shards
+                                    <Icon icon="shard" margin="m-0" /> Shards
                                 </strong>
                                 .<br />
                             </>
@@ -714,7 +714,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                             <>
                                 {shardingEnabled ? <>Each shard</> : <>Data</>} will be replicated to{" "}
                                 <strong>
-                                    {replicationFactor} <Icon icon="node" /> Nodes
+                                    {replicationFactor} <Icon icon="node" margin="m-0" /> Nodes
                                 </strong>
                                 .
                             </>
@@ -839,7 +839,7 @@ export function StepNodeSelection(props: StepNodeSelectionProps) {
                             <tr>
                                 {shardCount > 1 && (
                                     <th scope="row">
-                                        <Icon icon="shard" color="shard" /> {index}
+                                        <Icon icon="shard" color="shard" margin="m-0" /> {index}
                                     </th>
                                 )}
 
@@ -892,18 +892,18 @@ export function NodeSelectionDropdown(props: NodeSelectionDropdownProps) {
                         <>select</>
                     ) : (
                         <>
-                            <Icon icon="node" color="node" /> {destinationNode}
+                            <Icon icon="node" color="node" margin="m-0" /> {destinationNode}
                         </>
                     )}
                 </DropdownToggle>
                 <DropdownMenu container="DropdownContainer">
                     {nodeList.map((nodeTag) => (
                         <DropdownItem key={nodeTag} onClick={() => handleUpdate()}>
-                            <Icon icon="node" color="node" /> {nodeTag}
+                            <Icon icon="node" color="node" margin="m-0" /> {nodeTag}
                         </DropdownItem>
                     ))}
                     <DropdownItem>
-                        <Icon icon="disabled" /> None
+                        <Icon icon="disabled" margin="m-0" /> None
                     </DropdownItem>
                 </DropdownMenu>
             </UncontrolledDropdown>
@@ -945,7 +945,7 @@ export function StepPaths(props: StepPathsProps) {
                         <tr>
                             <th scope="row" className="align-middle">
                                 <strong>
-                                    <Icon icon="node" color="node" /> {nodeTag}
+                                    <Icon icon="node" color="node" margin="m-0" /> {nodeTag}
                                 </strong>
                             </th>
                             <td className="align-middle text-break">/data/test</td>
@@ -995,7 +995,7 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
                         className=" me-2 px-4 pt-3 w-100"
                         color="node"
                     >
-                        <Icon icon="database" className="fs-2" />
+                        <Icon icon="database" margin="m-0" className="fs-2" />
                         <br />
                         Regular database
                     </Button>
@@ -1005,7 +1005,7 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
                         isAvailable={licenseIncludesSharding}
                         featureName={
                             <strong className="text-shard">
-                                <Icon icon="sharding" /> Sharding
+                                <Icon icon="sharding" margin="m-0" /> Sharding
                             </strong>
                         }
                         className="d-inline-block"
@@ -1018,7 +1018,7 @@ export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
                             className="px-4 pt-3 w-100"
                             disabled={!licenseIncludesSharding}
                         >
-                            <Icon icon="sharding" className="fs-2" />
+                            <Icon icon="sharding" margin="m-0" className="fs-2" />
                             <br />
                             Sharded database
                         </Button>
@@ -1059,35 +1059,35 @@ export function StepBackupSource(props: StepBackupSourceProps) {
             case "local":
                 return (
                     <>
-                        <Icon icon="storage" className="me-1" />
+                        <Icon icon="storage" />
                         Local Server Directory
                     </>
                 );
             case "cloud":
                 return (
                     <>
-                        <Icon icon="cloud" className="me-1" />
+                        <Icon icon="cloud" />
                         RavenDB Cloud
                     </>
                 );
             case "aws":
                 return (
                     <>
-                        <Icon icon="aws" className="me-1" />
+                        <Icon icon="aws" />
                         Amazon S3
                     </>
                 );
             case "azure":
                 return (
                     <>
-                        <Icon icon="azure" className="me-1" />
+                        <Icon icon="azure" />
                         Microsoft Azure
                     </>
                 );
             case "gcp":
                 return (
                     <>
-                        <Icon icon="gcp" className="me-1" />
+                        <Icon icon="gcp" />
                         Google Cloud Platform
                     </>
                 );
@@ -1150,13 +1150,13 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                                             <ButtonGroup className="w-100">
                                                 <UncontrolledDropdown className="me-1">
                                                     <DropdownToggle caret>
-                                                        <Icon icon="node" color="node" className="me-1" />
+                                                        <Icon icon="node" color="node" />
                                                         <strong>DEV</strong>
                                                     </DropdownToggle>
                                                     <DropdownMenu>
                                                         {nodeList.map((node) => (
                                                             <DropdownItem>
-                                                                <Icon icon="node" color="node" className="me-1" />
+                                                                <Icon icon="node" color="node" />
                                                                 <strong>{node}</strong>
                                                             </DropdownItem>
                                                         ))}
@@ -1164,13 +1164,12 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                                                 </UncontrolledDropdown>
                                                 <UncontrolledDropdown className="me-1">
                                                     <DropdownToggle caret>
-                                                        <Icon icon="shard" color="shard" className="ms-1" />
+                                                        <Icon icon="shard" color="shard" margin="ms-1" />
                                                         <strong>1</strong>
                                                     </DropdownToggle>
                                                     <DropdownMenu>
                                                         <DropdownItem>
-                                                            <Icon icon="shard" color="shard" className="me-1" />{" "}
-                                                            <strong>1</strong>
+                                                            <Icon icon="shard" color="shard" /> <strong>1</strong>
                                                         </DropdownItem>
                                                     </DropdownMenu>
                                                 </UncontrolledDropdown>
@@ -1181,7 +1180,7 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                                     <Row className="mt-2">
                                         <Col lg={{ offset: 3 }}>
                                             <Button size="sm" outline color="info" className="rounded-pill">
-                                                <Icon icon="restore-backup" /> Add shard restore point
+                                                <Icon icon="restore-backup" margin="m-0" /> Add shard restore point
                                             </Button>
                                         </Col>
                                     </Row>
@@ -1207,12 +1206,12 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                         <Col lg={{ offset: 3, size: 9 }}>
                             <div className="mt-4">
                                 <Switch color="primary" selected={null} toggleSelection={null}>
-                                    <Icon icon="ongoing-tasks" addon="cancel" className="me-1" />
+                                    <Icon icon="ongoing-tasks" addon="cancel" />
                                     Disable ongoing tasks after restore
                                 </Switch>
                                 <br />
                                 <Switch color="primary" selected={null} toggleSelection={null}>
-                                    <Icon icon="index" className="me-1" /> Skip indexes
+                                    <Icon icon="index" /> Skip indexes
                                 </Switch>
                                 <br />
                                 {/* TODO: Lock encryption when the source file is encrypted */}
@@ -1222,7 +1221,7 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                                         message={
                                             <>
                                                 <p className="lead text-warning">
-                                                    <Icon icon="unsecure" /> Authentication is off
+                                                    <Icon icon="unsecure" margin="m-0" /> Authentication is off
                                                 </p>
                                                 <p>
                                                     <strong>Encription at Rest</strong> is only possible when
@@ -1241,7 +1240,7 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                                             toggleSelection={toggleEncryption}
                                             disabled={!serverAuthentication}
                                         >
-                                            <Icon icon="encryption" className="me-1" />
+                                            <Icon icon="encryption" />
                                             Encrypt at Rest
                                         </Switch>
                                     </LicenseRestrictions>
@@ -1250,7 +1249,8 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                                         isAvailable={licenseProps.encryption}
                                         featureName={
                                             <strong className="text-primary">
-                                                <Icon icon="storage" addon="encryption" /> Storage encryption
+                                                <Icon icon="storage" addon="encryption" margin="m-0" /> Storage
+                                                encryption
                                             </strong>
                                         }
                                         className="d-inline-block"
@@ -1261,7 +1261,7 @@ export function StepBackupSource(props: StepBackupSourceProps) {
                                             toggleSelection={toggleEncryption}
                                             disabled={!licenseProps.encryption}
                                         >
-                                            <Icon icon="encryption" className="me-1" />
+                                            <Icon icon="encryption" />
                                             Encrypt at Rest
                                         </Switch>
                                     </LicenseRestrictions>
@@ -1334,13 +1334,12 @@ export function BackupSourceFragmentLocal(props: BackupSourceFragmentLocalProps)
                                     <InputGroup>
                                         <UncontrolledDropdown>
                                             <DropdownToggle caret>
-                                                <Icon icon="node" color="node" className="me-1" />{" "}
-                                                <strong>{backup.node}</strong>
+                                                <Icon icon="node" color="node" /> <strong>{backup.node}</strong>
                                             </DropdownToggle>
                                             <DropdownMenu>
                                                 {nodeList.map((node) => (
                                                     <DropdownItem>
-                                                        <Icon icon="node" color="node" className="me-1" />
+                                                        <Icon icon="node" color="node" />
                                                         <strong>{node}</strong>
                                                     </DropdownItem>
                                                 ))}
@@ -1349,13 +1348,11 @@ export function BackupSourceFragmentLocal(props: BackupSourceFragmentLocalProps)
                                         <Input placeholder="Enter backup directory path" value={backup.directory} />
                                         <UncontrolledDropdown>
                                             <DropdownToggle caret>
-                                                <Icon icon="shard" color="shard" className="me-1" />{" "}
-                                                <strong>{backup.shard}</strong>
+                                                <Icon icon="shard" color="shard" /> <strong>{backup.shard}</strong>
                                             </DropdownToggle>
                                             <DropdownMenu>
                                                 <DropdownItem>
-                                                    <Icon icon="shard" color="shard" className="me-1" />{" "}
-                                                    <strong>1</strong>
+                                                    <Icon icon="shard" color="shard" /> <strong>1</strong>
                                                 </DropdownItem>
                                             </DropdownMenu>
                                         </UncontrolledDropdown>
@@ -1368,7 +1365,7 @@ export function BackupSourceFragmentLocal(props: BackupSourceFragmentLocalProps)
                     <Row className="mt-2">
                         <Col lg={{ offset: 3 }}>
                             <Button size="sm" outline color="info" className="rounded-pill" onClick={() => addBackup()}>
-                                <Icon icon="restore-backup" /> Add shard backup file
+                                <Icon icon="restore-backup" margin="m-0" /> Add shard backup file
                             </Button>
                         </Col>
                     </Row>
@@ -1395,7 +1392,7 @@ export function BackupSourceFragmentCloud() {
             <Row>
                 <Col lg="3">
                     <Label className="col-form-label" id="CloudBackupLinkInfo">
-                        Backup Link <Icon icon="info" color="info" />
+                        Backup Link <Icon icon="info" color="info" margin="m-0" />
                     </Label>
                 </Col>
                 <Col>
@@ -1441,7 +1438,7 @@ export function BackupSourceFragmentAws() {
                 <Row>
                     <Col lg={{ offset: 3 }}>
                         <Switch color="primary" selected={null} toggleSelection={null}>
-                            Force path style <Icon icon="info" className="text-info" id="CloudBackupLinkInfo" />
+                            Force path style <Icon icon="info" color="info" id="CloudBackupLinkInfo" margin="m-0" />
                         </Switch>
                         <UncontrolledPopover target="CloudBackupLinkInfo" trigger="hover" container="PopoverContainer">
                             <PopoverBody>

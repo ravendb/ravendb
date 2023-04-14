@@ -25,7 +25,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         <div className="top shard">
             {nodeInfo.location.shardNumber != null && (
                 <>
-                    <Icon icon="shard" className="me-1" />
+                    <Icon icon="shard" />
                     {nodeInfo.location.shardNumber}
                 </>
             )}
@@ -41,12 +41,12 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
             <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"} key={key}>
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
-                    {!sharded && <Icon icon="node" className="me-1" />}
+                    {!sharded && <Icon icon="node" />}
 
                     {nodeInfo.location.nodeTag}
                 </div>
                 <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
-                <div>{hasError ? <Icon icon="warning" color="danger" /> : "-"}</div>
+                <div>{hasError ? <Icon icon="warning" color="danger" margin="m-0" /> : "-"}</div>
                 <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
             </DistributionItem>
             {node && (
@@ -84,17 +84,17 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
                     <div className="top"></div>
                     {sharded && (
                         <div className="node">
-                            <Icon icon="node" className="me-1" /> Node
+                            <Icon icon="node" /> Node
                         </div>
                     )}
                     <div>
-                        <Icon icon="connected" className="me-1" /> Status
+                        <Icon icon="connected" /> Status
                     </div>
                     <div>
-                        <Icon icon="warning" className="me-1" /> Error
+                        <Icon icon="warning" /> Error
                     </div>
                     <div>
-                        <Icon icon="" className="me-1" />
+                        <Icon icon="changes" />
                         Status
                     </div>
                 </DistributionLegend>

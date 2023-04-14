@@ -10,6 +10,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 
 import "./DatabaseGroup.scss";
 import { Icon } from "./Icon";
+import IconName from "typings/server/icons";
 
 interface DatabaseGroupProps extends HTMLAttributes<HTMLDivElement> {
     children?: ReactNode | ReactNode[];
@@ -38,17 +39,17 @@ export function DatabaseGroupItem(props: DatabaseGroupItemProps) {
 
 interface DatabaseGroupNodeProps extends HTMLAttributes<HTMLDivElement> {
     children?: ReactNode | ReactNode[];
-    icon?: string;
+    icon?: IconName;
     color?: string;
 }
 
 export function DatabaseGroupNode(props: DatabaseGroupNodeProps) {
     const { children, icon, color } = props;
-    const nodeIcon = icon ? icon : "node";
-    const nodeColor = color ? color : "node";
+    const nodeIcon = icon ?? "node";
+    const nodeColor = color ?? "node";
     return (
         <div className="dbgroup-node">
-            <Icon icon={nodeIcon} color={nodeColor} className="me-1" /> {children ? <strong>{children}</strong> : null}
+            <Icon icon={nodeIcon} color={nodeColor} /> {children ? <strong>{children}</strong> : null}
         </div>
     );
 }
@@ -72,7 +73,7 @@ export function DatabaseGroupType(props: DatabaseGroupTypeProps) {
         }
     }
 
-    function cssIcon(node: NodeInfo) {
+    function cssIcon(node: NodeInfo): IconName {
         const type = node.type;
 
         switch (type) {
@@ -101,7 +102,7 @@ export function DatabaseGroupType(props: DatabaseGroupTypeProps) {
     return (
         <div className="dbgroup-type">
             <div title={node.type} className="mb-1">
-                <Icon icon={cssIcon(node)} className="me-1" /> {node.type}
+                <Icon icon={cssIcon(node)} /> {node.type}
             </div>
             <div>
                 <Badge color={nodeBadgeColor(node)} className="ms-1">
@@ -111,7 +112,7 @@ export function DatabaseGroupType(props: DatabaseGroupTypeProps) {
                             className="ms-1"
                             title="Database group node that is responsible for caught up of this node"
                         >
-                            <Icon icon="node"></Icon>
+                            <Icon icon="node" margin="m-0" />
                             <strong className="text-reset"> {node.responsibleNode}</strong>
                         </span>
                     )}
@@ -142,13 +143,13 @@ export function DatabaseGroupError(props: DatabaseGroupErrorProps) {
     return lastErrorShort ? (
         <div className="dbgroup-error position-relative">
             <div className="text-danger">
-                <Icon icon="warning" className="me-1" /> Error
+                <Icon icon="warning" /> Error
             </div>
 
             <small className="d-flex flex-column">
                 {lastErrorShort}
                 <a className="link stretched-link ms-2" title="Click to see error details" onClick={showErrorsDetails}>
-                    Error Details <Icon icon="info" />
+                    Error Details <Icon icon="info" margin="m-0" />
                 </a>
             </small>
             <div></div>

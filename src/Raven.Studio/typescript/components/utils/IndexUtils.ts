@@ -4,6 +4,7 @@ import { IndexNodeInfoDetails, IndexSharedInfo, IndexStatus } from "../models/in
 import IndexType = Raven.Client.Documents.Indexes.IndexType;
 import collection from "models/database/documents/collection";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
+import IconName from "typings/server/icons";
 
 //TODO: do we want that here?
 
@@ -51,7 +52,7 @@ export default class IndexUtils {
         }
     }
 
-    static indexTypeIcon(indexType: IndexType) {
+    static indexTypeIcon(indexType: IndexType): IconName {
         switch (indexType) {
             case "AutoMapReduce":
             case "JavaScriptMapReduce":
@@ -65,7 +66,7 @@ export default class IndexUtils {
                 return "map";
             //TODO: handle other types
             default:
-                return "";
+                return null;
         }
     }
 

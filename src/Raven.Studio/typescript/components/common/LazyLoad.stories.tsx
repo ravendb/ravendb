@@ -42,7 +42,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                 <RichPanelActions>
                     <Button>Actions are placed here</Button>
                     <Button className="ms-1" color="shard" onClick={toggleOpen} outline={!open}>
-                        <Icon icon="sharding" />
+                        <Icon icon="sharding" margin="m-0" />
                     </Button>
                 </RichPanelActions>
             </RichPanelHeader>
@@ -50,24 +50,24 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
             <RichPanelDetails>
                 <LazyLoad active={args.loadingActive}>
                     <RichPanelDetailItem>
-                        <Icon icon="check" className="me-1" />
+                        <Icon icon="check" />
                         <span>Detail item #1</span>
                     </RichPanelDetailItem>
                 </LazyLoad>
 
                 <LazyLoad active={args.loadingActive}>
                     <RichPanelDetailItem>
-                        <Icon icon="warning" className="me-1" /> Detail #2
+                        <Icon icon="warning" /> Detail #2
                     </RichPanelDetailItem>
                 </LazyLoad>
                 <LazyLoad active={args.loadingActive}>
                     <RichPanelDetailItem size="sm">
-                        <Icon icon="warning" className="me-1" /> <span>Detail small</span>
+                        <Icon icon="warning" /> <span>Detail small</span>
                     </RichPanelDetailItem>
                 </LazyLoad>
                 <LazyLoad active={args.loadingActive}>
                     <RichPanelDetailItem label="label">
-                        <Icon icon="warning" className="me-1" /> <span>Detail with label</span>
+                        <Icon icon="warning" /> <span>Detail with label</span>
                     </RichPanelDetailItem>
                 </LazyLoad>
                 <LazyLoad active={args.loadingActive}>
@@ -75,7 +75,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                         size="sm"
                         label={
                             <>
-                                <Icon icon="processor" className="me-1" />
+                                <Icon icon="processor" />
                                 label with icon
                             </>
                         }
@@ -86,7 +86,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                 <div className="rich-panel-details-right">
                     <LazyLoad active={args.loadingActive}>
                         <RichPanelDetailItem label="Other">
-                            <Icon icon="star" className="me-1" /> Detail placed right
+                            <Icon icon="star" /> Detail placed right
                         </RichPanelDetailItem>
                     </LazyLoad>
                 </div>
@@ -97,16 +97,16 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                     <DistributionLegend>
                         <div className="top"></div>
                         <div className="node">
-                            <Icon icon="node" className="me-1" /> Node
+                            <Icon icon="node" /> Node
                         </div>
                         <div>
-                            <Icon icon="list" className="me-1" /> Entries
+                            <Icon icon="list" /> Entries
                         </div>
                         <div>
-                            <Icon icon="warning" className="me-1" /> Errors
+                            <Icon icon="warning" /> Errors
                         </div>
                         <div>
-                            <Icon icon="" className="me-1" />
+                            <Icon icon="changes" />
                             Status
                         </div>
                     </DistributionLegend>
@@ -121,7 +121,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
 
                     <DistributionItem loading={args.loadingActive}>
                         <div className="top node">
-                            <Icon icon="node" className="me-1" /> A
+                            <Icon icon="node" /> A
                         </div>
                         <div>5</div>
                         <div>2</div>
@@ -133,7 +133,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
 
                     <DistributionItem>
                         <div className="top node">
-                            <Icon icon="node" className="me-1" /> A
+                            <Icon icon="node" /> A
                         </div>
                         <div>5</div>
                         <div>2</div>
@@ -144,7 +144,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                     </DistributionItem>
                     <DistributionItem>
                         <div className="top node">
-                            <Icon icon="node" className="me-1" /> A
+                            <Icon icon="node" /> A
                         </div>
                         <div>5</div>
                         <div>2</div>
@@ -155,7 +155,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                     </DistributionItem>
                     <DistributionItem>
                         <div className="top node">
-                            <Icon icon="node" className="me-1" /> B
+                            <Icon icon="node" /> B
                         </div>
                         <div>5</div>
                         <div>2</div>

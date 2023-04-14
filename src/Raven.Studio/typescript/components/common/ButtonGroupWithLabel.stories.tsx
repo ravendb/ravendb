@@ -16,11 +16,11 @@ export function GroupWithLabel() {
         <>
             <ButtonGroupWithLabel label="Button group with label">
                 <Button color="danger">
-                    <Icon icon="trash" className="me-1" />
+                    <Icon icon="trash" />
                     <span>Delete</span>
                 </Button>
                 <Button>
-                    <Icon icon="lock" className="me-1" />
+                    <Icon icon="lock" />
                     <span>Set delete lock mode</span>
                 </Button>
             </ButtonGroupWithLabel>

@@ -109,7 +109,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelName>
-                        <Icon icon="shard" color="shard" className="me-1" /> Shard #{shardName}
+                        <Icon icon="shard" color="shard" /> Shard #{shardName}
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
@@ -151,7 +151,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
                                         disabled={!addNodeEnabled}
                                         onClick={addNode}
                                     >
-                                        <Icon icon="plus" className="me-1" />
+                                        <Icon icon="plus" />
                                         Add node
                                     </Button>
                                 </DatabaseGroupActions>

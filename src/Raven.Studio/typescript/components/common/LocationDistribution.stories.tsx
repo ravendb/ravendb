@@ -22,16 +22,16 @@ const Template = (args: { withSummary: boolean; withLegend: boolean }) => {
                 <DistributionLegend>
                     <div className="top"></div>
                     <div className="node">
-                        <Icon icon="node" className="me-1" /> Node
+                        <Icon icon="node" /> Node
                     </div>
                     <div>
-                        <Icon icon="list" className="me-1" /> Entries
+                        <Icon icon="list" /> Entries
                     </div>
                     <div>
-                        <Icon icon="warning" className="me-1" /> Errors
+                        <Icon icon="warning" /> Errors
                     </div>
                     <div>
-                        <Icon icon="" className="me-1" />
+                        <Icon icon="changes" />
                         Status
                     </div>
                 </DistributionLegend>
@@ -48,7 +48,7 @@ const Template = (args: { withSummary: boolean; withLegend: boolean }) => {
             <DistributionItem loading></DistributionItem>
             <DistributionItem>
                 <div className="top node">
-                    <Icon icon="node" className="me-1" /> A
+                    <Icon icon="node" /> A
                 </div>
                 <div>5</div>
                 <div>2</div>
@@ -59,7 +59,7 @@ const Template = (args: { withSummary: boolean; withLegend: boolean }) => {
             </DistributionItem>
             <DistributionItem>
                 <div className="top node">
-                    <Icon icon="node" className="me-1" /> B
+                    <Icon icon="node" /> B
                 </div>
                 <div>5</div>
                 <div>2</div>

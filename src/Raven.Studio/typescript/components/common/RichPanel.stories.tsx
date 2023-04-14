@@ -48,31 +48,31 @@ const Template = (args: { withCheckbox: boolean }) => {
                 <RichPanelActions>
                     <Button>Actions are placed here</Button>
                     <Button className="ms-1" color="shard" onClick={toggleOpen} outline={!open}>
-                        <Icon icon="sharding" />
+                        <Icon icon="sharding" margin="m-0" />
                     </Button>
                 </RichPanelActions>
             </RichPanelHeader>
 
             <RichPanelDetails>
                 <RichPanelDetailItem>
-                    <Icon icon="check" className="me-1" />
+                    <Icon icon="check" />
                     Detail #1
                 </RichPanelDetailItem>
                 <RichPanelDetailItem>
-                    <Icon icon="warning" className="me-1" /> Detail #2
+                    <Icon icon="warning" /> Detail #2
                 </RichPanelDetailItem>
                 <RichPanelDetailItem size="sm">
-                    <Icon icon="warning" className="me-1" /> Detail small
+                    <Icon icon="warning" /> Detail small
                 </RichPanelDetailItem>
 
                 <RichPanelDetailItem label="label">
-                    <Icon icon="warning" className="me-1" /> Detail with label
+                    <Icon icon="warning" /> Detail with label
                 </RichPanelDetailItem>
                 <RichPanelDetailItem
                     size="sm"
                     label={
                         <>
-                            <Icon icon="processor" className="me-1" />
+                            <Icon icon="processor" />
                             label with icon
                         </>
                     }
@@ -81,7 +81,7 @@ const Template = (args: { withCheckbox: boolean }) => {
                 </RichPanelDetailItem>
                 <div className="rich-panel-details-right">
                     <RichPanelDetailItem label="Other">
-                        <Icon icon="star" className="me-1" /> Detail placed right
+                        <Icon icon="star" /> Detail placed right
                     </RichPanelDetailItem>
                 </div>
             </RichPanelDetails>
@@ -91,16 +91,16 @@ const Template = (args: { withCheckbox: boolean }) => {
                     <DistributionLegend>
                         <div className="top"></div>
                         <div className="node">
-                            <Icon icon="node" className="me-1" /> Node
+                            <Icon icon="node" /> Node
                         </div>
                         <div>
-                            <Icon icon="list" className="me-1" /> Entries
+                            <Icon icon="list" /> Entries
                         </div>
                         <div>
-                            <Icon icon="warning" className="me-1" /> Errors
+                            <Icon icon="warning" /> Errors
                         </div>
                         <div>
-                            <Icon icon="" className="me-1" />
+                            <Icon icon="changes" />
                             Status
                         </div>
                     </DistributionLegend>
@@ -116,7 +116,7 @@ const Template = (args: { withCheckbox: boolean }) => {
                     <DistributionItem loading></DistributionItem>
                     <DistributionItem>
                         <div className="top node">
-                            <Icon icon="node" className="me-1" /> A
+                            <Icon icon="node" /> A
                         </div>
                         <div>5</div>
                         <div>2</div>
@@ -127,7 +127,7 @@ const Template = (args: { withCheckbox: boolean }) => {
                     </DistributionItem>
                     <DistributionItem>
                         <div className="top node">
-                            <Icon icon="node" className="me-1" /> B
+                            <Icon icon="node" /> B
                         </div>
                         <div>5</div>
                         <div>2</div>

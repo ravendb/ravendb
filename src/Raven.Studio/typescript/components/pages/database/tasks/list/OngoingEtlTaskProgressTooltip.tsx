@@ -19,7 +19,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
             <PopoverWithHover target={target} placement="top">
                 <div className="text-danger flex-horizontal">
                     <div className="flex-start text-warning">
-                        <Icon icon="warning" />
+                        <Icon icon="warning" margin="m-0" />
                     </div>
                     <div>
                         <div>Unable to load task status:</div>
@@ -48,7 +48,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                                     title="Show script preview"
                                     onClick={() => showPreview(transformationScriptProgress.transformationName)}
                                 >
-                                    <Icon icon="preview" />
+                                    <Icon icon="preview" margin="m-0" />
                                 </button>
                             </div>
                         );

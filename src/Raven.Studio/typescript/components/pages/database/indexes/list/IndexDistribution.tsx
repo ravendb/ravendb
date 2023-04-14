@@ -14,6 +14,7 @@ import assertUnreachable from "../../../../utils/assertUnreachable";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { Button } from "reactstrap";
 import { Icon } from "components/common/Icon";
+import IconName from "typings/server/icons";
 
 interface IndexDistributionProps {
     index: IndexSharedInfo;
@@ -39,7 +40,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         <div className="top shard">
             {nodeInfo.location.shardNumber != null && (
                 <>
-                    <Icon icon="shard" className="me-1"></Icon>
+                    <Icon icon="shard" />
                     {nodeInfo.location.shardNumber}
                 </>
             )}
@@ -53,7 +54,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
             <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}>
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
-                    {!sharded && <Icon icon="node" className="me-1"></Icon>}
+                    {!sharded && <Icon icon="node" />}
 
                     {nodeInfo.location.nodeTag}
                 </div>
@@ -123,17 +124,17 @@ export function IndexDistribution(props: IndexDistributionProps) {
                 <div className="top"></div>
                 {sharded && (
                     <div className="node">
-                        <Icon icon="node" className="me-1"></Icon> Node
+                        <Icon icon="node" /> Node
                     </div>
                 )}
                 <div>
-                    <Icon icon="list" className="me-1"></Icon> Entries
+                    <Icon icon="list" /> Entries
                 </div>
                 <div>
-                    <Icon icon="warning" className="me-1"></Icon> Errors
+                    <Icon icon="warning" /> Errors
                 </div>
                 <div>
-                    <Icon icon="" className="me-1" />
+                    <Icon icon="changes" />
                     Status
                 </div>
             </DistributionLegend>
@@ -153,7 +154,7 @@ interface IndexProgressProps {
     nodeInfo: IndexNodeInfo;
 }
 
-function iconForState(status: Raven.Client.Documents.Indexes.IndexRunningStatus) {
+function iconForState(status: Raven.Client.Documents.Indexes.IndexRunningStatus): IconName {
     switch (status) {
         case "Disabled":
             return "stop";

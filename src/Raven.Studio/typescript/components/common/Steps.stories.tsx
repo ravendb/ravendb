@@ -62,17 +62,17 @@ export function StepsExample() {
             <div className="d-flex my-4">
                 {!isFirstStep && (
                     <Button onClick={prevStep}>
-                        <Icon icon="arrow-left" className="me-1" /> Back
+                        <Icon icon="arrow-left" /> Back
                     </Button>
                 )}
                 <FlexGrow />
                 {isLastStep ? (
                     <Button color="success">
-                        <Icon icon="rocket" className="me-1" /> Finish
+                        <Icon icon="rocket" /> Finish
                     </Button>
                 ) : (
                     <Button color="primary" onClick={nextStep} disabled={isLastStep}>
-                        Next <Icon icon="arrow-right" className="ms-1" />
+                        Next <Icon icon="arrow-right" margin="ms-1" />
                     </Button>
                 )}
             </div>

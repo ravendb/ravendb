@@ -29,29 +29,29 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                 <div className="top"></div>
                 {sharded && (
                     <div className="node">
-                        <Icon icon="node" className="me-1"></Icon> Node
+                        <Icon icon="node" /> Node
                     </div>
                 )}
                 <div>
-                    <Icon icon="list" className="me-1"></Icon> Documents
+                    <Icon icon="list" /> Documents
                 </div>
                 <div>
-                    <Icon icon="warning" className="me-1"></Icon> Indexing Errors
+                    <Icon icon="warning" /> Indexing Errors
                 </div>
                 <div>
-                    <Icon icon="indexing" className="me-1"></Icon> Indexing Status
+                    <Icon icon="indexing" /> Indexing Status
                 </div>
                 <div>
-                    <Icon icon="alerts" className="me-1"></Icon> Alerts
+                    <Icon icon="alerts" /> Alerts
                 </div>
                 <div>
-                    <Icon icon="info" className="me-1"></Icon> Performance Hints
+                    <Icon icon="info" /> Performance Hints
                 </div>
                 <div>
-                    <Icon icon="storage" className="me-1"></Icon> Size on disk
+                    <Icon icon="storage" /> Size on disk
                 </div>
                 <div>
-                    <Icon icon="recent" className="me-1"></Icon> Uptime
+                    <Icon icon="recent" /> Uptime
                 </div>
             </DistributionLegend>
 
@@ -60,7 +60,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     <div className="top shard">
                         {localState.location.shardNumber != null && (
                             <>
-                                <Icon icon="shard" className="me-1"></Icon>
+                                <Icon icon="shard" />
                                 {localState.location.shardNumber}
                             </>
                         )}
@@ -76,7 +76,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     >
                         {sharded && shard}
                         <div className={classNames("node", { top: !sharded })}>
-                            {!sharded && <Icon icon="node" className="me-1"></Icon>}
+                            {!sharded && <Icon icon="node" />}
 
                             {localState.location.nodeTag}
                         </div>

@@ -97,7 +97,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
             <RichPanelHeader className="bg-faded-orchestrator">
                 <RichPanelInfo>
                     <RichPanelName className="text-orchestrator">
-                        <Icon icon="orchestrator" className="me-1" /> Orchestrators
+                        <Icon icon="orchestrator" /> Orchestrators
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
@@ -139,7 +139,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                                         disabled={!addNodeEnabled}
                                         onClick={addNode}
                                     >
-                                        <Icon icon="plus" className="me-1" />
+                                        <Icon icon="plus" />
                                         Add node
                                     </Button>
                                 </DatabaseGroupActions>

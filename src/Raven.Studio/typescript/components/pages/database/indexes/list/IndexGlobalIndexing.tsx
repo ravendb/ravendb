@@ -12,7 +12,7 @@ export default function IndexGlobalIndexing() {
                                        attr: { title: 'Pause indexing process for ALL indexes until restart - On node ' + localNodeTag() },
                                        enable: !spinners.globalStartStop() && $root.globalIndexingStatus() !== 'Disabled', css: { 'btn-spinner': spinners.globalStartStop() }"
             >
-                <Icon icon="pause" className="me-1"></Icon>
+                <Icon icon="pause" />
                 Pause indexing until restart - Local node
             </Button>
             <Button
@@ -21,7 +21,7 @@ export default function IndexGlobalIndexing() {
                 title="Resume indexing process"
                 data-bind="click: startIndexing, visible: $root.globalIndexingStatus() === 'Paused', enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }"
             >
-                <Icon icon="play" className="me-1"></Icon>
+                <Icon icon="play" />
                 Resume indexing
             </Button>
         </div>

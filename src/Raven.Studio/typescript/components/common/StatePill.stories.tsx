@@ -22,10 +22,10 @@ const Template = () => {
 
             <div className="hstack gap-2">
                 <StatePill>
-                    <Icon icon="coffee" className="me-1" /> Neutral
+                    <Icon icon="coffee" /> Neutral
                 </StatePill>
                 <StatePill color="primary">
-                    <Icon icon="raven" className="me-1" /> Primary
+                    <Icon icon="raven" /> Primary
                 </StatePill>
             </div>
 
@@ -34,19 +34,19 @@ const Template = () => {
 
             <div className="hstack gap-2">
                 <StatePill color="secondary">
-                    <Icon icon="zombie" className="me-1" /> Secondary
+                    <Icon icon="zombie" /> Secondary
                 </StatePill>
                 <StatePill color="success">
-                    <Icon icon="check" className="me-1" /> Success!
+                    <Icon icon="check" /> Success!
                 </StatePill>
                 <StatePill color="warning">
-                    <Icon icon="warning" className="me-1" /> Warning
+                    <Icon icon="warning" /> Warning
                 </StatePill>
                 <StatePill color="danger">
-                    <Icon icon="danger" className="me-1" /> Danger
+                    <Icon icon="danger" /> Danger
                 </StatePill>
                 <StatePill color="info">
-                    <Icon icon="help" className="me-1" /> Info
+                    <Icon icon="help" /> Info
                 </StatePill>
             </div>
 
@@ -55,13 +55,13 @@ const Template = () => {
 
             <div className="hstack gap-2">
                 <StatePill color="shard">
-                    <Icon icon="shard" className="me-1" /> Shard
+                    <Icon icon="shard" /> Shard
                 </StatePill>
                 <StatePill color="node">
-                    <Icon icon="node" className="me-1" /> Node
+                    <Icon icon="node" /> Node
                 </StatePill>
                 <StatePill color="orchestrator">
-                    <Icon icon="orchestrator" className="me-1" /> Orchestrator
+                    <Icon icon="orchestrator" /> Orchestrator
                 </StatePill>
                 <StatePill color="progress">
                     <Spinner size="xs" /> Progress
