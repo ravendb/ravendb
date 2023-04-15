@@ -195,7 +195,7 @@ namespace Raven.Server.Rachis
                     peers.Clear();
                 }
 
-                foreach (var voter in clusterTopology.Members)
+                foreach (var voter in clusterTopology.Members.Concat(clusterTopology.Witnesses))
                 {
                     if (voter.Key == _engine.Tag)
                         continue; // we obviously won't be applying to ourselves

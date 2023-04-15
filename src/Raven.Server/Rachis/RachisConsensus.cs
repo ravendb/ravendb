@@ -643,7 +643,7 @@ namespace Raven.Server.Rachis
                             break;
 
                         case Leader.TopologyModification.Witness:
-                            if (clusterTopology.Watchers.ContainsKey(tag))
+                            if (clusterTopology.Witnesses.ContainsKey(tag))
                                 return;
                             break;
 
@@ -2241,9 +2241,9 @@ namespace Raven.Server.Rachis
             return ModifyTopologyAsync(nodeTag, url, asWatcher ? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Promotable, validateNotInTopology);
         }
 
-        public Task AddWitnessToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true, bool asWitness = true)
+        public Task AddWitnessToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true)
         {
-            return ModifyTopologyAsync(nodeTag, url, asWitness ? Leader.TopologyModification.Witness : Leader.TopologyModification.Promotable, validateNotInTopology);
+            return ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Witness , validateNotInTopology);
         }
 
         public Task RemoveFromClusterAsync(string nodeTag)

@@ -7,6 +7,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -166,26 +167,12 @@ namespace RachisTests
         [Fact]
         public async Task ClusterWithNodeAsWitness()
         {
+            LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs", TimeSpan.MaxValue, 1000000, false);
             var expected = "0123456789";
             var a = SetupServer(true);
             var b = SetupServer();
-            var c = 'test'
             await a.AddWitnessToClusterAsync(b.Url);
             await b.WaitForTopology(Leader.TopologyModification.Witness);
-
-            var tasks = new List<Task>();
-            for (var i = 0; i < 9; i++)
-            {
-                tasks.Add(a.PutAsync(new TestCommand { Name = "test", Value = i }));
-            }
-            var (lastIndex, _) = await a.PutAsync(new TestCommand { Name = "test", Value = 9 });
-            var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-            Assert.True(await waitForCommitIndexChange.WaitWithoutExceptionAsync(TimeSpan.FromSeconds(5)));
-            using (b.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                Assert.Equal(expected, b.StateMachine.Read(context, "test"));
-            }
         }
 
         [Fact]

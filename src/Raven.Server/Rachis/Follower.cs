@@ -314,7 +314,8 @@ namespace Raven.Server.Rachis
                             var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(lastTopology);
                             if (topology.Members.ContainsKey(_engine.Tag) ||
                                 topology.Promotables.ContainsKey(_engine.Tag) ||
-                                topology.Watchers.ContainsKey(_engine.Tag))
+                                topology.Watchers.ContainsKey(_engine.Tag) ||
+                                topology.Witnesses.ContainsKey(_engine.Tag)) 
                             {
                                 RachisConsensus.SetTopology(_engine, context, topology);
                             }
