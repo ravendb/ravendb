@@ -192,7 +192,8 @@ class accessManager {
         canDelete: this.isOperatorOrAbove,
         canDisableEnableDatabase: this.isOperatorOrAbove,
         canDisableIndexing: this.isOperatorOrAbove,
-        canCompactDatabase: this.isOperatorOrAbove
+        canCompactDatabase: this.isOperatorOrAbove,
+        canRestartDatabase: this.isOperatorOrAbove
     };
     
     certificatesView = {

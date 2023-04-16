@@ -29,6 +29,7 @@ import compactDatabaseDialog = require("viewmodels/resources/compactDatabaseDial
 import notificationCenter = require("common/notifications/notificationCenter");
 import saveDatabaseLockModeCommand = require("commands/resources/saveDatabaseLockModeCommand");
 import databaseSettings = require("viewmodels/database/settings/databaseSettings");
+import restartDatabaseCommand = require("../../commands/resources/restartDatabaseCommand");
 
 type databaseState = "errored" | "disabled" | "online" | "offline" | "remote";
 
@@ -85,7 +86,7 @@ class databases extends viewModelBase {
         super();
 
         this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", 
-            "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase", "updateDatabaseInfo",
+            "toggleDisableDatabaseIndexing", "restartDatabase", "deleteDatabase", "activateDatabase", "updateDatabaseInfo",
             "allowDatabaseDelete", "preventDatabaseDelete", "preventDatabaseDeleteWithError",
             "compactDatabase", "databasePanelClicked", "openNotificationCenter");
 
@@ -668,7 +669,23 @@ class databases extends viewModelBase {
                 }
             });
     }
-    
+
+    restartDatabase(db: databaseInfo) {
+        eventsCollector.default.reportEvent("databases", "restart-database");
+        this.changesContext.disconnectIfCurrent(db.asDatabase(), "DatabaseRestarted");
+
+        this.confirmationMessage("Are you sure?", "Restart database?")
+            .done(result => {
+                if (result.can) {
+                    db.inProgressAction("Restarting the database");
+
+                    new restartDatabaseCommand(db)
+                        .execute()
+                        .always(() => db.inProgressAction(null));
+                }
+            });
+    }
+
     compactDatabase(db: databaseInfo) {
         eventsCollector.default.reportEvent("databases", "compact");
         this.changesContext.disconnectIfCurrent(db.asDatabase(), "DatabaseDisabled");
