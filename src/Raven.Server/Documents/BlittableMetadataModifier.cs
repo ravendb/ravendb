@@ -479,6 +479,10 @@ namespace Raven.Server.Documents
                                 aboutToReadPropertyName = false;
                                 return true;
                             }
+
+                            if (state.CurrentTokenType == JsonParserToken.Null)
+                                break;
+
                             if (state.CurrentTokenType != JsonParserToken.String)
                                 ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.ChangeVector, state, reader);
                             ChangeVector = CreateLazyStringValueFromParserState(state);
@@ -824,6 +828,9 @@ namespace Raven.Server.Documents
                 case State.ReadingChangeVector:
                     if (reader.Read() == false)
                         return false;
+
+                    if (state.CurrentTokenType == JsonParserToken.Null)
+                        break;
 
                     if (state.CurrentTokenType != JsonParserToken.String)
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.ChangeVector, state, reader);
