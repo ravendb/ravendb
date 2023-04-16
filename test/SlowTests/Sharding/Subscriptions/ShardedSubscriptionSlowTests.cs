@@ -1145,7 +1145,6 @@ namespace SlowTests.Sharding.Subscriptions
 
 
         [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
-
         public async Task AbortWhenNoDocsLeft2()
         {
             using (var store = Sharding.GetDocumentStore())
