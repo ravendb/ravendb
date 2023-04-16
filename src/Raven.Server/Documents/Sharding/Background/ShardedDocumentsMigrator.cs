@@ -10,13 +10,13 @@ namespace Raven.Server.Documents.Sharding.Background
     public class ShardedDocumentsMigrator : IDisposable
     {
         private readonly ShardedDocumentDatabase _database;
-        private readonly CancellationTokenSource _cts;
+        private readonly CancellationToken _token;
         private readonly Logger _logger;
 
         public ShardedDocumentsMigrator(ShardedDocumentDatabase database)
         {
             _database = database;
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(database.ShardedDocumentsStorage.DocumentDatabase.DatabaseShutdown);
+            _token = database.ShardedDocumentsStorage.DocumentDatabase.DatabaseShutdown;
             _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
         }
 
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Sharding.Background
                 bool monitorTaken = false;
                 try
                 {
-                    _cts.Token.ThrowIfCancellationRequested();
+                    _token.ThrowIfCancellationRequested();
 
                     Monitor.TryEnter(this, 250, ref monitorTaken);
                     if (monitorTaken == false)
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Sharding.Background
             }
             catch (Exception e)
             {
-                if (_cts.IsCancellationRequested)
+                if (_token.IsCancellationRequested)
                     return;
 
                 if (_logger.IsOperationsEnabled)
@@ -104,18 +104,7 @@ namespace Raven.Server.Documents.Sharding.Background
         public void Dispose()
         {
             Monitor.Enter(this);
-            try
-            {
-                _cts.Dispose();
-            }
-            catch (ObjectDisposedException) //precaution, shouldn't happen
-            {
-                //don't care, we are disposing...
-            }
-            finally
-            {
-                Monitor.Exit(this);
-            }
+            Monitor.Exit(this);
         }
     }
 }

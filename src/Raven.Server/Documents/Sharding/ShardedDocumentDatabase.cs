@@ -130,12 +130,10 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
             if (process.SourceShard == ShardNumber && process.Status == MigrationStatus.OwnershipTransferred)
             {
-                bool alreadyExist = false;
                 index = (long)Hashing.XXHash64.CalculateRaw(process.LastSourceChangeVector ?? $"No docs for {process.MigrationIndex}");
 
                 if (_confirmations.TryGetValue(index, out t))
                 {
-                    alreadyExist = true;
                     if (t.IsCompleted == false)
                         continue;
                 }
