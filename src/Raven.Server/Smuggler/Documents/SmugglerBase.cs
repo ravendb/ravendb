@@ -667,6 +667,9 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    if (ShouldSkipIndex(index))
+                        continue;
+
                     if (OnIndexAction != null)
                     {
                         OnIndexAction(index);
@@ -746,7 +749,7 @@ namespace Raven.Server.Smuggler.Documents
             return result.Indexes;
         }
 
-
+        protected virtual bool ShouldSkipIndex(IndexDefinitionAndType index) => false;
 
         protected virtual Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType) =>
             ProcessIdentitiesInternalAsync(result, buildType, _destination.Identities());
