@@ -2,10 +2,11 @@
 using Sparrow.Compression;
 using Voron.Data.PostingLists;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs;
 
-public class PForEncodingTests
+public class PForEncodingTests : NoDisposalNeeded
 {
     private static long[] Data = new[]
     {
@@ -156,5 +157,9 @@ public class PForEncodingTests
                 }
             }
         }
+    }
+
+    public PForEncodingTests(ITestOutputHelper output) : base(output)
+    {
     }
 }
