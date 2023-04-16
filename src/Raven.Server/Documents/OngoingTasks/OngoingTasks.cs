@@ -101,20 +101,20 @@ public class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsState>
     }
 
     protected override (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication,
-        Dictionary<string, RavenConnectionString> connectionStrings, out string tag, out RavenConnectionString connection)
+        Dictionary<string, RavenConnectionString> connectionStrings, out string responsibleNodeTag, out RavenConnectionString connection)
     {
         connectionStrings.TryGetValue(replication.ConnectionStringName, out connection);
         replication.Database = connection?.Database;
         replication.ConnectionString = connection;
 
         var taskStatus = ReplicationLoader.GetExternalReplicationState(_server, _database.Name, replication.TaskId);
-        tag = _database.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
+        responsibleNodeTag = _database.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
 
         (string Url, OngoingTaskConnectionStatus Status) result = (null, OngoingTaskConnectionStatus.None);
 
         if (replication is ExternalReplication)
         {
-            if (tag == _server.NodeTag)
+            if (responsibleNodeTag == _server.NodeTag)
                 result = _database.ReplicationLoader.GetExternalReplicationDestination(replication.TaskId);
             else
                 result.Status = OngoingTaskConnectionStatus.NotOnThisNode;
@@ -124,7 +124,7 @@ public class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsState>
         {
             result.Status = OngoingTaskConnectionStatus.NotActive;
 
-            if (tag == _server.NodeTag)
+            if (responsibleNodeTag == _server.NodeTag)
             {
                 var handlers = GetIncomingReplicationHandlers();
                 foreach (var incoming in handlers)
