@@ -317,7 +317,7 @@ select filter(a)").Count();
         }
         using (var s = store.OpenSession())
         {
-            var emp = s.Advanced.RawQuery<Employee>("from Employees where exists(Manager) filter Age = 51")
+            var emp = s.Advanced.RawQuery<Employee>("from Employees where exists(Name) filter Age = 51")
                 .Statistics(out var stats)
                 .SingleOrDefault();
             Assert.Equal("Frank", emp.Name);
