@@ -25,6 +25,7 @@ using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.OngoingTasks;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -139,6 +140,7 @@ namespace Raven.Server.Documents
                     _fileLocker.TryAcquireWriteLock(_logger);
                 }
 
+                OngoingTasks = new OngoingTasks.OngoingTasks(this);
                 Smuggler = new DatabaseSmugglerFactory(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications
@@ -303,6 +305,8 @@ namespace Raven.Server.Documents
         public StudioConfiguration StudioConfiguration { get; private set; }
 
         public CompareExchangeStorage CompareExchangeStorage { get; private set; }
+
+        public AbstractOngoingTasks OngoingTasks { get; private set; }
 
         public bool Is32Bits { get; }
 
@@ -1734,7 +1738,7 @@ namespace Raven.Server.Documents
 
         private void OnCertificateChange(object sender, EventArgs e)
         {
-            if (_requestExecutor.IsValueCreated == false) 
+            if (_requestExecutor.IsValueCreated == false)
                 return;
 
             using (_requestExecutor.Value)

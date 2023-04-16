@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/task", "GET")]
         public async Task GetOngoingTaskInfo()
         {
-            using (var processor = new ShardedOngoingTasksHandlerProcessorForGetOngoingTaskInfo(this))
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForGetOngoingTask(this))
                 await processor.ExecuteAsync();
         }
 
