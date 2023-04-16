@@ -7,16 +7,18 @@ using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
-    public class DynamicBlittableJsonTests:IDisposable
+    public class DynamicBlittableJsonTests : ParallelTestBase
     {
         private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
 
-        public DynamicBlittableJsonTests()
+        public DynamicBlittableJsonTests(ITestOutputHelper output) : base(output)
         {
             _ctx = JsonOperationContext.ShortTermSingleUse();
         }
@@ -86,7 +88,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             };
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             foreach (var docReader in _docs)
             {
