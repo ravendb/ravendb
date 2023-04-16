@@ -70,6 +70,7 @@ public class SubscriptionConnectionsStateOrchestrator : AbstractSubscriptionConn
 
     private void StartShardSubscriptionWorkers()
     {
+        ClosedDueToNoDocs = 0;
         foreach (var shardNumber in _databaseContext.ShardsTopology.Keys)
         {
             var re = _databaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber);
