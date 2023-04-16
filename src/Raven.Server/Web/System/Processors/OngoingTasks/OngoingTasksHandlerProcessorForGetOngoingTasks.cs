@@ -1,13 +1,14 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<DatabaseRequestHandler, DocumentsOperationContext, SubscriptionConnectionsState>
     {
         public OngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.Database.OngoingTasks)
         {

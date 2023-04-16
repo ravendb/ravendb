@@ -1,64 +1,253 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
+using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents.Subscriptions;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.System;
 
 namespace Raven.Server.Documents.OngoingTasks;
 
-public abstract class AbstractOngoingTasks
+public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
+    where TSubscriptionConnectionsState : AbstractSubscriptionConnectionsState
 {
-    protected abstract IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
-    protected abstract IEnumerable<OngoingTaskBackup> CollectBackupTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
-    protected abstract IEnumerable<OngoingTaskRavenEtlListView> CollectRavenEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
-    protected abstract IEnumerable<OngoingTaskSqlEtlListView> CollectSqlEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
-    protected abstract IEnumerable<OngoingTaskOlapEtlListView> CollectOlapEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
-    protected abstract IEnumerable<OngoingTaskElasticSearchEtlListView> CollectElasticEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
-    protected abstract IEnumerable<OngoingTaskQueueEtlListView> CollectQueueEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
-    protected abstract IEnumerable<OngoingTaskPullReplicationAsSink> CollectPullReplicationAsSinkTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
-    protected abstract IEnumerable<OngoingTaskPullReplicationAsHub> CollectPullReplicationAsHubTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
-    protected abstract IEnumerable<OngoingTaskReplication> CollectExternalReplicationTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
+    private readonly ServerStore _server;
+    private readonly AbstractSubscriptionStorage<TSubscriptionConnectionsState> _subscriptionStorage;
+
+    protected AbstractOngoingTasks([NotNull] ServerStore server, [NotNull] AbstractSubscriptionStorage<TSubscriptionConnectionsState> subscriptionStorage)
+    {
+        _server = server ?? throw new ArgumentNullException(nameof(server));
+        _subscriptionStorage = subscriptionStorage ?? throw new ArgumentNullException(nameof(subscriptionStorage));
+    }
+
+    protected abstract DatabaseTopology GetDatabaseTopology(DatabaseRecord databaseRecord);
+
+    protected abstract string GetDestinationUrlForRavenEtl(string name);
+
+    private IEnumerable<OngoingTaskBackup> GetBackupTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.PeriodicBackups == null || databaseRecord.PeriodicBackups.Count == 0)
+            yield break;
+
+        foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
+            yield return CreateBackupTaskInfo(clusterTopology, databaseRecord, backupConfiguration);
+    }
+
+    private IEnumerable<OngoingTaskRavenEtlListView> GetRavenEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.RavenEtls == null || databaseRecord.RavenEtls.Count == 0)
+            yield break;
+
+        foreach (var ravenEtl in databaseRecord.RavenEtls)
+            yield return CreateRavenEtlTaskInfo(clusterTopology, databaseRecord, ravenEtl);
+    }
+
+    private IEnumerable<OngoingTaskSqlEtlListView> GetSqlEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.SqlEtls == null || databaseRecord.SqlEtls.Count == 0)
+            yield break;
+
+        foreach (var sqlEtl in databaseRecord.SqlEtls)
+            yield return CreateSqlEtlTaskInfo(clusterTopology, databaseRecord, sqlEtl);
+    }
+
+    private IEnumerable<OngoingTaskOlapEtlListView> GetOlapEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.OlapEtls == null || databaseRecord.OlapEtls.Count == 0)
+            yield break;
+
+        foreach (var olapEtl in databaseRecord.OlapEtls)
+            yield return CreateOlapEtlTaskInfo(clusterTopology, databaseRecord, olapEtl);
+    }
+
+    private IEnumerable<OngoingTaskElasticSearchEtlListView> GetElasticEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.ElasticSearchEtls == null || databaseRecord.ElasticSearchEtls.Count == 0)
+            yield break;
+
+        foreach (var elasticSearchEtl in databaseRecord.ElasticSearchEtls)
+            yield return CreateElasticSearchEtlTaskInfo(clusterTopology, databaseRecord, elasticSearchEtl);
+    }
+
+    private IEnumerable<OngoingTaskQueueEtlListView> GetQueueEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.QueueEtls == null || databaseRecord.QueueEtls.Count == 0)
+            yield break;
+
+        foreach (var queueEtl in databaseRecord.QueueEtls)
+            yield return CreateQueueEtlTaskInfo(clusterTopology, databaseRecord, queueEtl);
+    }
+
+    private IEnumerable<OngoingTaskPullReplicationAsSink> GetPullReplicationAsSinkTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        foreach (var sinkReplication in databaseRecord.SinkPullReplications)
+            yield return CreatePullReplicationAsSinkTaskInfo(clusterTopology, databaseRecord, sinkReplication);
+    }
+
+    protected abstract IEnumerable<OngoingTaskPullReplicationAsHub> GetPullReplicationAsHubTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
+
+    private IEnumerable<OngoingTaskReplication> CollectExternalReplicationTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        foreach (var watcher in databaseRecord.ExternalReplications)
+            yield return CreateExternalReplicationTaskInfo(clusterTopology, databaseRecord, watcher);
+    }
+
+    private IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        foreach (var subscriptionState in _subscriptionStorage.GetAllSubscriptionsFromServerStore(context))
+            yield return CreateSubscriptionTaskInfo(clusterTopology, databaseRecord, subscriptionState);
+    }
 
     public IEnumerable<OngoingTask> GetAllTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         foreach (var task in CollectSubscriptionTasks(context, clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in CollectBackupTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in GetBackupTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in CollectRavenEtlTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in GetRavenEtlTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in CollectSqlEtlTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in GetSqlEtlTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in CollectOlapEtlTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in GetOlapEtlTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in CollectElasticEtlTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in GetElasticEtlTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in CollectQueueEtlTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in GetQueueEtlTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in CollectPullReplicationAsSinkTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in GetPullReplicationAsSinkTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in CollectPullReplicationAsHubTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in GetPullReplicationAsHubTasks(context, clusterTopology, databaseRecord))
             yield return task;
 
         foreach (var task in CollectExternalReplicationTasks(context, clusterTopology, databaseRecord))
             yield return task;
     }
 
-    public OngoingTask GetTask(TransactionOperationContext context, long? taskId, string taskName, OngoingTaskType taskType, ClusterTopology clusterTopology, DatabaseRecord record)
+    public OngoingTask GetTask(TransactionOperationContext context, long? taskId, string taskName, OngoingTaskType taskType, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
+        switch (taskType)
+        {
+            case OngoingTaskType.Replication:
+                var watcher = taskName != null
+                    ? databaseRecord.ExternalReplications.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.ExternalReplications.Find(x => x.TaskId == taskId);
 
+                if (watcher == null)
+                    return null;
+
+                return CreateExternalReplicationTaskInfo(clusterTopology, databaseRecord, watcher);
+
+            case OngoingTaskType.PullReplicationAsHub:
+                throw new BadRequestException("Getting task info for " + OngoingTaskType.PullReplicationAsHub + " is not supported");
+
+            case OngoingTaskType.PullReplicationAsSink:
+                var sinkReplication = databaseRecord.SinkPullReplications.Find(x => x.TaskId == taskId);
+
+                if (sinkReplication == null)
+                    return null;
+
+                return CreatePullReplicationAsSinkTaskInfo(clusterTopology, databaseRecord, sinkReplication);
+
+            case OngoingTaskType.Backup:
+
+                var backupConfiguration = taskName != null ?
+                    databaseRecord.PeriodicBackups.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.PeriodicBackups?.Find(x => x.TaskId == taskId);
+
+                if (backupConfiguration == null)
+                    return null;
+
+                return CreateBackupTaskInfo(clusterTopology, databaseRecord, backupConfiguration);
+
+            case OngoingTaskType.SqlEtl:
+
+                var sqlEtl = taskName != null ?
+                    databaseRecord.SqlEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.SqlEtls?.Find(x => x.TaskId == taskId);
+
+                if (sqlEtl == null)
+                    return null;
+
+                return CreateSqlEtlTaskInfo(clusterTopology, databaseRecord, sqlEtl);
+
+            case OngoingTaskType.OlapEtl:
+
+                var olapEtl = taskName != null
+                    ? databaseRecord.OlapEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.OlapEtls?.Find(x => x.TaskId == taskId);
+
+                if (olapEtl == null)
+                    return null;
+
+                return CreateOlapEtlTaskInfo(clusterTopology, databaseRecord, olapEtl);
+
+            case OngoingTaskType.QueueEtl:
+
+                var queueEtl = taskName != null
+                    ? databaseRecord.QueueEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.QueueEtls?.Find(x => x.TaskId == taskId);
+
+                if (queueEtl == null)
+                    return null;
+
+                return CreateQueueEtlTaskInfo(clusterTopology, databaseRecord, queueEtl);
+
+            case OngoingTaskType.RavenEtl:
+
+                var ravenEtl = taskName != null ?
+                    databaseRecord.RavenEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.RavenEtls?.Find(x => x.TaskId == taskId);
+
+                if (ravenEtl == null)
+                    return null;
+
+                return CreateRavenEtlTaskInfo(clusterTopology, databaseRecord, ravenEtl);
+
+            case OngoingTaskType.ElasticSearchEtl:
+
+                var elasticSearchEtl = taskName != null ?
+                    databaseRecord.ElasticSearchEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.ElasticSearchEtls?.Find(x => x.TaskId == taskId);
+
+                if (elasticSearchEtl == null)
+                    return null;
+
+                return CreateElasticSearchEtlTaskInfo(clusterTopology, databaseRecord, elasticSearchEtl);
+
+            case OngoingTaskType.Subscription:
+
+                var subscriptionState = taskName != null
+                    ? _subscriptionStorage.GetSubscriptionByName(context, taskName)
+                    : _subscriptionStorage.GetSubscriptionById(context, taskId.Value);
+
+                return CreateSubscriptionTaskInfo(clusterTopology, databaseRecord, subscriptionState);
+            default:
+                return null;
+        }
     }
 
     protected abstract OngoingTaskConnectionStatus GetEtlTaskConnectionStatus<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
@@ -68,4 +257,230 @@ public abstract class AbstractOngoingTasks
         where T : ExternalReplicationBase;
 
     protected abstract PeriodicBackupStatus GetBackupStatus(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag, out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted);
+
+    private OngoingTaskReplication CreateExternalReplicationTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, ExternalReplication watcher)
+    {
+        var res = GetReplicationTaskConnectionStatus(GetDatabaseTopology(databaseRecord), clusterTopology, watcher, databaseRecord.RavenConnectionStrings, out var tag, out var connection);
+
+        return new OngoingTaskReplication
+        {
+            TaskId = watcher.TaskId,
+            TaskName = watcher.Name,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            ConnectionStringName = watcher.ConnectionStringName,
+            TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+            DestinationDatabase = connection?.Database,
+            DestinationUrl = res.Url,
+            TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
+            MentorNode = watcher.MentorNode,
+            PinToMentorNode = watcher.PinToMentorNode,
+            TaskConnectionStatus = res.Status,
+            DelayReplicationFor = watcher.DelayReplicationFor
+        };
+    }
+
+    private OngoingTaskSubscription CreateSubscriptionTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, SubscriptionState subscriptionState)
+    {
+        (OngoingTaskConnectionStatus connectionStatus, string responsibleNodeTag) = _subscriptionStorage.GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionState.SubscriptionId, subscriptionState, databaseRecord);
+
+        return OngoingTaskSubscription.From(subscriptionState, connectionStatus, clusterTopology, responsibleNodeTag);
+    }
+
+    private OngoingTaskBackup CreateBackupTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration)
+    {
+        var backupStatus = GetBackupStatus(backupConfiguration.TaskId, databaseRecord, backupConfiguration, out var responsibleNodeTag, out var nextBackup,
+            out var onGoingBackup, out var isEncrypted);
+        var backupDestinations = backupConfiguration.GetFullBackupDestinations();
+
+        return new OngoingTaskBackup
+        {
+            TaskId = backupConfiguration.TaskId,
+            BackupType = backupConfiguration.BackupType,
+            TaskName = backupConfiguration.Name,
+            TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+            MentorNode = backupConfiguration.MentorNode,
+            PinToMentorNode = backupConfiguration.PinToMentorNode,
+            LastExecutingNodeTag = backupStatus?.NodeTag,
+            LastFullBackup = backupStatus?.LastFullBackup,
+            LastIncrementalBackup = backupStatus?.LastIncrementalBackup,
+            OnGoingBackup = onGoingBackup,
+            NextBackup = nextBackup,
+            TaskConnectionStatus = backupConfiguration.Disabled
+                ? OngoingTaskConnectionStatus.NotActive
+                : responsibleNodeTag == _server.NodeTag
+                    ? OngoingTaskConnectionStatus.Active
+                    : OngoingTaskConnectionStatus.NotOnThisNode,
+            ResponsibleNode = new NodeId { NodeTag = responsibleNodeTag, NodeUrl = clusterTopology.GetUrlFromTag(responsibleNodeTag) },
+            BackupDestinations = backupDestinations,
+            RetentionPolicy = backupConfiguration.RetentionPolicy,
+            IsEncrypted = isEncrypted
+        };
+    }
+
+    private OngoingTaskRavenEtlListView CreateRavenEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, RavenEtlConfiguration ravenEtl)
+    {
+        var taskState = OngoingTasksHandler.GetEtlTaskState(ravenEtl);
+
+        databaseRecord.RavenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var connection);
+
+        var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, ravenEtl, out var tag, out var error);
+
+        return new OngoingTaskRavenEtlListView()
+        {
+            TaskId = ravenEtl.TaskId,
+            TaskName = ravenEtl.Name,
+            TaskState = taskState,
+            MentorNode = ravenEtl.MentorNode,
+            PinToMentorNode = ravenEtl.PinToMentorNode,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            DestinationUrl = GetDestinationUrlForRavenEtl(ravenEtl.Name),
+            TaskConnectionStatus = connectionStatus,
+            DestinationDatabase = connection?.Database,
+            ConnectionStringName = ravenEtl.ConnectionStringName,
+            TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
+            Error = error
+        };
+    }
+
+    private OngoingTaskSqlEtlListView CreateSqlEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, SqlEtlConfiguration sqlEtl)
+    {
+        string database = null;
+        string server = null;
+
+        if (databaseRecord.SqlConnectionStrings.TryGetValue(sqlEtl.ConnectionStringName, out var sqlConnection))
+        {
+            (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlConnection.FactoryName, sqlConnection.ConnectionString);
+        }
+
+        var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, sqlEtl, out var tag, out var error);
+
+        var taskState = OngoingTasksHandler.GetEtlTaskState(sqlEtl);
+
+        return new OngoingTaskSqlEtlListView
+        {
+            TaskId = sqlEtl.TaskId,
+            TaskName = sqlEtl.Name,
+            TaskConnectionStatus = connectionStatus,
+            TaskState = taskState,
+            MentorNode = sqlEtl.MentorNode,
+            PinToMentorNode = sqlEtl.PinToMentorNode,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            DestinationServer = server,
+            DestinationDatabase = database,
+            ConnectionStringDefined = sqlConnection != null,
+            ConnectionStringName = sqlEtl.ConnectionStringName,
+            Error = error
+        };
+    }
+
+    private OngoingTaskOlapEtlListView CreateOlapEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, OlapEtlConfiguration olapEtl)
+    {
+        string destination = default;
+        if (databaseRecord.OlapConnectionStrings.TryGetValue(olapEtl.ConnectionStringName, out var olapConnection))
+        {
+            destination = olapConnection.GetDestination();
+        }
+
+        var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, olapEtl, out var tag, out var error);
+
+        var taskState = OngoingTasksHandler.GetEtlTaskState(olapEtl);
+
+        return new OngoingTaskOlapEtlListView
+        {
+            TaskId = olapEtl.TaskId,
+            TaskName = olapEtl.Name,
+            TaskConnectionStatus = connectionStatus,
+            TaskState = taskState,
+            MentorNode = olapEtl.MentorNode,
+            PinToMentorNode = olapEtl.PinToMentorNode,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            ConnectionStringName = olapEtl.ConnectionStringName,
+            Destination = destination,
+            Error = error
+        };
+    }
+
+    private OngoingTaskElasticSearchEtlListView CreateElasticSearchEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord,
+        ElasticSearchEtlConfiguration elasticSearchEtl)
+    {
+        databaseRecord.ElasticSearchConnectionStrings.TryGetValue(elasticSearchEtl.ConnectionStringName, out var connection);
+
+        var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, elasticSearchEtl, out var tag, out var error);
+        var taskState = OngoingTasksHandler.GetEtlTaskState(elasticSearchEtl);
+
+        return new OngoingTaskElasticSearchEtlListView
+        {
+            TaskId = elasticSearchEtl.TaskId,
+            TaskName = elasticSearchEtl.Name,
+            TaskConnectionStatus = connectionStatus,
+            TaskState = taskState,
+            MentorNode = elasticSearchEtl.MentorNode,
+            PinToMentorNode = elasticSearchEtl.PinToMentorNode,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            ConnectionStringName = elasticSearchEtl.ConnectionStringName,
+            NodesUrls = connection?.Nodes,
+            Error = error
+        };
+    }
+
+    private OngoingTaskQueueEtlListView CreateQueueEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, QueueEtlConfiguration queueEtl)
+    {
+        databaseRecord.QueueConnectionStrings.TryGetValue(queueEtl.ConnectionStringName, out var connection);
+
+        var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, queueEtl, out var tag, out var error);
+        var taskState = OngoingTasksHandler.GetEtlTaskState(queueEtl);
+
+        return new OngoingTaskQueueEtlListView
+        {
+            TaskId = queueEtl.TaskId,
+            TaskName = queueEtl.Name,
+            TaskConnectionStatus = connectionStatus,
+            TaskState = taskState,
+            MentorNode = queueEtl.MentorNode,
+            PinToMentorNode = queueEtl.PinToMentorNode,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            ConnectionStringName = queueEtl.ConnectionStringName,
+            BrokerType = queueEtl.BrokerType,
+            Url = connection?.GetUrl(),
+            Error = error
+        };
+    }
+
+    private OngoingTaskPullReplicationAsSink CreatePullReplicationAsSinkTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, PullReplicationAsSink sinkReplication)
+    {
+        var sinkReplicationStatus = GetReplicationTaskConnectionStatus(GetDatabaseTopology(databaseRecord), clusterTopology, sinkReplication, databaseRecord.RavenConnectionStrings, out var sinkReplicationTag, out var sinkReplicationConnection);
+
+        var sinkInfo = new OngoingTaskPullReplicationAsSink
+        {
+            TaskId = sinkReplication.TaskId,
+            TaskName = sinkReplication.Name,
+            ResponsibleNode = new NodeId { NodeTag = sinkReplicationTag, NodeUrl = clusterTopology.GetUrlFromTag(sinkReplicationTag) },
+            ConnectionStringName = sinkReplication.ConnectionStringName,
+            TaskState = sinkReplication.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+            DestinationDatabase = sinkReplicationConnection?.Database,
+            HubName = sinkReplication.HubName,
+            Mode = sinkReplication.Mode,
+            DestinationUrl = sinkReplicationStatus.Url,
+            TopologyDiscoveryUrls = sinkReplicationConnection?.TopologyDiscoveryUrls,
+            MentorNode = sinkReplication.MentorNode,
+            PinToMentorNode = sinkReplication.PinToMentorNode,
+            TaskConnectionStatus = sinkReplicationStatus.Status,
+            AccessName = sinkReplication.AccessName,
+            AllowedHubToSinkPaths = sinkReplication.AllowedHubToSinkPaths,
+            AllowedSinkToHubPaths = sinkReplication.AllowedSinkToHubPaths
+        };
+
+        if (sinkReplication.CertificateWithPrivateKey != null)
+        {
+            // fetch public key of certificate
+            var certBytes = Convert.FromBase64String(sinkReplication.CertificateWithPrivateKey);
+            var certificate = CertificateLoaderUtil.CreateCertificate(certBytes,
+                sinkReplication.CertificatePassword,
+                CertificateLoaderUtil.FlagsForExport);
+
+            sinkInfo.CertificatePublicKey = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
+        }
+
+        return sinkInfo;
+    }
 }

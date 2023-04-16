@@ -7,69 +7,32 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.OngoingTasks;
+using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding;
 
 public partial class ShardedDatabaseContext
 {
-    public AbstractOngoingTasks OngoingTasks;
+    public ShardedOngoingTasks OngoingTasks;
 
-    public class ShardedOngoingTasks : AbstractOngoingTasks
+    public class ShardedOngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsStateOrchestrator>
     {
         private readonly ShardedDatabaseContext _context;
 
-        public ShardedOngoingTasks([NotNull] ShardedDatabaseContext context)
+        public ShardedOngoingTasks([NotNull] ShardedDatabaseContext context) : base(context.ServerStore, context.SubscriptionsStorage)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        protected override IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+        protected override DatabaseTopology GetDatabaseTopology(DatabaseRecord databaseRecord)
         {
-            throw new System.NotImplementedException();
+            return databaseRecord.Sharding.Orchestrator.Topology;
         }
 
-        protected override IEnumerable<OngoingTaskBackup> CollectBackupTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-        {
-            throw new System.NotImplementedException();
-        }
+        protected override string GetDestinationUrlForRavenEtl(string name) => null;
 
-        protected override IEnumerable<OngoingTaskRavenEtlListView> CollectRavenEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        protected override IEnumerable<OngoingTaskSqlEtlListView> CollectSqlEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        protected override IEnumerable<OngoingTaskOlapEtlListView> CollectOlapEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        protected override IEnumerable<OngoingTaskElasticSearchEtlListView> CollectElasticEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        protected override IEnumerable<OngoingTaskQueueEtlListView> CollectQueueEtlTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        protected override IEnumerable<OngoingTaskPullReplicationAsSink> CollectPullReplicationAsSinkTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        protected override IEnumerable<OngoingTaskPullReplicationAsHub> CollectPullReplicationAsHubTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        protected override IEnumerable<OngoingTaskReplication> CollectExternalReplicationTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+        protected override IEnumerable<OngoingTaskPullReplicationAsHub> GetPullReplicationAsHubTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
         {
             throw new System.NotImplementedException();
         }
