@@ -671,7 +671,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
             CancellationToken token)
         {
-            IEnumerable<QueryResult> results;
             if (query.Metadata.HasHighlightings)
             {
                 if (query.Metadata.FilterScript is null)
@@ -680,7 +679,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         if (query.Metadata.IsDistinct)
                         {
-                            results = QueryInternal<HasHighlighting, NoQueryFilter, HasProjection, HasDistinct>(
+                            return QueryInternal<HasHighlighting, NoQueryFilter, HasProjection, HasDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -689,7 +688,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else
                         {
-                            results = QueryInternal<HasHighlighting, NoQueryFilter, HasProjection, NoDistinct>(
+                            return QueryInternal<HasHighlighting, NoQueryFilter, HasProjection, NoDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -701,7 +700,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         if (query.Metadata.IsDistinct)
                         {
-                            results = QueryInternal<HasHighlighting, NoQueryFilter, NoProjection, HasDistinct>(
+                            return QueryInternal<HasHighlighting, NoQueryFilter, NoProjection, HasDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -710,7 +709,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else
                         {
-                            results = QueryInternal<HasHighlighting, NoQueryFilter, NoProjection, NoDistinct>(
+                            return QueryInternal<HasHighlighting, NoQueryFilter, NoProjection, NoDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -725,7 +724,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         if (query.Metadata.IsDistinct)
                         {
-                            results = QueryInternal<HasHighlighting, HasQueryFilter, HasProjection, HasDistinct>(
+                            return QueryInternal<HasHighlighting, HasQueryFilter, HasProjection, HasDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -734,7 +733,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else
                         {
-                            results = QueryInternal<HasHighlighting, HasQueryFilter, HasProjection, NoDistinct>(
+                            return QueryInternal<HasHighlighting, HasQueryFilter, HasProjection, NoDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -746,7 +745,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         if (query.Metadata.IsDistinct)
                         {
-                            results = QueryInternal<HasHighlighting, HasQueryFilter, NoProjection, HasDistinct>(
+                            return QueryInternal<HasHighlighting, HasQueryFilter, NoProjection, HasDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -755,7 +754,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else
                         {
-                            results = QueryInternal<HasHighlighting, HasQueryFilter, NoProjection, NoDistinct>(
+                            return QueryInternal<HasHighlighting, HasQueryFilter, NoProjection, NoDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -773,7 +772,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         if (query.Metadata.IsDistinct)
                         {
-                            results = QueryInternal<NoHighlighting, NoQueryFilter, HasProjection, HasDistinct>(
+                            return QueryInternal<NoHighlighting, NoQueryFilter, HasProjection, HasDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -782,7 +781,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else
                         {
-                            results = QueryInternal<NoHighlighting, NoQueryFilter, HasProjection, NoDistinct>(
+                            return QueryInternal<NoHighlighting, NoQueryFilter, HasProjection, NoDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -794,7 +793,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         if (query.Metadata.IsDistinct)
                         {
-                            results = QueryInternal<NoHighlighting, NoQueryFilter, NoProjection, HasDistinct>(
+                            return QueryInternal<NoHighlighting, NoQueryFilter, NoProjection, HasDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -803,7 +802,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else
                         {
-                            results = QueryInternal<NoHighlighting, NoQueryFilter, NoProjection, NoDistinct>(
+                            return QueryInternal<NoHighlighting, NoQueryFilter, NoProjection, NoDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -818,7 +817,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         if (query.Metadata.IsDistinct)
                         {
-                            results = QueryInternal<NoHighlighting, HasQueryFilter, HasProjection, HasDistinct>(
+                            return QueryInternal<NoHighlighting, HasQueryFilter, HasProjection, HasDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -827,7 +826,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else
                         {
-                            results = QueryInternal<NoHighlighting, HasQueryFilter, HasProjection, NoDistinct>(
+                            return QueryInternal<NoHighlighting, HasQueryFilter, HasProjection, NoDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -839,7 +838,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         if (query.Metadata.IsDistinct)
                         {
-                            results = QueryInternal<NoHighlighting, HasQueryFilter, NoProjection, HasDistinct>(
+                            return QueryInternal<NoHighlighting, HasQueryFilter, NoProjection, HasDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -848,7 +847,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else
                         {
-                            results = QueryInternal<NoHighlighting, HasQueryFilter, NoProjection, NoDistinct>(
+                            return QueryInternal<NoHighlighting, HasQueryFilter, NoProjection, NoDistinct>(
                                 query, queryTimings, fieldsToFetch,
                                 totalResults, skippedResults, scannedDocuments,
                                 retriever, documentsContext,
@@ -858,9 +857,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
                 }
             }
-
-            foreach (var result in results)
-                yield return result;
         }
 
         private static int ProcessHighlightings(HighlightingField current, CoraxHighlightingTermIndex highlightingTerm, ReadOnlySpan<char> fieldFragment, List<string> fragments, int maxFragmentCount)
