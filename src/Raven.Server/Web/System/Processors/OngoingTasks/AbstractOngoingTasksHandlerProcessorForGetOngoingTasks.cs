@@ -2,7 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Http;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.OngoingTasks;
 using Raven.Server.ServerWide.Context;
@@ -35,6 +37,8 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
             context.Write(writer, result.ToJson());
         }
     }
+
+    protected override RavenCommand<OngoingTasksResult> CreateCommandForNode(string nodeTag) => new GetOngoingTasksCommand(nodeTag);
 
     protected abstract long SubscriptionsCount { get; }
 
