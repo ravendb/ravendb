@@ -315,7 +315,14 @@ select filter(a)").Count();
                 .SingleOrDefault();
             Assert.Equal("Jane", emp.Name);
         }
-
+        using (var s = store.OpenSession())
+        {
+            var emp = s.Advanced.RawQuery<Employee>("from Employees where exists(Manager) filter Age = 51")
+                .Statistics(out var stats)
+                .SingleOrDefault();
+            Assert.Equal("Frank", emp.Name);
+            Assert.Equal(4, stats.ScannedResults);
+        }
         // scan results
         using (var s = store.OpenSession())
         {

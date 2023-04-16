@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading;
@@ -51,6 +52,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly IndexFieldsMapping _fieldMappings;
         private readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;
+        private readonly int _maxNumberOfOutputsPerDocument;
 
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
@@ -58,6 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _allocator = readTransaction.Allocator;
             _fieldMappings = fieldsMapping;
             _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
+            _maxNumberOfOutputsPerDocument = index.MaxNumberOfOutputsPerDocument;
         }
 
         public override long EntriesCount() => _indexSearcher.NumberOfEntries;
@@ -454,18 +457,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             public bool IsProjection => true;
         }
 
-        protected static bool WillAlwaysIncludeInResults(IndexType indexType, FieldsToFetch fieldsToFetch, IndexQueryServerSide query)
+        private static bool WillAlwaysIncludeInResults(IndexType indexType, FieldsToFetch fieldsToFetch, IndexQueryServerSide query)
         {
-            if (fieldsToFetch.IsDistinct)
-                return true;
-
-            if (indexType.IsMapReduce())
-                return true;
-
-            if (query.SkipDuplicateChecking)
-                return true;
-
-            return false;
+            return fieldsToFetch.IsDistinct || indexType.IsMapReduce() || query.SkipDuplicateChecking;
         }
 
         private IEnumerable<QueryResult> QueryInternal<THighlighting, TQueryFilter, THasProjection, TDistinct>(
@@ -495,115 +489,111 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var identityTracker = new IdentityTracker<TDistinct>();
             identityTracker.Initialize(_index, query, _indexSearcher, _fieldMappings, fieldsToFetch, retriever);
 
-            var pageSize = query.PageSize;
-            bool isDistinctCount = query.PageSize == 0 && typeof(TDistinct) == typeof(HasDistinct);
-            if (isDistinctCount)
-                pageSize = int.MaxValue;
-
-            if (query.Metadata.HasExplanations)
-                throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
-
-            if (pageSize + query.Start > int.MaxValue)
+            int pageSize = query.PageSize;
+            if ((long)pageSize + query.Start > int.MaxValue)
             {
                 throw new NotSupportedException($"Corax query cannot cover 2.1 billion results at once, but got pageSize: {pageSize} and start: {query.Start}");
             }
-            int take = (int)(pageSize + query.Start);
+            
+            if (query.Metadata.HasExplanations)
+                throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
+            
+            int take = pageSize + query.Start;
             if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
                 take = CoraxConstants.IndexSearcher.TakeAll;
+            
+            bool isDistinctCount = query.PageSize == 0 && typeof(TDistinct) == typeof(HasDistinct);
+            if (isDistinctCount)
+            {
+                pageSize = int.MaxValue;
+                take = CoraxConstants.IndexSearcher.TakeAll;
+            }
 
             THasProjection hasProjections = default;
             THighlighting highlightings = default;
             highlightings.Initialize(query, queryTimings);
 
-            IQueryMatch queryMatch;
-
-            QueryTimingsScope coraxScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false);
-            using (coraxScope?.Start())
+            bool runQuery = true;
+            while (runQuery)
             {
-                var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, take);
+                IQueryMatch queryMatch;
 
-                if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters)) is null)
-                    yield break;
-            }
+                using (queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false)?.Start())
+                {
+                    var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index,
+                        query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, take);
 
-            highlightings.Setup(query, documentsContext);
+                    if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters)) is null)
+                        yield break;
+                }
 
-            int coraxPageSize = CoraxGetPageSize(_indexSearcher, take, query);
-            var ids = QueryPool.Rent(coraxPageSize);
-            int docsToLoad = pageSize;
-            int queryStart = query.Start;
+                highlightings.Setup(query, documentsContext);
 
-            using var queryFilter = GetQueryFilter();
+                int bufferSize = CoraxBufferSize(_indexSearcher, take, query);
+                var ids = QueryPool.Rent(bufferSize);
 
-            bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
+                int docsToLoad = pageSize;
 
-            while (true)
-            {
-                token.ThrowIfCancellationRequested();
+                using var queryFilter = GetQueryFilter();
 
-                // We look for items that was haven't seen before in the case of paging. 
-                int read = queryMatch.Fill(ids);
-                if (read == 0)
-                    break;
-
-                // If we are going to skip, we've better do it knowing how many we have passed. 
-                int i = identityTracker.RegisterDuplicates<THasProjection>(ref hasProjections, totalResults.Value, ids.AsSpan(0, read), token);
-
-                totalResults.Value += read;
-
-                // Now for every document that was selected. document it. 
-                for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
+                bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
+                totalResults.Value = 0;
+                while (true)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    // If we are going to include no matter what, lets skip everything else.
-                    if (willAlwaysIncludeInResults)
-                        goto Include;
+                    // We look for items that was haven't seen before in the case of paging. 
+                    int read = queryMatch.Fill(ids);
+                    if (read == 0)
+                        break;
 
-                    // Ok, we will need to check for duplicates, then we will have to work. In some cases (like TimeSeries) we don't "have" unique identifier so we skip checking.
-                    var identityExists = retriever.TryGetKeyCorax(_indexSearcher, ids[i], out var rawIdentity);
+                    // If we are going to skip, we've better do it knowing how many we have passed. 
+                    int i = identityTracker.RegisterDuplicates(ref hasProjections, totalResults.Value, ids.AsSpan(0, read), token);
 
-                    // If we have figured out that this document identity has already been seen, we are skipping it.
-                    if (identityExists && identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity) == false)
+                    totalResults.Value += read;
+
+                    // Now for every document that was selected. document it. 
+                    for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                     {
-                        docsToLoad++;
-                        skippedResults.Value++;
-                        continue;
-                    }
+                        token.ThrowIfCancellationRequested();
 
-                // Now we know this is a new candidate document to be return therefore, we are going to be getting the
-                // actual data and apply the rest of the filters. 
-                Include:
-                    var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key, _index.IndexFieldsPersistence);
+                        // If we are going to include no matter what, lets skip everything else.
+                        if (willAlwaysIncludeInResults)
+                            goto Include;
 
-                    var filterResult = queryFilter.Apply(ref retrieverInput, key);
-                    if (filterResult is not FilterResult.Accepted)
-                    {
-                        docsToLoad++;
-                        if (filterResult is FilterResult.Skipped)
-                            continue;
-                        if (filterResult is FilterResult.LimitReached)
-                            break;
-                    }
+                        // Ok, we will need to check for duplicates, then we will have to work. In some cases (like TimeSeries) we don't "have" unique identifier so we skip checking.
+                        var identityExists = retriever.TryGetKeyCorax(_indexSearcher, ids[i], out var rawIdentity);
 
-                    bool markedAsSkipped = false;
-                    var fetchedDocument = retriever.Get(ref retrieverInput, token);
-                    if (fetchedDocument.Document != null)
-                    {
-                        var qr = GetQueryResult(ref identityTracker, fetchedDocument.Document, ref markedAsSkipped);
-                        if (qr.Result is null)
+                        // If we have figured out that this document identity has already been seen, we are skipping it.
+                        if (identityExists && identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity) == false)
                         {
                             docsToLoad++;
+                            skippedResults.Value++;
                             continue;
                         }
 
-                        yield return qr;
-                    }
-                    else if (fetchedDocument.List != null)
-                    {
-                        foreach (Document item in fetchedDocument.List)
+                        // Now we know this is a new candidate document to be return therefore, we are going to be getting the
+                        // actual data and apply the rest of the filters. 
+                        Include:
+                        var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key,
+                            _index.IndexFieldsPersistence);
+
+                        var filterResult = queryFilter.Apply(ref retrieverInput, key);
+                        if (filterResult is not FilterResult.Accepted)
                         {
-                            var qr = GetQueryResult(ref identityTracker, item, ref markedAsSkipped);
+                            docsToLoad++;
+                            if (filterResult is FilterResult.Skipped)
+                                continue;
+
+                            if (filterResult is FilterResult.LimitReached)
+                                break;
+                        }
+
+                        bool markedAsSkipped = false;
+                        var fetchedDocument = retriever.Get(ref retrieverInput, token);
+                        if (fetchedDocument.Document != null)
+                        {
+                            var qr = GetQueryResult(ref identityTracker, fetchedDocument.Document, ref markedAsSkipped);
                             if (qr.Result is null)
                             {
                                 docsToLoad++;
@@ -612,16 +602,49 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                             yield return qr;
                         }
+                        else if (fetchedDocument.List != null)
+                        {
+                            foreach (Document item in fetchedDocument.List)
+                            {
+                                var qr = GetQueryResult(ref identityTracker, item, ref markedAsSkipped);
+                                if (qr.Result is null)
+                                {
+                                    docsToLoad++;
+                                    continue;
+                                }
+
+                                yield return qr;
+                            }
+                        }
+                        else
+                        {
+                            skippedResults.Value++;
+                        }
                     }
-                    else
-                    {
-                        skippedResults.Value++;
-                    }
+
+	                // No need to continue filling buffers as there are no more docs to load.
+	                if (docsToLoad <= 0)
+	                    break;
                 }
 
-                // No need to continue filling buffers as there are no more docs to load.
-                if (docsToLoad <= 0)
-                    break;
+                QueryPool.Return(ids);
+
+                if (queryMatch is not SortingMatch sm)
+                    break; // this is only relevant if we are sorting, since we may have filtered items and need to read more, see: RavenDB-20294
+                
+                if (docsToLoad == 0 ||
+                    sm.TotalResults == totalResults.Value ||
+                    scannedDocuments.Value >= query.FilterLimit)
+                {
+                    runQuery = false;
+                }
+                else
+                {
+                    Debug.Assert(_maxNumberOfOutputsPerDocument > 0);
+                    take += (pageSize - (pageSize - docsToLoad)) * _maxNumberOfOutputsPerDocument;
+                    if (take < 0) // handle overflow
+                        take = int.MaxValue;
+                }
             }
 
             if (isDistinctCount)
@@ -662,8 +685,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
                 };
             }
-
-            QueryPool.Return(ids);
         }
 
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
@@ -1128,7 +1149,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             mlt.SetFieldNames(fieldNames);
 
-            var pageSize = CoraxGetPageSize(_indexSearcher, query.PageSize, query);
+            var pageSize = CoraxBufferSize(_indexSearcher, query.PageSize, query);
 
             IQueryMatch mltQuery;
             if (baseDocId.HasValue)
@@ -1207,8 +1228,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters)) is null)
                 yield break;
 
-            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query));
-            int docsToLoad = CoraxGetPageSize(_indexSearcher, pageSize, query);
+            var ids = QueryPool.Rent(CoraxBufferSize(_indexSearcher, take, query));
+            int docsToLoad = CoraxBufferSize(_indexSearcher, pageSize, query);
             using var coraxEntryReader = new CoraxIndexedEntriesReader(_indexSearcher, _fieldMappings);
             int read;
             int i = Skip();

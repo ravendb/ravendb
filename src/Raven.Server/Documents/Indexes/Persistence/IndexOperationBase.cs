@@ -117,7 +117,7 @@ public abstract class IndexOperationBase : IDisposable
         return (int)pageSize;
     }
 
-    protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int pageSize, IndexQueryServerSide query)
+    protected static int CoraxBufferSize(global::Corax.IndexSearcher searcher, long pageSize, IndexQueryServerSide query)
     {
         var numberOfEntries = searcher.NumberOfEntries;
         if (numberOfEntries == 0)
