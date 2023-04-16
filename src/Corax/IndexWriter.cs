@@ -1400,8 +1400,8 @@ namespace Corax
                     for (int i = 0; i < read; i++)
                     {
                         _deletedEntries.Add(output[i]);
+                        _numberOfModifications--;
                     }
-                    _numberOfModifications--;
                 }
             }
             else
