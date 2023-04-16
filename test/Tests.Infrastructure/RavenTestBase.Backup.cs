@@ -13,6 +13,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -174,7 +175,7 @@ namespace FastTests
                     var rawRecord = server.ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName);
                     var pbConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
                     var backupStatus = db.PeriodicBackupRunner.GetBackupStatus(taskId);
-                    var node = db.WhoseTaskIsIt(rawRecord.Topology, pbConfig, backupStatus, keepTaskOnOriginalMemberNode);
+                    var node = BackupUtils.WhoseTaskIsIt(server.ServerStore, rawRecord.Topology, pbConfig, backupStatus, db.NotificationCenter, keepTaskOnOriginalMemberNode);
 
                     return node;
                 }

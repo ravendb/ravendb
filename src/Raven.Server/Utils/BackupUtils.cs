@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Json.Serialization;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
@@ -79,13 +82,6 @@ internal static class BackupUtils
             BackupTaskType = lastBackupStatus?.TaskId == 0 ? BackupTaskType.OneTime : BackupTaskType.Periodic,
             Destinations = AddDestinations(lastBackupStatus)
         };
-    }
-
-    internal static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, string databaseName, long taskId)
-    {
-        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (context.OpenReadTransaction())
-            return GetBackupStatusFromCluster(serverStore, context, databaseName, taskId);
     }
 
     internal static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
@@ -312,10 +308,10 @@ internal static class BackupUtils
         using (context.OpenReadTransaction())
         {
             var rawDatabaseRecord = parameters.ServerStore.Cluster.ReadRawDatabaseRecord(context, parameters.DatabaseName);
-            
+
             foreach (var backup in rawDatabaseRecord.PeriodicBackups)
             {
-                var nextAction = GetNextIdleDatabaseActivity(new NextIdleDatabaseActivityParameters(parameters, backup));
+                var nextAction = GetNextIdleDatabaseActivity(new NextIdleDatabaseActivityParameters(parameters, backup, context));
 
                 if (nextAction == null)
                     continue;
@@ -339,7 +335,7 @@ internal static class BackupUtils
             parameters.Configuration.HasBackup() == false)
             return null;
 
-        var backupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.DatabaseName, parameters.Configuration.TaskId);
+        var backupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
         if (backupStatus == null)
         {
             // we want to wait for the backup occurrence
@@ -350,7 +346,7 @@ internal static class BackupUtils
         }
 
         var topology = parameters.ServerStore.LoadDatabaseTopology(parameters.DatabaseName);
-        var responsibleNodeTag = DocumentDatabase.WhoseTaskIsIt(parameters.ServerStore, topology, parameters.Configuration, backupStatus, parameters.NotificationCenter, keepTaskOnOriginalMemberNode: true);
+        var responsibleNodeTag = WhoseTaskIsIt(parameters.ServerStore, topology, parameters.Configuration, backupStatus, parameters.NotificationCenter, keepTaskOnOriginalMemberNode: true);
         if (responsibleNodeTag == null)
         {
             // cluster is down
@@ -437,49 +433,123 @@ internal static class BackupUtils
     }
 
     public static void SaveBackupStatus(PeriodicBackupStatus status, string databaseName, ServerStore serverStore, Logger logger,
-            BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
+        BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
+    {
+        try
         {
-            try
+            var command = new UpdatePeriodicBackupStatusCommand(databaseName, RaftIdGenerator.NewId()) { PeriodicBackupStatus = status };
+
+            AsyncHelpers.RunSync(async () =>
             {
-                var command = new UpdatePeriodicBackupStatusCommand(databaseName, RaftIdGenerator.NewId())
-                {
-                    PeriodicBackupStatus = status
-                };
+                var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
+                    {
+                        var result = await serverStore.SendToLeaderAsync(command);
+                        return result.Index;
+                    },
+                    infoMessage: "Saving the backup status in the cluster",
+                    errorMessage: "Failed to save the backup status in the cluster",
+                    backupResult, onProgress, operationCancelToken);
 
-                AsyncHelpers.RunSync(async () =>
-                {
-                    var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
-                        {
-                            var result = await serverStore.SendToLeaderAsync(command);
-                            return result.Index;
-                        },
-                        infoMessage: "Saving the backup status in the cluster",
-                        errorMessage: "Failed to save the backup status in the cluster",
-                        backupResult, onProgress, operationCancelToken);
+                await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
+                    {
+                        await serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+                        return default;
+                    },
+                    infoMessage: "Verifying that the backup status was successfully saved in the cluster",
+                    errorMessage: "Failed to verify that the backup status was successfully saved in the cluster",
+                    backupResult, onProgress, operationCancelToken);
+            });
 
-                    await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
-                        {
-                            await serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
-                            return default;
-                        },
-                        infoMessage: "Verifying that the backup status was successfully saved in the cluster",
-                        errorMessage: "Failed to verify that the backup status was successfully saved in the cluster",
-                        backupResult, onProgress, operationCancelToken);
-                });
-
-                if (logger.IsInfoEnabled)
-                    logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
-            }
-            catch (Exception e)
-            {
-                const string message = "Error saving the periodic backup status";
-
-                if (logger.IsOperationsEnabled)
-                    logger.Operations(message, e);
-
-                backupResult?.AddError($"{message}{Environment.NewLine}{e}");
-            }
+            if (logger.IsInfoEnabled)
+                logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
         }
+        catch (Exception e)
+        {
+            const string message = "Error saving the periodic backup status";
+
+            if (logger.IsOperationsEnabled)
+                logger.Operations(message, e);
+
+            backupResult?.AddError($"{message}{Environment.NewLine}{e}");
+        }
+    }
+
+    public static string WhoseTaskIsIt(
+            ServerStore serverStore,
+            DatabaseTopology databaseTopology,
+            IDatabaseTask configuration,
+            IDatabaseTaskStatus taskStatus,
+            NotificationCenter.NotificationCenter notificationCenter,
+            bool keepTaskOnOriginalMemberNode = false)
+    {
+        var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
+            serverStore.Engine.CurrentState, configuration,
+            getLastResponsibleNode:
+            () =>
+            {
+                var lastResponsibleNode = taskStatus?.NodeTag;
+                if (lastResponsibleNode == null)
+                {
+                    // first time this task is assigned
+                    return null;
+                }
+
+                if (databaseTopology.AllNodes.Contains(lastResponsibleNode) == false)
+                {
+                    // the topology doesn't include the last responsible node anymore
+                    // we'll choose a different one
+                    return null;
+                }
+
+                if (taskStatus is PeriodicBackupStatus)
+                {
+                    if (databaseTopology.Rehabs.Contains(lastResponsibleNode) &&
+                        databaseTopology.PromotablesStatus.TryGetValue(lastResponsibleNode, out var status) &&
+                        (status == DatabasePromotionStatus.OutOfCpuCredits ||
+                         status == DatabasePromotionStatus.EarlyOutOfMemory ||
+                         status == DatabasePromotionStatus.HighDirtyMemory))
+                    {
+                        // avoid moving backup tasks when the machine is out of CPU credit
+                        return lastResponsibleNode;
+                    }
+                }
+
+                if (serverStore.LicenseManager.HasHighlyAvailableTasks() == false)
+                {
+                    // can't redistribute, keep it on the original node
+                    RaiseAlertIfNecessary(databaseTopology, configuration, lastResponsibleNode, serverStore, notificationCenter);
+                    return lastResponsibleNode;
+                }
+
+                if (keepTaskOnOriginalMemberNode &&
+                    databaseTopology.Members.Contains(lastResponsibleNode))
+                {
+                    // keep the task on the original node
+                    return lastResponsibleNode;
+                }
+
+                return null;
+            });
+
+        if (whoseTaskIsIt == null && taskStatus is PeriodicBackupStatus)
+            return taskStatus.NodeTag; // we don't want to stop backup process
+
+        return whoseTaskIsIt;
+    }
+
+    private static void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode,
+        ServerStore serverStore, NotificationCenter.NotificationCenter notificationCenter)
+    {
+        // raise alert if redistribution is necessary
+        if (notificationCenter != null &&
+            databaseTopology.Count > 1 &&
+            serverStore.NodeTag != lastResponsibleNode &&
+            databaseTopology.Members.Contains(lastResponsibleNode) == false)
+        {
+            var alert = LicenseManager.CreateHighlyAvailableTasksAlert(databaseTopology, configuration, lastResponsibleNode);
+            notificationCenter.Add(alert);
+        }
+    }
 
     public class NextBackupOccurrenceParameters
     {
@@ -528,7 +598,7 @@ internal static class BackupUtils
 
     public class EarliestIdleDatabaseActivityParameters
     {
-        public string DatabaseName { get; set; }
+                public string DatabaseName { get; set; }
 
         public DateTime? DatabaseWakeUpTimeUtc { get; set; }
 
@@ -549,8 +619,11 @@ internal static class BackupUtils
     {
         public PeriodicBackupConfiguration Configuration { get; set; }
 
-        public NextIdleDatabaseActivityParameters(EarliestIdleDatabaseActivityParameters parameters, PeriodicBackupConfiguration configuration)
+        public TransactionOperationContext Context { get; set; }
+
+        public NextIdleDatabaseActivityParameters(EarliestIdleDatabaseActivityParameters parameters, PeriodicBackupConfiguration configuration, TransactionOperationContext context)
         {
+            Context = context;
             Configuration = configuration;
             DatabaseName = parameters.DatabaseName;
             DatabaseWakeUpTimeUtc = parameters.DatabaseWakeUpTimeUtc;
