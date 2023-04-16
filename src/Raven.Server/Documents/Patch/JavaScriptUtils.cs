@@ -349,7 +349,7 @@ namespace Raven.Server.Documents.Patch
 
             var jsValue = objectInstance.Get(Constants.Documents.Metadata.Key);
             // search either @metadata.@id or @id
-            var metadata = jsValue.IsObject() == false ? objectInstance : jsValue.AsObject();
+            var metadata = jsValue.IsObject() == false || jsValue is BlittableObjectInstance blittableJsValue && blittableJsValue.Blittable.Count == 0 ? objectInstance : jsValue.AsObject();
             var value = metadata.Get(Constants.Documents.Metadata.Id);
             if (value.IsString() == false)
             {
