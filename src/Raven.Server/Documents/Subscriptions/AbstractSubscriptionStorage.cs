@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using JetBrains.Annotations;
@@ -37,6 +38,16 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
     protected abstract void SetConnectionException(TState state, SubscriptionException ex);
     protected abstract string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus);
     protected abstract bool SubscriptionChangeVectorHasChanges(TState state, SubscriptionState taskStatus);
+
+    public IEnumerable<SubscriptionState> GetAllSubscriptionsFromServerStore(TransactionOperationContext context)
+    {
+        foreach (var state in SubscriptionsClusterStorage.GetAllSubscriptionsWithoutState(context, _databaseName, 0, int.MaxValue))
+            yield return state;
+    }
+
+    public SubscriptionState GetSubscriptionById(TransactionOperationContext context, long taskId) => _serverStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, _databaseName, taskId);
+
+    public SubscriptionState GetSubscriptionByName(TransactionOperationContext context, string taskName) => _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, taskName);
 
     public long GetAllSubscriptionsCount()
     {
