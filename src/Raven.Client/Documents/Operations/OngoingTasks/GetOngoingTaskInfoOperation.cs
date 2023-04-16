@@ -104,6 +104,9 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                         case OngoingTaskType.PullReplicationAsSink:
                             Result = JsonDeserializationClient.OngoingTaskPullReplicationAsSinkResult(response);
                             break;
+                        case OngoingTaskType.PullReplicationAsHub:
+                            Result = JsonDeserializationClient.OngoingTaskPullReplicationAsHubResult(response);
+                            break;
                         default:
                             throw new ArgumentOutOfRangeException();
                     }

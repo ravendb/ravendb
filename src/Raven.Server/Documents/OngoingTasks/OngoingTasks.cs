@@ -11,6 +11,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -148,7 +149,13 @@ public class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsState>
     protected override PeriodicBackupStatus GetBackupStatus(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
         out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
     {
-        throw new NotImplementedException();
+        var backupStatus = _database.PeriodicBackupRunner.GetBackupStatus(taskId);
+        responsibleNodeTag = _database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
+        nextBackup = _database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
+        onGoingBackup = _database.PeriodicBackupRunner.OnGoingBackup(taskId);
+        isEncrypted = BackupTask.IsBackupEncrypted(_database, backupConfiguration);
+
+        return backupStatus;
     }
 
     private List<IAbstractIncomingReplicationHandler> GetIncomingReplicationHandlers() => _database.ReplicationLoader.IncomingHandlers.ToList();

@@ -163,7 +163,7 @@ loadToOrders(orderData);
 
                 taskId = addRavenEtlResult.TaskId;
 
-                var etlResult = (OngoingTaskRavenEtlDetails)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);
+                var etlResult = (OngoingTaskRavenEtl)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);
                 Assert.Equal("cs", etlResult.Configuration.ConnectionStringName);
                 Assert.Equal("tesst", etlResult.Configuration.Name);
                 Assert.Equal("loadAll", etlResult.Configuration.Transforms[0].Name);
@@ -173,7 +173,7 @@ loadToOrders(orderData);
 
                 taskId = addSqlEtlResult.TaskId;
 
-                var sqlResult = (OngoingTaskSqlEtlDetails)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.SqlEtl);
+                var sqlResult = (OngoingTaskSqlEtl)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.SqlEtl);
                 Assert.Equal("abc", sqlResult.Configuration.ConnectionStringName);
                 Assert.Equal("abc", sqlResult.Configuration.Name);
                 Assert.Equal("OrdersAndLines", sqlResult.Configuration.Transforms[0].Name);
@@ -316,7 +316,7 @@ loadToOrders(orderData);
                 Assert.Equal("backup1", backupResult.TaskName);
                 Assert.Equal(OngoingTaskState.Disabled, backupResult.TaskState);
 
-                var etlResult = (OngoingTaskRavenEtlDetails)await GetTaskInfo((DocumentStore)store, "tesst", OngoingTaskType.RavenEtl);
+                var etlResult = (OngoingTaskRavenEtl)await GetTaskInfo((DocumentStore)store, "tesst", OngoingTaskType.RavenEtl);
                 Assert.Equal("cs", etlResult.Configuration.ConnectionStringName);
                 Assert.Equal("tesst", etlResult.Configuration.Name);
                 Assert.Equal("loadAll", etlResult.Configuration.Transforms[0].Name);
@@ -324,7 +324,7 @@ loadToOrders(orderData);
                 Assert.Equal("Users", etlResult.Configuration.Transforms[0].Collections[0]);
                 Assert.Equal(etlConfiguration.Name, etlResult?.TaskName);
 
-                var sqlResult = (OngoingTaskSqlEtlDetails)await GetTaskInfo((DocumentStore)store, "abc", OngoingTaskType.SqlEtl);
+                var sqlResult = (OngoingTaskSqlEtl)await GetTaskInfo((DocumentStore)store, "abc", OngoingTaskType.SqlEtl);
                 Assert.Equal("abc", sqlResult.Configuration.ConnectionStringName);
                 Assert.Equal("abc", sqlResult.Configuration.Name);
                 Assert.Equal("OrdersAndLines", sqlResult.Configuration.Transforms[0].Name);

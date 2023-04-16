@@ -97,17 +97,17 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskReplication> GetOngoingTaskReplicationResult = GenerateJsonDeserializationRoutine<OngoingTaskReplication>();
 
-        public static readonly Func<BlittableJsonReaderObject, OngoingTaskRavenEtlDetails> GetOngoingTaskRavenEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskRavenEtlDetails>();
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskRavenEtl> GetOngoingTaskRavenEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskRavenEtl>();
 
-        public static readonly Func<BlittableJsonReaderObject, OngoingTaskOlapEtlDetails> GetOngoingTaskOlapEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskOlapEtlDetails>();
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskOlapEtl> GetOngoingTaskOlapEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskOlapEtl>();
         
-        public static readonly Func<BlittableJsonReaderObject, OngoingTaskElasticSearchEtlDetails> GetOngoingTaskElasticSearchEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskElasticSearchEtlDetails>();
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskElasticSearchEtl> GetOngoingTaskElasticSearchEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskElasticSearchEtl>();
         
-        public static readonly Func<BlittableJsonReaderObject, OngoingTaskQueueEtlDetails> GetOngoingTaskQueueEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskQueueEtlDetails>();
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskQueueEtl> GetOngoingTaskQueueEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskQueueEtl>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskBackup> GetOngoingTaskBackupResult = GenerateJsonDeserializationRoutine<OngoingTaskBackup>();
 
-        public static readonly Func<BlittableJsonReaderObject, OngoingTaskSqlEtlDetails> GetOngoingTaskSqlEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskSqlEtlDetails>();
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskSqlEtl> GetOngoingTaskSqlEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskSqlEtl>();
 
         public static readonly Func<BlittableJsonReaderObject, ModifySolverResult> ModifySolverResult = GenerateJsonDeserializationRoutine<ModifySolverResult>();
 

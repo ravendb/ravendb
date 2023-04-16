@@ -140,7 +140,6 @@ namespace Raven.Server.Documents
                     _fileLocker.TryAcquireWriteLock(_logger);
                 }
 
-                OngoingTasks = new OngoingTasks.OngoingTasks(this);
                 Smuggler = new DatabaseSmugglerFactory(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications
@@ -155,6 +154,7 @@ namespace Raven.Server.Documents
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
                 SubscriptionStorage = CreateSubscriptionStorage(serverStore);
+                OngoingTasks = new OngoingTasks.OngoingTasks(this);
                 Metrics = new MetricCounters();
                 MetricCacher = new DatabaseMetricCacher(this);
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);

@@ -131,7 +131,7 @@ namespace TypingsGenerator
             string studioDir = FindStudioDirectory();
 
             string targetDir = Path.Combine(studioDir, TypingsDirectory);
-            
+
             Console.WriteLine("Using directory: " + Path.GetFullPath(targetDir));
             Directory.CreateDirectory(targetDir);
 
@@ -176,10 +176,10 @@ namespace TypingsGenerator
             Directory.CreateDirectory(targetDir);
             scripter
                 .SaveToDirectory(targetDir);
-            
+
             var endpoints = new EndpointsExporter();
             endpoints.Create(targetDir);
-            
+
             var configuration = new ConfigurationExporter();
             configuration.Create(targetDir);
 
@@ -219,11 +219,11 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo));
             scripter.AddType(typeof(StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState));
-            
+
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(DetailedDatabaseStatistics));
             scripter.AddType(typeof(EssentialDatabaseStatistics));
-            
+
 
             // database settings
             scripter.AddType(typeof(SettingsResult));
@@ -479,8 +479,7 @@ namespace TypingsGenerator
 
             // ongoing tasks - ravenDB ETL
             scripter.AddType(typeof(EtlTaskProgress));
-            scripter.AddType(typeof(OngoingTaskRavenEtlDetails));
-            scripter.AddType(typeof(OngoingTaskRavenEtlListView));
+            scripter.AddType(typeof(OngoingTaskRavenEtl));
             scripter.AddType(typeof(RavenEtlConfiguration));
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(TestRavenEtlScript));
@@ -489,33 +488,29 @@ namespace TypingsGenerator
             scripter.AddType(typeof(EtlTaskPerformanceStats));
 
             // ongoing tasks - SQL ETL
-            scripter.AddType(typeof(OngoingTaskSqlEtlDetails));
-            scripter.AddType(typeof(OngoingTaskSqlEtlListView));
+            scripter.AddType(typeof(OngoingTaskSqlEtl));
             scripter.AddType(typeof(SqlEtlConfiguration));
             scripter.AddType(typeof(TestSqlEtlScript));
             scripter.AddType(typeof(SqlEtlTable));
             scripter.AddType(typeof(SqlEtlTestScriptResult));
-            
+
             // ongoing tasks - Olap ETL
-            scripter.AddType(typeof(OngoingTaskOlapEtlDetails));
-            scripter.AddType(typeof(OngoingTaskOlapEtlListView));
+            scripter.AddType(typeof(OngoingTaskOlapEtl));
             scripter.AddType(typeof(OlapEtlConfiguration));
             scripter.AddType(typeof(OlapEtlTable));
             scripter.AddType(typeof(EtlPerformanceOperation));
             scripter.AddType(typeof(OlapEtlPerformanceOperation));
             scripter.AddType(typeof(OlapEtlTestScriptResult));
             scripter.AddType(typeof(TestOlapEtlScript));
-            
+
             // ongoing tasks - Elastic Search ETL
-            scripter.AddType(typeof(OngoingTaskElasticSearchEtlDetails));
-            scripter.AddType(typeof(OngoingTaskElasticSearchEtlListView));
+            scripter.AddType(typeof(OngoingTaskElasticSearchEtl));
             scripter.AddType(typeof(ElasticSearchEtlConfiguration));
             scripter.AddType(typeof(ElasticSearchEtlTestScriptResult));
             scripter.AddType(typeof(TestElasticSearchEtlScript));
-            
+
             // ongoing tasks - Queue ETL
-            scripter.AddType(typeof(OngoingTaskQueueEtlDetails));
-            scripter.AddType(typeof(OngoingTaskQueueEtlListView));
+            scripter.AddType(typeof(OngoingTaskQueueEtl));
             scripter.AddType(typeof(QueueEtlConfiguration));
             scripter.AddType(typeof(QueueEtlTestScriptResult));
             scripter.AddType(typeof(TestQueueEtlScript));
@@ -547,7 +542,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LogMode));
             scripter.AddType(typeof(SetLogsConfigurationOperation.Parameters));
             scripter.AddType(typeof(PutTrafficWatchConfigurationOperation.Parameters));
-            
+
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));
 
@@ -633,12 +628,12 @@ namespace TypingsGenerator
             // custom sorters & analyzers
             scripter.AddType(typeof(SorterDefinition));
             scripter.AddType(typeof(AnalyzerDefinition));
-            
+
             // integrations
             scripter.AddType(typeof(PostgreSqlUser));
             scripter.AddType(typeof(PostgreSqlUsernames));
             scripter.AddType(typeof(PostgreSqlServerStatus));
-            
+
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
 
             scripter.AddType(typeof(StartTransactionsRecordingOperation.Parameters));

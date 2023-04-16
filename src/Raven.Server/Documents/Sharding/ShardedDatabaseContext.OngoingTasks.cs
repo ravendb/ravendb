@@ -39,7 +39,9 @@ public partial class ShardedDatabaseContext
 
         protected override OngoingTaskConnectionStatus GetEtlTaskConnectionStatus<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
         {
-            throw new System.NotImplementedException();
+            tag = null;
+            error = null;
+            return OngoingTaskConnectionStatus.None;
         }
 
         protected override (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication,
@@ -51,7 +53,11 @@ public partial class ShardedDatabaseContext
         protected override PeriodicBackupStatus GetBackupStatus(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
             out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
         {
-            throw new System.NotImplementedException();
+            nextBackup = null;
+            onGoingBackup = null;
+            isEncrypted = false;
+            responsibleNodeTag = null;
+            return null;
         }
     }
 }

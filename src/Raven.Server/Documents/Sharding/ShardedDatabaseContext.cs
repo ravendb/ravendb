@@ -79,11 +79,11 @@ namespace Raven.Server.Documents.Sharding
 
             Streaming = new ShardedStreaming();
             Cluster = new ShardedCluster(this);
-            OngoingTasks = new ShardedOngoingTasks(this);
             Changes = new ShardedDocumentsChanges(this);
             Operations = new ShardedOperations(this);
 
             SubscriptionsStorage = new ShardedSubscriptionsStorage(this, serverStore);
+            OngoingTasks = new ShardedOngoingTasks(this);
 
             QueryRunner = new ShardedQueryRunner();
             Smuggler = new ShardedSmugglerContext(this, serverStore);

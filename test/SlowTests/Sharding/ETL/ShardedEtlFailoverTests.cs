@@ -346,7 +346,7 @@ namespace SlowTests.Sharding.ETL
                 // we leave this here to make sure that such issue in future will fail the test immediately
                 await src.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration()));
 
-                var taskInfo = (OngoingTaskRavenEtlDetails)src.Maintenance.Send(new GetOngoingTaskInfoOperation(etlResult.TaskId, OngoingTaskType.RavenEtl));
+                var taskInfo = (OngoingTaskRavenEtl)src.Maintenance.Send(new GetOngoingTaskInfoOperation(etlResult.TaskId, OngoingTaskType.RavenEtl));
                 Assert.NotNull(taskInfo);
 
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Minor,

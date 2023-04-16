@@ -150,7 +150,7 @@ namespace FastTests.Client
                 var taskId = ravenEtlResult.TaskId;
 
                 var op = new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.RavenEtl);
-                var etlResult = (OngoingTaskRavenEtlDetails)store.Maintenance.Send(op);
+                var etlResult = (OngoingTaskRavenEtl)store.Maintenance.Send(op);
 
                 Assert.Equal("cs", etlResult.Configuration.ConnectionStringName);
                 Assert.Equal("test", etlResult.Configuration.Name);
@@ -160,7 +160,7 @@ namespace FastTests.Client
                 Assert.Equal(etlConfiguration.Name, etlResult?.TaskName);
 
                 op = new GetOngoingTaskInfoOperation("test", OngoingTaskType.RavenEtl);
-                etlResult = (OngoingTaskRavenEtlDetails)store.Maintenance.Send(op);
+                etlResult = (OngoingTaskRavenEtl)store.Maintenance.Send(op);
 
                 Assert.Equal("cs", etlResult.Configuration.ConnectionStringName);
                 Assert.Equal(taskId, etlResult.TaskId);
@@ -222,7 +222,7 @@ loadToOrders(orderData);
                 var taskId = sqlEtlResult.TaskId;
 
                 var op = new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.SqlEtl);
-                var sqlResult = (OngoingTaskSqlEtlDetails)store.Maintenance.Send(op);
+                var sqlResult = (OngoingTaskSqlEtl)store.Maintenance.Send(op);
 
                 Assert.Equal("abc", sqlResult.Configuration.ConnectionStringName);
                 Assert.Equal("abc", sqlResult.Configuration.Name);
@@ -233,7 +233,7 @@ loadToOrders(orderData);
                 Assert.Equal(sqlConfiguration.Name, sqlResult?.TaskName);
 
                 op = new GetOngoingTaskInfoOperation("abc", OngoingTaskType.SqlEtl);
-                sqlResult = (OngoingTaskSqlEtlDetails)store.Maintenance.Send(op);
+                sqlResult = (OngoingTaskSqlEtl)store.Maintenance.Send(op);
 
                 Assert.Equal("abc", sqlResult.Configuration.ConnectionStringName);
                 Assert.Equal("abc", sqlResult.Configuration.Name);
