@@ -1088,7 +1088,7 @@ namespace Raven.Server.Documents.Patch
                     reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     if (_database is ShardedDocumentDatabase)
-                        id = GenerateIdForShard(args, id);
+                        id = GenerateIdForShard(id);
 
                     var put = _database.DocumentsStorage.Put(
                         _docsCtx,
@@ -1120,13 +1120,12 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private string GenerateIdForShard(JsValue[] args, string id)
+            private string GenerateIdForShard(string id)
             {
                 if (id?[^1] != _database.IdentityPartsSeparator)
                     return id;
 
-                var originalId = (args[1].AsObject() as BlittableObjectInstance)!.DocumentId;
-                return ShardHelper.GenerateStickyId(id, originalId, _database.IdentityPartsSeparator);
+                return ShardHelper.GenerateStickyId(id, OriginalDocumentId, _database.IdentityPartsSeparator);
             }
 
             private static void AssertValidId()
