@@ -7,10 +7,11 @@ using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Sets
 {
-    public unsafe class PostingListLeafPageTests : IDisposable
+    public unsafe class PostingListLeafPageTests : NoDisposalNeeded
     {
         private readonly Transaction _tx;
         private readonly StorageEnvironment _env;
@@ -18,7 +19,7 @@ namespace FastTests.Voron.Sets
         private readonly byte* _pagePtr;
         private readonly LowLevelTransaction _llt;
 
-        public PostingListLeafPageTests()
+        public PostingListLeafPageTests(ITestOutputHelper output) : base(output)
         {
             _env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
             _tx = _env.WriteTransaction();
@@ -122,7 +123,7 @@ namespace FastTests.Voron.Sets
             Assert.Equal(list, leaf.GetDebugOutput());
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _releaseStr.Dispose();
             _tx?.Dispose();

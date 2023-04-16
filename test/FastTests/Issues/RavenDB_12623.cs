@@ -4,11 +4,16 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_12623 : IDisposable
+    public class RavenDB_12623 : NoDisposalNeeded
     {
+        public RavenDB_12623(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ContextPoolsShouldNotLeakThreadIdData()
         {            
@@ -48,10 +53,6 @@ namespace FastTests.Issues
             });
             t.Start();
             t.Join();
-        }
-
-        public void Dispose()
-        {
         }
     }
 }
