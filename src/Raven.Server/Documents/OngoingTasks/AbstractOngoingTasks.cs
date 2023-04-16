@@ -253,7 +253,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
     protected abstract OngoingTaskConnectionStatus GetEtlTaskConnectionStatus<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
         where T : ConnectionString;
 
-    protected abstract (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication, Dictionary<string, RavenConnectionString> connectionStrings, out string tag, out RavenConnectionString connection)
+    protected abstract (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication, Dictionary<string, RavenConnectionString> connectionStrings, out string responsibleNodeTag, out RavenConnectionString connection)
         where T : ExternalReplicationBase;
 
     protected abstract PeriodicBackupStatus GetBackupStatus(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag, out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted);
@@ -262,11 +262,15 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
     {
         var res = GetReplicationTaskConnectionStatus(GetDatabaseTopology(databaseRecord), clusterTopology, watcher, databaseRecord.RavenConnectionStrings, out var tag, out var connection);
 
+        NodeId responsibleNode = null;
+        if (tag != null)
+            responsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) };
+
         return new OngoingTaskReplication
         {
             TaskId = watcher.TaskId,
             TaskName = watcher.Name,
-            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            ResponsibleNode = responsibleNode,
             ConnectionStringName = watcher.ConnectionStringName,
             TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
             DestinationDatabase = connection?.Database,
@@ -454,11 +458,15 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
     {
         var sinkReplicationStatus = GetReplicationTaskConnectionStatus(GetDatabaseTopology(databaseRecord), clusterTopology, sinkReplication, databaseRecord.RavenConnectionStrings, out var sinkReplicationTag, out var sinkReplicationConnection);
 
+        NodeId responsibleNode = null;
+        if (sinkReplicationTag != null)
+            responsibleNode = new NodeId { NodeTag = sinkReplicationTag, NodeUrl = clusterTopology.GetUrlFromTag(sinkReplicationTag) };
+
         var sinkInfo = new OngoingTaskPullReplicationAsSink
         {
             TaskId = sinkReplication.TaskId,
             TaskName = sinkReplication.Name,
-            ResponsibleNode = new NodeId { NodeTag = sinkReplicationTag, NodeUrl = clusterTopology.GetUrlFromTag(sinkReplicationTag) },
+            ResponsibleNode = responsibleNode,
             ConnectionStringName = sinkReplication.ConnectionStringName,
             TaskState = sinkReplication.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
             DestinationDatabase = sinkReplicationConnection?.Database,

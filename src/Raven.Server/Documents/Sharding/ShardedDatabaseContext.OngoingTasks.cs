@@ -4,11 +4,15 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.OngoingTasks;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web;
 
 namespace Raven.Server.Documents.Sharding;
 
@@ -45,9 +49,14 @@ public partial class ShardedDatabaseContext
         }
 
         protected override (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication,
-            Dictionary<string, RavenConnectionString> connectionStrings, out string tag, out RavenConnectionString connection)
+            Dictionary<string, RavenConnectionString> connectionStrings, out string responsibleNodeTag, out RavenConnectionString connection)
         {
-            throw new System.NotImplementedException();
+            connectionStrings.TryGetValue(replication.ConnectionStringName, out connection);
+            replication.Database = connection?.Database;
+            replication.ConnectionString = connection;
+
+            responsibleNodeTag = null;
+            return (null, OngoingTaskConnectionStatus.None);
         }
 
         protected override PeriodicBackupStatus GetBackupStatus(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
