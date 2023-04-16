@@ -622,9 +622,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                     }
 
-	                // No need to continue filling buffers as there are no more docs to load.
-	                if (docsToLoad <= 0)
-	                    break;
+                    // No need to continue filling buffers as there are no more docs to load.
+                    if (docsToLoad <= 0)
+                        break;
                 }
 
                 QueryPool.Return(ids);
