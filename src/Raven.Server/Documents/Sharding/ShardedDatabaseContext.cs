@@ -79,6 +79,7 @@ namespace Raven.Server.Documents.Sharding
 
             Streaming = new ShardedStreaming();
             Cluster = new ShardedCluster(this);
+            OngoingTasks = new ShardedOngoingTasks(this);
             Changes = new ShardedDocumentsChanges(this);
             Operations = new ShardedOperations(this);
 
