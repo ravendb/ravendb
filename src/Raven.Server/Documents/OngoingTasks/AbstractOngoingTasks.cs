@@ -49,7 +49,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateBackupTaskInfo(clusterTopology, databaseRecord, backupConfiguration);
     }
 
-    private IEnumerable<OngoingTaskRavenEtlListView> GetRavenEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskRavenEtl> GetRavenEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         if (databaseRecord.RavenEtls == null || databaseRecord.RavenEtls.Count == 0)
             yield break;
@@ -58,7 +58,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateRavenEtlTaskInfo(clusterTopology, databaseRecord, ravenEtl);
     }
 
-    private IEnumerable<OngoingTaskSqlEtlListView> GetSqlEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskSqlEtl> GetSqlEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         if (databaseRecord.SqlEtls == null || databaseRecord.SqlEtls.Count == 0)
             yield break;
@@ -67,7 +67,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateSqlEtlTaskInfo(clusterTopology, databaseRecord, sqlEtl);
     }
 
-    private IEnumerable<OngoingTaskOlapEtlListView> GetOlapEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskOlapEtl> GetOlapEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         if (databaseRecord.OlapEtls == null || databaseRecord.OlapEtls.Count == 0)
             yield break;
@@ -76,7 +76,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateOlapEtlTaskInfo(clusterTopology, databaseRecord, olapEtl);
     }
 
-    private IEnumerable<OngoingTaskElasticSearchEtlListView> GetElasticEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskElasticSearchEtl> GetElasticEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         if (databaseRecord.ElasticSearchEtls == null || databaseRecord.ElasticSearchEtls.Count == 0)
             yield break;
@@ -85,7 +85,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateElasticSearchEtlTaskInfo(clusterTopology, databaseRecord, elasticSearchEtl);
     }
 
-    private IEnumerable<OngoingTaskQueueEtlListView> GetQueueEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskQueueEtl> GetQueueEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         if (databaseRecord.QueueEtls == null || databaseRecord.QueueEtls.Count == 0)
             yield break;
@@ -317,7 +317,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         };
     }
 
-    private OngoingTaskRavenEtlListView CreateRavenEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, RavenEtlConfiguration ravenEtl)
+    private OngoingTaskRavenEtl CreateRavenEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, RavenEtlConfiguration ravenEtl)
     {
         var taskState = OngoingTasksHandler.GetEtlTaskState(ravenEtl);
 
@@ -325,7 +325,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
 
         var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, ravenEtl, out var tag, out var error);
 
-        return new OngoingTaskRavenEtlListView()
+        return new OngoingTaskRavenEtl
         {
             TaskId = ravenEtl.TaskId,
             TaskName = ravenEtl.Name,
@@ -338,11 +338,12 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             DestinationDatabase = connection?.Database,
             ConnectionStringName = ravenEtl.ConnectionStringName,
             TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
-            Error = error
+            Error = error,
+            Configuration = ravenEtl
         };
     }
 
-    private OngoingTaskSqlEtlListView CreateSqlEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, SqlEtlConfiguration sqlEtl)
+    private OngoingTaskSqlEtl CreateSqlEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, SqlEtlConfiguration sqlEtl)
     {
         string database = null;
         string server = null;
@@ -356,7 +357,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
 
         var taskState = OngoingTasksHandler.GetEtlTaskState(sqlEtl);
 
-        return new OngoingTaskSqlEtlListView
+        return new OngoingTaskSqlEtl
         {
             TaskId = sqlEtl.TaskId,
             TaskName = sqlEtl.Name,
@@ -369,11 +370,12 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             DestinationDatabase = database,
             ConnectionStringDefined = sqlConnection != null,
             ConnectionStringName = sqlEtl.ConnectionStringName,
-            Error = error
+            Error = error,
+            Configuration = sqlEtl
         };
     }
 
-    private OngoingTaskOlapEtlListView CreateOlapEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, OlapEtlConfiguration olapEtl)
+    private OngoingTaskOlapEtl CreateOlapEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, OlapEtlConfiguration olapEtl)
     {
         string destination = default;
         if (databaseRecord.OlapConnectionStrings.TryGetValue(olapEtl.ConnectionStringName, out var olapConnection))
@@ -385,7 +387,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
 
         var taskState = OngoingTasksHandler.GetEtlTaskState(olapEtl);
 
-        return new OngoingTaskOlapEtlListView
+        return new OngoingTaskOlapEtl
         {
             TaskId = olapEtl.TaskId,
             TaskName = olapEtl.Name,
@@ -396,19 +398,19 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
             ConnectionStringName = olapEtl.ConnectionStringName,
             Destination = destination,
-            Error = error
+            Error = error,
+            Configuration = olapEtl
         };
     }
 
-    private OngoingTaskElasticSearchEtlListView CreateElasticSearchEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord,
-        ElasticSearchEtlConfiguration elasticSearchEtl)
+    private OngoingTaskElasticSearchEtl CreateElasticSearchEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, ElasticSearchEtlConfiguration elasticSearchEtl)
     {
         databaseRecord.ElasticSearchConnectionStrings.TryGetValue(elasticSearchEtl.ConnectionStringName, out var connection);
 
         var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, elasticSearchEtl, out var tag, out var error);
         var taskState = OngoingTasksHandler.GetEtlTaskState(elasticSearchEtl);
 
-        return new OngoingTaskElasticSearchEtlListView
+        return new OngoingTaskElasticSearchEtl
         {
             TaskId = elasticSearchEtl.TaskId,
             TaskName = elasticSearchEtl.Name,
@@ -419,18 +421,19 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
             ConnectionStringName = elasticSearchEtl.ConnectionStringName,
             NodesUrls = connection?.Nodes,
-            Error = error
+            Error = error,
+            Configuration = elasticSearchEtl
         };
     }
 
-    private OngoingTaskQueueEtlListView CreateQueueEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, QueueEtlConfiguration queueEtl)
+    private OngoingTaskQueueEtl CreateQueueEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, QueueEtlConfiguration queueEtl)
     {
         databaseRecord.QueueConnectionStrings.TryGetValue(queueEtl.ConnectionStringName, out var connection);
 
         var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, queueEtl, out var tag, out var error);
         var taskState = OngoingTasksHandler.GetEtlTaskState(queueEtl);
 
-        return new OngoingTaskQueueEtlListView
+        return new OngoingTaskQueueEtl
         {
             TaskId = queueEtl.TaskId,
             TaskName = queueEtl.Name,
@@ -442,7 +445,8 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             ConnectionStringName = queueEtl.ConnectionStringName,
             BrokerType = queueEtl.BrokerType,
             Url = connection?.GetUrl(),
-            Error = error
+            Error = error,
+            Configuration = queueEtl
         };
     }
 
