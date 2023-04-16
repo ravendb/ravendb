@@ -50,6 +50,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     protected readonly bool IsAutoMapReduceQuery;
     protected readonly IndexType IndexType;
     protected readonly IndexSourceType IndexSourceType;
+    protected readonly IndexDefinitionBaseServerSide indexDefinition;
     protected readonly long? ExistingResultEtag;
     protected readonly bool MetadataOnly;
 
@@ -78,6 +79,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         IndexType = index?.Type ?? IndexType.None;
         IndexSourceType = index?.SourceType ?? IndexSourceType.None;
+        indexDefinition = index?.Definition;
 
         IsAutoMapReduceQuery = Query.Metadata.IsDynamic && Query.Metadata.IsGroupBy;
 

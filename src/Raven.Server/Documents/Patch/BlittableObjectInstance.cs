@@ -149,6 +149,10 @@ namespace Raven.Server.Documents.Patch
             {
                 value = null;
                 var fieldMapping = parent.IndexRetriever.KnownFields;
+
+                if (fieldMapping == null)
+                    return false;
+
                 var isDynamic = indexField == null;
                 IndexFieldBinding binding = null;
                 if (isDynamic == false && fieldMapping.TryGetByFieldId(indexField.Id, out binding) == false)
