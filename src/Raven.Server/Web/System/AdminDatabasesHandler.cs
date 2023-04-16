@@ -837,6 +837,15 @@ namespace Raven.Server.Web.System
             await ToggleDisableDatabases(disable: false);
         }
 
+        [RavenAction("/admin/databases/restart", "POST", AuthorizationStatus.Operator)]
+        public async Task RestartDatabase()
+        {
+            var databaseName = GetStringQueryString("name");
+            await ServerStore.DatabasesLandlord.RestartDatabase(databaseName);
+
+            NoContentStatus();
+        }
+
         [RavenAction("/admin/databases/indexing", "POST", AuthorizationStatus.Operator)]
         public async Task ToggleIndexing()
         {
