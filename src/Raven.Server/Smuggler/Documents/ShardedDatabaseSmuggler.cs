@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
@@ -48,6 +49,18 @@ namespace Raven.Server.Smuggler.Documents
             {
                 return await ProcessDatabaseRecordInternalAsync(result, action);
             }
+        }
+
+        protected override bool ShouldSkipIndex(IndexDefinitionAndType index)
+        {
+            if (index.Type is IndexType.MapReduce or IndexType.AutoMapReduce)
+                return true;
+
+            var definition = (IndexDefinition)index.IndexDefinition;
+            if (definition.DeploymentMode is IndexDeploymentMode.Rolling)
+                return true;
+
+            return false;
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType)
