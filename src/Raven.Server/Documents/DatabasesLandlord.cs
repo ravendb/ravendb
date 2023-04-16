@@ -1091,8 +1091,12 @@ namespace Raven.Server.Documents
                     switch (nextIdleDatabaseActivity.Type)
                     {
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
-                            var backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, databaseName, nextIdleDatabaseActivity.TaskId);
-                            
+                            PeriodicBackupStatus backupStatus;
+
+                            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            using (context.OpenReadTransaction())
+                                    backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, databaseName, nextIdleDatabaseActivity.TaskId);
+
                             backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
                             backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;
                             backupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;

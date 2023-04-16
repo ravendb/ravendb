@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             var subscription = GetSubscriptionFromServerStore(serverContext, name);
             var topology = _serverStore.Cluster.ReadDatabaseTopology(serverContext, _db.Name);
-            return _db.WhoseTaskIsIt(topology, subscription, subscription);
+            return BackupUtils.WhoseTaskIsIt(_serverStore, topology, subscription, subscription, _db.NotificationCenter);
         }
 
         public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, long? registerConnectionDurationInTicks, CancellationToken token)
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Subscriptions
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
                 var topology = record.Topology;
 
-                var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
+                var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, topology, subscription, subscription, _db.NotificationCenter);
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(_serverStore.NodeTag))
                     throw new DatabaseDoesNotExistException($"Stopping subscription '{name}' on node {_serverStore.NodeTag}, because database '{_db.Name}' is being deleted.");
 
@@ -564,7 +564,7 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    var whoseTaskIsIt = _db.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
+                    var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, databaseRecord.Topology, subscriptionState, subscriptionState, _db.NotificationCenter);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
                         DropSubscriptionConnection(subscriptionStateKvp.Key,
