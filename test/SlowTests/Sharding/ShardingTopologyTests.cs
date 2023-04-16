@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NuGet.Packaging;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Utils;
@@ -157,6 +158,31 @@ namespace SlowTests.Sharding
                     Assert.False(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, addShardRes.ShardNumber), out _));
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public void ValidateShardCantHaveMultipleInstancesOnSameNode()
+        {
+            var error = Assert.ThrowsAny<RavenException>(() =>
+            {
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           ModifyDatabaseRecord = r =>
+                           {
+                               r.Sharding = new ShardingConfiguration();
+                               r.Sharding.Shards = new Dictionary<int, DatabaseTopology>()
+                               {
+                                   {0, new DatabaseTopology() {Members = new List<string>() {"A", "A"}}},
+                                   {1, new DatabaseTopology()},
+                                   {2, new DatabaseTopology()}
+                               };
+                           }
+                       }))
+                {
+                    
+                }
+            });
+            Assert.Contains("Can't have multiple replicas of the same shard on the same node", error.Message);
         }
 
         [Fact]
