@@ -225,13 +225,13 @@ namespace Corax.Queries
                 var decodeState = new PForDecoder.DecoderState(stream.Length);
                 int bufferIndex = 0;
                 int matchedIndex = 0;
-                while (bufferIndex < buffer.Length)
+                while (bufferIndex < matches)
                 {
                     var read = PForDecoder.Decode(ref decodeState, stream, decodedMatches);
                     if (read == 0)
                         break;
 
-                    for (int decodedIndex = 0; decodedIndex < read && bufferIndex < buffer.Length; decodedIndex++)
+                    for (int decodedIndex = 0; decodedIndex < read && bufferIndex < matches; decodedIndex++)
                     {
                         long current = decodedMatches[decodedIndex];
                         long decodedEntryId = typeof(TBoostingMode) == typeof(HasBoosting) ? 
