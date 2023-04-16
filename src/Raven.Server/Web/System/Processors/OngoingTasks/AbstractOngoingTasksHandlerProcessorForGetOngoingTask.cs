@@ -8,19 +8,21 @@ using Raven.Client.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.OngoingTasks;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
-internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTask<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<OngoingTask, TRequestHandler, TOperationContext>
+internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTask<TRequestHandler, TOperationContext, TSubscriptionConnectionsState> : AbstractHandlerProxyReadProcessor<OngoingTask, TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+    where TSubscriptionConnectionsState : AbstractSubscriptionConnectionsState
 {
-    private readonly AbstractOngoingTasks _ongoingTasks;
+    private readonly AbstractOngoingTasks<TSubscriptionConnectionsState> _ongoingTasks;
 
-    protected AbstractOngoingTasksHandlerProcessorForGetOngoingTask([NotNull] TRequestHandler requestHandler, [NotNull] AbstractOngoingTasks ongoingTasks)
+    protected AbstractOngoingTasksHandlerProcessorForGetOngoingTask([NotNull] TRequestHandler requestHandler, [NotNull] AbstractOngoingTasks<TSubscriptionConnectionsState> ongoingTasks)
         : base(requestHandler)
     {
         _ongoingTasks = ongoingTasks ?? throw new ArgumentNullException(nameof(ongoingTasks));

@@ -87,12 +87,6 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public IEnumerable<SubscriptionState> GetAllSubscriptionsFromServerStore(TransactionOperationContext context)
-        {
-            foreach (var state in SubscriptionsClusterStorage.GetAllSubscriptionsWithoutState(context, _databaseName, 0, int.MaxValue))
-                yield return state;
-        }
-
         public string GetResponsibleNode(TransactionOperationContext serverContext, string name)
         {
             var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(serverContext, _databaseName, name);

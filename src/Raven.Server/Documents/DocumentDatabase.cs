@@ -306,7 +306,7 @@ namespace Raven.Server.Documents
 
         public CompareExchangeStorage CompareExchangeStorage { get; private set; }
 
-        public AbstractOngoingTasks OngoingTasks { get; private set; }
+        public OngoingTasks.OngoingTasks OngoingTasks { get; private set; }
 
         public bool Is32Bits { get; }
 

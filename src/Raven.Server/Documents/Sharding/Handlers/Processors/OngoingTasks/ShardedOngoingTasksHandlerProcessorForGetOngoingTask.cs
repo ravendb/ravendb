@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
@@ -8,7 +9,7 @@ using Raven.Server.Web.System.Processors.OngoingTasks;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
-    internal class ShardedOngoingTasksHandlerProcessorForGetOngoingTask : AbstractOngoingTasksHandlerProcessorForGetOngoingTask<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal class ShardedOngoingTasksHandlerProcessorForGetOngoingTask : AbstractOngoingTasksHandlerProcessorForGetOngoingTask<ShardedDatabaseRequestHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
     {
         public ShardedOngoingTasksHandlerProcessorForGetOngoingTask([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.DatabaseContext.OngoingTasks)
         {
