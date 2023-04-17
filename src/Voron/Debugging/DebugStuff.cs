@@ -12,10 +12,12 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
+using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
+using Container = Voron.Data.Containers.Container;
 
 namespace Voron.Debugging
 {
@@ -295,6 +297,8 @@ namespace Voron.Debugging
         public static void RenderAndShow(CompactTree tree, string message = null)
         {
             var headerData = $"{tree.State}";
+            Container container = new Container(tree.Llt.GetPage(tree.State.TermsContainerId));
+            headerData += $" Terms container pages: {container.Header.NumberOfPages}";
             if (!string.IsNullOrWhiteSpace(message))
                 headerData = $"{message}-{headerData}";
 
@@ -326,22 +330,21 @@ namespace Voron.Debugging
             for (int i = 0; i < header->NumberOfEntries; i++)
             {
                 var state = new CompactTree.CursorState { Page = page };
+                string keyText = "[smallest]";
                 if (CompactTree.GetEntry(tree, ref state, i, out var keyScope, out var val))
                 {
                     var key = keyScope.Key.Decoded();
-                    string keyText = key.Length != 0 ? Encoding.UTF8.GetString(key) : "---first---";
+                    keyText =  Encoding.UTF8.GetString(key) ;
+                }
+                
 
-                    if (header->PageFlags.HasFlag(CompactPageFlags.Leaf))
-                    {
-                        sw.Write($"<li>{keyText} {val}</li>");
-                    }
-                    else
-                    {
-                        if (key.Length == 0)
-                            keyText = "[smallest]";
-
-                        RenderPageInternal(tree, tree.Llt.GetPage(val), sw, keyText, false);
-                    }
+                if (header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+                {
+                    sw.Write($"<li>{keyText} {val}</li>");
+                }
+                else
+                {
+                    RenderPageInternal(tree, tree.Llt.GetPage(val), sw, keyText, false);
                 }
             }
 
