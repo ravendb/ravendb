@@ -489,10 +489,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             identityTracker.Initialize(_index, query, _indexSearcher, _fieldMappings, fieldsToFetch, retriever);
 
             int pageSize = query.PageSize;
-            if ((long)pageSize + query.Start > int.MaxValue)
-            {
-                throw new NotSupportedException($"Corax query cannot cover 2.1 billion results at once, but got pageSize: {pageSize} and start: {query.Start}");
-            }
             
             if (query.Metadata.HasExplanations)
                 throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
