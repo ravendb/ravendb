@@ -46,11 +46,6 @@ namespace Raven.Client.Documents.Operations
             {
                 url = $"{node.Url}/databases/{node.Database}/json-patch?id={UrlEncode(_id)}";
                 
-                var operationDjv = new DynamicJsonValue
-                {
-                    [nameof(JsonOperation.Operations)] =  TypeConverter.ToBlittableSupportedType(_jsonPatchDocument.Operations, _conventions, ctx)
-                };
-
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Patch,
@@ -59,7 +54,25 @@ namespace Raven.Client.Documents.Operations
                     {
                         await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
-                            ctx.Write(writer, ctx.ReadObject(operationDjv, _id));
+                            var serializer = _conventions.Serialization.CreateSerializer(new CreateSerializerOptions { TypeNameHandling = TypeNameHandling.None });
+                            writer.WriteStartObject();
+                            writer.WritePropertyName(nameof(JsonOperation.Operations));
+                            writer.WriteStartArray();
+                            var isFirst = true;
+                            foreach (var operation in _jsonPatchDocument.Operations)
+                            {
+                                if (isFirst)
+                                    isFirst = false;
+                                else
+                                    writer.WriteComma();
+                                
+                                ctx.Write(writer, _conventions.Serialization.DefaultConverter.ToBlittable(
+                                    operation
+                                    , ctx, serializer));
+                            }
+                    
+                            writer.WriteEndArray();
+                            writer.WriteEndObject();
                         }
                     }, _conventions)
                 };
