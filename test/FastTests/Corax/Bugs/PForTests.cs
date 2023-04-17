@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Sparrow.Compression;
 using Sparrow.Server.Debugging;
+using Tests.Infrastructure;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
 using Xunit;
@@ -63,7 +64,7 @@ namespace FastTests.Corax.Bugs
             Assert.Equal(data.Length, idx);
         }
 
-        [Fact]
+        [MultiplatformFact(RavenPlatform.Linux | RavenPlatform.Windows)]
         public void CanEncodeAndDecodeSafely()
         {
             using var stream = typeof(PForTests).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs.access_violation.json.gz");
