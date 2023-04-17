@@ -17,17 +17,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 
         protected override long SubscriptionsCount => RequestHandler.DatabaseContext.SubscriptionsStorage.GetAllSubscriptionsCount();
 
-        protected override bool IsCurrentNode(out string nodeTag)
-        {
-            var isCurrentNode = base.IsCurrentNode(out nodeTag);
-            if (isCurrentNode)
-            {
-                if (TryGetShardNumber(out _))
-                    return false;
-            }
-
-            return isCurrentNode;
-        }
+        protected override bool SupportsOptionalShardNumber => true;
 
         protected override Task HandleRemoteNodeAsync(ProxyCommand<OngoingTasksResult> command, OperationCancelToken token)
         {
