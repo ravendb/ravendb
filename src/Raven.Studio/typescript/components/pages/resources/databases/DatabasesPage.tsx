@@ -1,9 +1,10 @@
 ﻿import React, { useEffect, useState } from "react";
 import { DatabasePanel } from "./partials/DatabasePanel";
+import { useAccessManager } from "hooks/useAccessManager";
 import { DatabasesToolbarActions } from "./partials/DatabasesToolbarActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { Row } from "reactstrap";
+import { Button, Col, DropdownItem, DropdownMenu, DropdownToggle, Row, UncontrolledDropdown } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
@@ -13,11 +14,13 @@ import { DatabaseFilterCriteria } from "components/models/databases";
 import {
     compactDatabase,
     loadDatabasesDetails,
+    openCreateDatabaseDialog,
     openCreateDatabaseFromRestoreDialog,
     syncDatabaseDetails,
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { databasesViewSelectors } from "components/pages/resources/databases/store/databasesViewSelectors";
+import { StickyHeader } from "components/common/StickyHeader";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -43,6 +46,9 @@ export function DatabasesPage(props: DatabasesPageProps) {
         name: "",
         states: [],
     });
+
+    const { isOperatorOrAbove } = useAccessManager();
+    const canCreateNewDatabase = isOperatorOrAbove();
 
     const filteredDatabaseNames = useAppSelector(
         databasesViewSelectors.filteredDatabaseNames(filterCriteria),
@@ -92,30 +98,49 @@ export function DatabasesPage(props: DatabasesPageProps) {
     const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 
     return (
-        <div className="content-margin">
-            <div id="dropdownContainer"></div> {/*fixes rendering order bug on hover animation */}
-            <Row className="mb-4">
+        <>
+            <StickyHeader>
+                <Row>
+                    <Col sm="auto" className="align-self-center">
+                        {canCreateNewDatabase && (
+                            <UncontrolledDropdown group>
+                                <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>
+                                    <i className="icon-new-database" />
+                                    <span>New database</span>
+                                </Button>
+                                <DropdownToggle color="primary" caret></DropdownToggle>
+                                <DropdownMenu>
+                                    <DropdownItem onClick={() => dispatch(openCreateDatabaseFromRestoreDialog())}>
+                                        <i className="icon-restore-backup" /> New database from backup (Restore)
+                                    </DropdownItem>
+                                </DropdownMenu>
+                            </UncontrolledDropdown>
+                        )}
+                    </Col>
+                    <Col>
+                        <DatabasesFilter searchCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
+                    </Col>
+                </Row>
+
                 <DatabasesToolbarActions
                     databaseNames={filteredDatabaseNames}
                     selectedDatabases={selectedDatabases}
                     setSelectedDatabaseNames={setSelectedDatabaseNames}
                 />
-            </Row>
-            <DatabasesFilter searchCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
-            <div className="flex-grow scroll js-scroll-container">
-                <div>
-                    {filteredDatabaseNames.map((dbName) => (
-                        <DatabasePanel
-                            key={dbName}
-                            databaseName={dbName}
-                            selected={selectedDatabaseNames.includes(dbName)}
-                            toggleSelection={() => toggleSelection(dbName)}
-                        />
-                    ))}
+            </StickyHeader>
+            <div id="dropdownContainer"></div> {/*fixes rendering order bug on hover animation */}
+            <div className="p-4 pt-1">
+                {filteredDatabaseNames.map((dbName) => (
+                    <DatabasePanel
+                        key={dbName}
+                        databaseName={dbName}
+                        selected={selectedDatabaseNames.includes(dbName)}
+                        toggleSelection={() => toggleSelection(dbName)}
+                    />
+                ))}
 
-                    {!databases.length && <NoDatabases />}
-                </div>
+                {!databases.length && <NoDatabases />}
             </div>
-        </div>
+        </>
     );
 }

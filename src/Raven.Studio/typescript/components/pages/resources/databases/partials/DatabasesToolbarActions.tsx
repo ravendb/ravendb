@@ -1,22 +1,28 @@
-﻿import React, { useCallback, useMemo, useState } from "react";
+﻿import React, { useCallback, useState } from "react";
 import { useAccessManager } from "hooks/useAccessManager";
-import { Button, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import {
+    Button,
+    ButtonGroup,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    Spinner,
+    UncontrolledDropdown,
+} from "reactstrap";
 import { useAppDispatch } from "components/store";
 import { DatabaseSharedInfo } from "components/models/databases";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useEventsCollector } from "hooks/useEventsCollector";
-import { ButtonGroupWithLabel } from "components/common/ButtonGroupWithLabel";
-import { CheckboxTriple } from "components/common/CheckboxTriple";
-import { Icon } from "components/common/Icon";
 import {
     changeDatabasesLockMode,
     confirmSetLockMode,
     confirmToggleDatabases,
-    openCreateDatabaseDialog,
-    openCreateDatabaseFromRestoreDialog,
     toggleDatabases,
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
+import { Checkbox } from "components/common/Checkbox";
+import { SelectionActions } from "components/common/SelectionActions";
+import { Icon } from "components/common/Icon";
 
 interface DatabasesToolbarActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -30,7 +36,6 @@ export function DatabasesToolbarActions({
     setSelectedDatabaseNames,
 }: DatabasesToolbarActionsProps) {
     const { isOperatorOrAbove } = useAccessManager();
-    const canCreateNewDatabase = isOperatorOrAbove();
     const { reportEvent } = useEventsCollector();
 
     const [lockChanges, setLockChanges] = useState(false);
@@ -51,20 +56,6 @@ export function DatabasesToolbarActions({
             setSelectedDatabaseNames(databaseNames);
         }
     }, [selectedDatabases.length, setSelectedDatabaseNames, databaseNames]);
-
-    const databasesSelectionState = useMemo<checkbox>(() => {
-        const selectedCount = selectedDatabases.length;
-        const dbsCount = databaseNames.length;
-        if (dbsCount > 0 && dbsCount === selectedCount) {
-            return "checked";
-        }
-
-        if (selectedCount > 0) {
-            return "some_checked";
-        }
-
-        return "unchecked";
-    }, [selectedDatabases.length, databaseNames]);
 
     if (!isOperatorOrAbove()) {
         // no access
@@ -116,30 +107,25 @@ export function DatabasesToolbarActions({
     };
 
     return (
-        <div className="actions d-flex justify-content-between">
-            {canCreateNewDatabase && (
-                <UncontrolledDropdown group>
-                    <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>
-                        <Icon icon="database" addon="plus" />
-                        <span>New database</span>
-                    </Button>
-                    <DropdownToggle color="primary" caret></DropdownToggle>
-                    <DropdownMenu>
-                        <DropdownItem onClick={() => dispatch(openCreateDatabaseFromRestoreDialog())}>
-                            <Icon icon="restore-backup" /> New database from backup (Restore)
-                        </DropdownItem>
-                    </DropdownMenu>
-                </UncontrolledDropdown>
-            )}
+        <div className="position-relative">
+            <Checkbox
+                selected={selectedDatabases.length > 0}
+                indeterminate={0 < selectedDatabases.length && selectedDatabases.length < databaseNames.length}
+                toggleSelection={toggleSelectAll}
+                title="Select all or none"
+                size="lg"
+                className="ms-5"
+            />
 
-            <div className="flex-horizontal">
-                <CheckboxTriple
-                    onChanged={toggleSelectAll}
-                    state={databasesSelectionState}
-                    title="Select all or none"
-                />
+            <SelectionActions active={anythingSelected && !toggleChanges}>
+                <div className="d-flex align-items-center">
+                    <div className="small-label mb-1 flex-grow">With selected:</div>
 
-                <ButtonGroupWithLabel label="Selection" className="margin-left-sm gap-1">
+                    {/* <Button color="link" onClick={toggleSelectAll} className="ms-3 small-label mb-1" size="xs">
+                        DESELECT <Icon icon="clear" />
+                    </Button> */}
+                </div>
+                <ButtonGroup className="gap-2">
                     {isOperatorOrAbove() && (
                         <Button color="danger" onClick={onDelete} disabled={!canDeleteSelection || deleteChanges}>
                             {deleteChanges ? <Spinner size="sm" /> : <Icon icon="trash" />}
@@ -153,6 +139,7 @@ export function DatabasesToolbarActions({
                                 caret
                                 disabled={!anythingSelected || toggleChanges}
                                 title="Set the status (enabled/disabled) of selected databases"
+                                className="rounded-pill"
                             >
                                 {toggleChanges ? <Spinner size="sm" /> : <Icon icon="play" />}
                                 <span>Set state...</span>
@@ -176,6 +163,7 @@ export function DatabasesToolbarActions({
                                 title="Set the delete lock mode for the selected databases"
                                 caret
                                 disabled={!anythingSelected || lockChanges}
+                                className="rounded-pill"
                             >
                                 {lockChanges ? <Spinner size="sm" /> : <Icon icon="lock" />}
 
@@ -206,8 +194,23 @@ export function DatabasesToolbarActions({
                             </DropdownMenu>
                         </UncontrolledDropdown>
                     )}
-                </ButtonGroupWithLabel>
-            </div>
+                    {isOperatorOrAbove() && (
+                        <Button
+                            color="danger"
+                            onClick={onDelete}
+                            disabled={!canDeleteSelection || deleteChanges}
+                            className="rounded-pill"
+                        >
+                            {deleteChanges ? <Spinner size="sm" /> : <i className="icon-trash" />}
+                            Delete
+                        </Button>
+                    )}
+
+                    <Button onClick={toggleSelectAll} className="ms-3 rounded-pill">
+                        Deselect <Icon icon="clear" />
+                    </Button>
+                </ButtonGroup>
+            </SelectionActions>
         </div>
     );
 }

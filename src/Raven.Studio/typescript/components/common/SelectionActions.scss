@@ -1,0 +1,23 @@
+@use "Content/scss/bs5variables";
+
+.selection-actions {
+    border: bs5variables.$border-width solid bs5variables.$primary-var;
+    background: bs5variables.$panel-header-bg;
+    padding: bs5variables.$gutter-sm bs5variables.$gutter;
+    border-radius: bs5variables.$border-radius-sm;
+    position: absolute;
+    top: bs5variables.$gutter-xxs;
+    left: 50%;
+    transform: translate(-50%, bs5variables.$gutter-xxs) scale(0.95);
+    opacity: 0;
+    transition: all 0.2s bs5variables.$global-easing;
+    pointer-events: none;
+    z-index: bs5variables.$zindex-selection-actions;
+    box-shadow: bs5variables.$box-shadow;
+
+    &.active {
+        transform: translate(-50%, 0) scale(1);
+        opacity: 1;
+        pointer-events: all;
+    }
+}
