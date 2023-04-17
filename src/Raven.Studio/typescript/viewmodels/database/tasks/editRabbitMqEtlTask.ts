@@ -218,7 +218,7 @@ class editRabbitMqEtlTask extends viewModelBase {
             
             getOngoingTaskInfoCommand.forQueueEtl(this.activeDatabase(), args.taskId)
                 .execute()
-                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails) => {
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl) => {
                     this.editedRabbitMqEtl(new ongoingTaskRabbitMqEtlEditModel(result));
                     this.showAdvancedOptions(this.editedRabbitMqEtl().hasAdvancedOptionsDefined());
                     deferred.resolve();

@@ -236,7 +236,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
 
             getOngoingTaskInfoCommand.forElasticSearchEtl(this.db, args.taskId)
                 .execute()
-                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails) => {
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl) => {
                     this.editedElasticSearchEtl(new ongoingTaskElasticSearchEtlEditModel(result));
                     deferred.resolve();
                 })

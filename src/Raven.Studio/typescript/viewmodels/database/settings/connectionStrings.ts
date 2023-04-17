@@ -216,20 +216,20 @@ class connectionStrings extends viewModelBase {
             
             switch (studioTaskType) {
                 case "RavenEtl":
-                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView).ConnectionStringName;
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl).ConnectionStringName;
                     break;
                 case "SqlEtl":
-                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView).ConnectionStringName;
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl).ConnectionStringName;
                     break;
                 case "OlapEtl":
-                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView).ConnectionStringName;
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl).ConnectionStringName;
                     break;
                 case "ElasticSearchEtl":
-                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView).ConnectionStringName;
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl).ConnectionStringName;
                     break;
                 case "KafkaQueueEtl":
                 case "RabbitQueueEtl":
-                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView).ConnectionStringName;
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl).ConnectionStringName;
                     break;
                 case "Replication":
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication).ConnectionStringName;
