@@ -1,13 +1,13 @@
 ﻿import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 import OngoingTaskType = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
-import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
+import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import assertUnreachable from "./assertUnreachable";
 
 export default class TaskUtils {
     static ongoingTaskToStudioTaskType(task: OngoingTask): StudioTaskType {
         if (task.TaskType === "QueueEtl") {
-            const queueTask = task as OngoingTaskQueueEtlListView;
+            const queueTask = task as OngoingTaskQueueEtl;
             switch (queueTask.BrokerType) {
                 case "Kafka":
                     return "KafkaQueueEtl";

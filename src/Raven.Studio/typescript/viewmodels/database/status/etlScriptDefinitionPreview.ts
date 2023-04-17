@@ -21,11 +21,11 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
     
     constructor(etlType: EtlType,
                 transformationName: string,
-                task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
-                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
-                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
-                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
-                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails>) {
+                task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl>) {
         super();
 
         aceEditorBindingHandler.install();

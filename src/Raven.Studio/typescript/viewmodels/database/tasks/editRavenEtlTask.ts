@@ -229,7 +229,7 @@ class editRavenEtlTask extends shardViewModelBase {
             
             getOngoingTaskInfoCommand.forRavenEtl(this.db, args.taskId)
                 .execute()
-                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) => {
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl) => {
                     this.editedRavenEtl(new ongoingTaskRavenEtlEditModel(result));
                     deferred.resolve();
                 })

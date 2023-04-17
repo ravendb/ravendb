@@ -28,7 +28,7 @@ class ongoingTaskKafkaEtlEditModel extends ongoingTaskQueueEtlEditModel {
                     ConnectionStringName: "",
                     Name: ""
                 },
-            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl);
     }
 }
 

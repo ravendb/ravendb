@@ -56,7 +56,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
     validationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
     
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl) {
         super();
 
         this.update(dto);
@@ -135,7 +135,7 @@ abstract class ongoingTaskQueueEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl) {
         super.update(dto);
         const configuration = dto.Configuration;
         

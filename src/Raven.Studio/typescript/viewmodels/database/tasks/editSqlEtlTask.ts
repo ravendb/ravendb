@@ -245,7 +245,7 @@ class editSqlEtlTask extends shardViewModelBase {
 
             getOngoingTaskInfoCommand.forSqlEtl(this.db, args.taskId)
                 .execute()
-                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) => {
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl) => {
                     this.editedSqlEtl(new ongoingTaskSqlEtlEditModel(result));
                     deferred.resolve();
                 })

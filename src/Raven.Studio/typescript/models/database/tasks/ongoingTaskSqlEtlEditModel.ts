@@ -28,7 +28,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         return "Table";
     }
     
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl) {
         super();
 
         this.update(dto);
@@ -97,7 +97,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl) {
         super.update(dto);
 
         if (dto.Configuration) {
@@ -151,7 +151,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
                      Transforms: [],
                      SqlTables: []
                 }
-            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl);
     }
 
     hasAdvancedOptionsDefined(): boolean {

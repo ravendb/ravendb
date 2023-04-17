@@ -1,13 +1,8 @@
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
-import OngoingTaskRavenEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView;
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 import moment = require("moment");
-import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView;
-import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView;
-import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
-import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;
 import OngoingTaskPullReplicationAsSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink;
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
 import PullReplicationDefinition = Raven.Client.Documents.Operations.Replication.PullReplicationDefinition;
@@ -15,6 +10,11 @@ import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.O
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import GetPeriodicBackupStatusOperationResult = Raven.Client.Documents.Operations.Backups.GetPeriodicBackupStatusOperationResult;
 import CloudUploadStatus = Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
+import OngoingTaskRavenEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl;
+import OngoingTaskSqlEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl;
+import OngoingTaskOlapEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl;
+import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
+import OngoingTaskElasticSearchEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -191,7 +191,7 @@ export class TasksStubs {
         };
     }
 
-    static getRavenEtlListItem(): OngoingTaskRavenEtlListView {
+    static getRavenEtlListItem(): OngoingTaskRavenEtl {
         return {
             TaskName: "RavenETLTask",
             TaskId: 105,
@@ -206,10 +206,11 @@ export class TasksStubs {
             TaskConnectionStatus: "Active",
             TopologyDiscoveryUrls: ["http://url1", "http://url2"],
             PinToMentorNode: false,
+            Configuration: null,
         };
     }
 
-    static getSqlListItem(): OngoingTaskSqlEtlListView {
+    static getSqlListItem(): OngoingTaskSqlEtl {
         return {
             TaskName: "SqlTask",
             TaskId: 115,
@@ -224,10 +225,11 @@ export class TasksStubs {
             TaskConnectionStatus: "Active",
             ConnectionStringDefined: true,
             PinToMentorNode: false,
+            Configuration: null,
         };
     }
 
-    static getOlapListItem(): OngoingTaskOlapEtlListView {
+    static getOlapListItem(): OngoingTaskOlapEtl {
         return {
             TaskName: "OlapTask",
             TaskId: 145,
@@ -240,10 +242,11 @@ export class TasksStubs {
             MentorNode: null,
             TaskConnectionStatus: "Active",
             PinToMentorNode: false,
+            Configuration: null,
         };
     }
 
-    static getKafkaListItem(): OngoingTaskQueueEtlListView {
+    static getKafkaListItem(): OngoingTaskQueueEtl {
         return {
             TaskName: "KafkaTask",
             TaskId: 302,
@@ -257,10 +260,11 @@ export class TasksStubs {
             BrokerType: "Kafka",
             Url: "localhost:9092",
             PinToMentorNode: false,
+            Configuration: null,
         };
     }
 
-    static getRabbitListItem(): OngoingTaskQueueEtlListView {
+    static getRabbitListItem(): OngoingTaskQueueEtl {
         return {
             TaskName: "RabbitTask",
             TaskId: 303,
@@ -274,6 +278,7 @@ export class TasksStubs {
             Url: "localhost:6006",
             BrokerType: "RabbitMq",
             PinToMentorNode: false,
+            Configuration: null,
         };
     }
 
@@ -332,7 +337,7 @@ export class TasksStubs {
         };
     }
 
-    static getElasticSearchListItem(): OngoingTaskElasticSearchEtlListView {
+    static getElasticSearchListItem(): OngoingTaskElasticSearchEtl {
         return {
             TaskName: "ElasticSearchTask",
             TaskId: 185,
@@ -345,6 +350,7 @@ export class TasksStubs {
             TaskConnectionStatus: "Active",
             NodesUrls: ["http://elastic1:8081", "http://elastic2:8081"],
             PinToMentorNode: false,
+            Configuration: null,
         };
     }
 

@@ -30,7 +30,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
         return "Index";
     }
     
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl) {
         super();
 
         this.update(dto);
@@ -90,7 +90,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl) {
         super.update(dto);
         
         const configuration = dto.Configuration;
@@ -151,7 +151,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
                     Transforms: [],
                     OlapTables: []
                 }
-            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl);
        }
 }
 

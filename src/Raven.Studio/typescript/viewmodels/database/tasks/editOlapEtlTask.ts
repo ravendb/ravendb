@@ -294,7 +294,7 @@ class editOlapEtlTask extends shardViewModelBase {
 
             getOngoingTaskInfoCommand.forOlapEtl(this.db, args.taskId)
                 .execute()
-                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails) => {
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl) => {
                     this.editedOlapEtl(new ongoingTaskOlapEtlEditModel(result));
                     deferred.resolve();
                 })

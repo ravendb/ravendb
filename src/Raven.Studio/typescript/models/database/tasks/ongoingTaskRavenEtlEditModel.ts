@@ -27,7 +27,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         return "Collection";
     }
     
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl) {
         super();
 
         this.update(dto);
@@ -97,7 +97,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl) {
         super.update(dto);
 
         if (dto.Configuration) {
@@ -152,7 +152,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
                     ConnectionStringName: "",
                     Name: "",
                 },
-            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl);
     }
 
     hasAdvancedOptionsDefined(): boolean {

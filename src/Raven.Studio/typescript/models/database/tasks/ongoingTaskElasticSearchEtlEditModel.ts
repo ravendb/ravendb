@@ -21,7 +21,7 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
         return "Index";
     }
     
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl) {
         super();
 
         this.update(dto);
@@ -79,7 +79,7 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl) {
         super.update(dto);
         
         const configuration = dto.Configuration;
@@ -126,7 +126,7 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
                     Transforms: [],
                     ElasticIndexes: []
                 }
-            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl);
        }
 }
 
