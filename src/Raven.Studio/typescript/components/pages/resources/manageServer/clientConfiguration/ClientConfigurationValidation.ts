@@ -1,40 +1,40 @@
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { ValidationMessageUtils } from "components/utils/ValidationMessageUtils";
+import { ValidationMessageUtils as Messages } from "components/utils/ValidationMessageUtils";
 
 const schema = yup
     .object({
-        identityPartsSeparatorEnabled: yup.boolean(),
+        identityPartsSeparatorEnabled: yup.boolean().optional(),
         identityPartsSeparatorValue: yup.string().when("identityPartsSeparatorEnabled", {
             is: true,
-            then: (schema) => schema.required(ValidationMessageUtils.required),
+            then: (schema) => schema.required(Messages.required),
         }),
-        maximumNumberOfRequestsEnabled: yup.boolean(),
+        maximumNumberOfRequestsEnabled: yup.boolean().optional(),
         maximumNumberOfRequestsValue: yup
             .number()
-            .positive()
-            .integer()
+            .positive(Messages.positiveNumber)
+            .integer(Messages.integerNumber)
             .when("maximumNumberOfRequestsEnabled", {
                 is: true,
-                then: (schema) => schema.required(ValidationMessageUtils.required),
+                then: (schema) => schema.required(Messages.required),
             }),
-        sessionContextEnabled: yup.boolean(),
-        seedEnabled: yup.boolean(),
+        sessionContextEnabled: yup.boolean().optional(),
+        seedEnabled: yup.boolean().optional(),
         seedValue: yup
             .number()
-            .positive()
-            .integer()
+            .positive(Messages.positiveNumber)
+            .integer(Messages.integerNumber)
             .when("seedEnabled", {
                 is: true,
-                then: (schema) => schema.required(ValidationMessageUtils.required),
+                then: (schema) => schema.required(Messages.required),
             }),
-        readBalanceBehaviorEnabled: yup.boolean(),
+        readBalanceBehaviorEnabled: yup.boolean().optional(),
         readBalanceBehaviorValue: yup
             .mixed<Raven.Client.Http.ReadBalanceBehavior>()
             .oneOf(["None", "FastestNode", "RoundRobin"])
             .when("readBalanceBehaviorEnabled", {
                 is: true,
-                then: (schema) => schema.required(ValidationMessageUtils.required),
+                then: (schema) => schema.required(Messages.required),
             }),
     })
     .required();

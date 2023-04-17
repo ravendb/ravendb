@@ -28,6 +28,7 @@ export default function ClientConfiguration() {
         "seedEnabled",
     ]);
 
+    // TODO: reset after change checkbox, not in effect
     useEffect(() => {
         if (!identityPartsSeparatorEnabled) {
             resetField("identityPartsSeparatorValue");
