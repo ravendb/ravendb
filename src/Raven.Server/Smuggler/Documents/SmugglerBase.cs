@@ -667,9 +667,12 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (ShouldSkipIndex(index))
+                    if (ShouldSkipIndex(index, out var msg))
+                    {
+                        result.AddWarning(msg);
                         continue;
-
+                    }
+                    
                     if (OnIndexAction != null)
                     {
                         OnIndexAction(index);
@@ -749,7 +752,11 @@ namespace Raven.Server.Smuggler.Documents
             return result.Indexes;
         }
 
-        protected virtual bool ShouldSkipIndex(IndexDefinitionAndType index) => false;
+        protected virtual bool ShouldSkipIndex(IndexDefinitionAndType index, out string msg)
+        {
+            msg = null;
+            return false;
+        }
 
         protected virtual Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType) =>
             ProcessIdentitiesInternalAsync(result, buildType, _destination.Identities());
@@ -909,6 +916,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 result.DatabaseRecord.ReadCount++;
 
+                SkipDatabaseRecordTypesIfNeeded(databaseRecord, result, _options.OperateOnDatabaseRecordTypes);
+
                 try
                 {
                     await actions.WriteDatabaseRecordAsync(databaseRecord, result, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
@@ -921,6 +930,10 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.DatabaseRecord;
+        }
+
+        protected virtual void SkipDatabaseRecordTypesIfNeeded(DatabaseRecord databaseRecord, SmugglerResult result, DatabaseRecordItemType databaseRecordItemType)
+        {
         }
 
         protected async Task<SmugglerProgressBase.Counts> ProcessIdentitiesInternalAsync(SmugglerResult result, BuildVersionType buildType, IKeyValueActions<long> action)

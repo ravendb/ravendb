@@ -51,14 +51,59 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        protected override bool ShouldSkipIndex(IndexDefinitionAndType index)
+        protected override void SkipDatabaseRecordTypesIfNeeded(DatabaseRecord databaseRecord, SmugglerResult result, DatabaseRecordItemType databaseRecordItemType)
         {
-            if (index.Type is IndexType.MapReduce or IndexType.AutoMapReduce)
-                return true;
+            if (databaseRecord.SinkPullReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SinkPullReplications))
+            {
+                foreach (var pullReplication in databaseRecord.SinkPullReplications)
+                {
+                    AddWarning(DatabaseRecordItemType.SinkPullReplications, pullReplication.Name);
+                }
+            }
 
+            if (databaseRecord.HubPullReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.HubPullReplications))
+            {
+                foreach (var pullReplication in databaseRecord.HubPullReplications)
+                {
+                    AddWarning(DatabaseRecordItemType.HubPullReplications, pullReplication.Name);
+                }
+            }
+
+            if (databaseRecord.Integrations?.PostgreSql != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PostgreSQLIntegration))
+            {
+                AddWarning(DatabaseRecordItemType.PostgreSQLIntegration);
+            }
+
+            if (databaseRecord.QueueEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.QueueEtls))
+            {
+                AddWarning(DatabaseRecordItemType.QueueEtls);
+            }
+
+            _options.OperateOnDatabaseRecordTypes &= ~DatabaseSmugglerOptions.ShardingNotSupportedDatabaseSmugglerOptions;
+
+            void AddWarning(DatabaseRecordItemType type, string name = null)
+            {
+                var typeMsg = string.IsNullOrEmpty(name) ? $"{type}" : $"{type} task '{name}'";
+                result.AddWarning($"Skipped {typeMsg} - it is currently not supported in Sharding");
+            }
+        }
+
+        protected override bool ShouldSkipIndex(IndexDefinitionAndType index, out string msg)
+        {
+            msg = null;
             var definition = (IndexDefinition)index.IndexDefinition;
-            if (definition.DeploymentMode is IndexDeploymentMode.Rolling)
+
+            if (index.Type is IndexType.MapReduce or IndexType.AutoMapReduce)
+            {
+                msg = $"Skipped index '{definition.Name}'. Map-Reduce is currently not supported in Sharding";
                 return true;
+            }
+
+            if (definition.DeploymentMode is IndexDeploymentMode.Rolling)
+            {
+                msg = $"Skipped index '{definition.Name}'. Rolling indexes are currently not supported in Sharding";
+                return true;
+            }
 
             return false;
         }
