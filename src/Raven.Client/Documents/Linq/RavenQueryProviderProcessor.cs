@@ -3238,7 +3238,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 script = ToJs(expression);
             }
+            
+            if (QueryGenerator.Conventions.FindProjectedPropertyNameForIndex != null)
+            {
+                var firstDotIndex = script.IndexOf('.');
 
+                var documentAlias = script.Substring(0, firstDotIndex + 1);
+                var propertySelector = script.Substring(firstDotIndex + 1);
+                
+                propertySelector = QueryGenerator.Conventions.FindProjectedPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
+                    propertySelector);
+
+                script = $"{documentAlias}{propertySelector}";
+            }
+            
             if (addComma)
             {
                 sb.Append(", ");
