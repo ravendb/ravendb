@@ -1498,7 +1498,7 @@ namespace Raven.Server
                 if (_caseSensitiveAuthorizedDatabases.TryGetValue(database, out var mode))
                     return CheckAccess(mode, requireAdmin, requireWrite);
 
-                if (AuthorizedDatabases.TryGetValue(database, out mode) == false)
+                if (AuthorizedDatabases.TryGetValue(ShardHelper.ToDatabaseName(database), out mode) == false)
                     return false;
 
                 // Technically speaking, since this is per connection, this is single threaded. But I'm
