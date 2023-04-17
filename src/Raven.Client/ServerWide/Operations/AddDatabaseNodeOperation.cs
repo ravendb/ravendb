@@ -20,7 +20,7 @@ namespace Raven.Client.ServerWide.Operations
             _node = node;
         }
 
-        internal AddDatabaseNodeOperation(string databaseName, int shardNumber, string node = null) : this(databaseName, node)
+        public AddDatabaseNodeOperation(string databaseName, int shardNumber, string node = null) : this(databaseName, node)
         {
             _databaseName = ClientShardHelper.ToShardName(databaseName, shardNumber);
         }
