@@ -65,7 +65,9 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                 if (_fields.TryGetValue(property.Key, out var field) == false)
                     throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
 
-                if (storedValue is not null)
+                
+                InsertRegularField(field, value, indexContext, ref entryWriter, scope, out var shouldSkip);
+                if (storedValue is not null && shouldSkip == false)
                 {
                     //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
                     var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
@@ -75,8 +77,6 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
                     storedValue[property.Key] = blittableValue;
                 }
-
-                InsertRegularField(field, value, indexContext, ref entryWriter, scope);
             }
 
             if (storedValue is not null)

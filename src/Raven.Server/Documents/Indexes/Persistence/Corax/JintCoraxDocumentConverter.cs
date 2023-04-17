@@ -81,7 +81,6 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 bool shouldSaveAsBlittable;
                 object value;
                 JsValue actualValue;
-
                 if (isDynamicFieldEnumerable)
                 {
                     var enumerableScope = CreateEnumerableWriterScope();
@@ -89,9 +88,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     do
                     {
                         ProcessObject(iterator.Current, propertyAsString, field, ref entryWriter, enumerableScope, indexingScope, documentToProcess,
-                            out shouldSaveAsBlittable, out value, out actualValue);
+                            out shouldSaveAsBlittable, out value, out actualValue, out _);
                         if (shouldSaveAsBlittable)
-                            ProcessAsJson(actualValue, field, ref entryWriter, enumerableScope, documentToProcess);
+                            ProcessAsJson(actualValue, field, ref entryWriter, enumerableScope, documentToProcess, out _);
 
                         var disposable = value as IDisposable;
                         disposable?.Dispose();
@@ -102,9 +101,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 else
                 {
                     ProcessObject(propertyDescriptor.Value, propertyAsString, field, ref entryWriter, singleEntryWriterScope, indexingScope, documentToProcess,
-                        out shouldSaveAsBlittable, out value, out actualValue);
+                        out shouldSaveAsBlittable, out value, out actualValue, out _);
                     if (shouldSaveAsBlittable)
-                        ProcessAsJson(actualValue, field, ref entryWriter, singleEntryWriterScope, documentToProcess);
+                        ProcessAsJson(actualValue, field, ref entryWriter, singleEntryWriterScope, documentToProcess, out _);
                     var disposable = value as IDisposable;
                     disposable?.Dispose();
                 }
@@ -126,11 +125,11 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
         //Helpers
 
-        void ProcessAsJson(JsValue actualValue, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope, ObjectInstance documentToProcess)
+        void ProcessAsJson(JsValue actualValue, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope, ObjectInstance documentToProcess, out bool shouldSkip)
         {
             var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                 context: indexContext);
-            InsertRegularField(field, value, indexContext, ref entryWriter, writerScope);
+            InsertRegularField(field, value, indexContext, ref entryWriter, writerScope, out shouldSkip);
         }
 
         static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, out float? boost)
@@ -159,8 +158,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         }
 
         void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope,
-            CurrentIndexingScope indexingScope, ObjectInstance documentToProcess, out bool shouldProcessAsBlittable, out object value, out JsValue actualValue)
+            CurrentIndexingScope indexingScope, ObjectInstance documentToProcess, out bool shouldProcessAsBlittable, out object value, out JsValue actualValue, out bool shouldSkip)
         {
+            shouldSkip = false;
             value = null;
             actualValue = valueToInsert;
             var isObject = IsObject(actualValue);
@@ -185,7 +185,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                         value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                             context: indexContext);
 
-                        InsertRegularField(field, value, indexContext, ref entryWriter, writerScope);
+                        InsertRegularField(field, value, indexContext, ref entryWriter, writerScope, out shouldSkip);
 
                         if (value is IDisposable toDispose1)
                         {
@@ -229,7 +229,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                         return; //Ignoring bad spatial field
                     }
 
-                    InsertRegularField(field, spatial, indexContext, ref entryWriter, writerScope);
+                    InsertRegularField(field, spatial, indexContext, ref entryWriter, writerScope, out shouldSkip);
 
                     shouldProcessAsBlittable = false;
                     return;
