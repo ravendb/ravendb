@@ -30,6 +30,8 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     private readonly ShardedDocumentDatabase _documentDatabase;
 
+    public Action<IPagerLevelTransactionState> OnFailure { get; protected set; }
+
     static ShardedDocumentsStorage()
     {
         using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -44,6 +46,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         _documentDatabase = documentDatabase;
         _bucketStats = new BucketStatsHolder();
 
+        OnFailure += _bucketStats.ClearBucketStatsOnFailure;
         OnBeforeCommit += _bucketStats.UpdateBucketStatsTreeBeforeCommit;
     }
 

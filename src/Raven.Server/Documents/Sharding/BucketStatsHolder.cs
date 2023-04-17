@@ -76,6 +76,11 @@ namespace Raven.Server.Documents.Sharding
             _mergedChangeVectors.Clear();
         }
 
+        public void ClearBucketStatsOnFailure(IPagerLevelTransactionState _)
+        {
+            _values.Clear();
+            _mergedChangeVectors.Clear();
+        }
 
         private ByteStringContext.InternalScope MergeStats(Transaction tx, Tree tree, Documents.BucketStats inMemoryStats, Slice keySlice, int bucket, out Documents.BucketStats stats, out Slice mergedCvSlice)
         {
