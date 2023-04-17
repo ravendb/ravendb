@@ -15,7 +15,7 @@ public class CompactTreeTests : StorageTest
     }
 
     [Fact]
-    public void CanHandlePageSplits()
+    public void CanHandleMerges()
     {
         using (var wtx = Env.WriteTransaction())
         {
@@ -25,7 +25,103 @@ public class CompactTreeTests : StorageTest
             {
                 tree.Add(i.ToString(), i);
             }
-            tree.Render();
+            
+          
+            for (int i = 0; i < 2000; i++)
+            {
+                Assert.True(tree.TryRemove(i.ToString(), out var l));
+                Assert.Equal(i, l);
+            }
+
+            wtx.Commit();
+        }
+    }
+    
+    [Fact]
+    public void CanHandlePageSplits()
+    {
+        var expected = new List<(string,long)>();
+        using (var wtx = Env.WriteTransaction())
+        {
+            var tree = wtx.CompactTreeFor("test");
+
+            for (int i = 0; i < 2000; i++)
+            {
+                tree.Add(i.ToString(), i);
+                expected.Add((i.ToString(), i));
+            }
+            
+            var entries = tree.AllEntriesIn(tree.State.RootPage);
+            // we remove the entry that is the left most in the root entry
+            Assert.True(tree.TryRemove(entries[^1].Item1, out _));
+            expected.RemoveAll(x => x.Item1 == entries[^1].Item1);
+            wtx.Commit();
+        }
+        expected.Sort((x,y) => string.CompareOrdinal(x.Item1, y.Item1));
+          
+        using (var rtx = Env.ReadTransaction())
+        {
+            var tree = rtx.CompactTreeFor("test");
+         
+            var it = tree.Iterate();
+            it.Reset();
+            var items = new List<(string, long)>();
+            while (it.MoveNext(out var scope, out var v))
+            {
+                items.Add((scope.Key.ToString(), v));
+            }
+            Assert.Equal(expected, items);
+        }
+    }
+    
+    [Fact]
+    public void CanHandlePageSplitsWithCompression()
+    {
+        using (var wtx = Env.WriteTransaction())
+        {
+            var tree = wtx.CompactTreeFor("test");
+
+            for (int i = 0; i < 2000; i++)
+            {
+                tree.Add("A" + i, i);
+            }
+
+            tree._state.NextTrainAt = 1; // force new dictionary generation
+            
+            wtx.Commit();
+        }
+        
+        using (var wtx = Env.WriteTransaction())
+        {
+            var tree = wtx.CompactTreeFor("test");
+
+            for (int i = 0; i < 2000; i++)
+            {
+                tree.Add("B" + i, i);
+            }
+            tree._state.NextTrainAt = int.MaxValue;
+
+            wtx.Commit();
+        }
+        
+        using (var wtx = Env.WriteTransaction())
+        {
+            var tree = wtx.CompactTreeFor("test");
+ 
+            // All B items are encoded with the new dic, all A items with the old
+            // we are removing entries directly in the middle between them, forcing 
+            // us to merge pages with different dictionaries
+            for (int i = 0; i < 1000; i++)
+            {
+                Assert.True(tree.TryRemove( "B" + i, out var l));
+                Assert.Equal(i, l);
+            }
+            for (int i = 1000; i < 2000; i++)
+            {
+                Assert.True(tree.TryRemove( "A" + i, out var l));
+                Assert.Equal(i, l);
+            }
+
             wtx.Commit();
         }
     }
