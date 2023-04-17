@@ -37,7 +37,8 @@ namespace Raven.Server.Documents.Includes
         public IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context, Dictionary<string, HashSet<string>> countersBySourcePath)
             : this(database, context)
         {
-            _countersBySourcePath = countersBySourcePath.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray());
+            _countersBySourcePath = countersBySourcePath?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray())?? new Dictionary<string, string[]>();
+            ;
         }
 
         //AddRange
