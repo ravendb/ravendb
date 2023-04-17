@@ -42,7 +42,8 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Utils;
+ using Sparrow.Logging;
+ using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
 namespace Raven.Server.Web.System
@@ -471,8 +472,9 @@ namespace Raven.Server.Web.System
 
                     var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger);
                     var threadName = $"Backup thread {backupName} for database '{Database.Name}'";
-                    
-                    LogTaskToAudit(backupParameters.Name, $"{operationId}", backupConfiguration.ToAuditJson());
+
+                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                        LogTaskToAudit(backupParameters.Name, $"{operationId}", backupConfiguration.ToAuditJson());
 
                     var t = Database.Operations.AddOperation(
                         null,
@@ -1438,8 +1440,11 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            var description = (disable) ? "disable" : "enable";
-            LogTaskToAudit(description + $"-{typeStr}Task", $"{key}",null);
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                var description = (disable) ? "disable" : "enable";
+                LogTaskToAudit(description + $"-{typeStr}Task", $"{key}", conf: null);
+            }
         }
 
         [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
@@ -1528,7 +1533,9 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
-            LogTaskToAudit($"delete-{typeStr}", $"{id}", null);
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                LogTaskToAudit($"delete-{typeStr}", $"{id}", conf: null);
         }
 
         private static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString

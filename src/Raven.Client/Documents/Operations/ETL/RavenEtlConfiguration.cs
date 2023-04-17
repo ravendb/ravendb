@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL

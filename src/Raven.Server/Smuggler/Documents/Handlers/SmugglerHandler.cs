@@ -40,6 +40,7 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
 
@@ -149,7 +150,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     HttpContext.Abort();
                 }
-                LogTaskToAudit("exprot-data", $"{operationId}",null);
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                    LogTaskToAudit("exprot-data", $"{operationId}", conf: null);
             }
         }
 
@@ -733,8 +736,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }, operationId, token: token).ConfigureAwait(false);
 
                 await WriteImportResultAsync(context, result, ResponseBodyStream());
-
-                LogTaskToAudit("import-data", $"{operationId}", null);
+                
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                    LogTaskToAudit("import-data", $"{operationId}", conf: null);
             }
         }
 
