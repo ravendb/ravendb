@@ -1576,7 +1576,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public static Stream GetTempStream(DatabaseSmugglerOptionsServerSide options)
         {
-            var tempFileName = $"{Guid.NewGuid()}.smuggler";
+            var tempFileName = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.smuggler");
             if (options.EncryptionKey != null)
                 return new DecryptingXChaCha20Oly1305Stream(new StreamsTempFile(tempFileName, true).StartNewStream(), Convert.FromBase64String(options.EncryptionKey));
 
