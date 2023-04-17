@@ -24,6 +24,8 @@ namespace Voron.Data.CompactTrees
         public long TreeDictionaryId;
         [FieldOffset(48)]
         public long NextTrainAt;
+        [FieldOffset(56)]
+        public long TermsContainerId;
 
         public override string ToString()
         {
