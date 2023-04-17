@@ -74,7 +74,7 @@ export function FormGeneralToggle<TFieldValues extends FieldValues, TName extend
 
     return (
         <Label className="form-check">
-            {label && labelPosition === "left" && <div className="ms-2">{label}</div>}
+            {label && (!labelPosition || labelPosition === "left") && <div className="ms-2">{label}</div>}
             <FormInput type={type} {...restProps} />
             {label && labelPosition === "right" && <div className="ms-2">{label}</div>}
         </Label>
