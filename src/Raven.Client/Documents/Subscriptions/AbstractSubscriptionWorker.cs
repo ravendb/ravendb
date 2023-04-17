@@ -747,7 +747,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        internal virtual async Task SendAckAsync(TBatch batch, Stream stream, JsonOperationContext context, CancellationToken token)
+        protected virtual async Task SendAckAsync(TBatch batch, Stream stream, JsonOperationContext context, CancellationToken token)
         {
             try
             {

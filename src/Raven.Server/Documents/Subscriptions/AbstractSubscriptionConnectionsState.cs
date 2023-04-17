@@ -575,7 +575,7 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
         }
     }
 
-    public virtual async Task HandleConnectionException(TSubscriptionConnection connection, Exception e)
+    public virtual async Task HandleConnectionExceptionAsync(TSubscriptionConnection connection, Exception e)
     {
         switch (e)
         {

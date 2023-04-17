@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
         }
 
-        internal override async Task SendAckAsync(ShardedSubscriptionBatch batch, Stream stream, JsonOperationContext context, CancellationToken token)
+        protected override async Task SendAckAsync(ShardedSubscriptionBatch batch, Stream stream, JsonOperationContext context, CancellationToken token)
         {
             try
             {

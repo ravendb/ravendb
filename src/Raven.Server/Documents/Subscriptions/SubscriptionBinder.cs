@@ -111,7 +111,7 @@ public class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscri
             }
             catch (Exception e)
             {
-                await _subscriptionConnectionsState.HandleConnectionException(_connection, e);
+                await _subscriptionConnectionsState.HandleConnectionExceptionAsync(_connection, e);
             }
             finally
             {
