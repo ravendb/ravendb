@@ -19,6 +19,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
+using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -683,19 +684,8 @@ namespace SlowTests.Sharding.Replication
 
                     var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
                     var server = Servers.Single(s => s.WebUrl == responsibale);
-                    using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
-                    {
-                        Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
-                                  null,
-                            true));
 
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
-                            .DestinationUrl;
-
-                        // fail the node to to where the data is sent
-                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
-                    }
+                    await DisposeWatcherNodeAsync(srcDB, server, srcStore);
 
                     using (var session = srcStore.OpenSession())
                     {
@@ -709,6 +699,46 @@ namespace SlowTests.Sharding.Replication
 
                     Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
                 }
+            }
+        }
+
+        private async Task DisposeWatcherNodeAsync(string srcDB, RavenServer server, IDocumentStore srcStore)
+        {
+            using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
+            {
+                var ongoingTasks = processor.GetOngoingTasksInternal();
+                var replicationTask = ongoingTasks.OngoingTasks.Single(x => x is OngoingTaskReplication);
+                var replicationTaskId = replicationTask.TaskId;
+
+                var value = await WaitForValueAsync(async () =>
+                {
+                    for (var shardNumber = 0; shardNumber < 3; shardNumber++)
+                    {
+                        var replicationTaskInfo = (OngoingTaskReplication)(await srcStore.Maintenance.ForShard(shardNumber)
+                            .SendAsync(new GetOngoingTaskInfoOperation(replicationTaskId, OngoingTaskType.Replication)));
+                        if (replicationTaskInfo.DestinationUrl != null)
+                            return true;
+                    }
+
+                    return false;
+                }, true);
+
+                Assert.True(value);
+
+                string watcherTaskUrl = null;
+                for (var shardNumber = 0; shardNumber < 3; shardNumber++)
+                {
+                    var replicationTaskInfo = (OngoingTaskReplication)(await srcStore.Maintenance.ForShard(shardNumber)
+                        .SendAsync(new GetOngoingTaskInfoOperation(replicationTaskId, OngoingTaskType.Replication)));
+                    if (replicationTaskInfo.DestinationUrl != null)
+                    {
+                        watcherTaskUrl = replicationTaskInfo.DestinationUrl;
+                        break;
+                    }
+                }
+
+                // fail the node to to where the data is sent
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
             }
         }
 
@@ -771,19 +801,8 @@ namespace SlowTests.Sharding.Replication
 
                     var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
                     var server = Servers.Single(s => s.WebUrl == responsibale);
-                    using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
-                    {
-                        Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
-                                  null,
-                            true));
 
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
-                            .DestinationUrl;
-
-                        // fail the node to to where the data is sent
-                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
-                    }
+                    await DisposeWatcherNodeAsync(srcDB, server, srcStore);
 
                     using (var session = srcStore.OpenSession())
                     {
@@ -857,19 +876,8 @@ namespace SlowTests.Sharding.Replication
 
                     var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
                     var server = Servers.Single(s => s.WebUrl == responsibale);
-                    using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
-                    {
-                        Assert.True(WaitForValue(
-                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
-                                  null,
-                            true));
 
-                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasks.Single(t => t is OngoingTaskReplication))
-                            .DestinationUrl;
-
-                        // fail the node to to where the data is sent
-                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
-                    }
+                    await DisposeWatcherNodeAsync(srcDB, server, srcStore);
 
                     using (var session = srcStore.OpenSession())
                     {
@@ -1727,7 +1735,7 @@ namespace SlowTests.Sharding.Replication
                 {
                     for (int i = 0; i < 50; i++)
                         s1.Store(new User(), $"foo/bar/{i}");
-                    
+
                     s1.SaveChanges();
                 }
 
@@ -1791,7 +1799,7 @@ namespace SlowTests.Sharding.Replication
                 }
 
                 var location = await Sharding.GetShardNumberForAsync(store2, id1);
-       
+
                 using (var s1 = store1.OpenSession())
                 {
                     s1.Delete(id1);
@@ -1864,9 +1872,9 @@ namespace SlowTests.Sharding.Replication
                         Assert.Equal(0, tombstonesCount);
                     }
                 }
-                
+
                 await Sharding.Resharding.MoveShardForId(store2, id2);
-               
+
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
             }
