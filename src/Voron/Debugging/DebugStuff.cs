@@ -325,7 +325,8 @@ namespace Voron.Debugging
             var entries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
             for (int i = 0; i < header->NumberOfEntries; i++)
             {
-                if (CompactTree.GetEntry(tree, page, entries[i], out var keyScope, out var val))
+                var state = new CompactTree.CursorState { Page = page };
+                if (CompactTree.GetEntry(tree, ref state, i, out var keyScope, out var val))
                 {
                     var key = keyScope.Key.Decoded();
                     string keyText = key.Length != 0 ? Encoding.UTF8.GetString(key) : "---first---";

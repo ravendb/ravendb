@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests.Corax;
 using Tests.Infrastructure;
 using FastTests.Voron.Sets;
 using FastTests.Corax.Bugs;
@@ -30,10 +31,10 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new ReshardingTests(testOutputHelper))
+                using (var test = new CompactTreeTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.RestoreShardedDatabaseFromIncrementalBackupAfterBucketMigration();
+                    test.CanEncodeAndDecode((int)DateTime.Now.Ticks);
                 }
             }
             catch (Exception e)
