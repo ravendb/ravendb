@@ -68,11 +68,11 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                             throw new ArgumentOutOfRangeException($"{spatialOptions.MethodType} is not implemented.");
                     }
 
-                    InsertRegularField(indexField, value, indexContext, ref entryWriter, scope);
+                    InsertRegularField(indexField, value, indexContext, ref entryWriter, scope, out var _);
                 }
                 else if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value))
                 {
-                    InsertRegularField(indexField, value, indexContext, ref entryWriter, scope);
+                    InsertRegularField(indexField, value, indexContext, ref entryWriter, scope, out var _);
                 }
             }
 

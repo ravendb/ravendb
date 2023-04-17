@@ -128,14 +128,15 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     }
     
     protected void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
-        IWriterScope scope, bool nestedArray = false)
+        IWriterScope scope, out bool shouldSkip, bool nestedArray = false)
     {
+        shouldSkip = false;
         var valueType = GetValueType(value);
         var path = field.Name;
         var fieldId = field.Id;
         long @long;
         double @double;
-
+        
         switch (valueType)
         {
             case ValueType.Double:
@@ -273,6 +274,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var iterator = (IEnumerable)value;
 
                 var canFinishEnumerableWriting = false;
+                shouldSkip = true;
+                
                 if (scope is not EnumerableWriterScope enumerableWriterScope)
                 {
                     canFinishEnumerableWriting = true;
@@ -281,7 +284,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                
                 foreach (var item in iterator)
                 {
-                    InsertRegularField(field, item, indexContext, ref entryWriter, enumerableWriterScope);
+                    InsertRegularField(field, item, indexContext, ref entryWriter, enumerableWriterScope, out var innerShouldSkip, nestedArray);
+                    //Should override shouldSkip to false when something is not skipped.
+                    shouldSkip &= innerShouldSkip;
                 }
 
                 if (canFinishEnumerableWriting)
@@ -303,7 +308,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (val is not DynamicJsonValue json)
                 {
-                    InsertRegularField(field, val, indexContext, ref entryWriter, scope, nestedArray);
+                    InsertRegularField(field, val, indexContext, ref entryWriter, scope, out shouldSkip, nestedArray);
                     return;
                 }
 
@@ -318,15 +323,16 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
 
             case ValueType.BlittableJsonObject:
-                HandleObject((BlittableJsonReaderObject)value, field, indexContext, ref entryWriter, scope);
+                HandleObject((BlittableJsonReaderObject)value, field, indexContext, ref entryWriter, scope, out shouldSkip, nestedArray);
                 return;
 
             case ValueType.DynamicNull:       
                 var dynamicNull = (DynamicNullObject)value;
                 if (dynamicNull.IsExplicitNull || _indexImplicitNull)
-                {
                     scope.WriteNull(path, fieldId, ref entryWriter);
-                }
+                else
+                    shouldSkip = true;
+                
                 return;
 
             case ValueType.Null:
@@ -344,7 +350,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var cdi = value as CoraxDynamicItem;
                 (scope as EnumerableWriterScope)?.SetAsDynamic();
             //we want to unpack item here.
-                InsertRegularField(cdi!.Field, cdi.Value, indexContext, ref entryWriter, scope, nestedArray);
+                InsertRegularField(cdi!.Field, cdi.Value, indexContext, ref entryWriter, scope, out shouldSkip, nestedArray);
                 break;
             case ValueType.Stream:
                 throw new NotImplementedInCoraxException($"Streams are not implemented in Corax yet");
@@ -374,12 +380,12 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
-        IWriterScope scope, bool nestedArray = false)
+        IWriterScope scope, out bool shouldSkip, bool nestedArray = false)
     {
         if (val.TryGetMember(RavenConstants.Json.Fields.Values, out var values) &&
             IsArrayOfTypeValueObject(val))
         {
-            InsertRegularField(field, (IEnumerable)values, indexContext, ref entryWriter, scope, nestedArray);
+            InsertRegularField(field, (IEnumerable)values, indexContext, ref entryWriter, scope, out shouldSkip, nestedArray);
             return;
         }
         
@@ -389,6 +395,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             binding.SetAnalyzer(null);
         
         scope.Write(field.Name, field.Id, val, ref entryWriter);
+        shouldSkip = false;
     }
 
     private void DisableIndexingForComplexObject(IndexField field)
