@@ -1519,7 +1519,6 @@ namespace Voron.Data.CompactTrees
             if (currentKeyId == 0)
             {
                 encodedKeyLengthInBits = 0;
-                value = 0;
                 return ReadOnlySpan<byte>.Empty;
             }
             
