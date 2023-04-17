@@ -262,7 +262,7 @@ namespace Raven.Server.Documents
                         confString = ctx.ReadObject(conf, "conf").ToString();
                     }
 
-                    line += ($"Configuration: {confString}");
+                    line += ($" Configuration: {confString}");
                 }
 
                 auditLog.Info(line);
