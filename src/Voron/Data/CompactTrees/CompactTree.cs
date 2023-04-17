@@ -381,10 +381,8 @@ namespace Voron.Data.CompactTrees
             var shouldBeInCurrentPage = pos < state.Header->NumberOfEntries;
             if (shouldBeInCurrentPage)
             {
-                GetEncodedKeyPtr(ref state, pos, out var nextEntryPtr, out var nextEntryLengthInBits);
-
-                var match = encodedKey.CompareEncodedWith(nextEntryPtr, nextEntryLengthInBits, state.Header->DictionaryId);
-
+                var match = CompareEntryWith(ref state, pos, encodedKey);
+                    
                 shouldBeInCurrentPage = match < 0;
             }
 
@@ -406,14 +404,12 @@ namespace Voron.Data.CompactTrees
 
                     // We change the current dictionary for this key. 
                    
-                    GetEncodedKeyPtr(ref cur, cur.LastSearchPosition + 1, out var currentKeyInPageDictionaryPtr, out var currentKeyInPageDictionaryLengthInBits);
-
                     // PERF: The reason why we are changing the dictionary instead of comparing with a dictionary instead is because we want
                     // to explicitly exploit the fact that when dictionaries do not change along the search path, we can use the fast-path
                     // to find the encoded key. 
                     long dictionaryId = cur.Header->DictionaryId;
                     currentKeyInPageDictionary.ChangeDictionary(dictionaryId);
-                    var match = currentKeyInPageDictionary.CompareEncodedWith(currentKeyInPageDictionaryPtr, currentKeyInPageDictionaryLengthInBits, dictionaryId);
+                    var match = CompareEntryWith(ref cur, cur.LastSearchPosition + 1, currentKeyInPageDictionary);
                     if (match < 0)
                         continue;
 
@@ -1067,11 +1063,12 @@ namespace Voron.Data.CompactTrees
             return updateCauseForSplit.Key;
         }
 
-        private int CompareEntryWith(ref CursorState state, int position, CompactKey causeForSplit)
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private int CompareEntryWith(ref CursorState state, int position, CompactKey encodedKey)
         {
             long containerId = DecodeKey(state.Page.Pointer + state.EntriesOffsetsPtr[position]);
             GetEncodedKeyPtr(ref state, containerId, out var lastEntryFromPreviousPage, out var sizeInBits);
-            return causeForSplit.CompareEncodedWith(lastEntryFromPreviousPage, sizeInBits, state.Header->DictionaryId);
+            return encodedKey.CompareEncodedWith(lastEntryFromPreviousPage, sizeInBits, state.Header->DictionaryId);
         }
 
         private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state)
