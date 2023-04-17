@@ -32,8 +32,6 @@ public class RavenDB_18073 : RavenTestBase
                 
                 session.SaveChanges();
                 
-                WaitForUserToContinueTheTest(store);
-                
                 var res = session.Advanced.RawQuery<Dto>(query).ToList();
                 
                 Assert.Equal(3, res.Count);
