@@ -119,7 +119,7 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("Auto/Items/BySpatial.point(Latitude|Longitude)AndSpatial.point(Latitude2|Longitude2)", stats.IndexName);
+                    Assert.Equal("Auto/Items/BySpatial.point(Latitude2|Longitude2)AndSpatial.point(Latitude|Longitude)", stats.IndexName);
 
                     results = session.Query<Item>()
                         .Statistics(out stats)
@@ -127,7 +127,7 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("Auto/Items/BySpatial.point(Latitude|Longitude)AndSpatial.point(Latitude2|Longitude2)AndSpatial.wkt(ShapeWkt)", stats.IndexName);
+                    Assert.Equal("Auto/Items/BySpatial.point(Latitude2|Longitude2)AndSpatial.point(Latitude|Longitude)AndSpatial.wkt(ShapeWkt)", stats.IndexName);
                 }
             }
         }
