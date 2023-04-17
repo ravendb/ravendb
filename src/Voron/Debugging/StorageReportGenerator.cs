@@ -430,16 +430,21 @@ namespace Voron.Debugging
             {
                 pageDensities = GetPageDensities(ct);
             }
-            long pageCount = ct.State.BranchPages + ct.State.LeafPages;
+            var container = new Container(ct.Llt.GetPage(ct.State.TermsContainerId));
+            
+            long pageCount = ct.State.BranchPages + ct.State.LeafPages +container.Header.NumberOfPages + container.Header.NumberOfOverflowPages;
+
             double density = pageDensities?.Average() ?? -1;
+            
             var treeReport = new TreeReport
             {
                 Type = RootObjectType.Set,
                 Name = ct.Name.ToString(),
                 BranchPages = ct.State.BranchPages,
                 NumberOfEntries = ct.State.NumberOfEntries,
-                LeafPages = ct.State.LeafPages,
+                LeafPages = ct.State.LeafPages + container.Header.NumberOfPages,
                 PageCount = pageCount,
+                OverflowPages = container.Header.NumberOfOverflowPages,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(pageCount),
                 UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
