@@ -47,7 +47,7 @@ namespace Voron.Data.CompactTrees
                     Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
                     if (state.LastSearchPosition < state.Header->NumberOfEntries && state.LastSearchPosition >= 0) // same page
                     {
-                        GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[state.LastSearchPosition], out scope, out value);
+                        GetEntry(_tree, ref state, state.LastSearchPosition, out scope, out value);
                         state.LastSearchPosition++;
 
                         var key = scope.Key.Decoded();

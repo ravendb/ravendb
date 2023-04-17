@@ -121,8 +121,8 @@ unsafe partial class CompactTree
         if (current.Header->NumberOfEntries == 0)
             return;
 
-        _ = GetEncodedEntry(current.Page, current.EntriesOffsets[0], out var lastEncodedKey, out var lastEncodedKeyLengthInBits, out var l);
-
+        var lastEncodedKey = GetEncodedKeySpan(ref current, 0, out var lastEncodedKeyLengthInBits, out var l);
+        
         Span<byte> lastDecodedKey = new byte[dictionary.GetMaxDecodingBytes(lastEncodedKey.Length)];
 
         if (lastEncodedKey.Length != 0)
@@ -132,7 +132,7 @@ unsafe partial class CompactTree
 
         for (int i = 1; i < current.Header->NumberOfEntries; i++)
         {
-            GetEncodedEntry(current.Page, current.EntriesOffsets[i], out var encodedKey, out var encodeKeyLengthInBits, out l);
+            var encodedKey = GetEncodedKeySpan(ref current, i, out var encodeKeyLengthInBits, out l);
             if (encodedKey.Length <= 0)
                 VoronUnrecoverableErrorException.Raise(_llt, "Encoded key is corrupted.");
             if (lastEncodedKey.SequenceCompareTo(encodedKey) >= 0)
