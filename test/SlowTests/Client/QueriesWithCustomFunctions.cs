@@ -672,7 +672,7 @@ from 'Users' as u select output(u)", query.ToString());
                     if (options.DatabaseMode == RavenDatabaseMode.Single)
                     {
                         Assert.True(timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Retriever)]
-                        .Timings[nameof(QueryTimingsScope.Names.Projection)].Timings[nameof(QueryTimingsScope.Names.Load)].DurationInMs >= 0);
+                            .Timings[nameof(QueryTimingsScope.Names.Projection)].Timings[nameof(QueryTimingsScope.Names.Load)].DurationInMs >= 0);
                     }
                 }
             }
