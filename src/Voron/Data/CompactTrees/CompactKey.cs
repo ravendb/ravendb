@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using System.Text;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
@@ -66,6 +67,7 @@ public unsafe class CompactKey : IDisposable
     }
 
     public bool IsValid => Dictionary > 0;
+    public long ContainerId;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ReadOnlySpan<byte> EncodedWithCurrent(out int lengthInBits)
@@ -447,5 +449,13 @@ public unsafe class CompactKey : IDisposable
         var thisDecoded = this.Decoded();
         var valueDecoded = value.Decoded();
         return thisDecoded.SequenceCompareTo(valueDecoded);
+    }
+
+    public override string ToString()
+    {
+        if (IsValid == false)
+            return "Key: [NotValid]";
+        
+        return Encoding.UTF8.GetString(Decoded());
     }
 }
