@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
@@ -205,6 +206,109 @@ namespace SlowTests.Sharding.Encryption
                     var users = await session.Query<User>().ToListAsync();
                     Assert.Equal(1, users.Count);
                     Assert.Equal("ayende", users[0].Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding)]
+        public async Task ClientCertificateForShardedDatabaseShouldPermitAccessToIndividualShards()
+        {
+            Encryption.EncryptedServer(out var certificates, out var dbName);
+
+            var options = new Options
+            {
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ClientCertificate1.Value,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Encrypted = true;
+                },
+                ModifyDatabaseName = s => dbName,
+                DeleteDatabaseOnDispose = false
+            };
+            var dic = new Dictionary<int, List<string>>();
+            ShardingConfiguration sharding;
+
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                sharding = await Sharding.GetShardingConfigurationAsync(store);
+
+                // insert dome data
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var id = $"users/{i}";
+
+                        session.Store(new User
+                        {
+                            Name = $"user-{i}"
+                        }, id);
+
+                        var shardNumber = await Sharding.GetShardNumberFor(store, id);
+                        if (dic.TryGetValue(shardNumber, out var idsList) == false)
+                        {
+                            dic[shardNumber] = idsList = new List<string>();
+                        }
+                        idsList.Add(id);
+                    }
+
+                    session.SaveChanges();
+                }
+            }
+
+            var userCert = certificates.ClientCertificate2.Value;
+
+            Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value,
+                clientCertificate: userCert,
+                permissions: new Dictionary<string, DatabaseAccess>
+                {
+                    [dbName] = DatabaseAccess.Admin
+                },
+                clearance: SecurityClearance.ValidUser);
+
+            options.ClientCertificate = userCert;
+            options.CreateDatabase = false;
+            options.DeleteDatabaseOnDispose = true;
+
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                // assert that we can access the sharded-db
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var id = $"users/{i}";
+                        var doc = await session.LoadAsync<User>(id);
+                        Assert.Equal($"user-{i}", doc.Name);
+                    }
+                }
+
+                // assert that we can access each shard directly
+                foreach (var shardNumber in sharding.Shards.Keys)
+                {
+                    string newId;
+                    var shard = ShardHelper.ToShardName(store.Database, shardNumber);
+                    using (var session = store.OpenAsyncSession(database: shard))
+                    {
+                        Assert.True(dic.TryGetValue(shardNumber, out var idsList));
+                        foreach (var id in idsList)
+                        {
+                            var doc = await session.LoadAsync<User>(id);
+                            Assert.NotNull(doc);
+                        }
+
+                        newId = $"users/new/${idsList.First()}";
+                        await session.StoreAsync(new User(), newId);
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store.OpenAsyncSession(database: shard))
+                    {
+                        var newDoc = await session.LoadAsync<User>(newId);
+                        Assert.NotNull(newDoc);
+                    }
                 }
             }
         }
