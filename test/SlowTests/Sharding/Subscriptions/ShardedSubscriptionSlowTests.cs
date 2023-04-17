@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
@@ -199,7 +200,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        private async Task CheckSubscriptionNewCVs(IDocumentStore store, SubscriptionState state, Dictionary<string, string> cvs)
+        private async Task CheckSubscriptionNewCVsAsync(IDocumentStore store, SubscriptionState state, Dictionary<string, string> cvs)
         {
             var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
             await foreach (var db in shards)
@@ -390,7 +391,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                 mre2.Set();
 
-                await CheckSubscriptionNewCVs(store, state, changeVectorsCollection);
+                await CheckSubscriptionNewCVsAsync(store, state, changeVectorsCollection);
 
                 // connect and assert no docs are sent 
                 // after setting subs id to LastDocument, we add Users with Age>18
@@ -496,6 +497,31 @@ namespace SlowTests.Sharding.Subscriptions
 
                 Assert.True(docs.Wait(_reasonableWaitTime));
                 AssertOnSubscriptionConnectionRetryEventException(onSubscriptionConnectionRetryException, state);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        public void ThrowOnUpdatingChangeVectorByAdmin()
+        {
+            //RavenDB-18223
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>()
+                {
+                    ChangeVector = Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument.ToString()
+                });
+
+                Assert.Throws<RavenException>(() => store.Subscriptions.Update(new SubscriptionUpdateOptions() { Name = id, ChangeVector = "A:322-AaAaAaAaAaAa" }));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+        public void ThrowOnSettingChangeVectorByAdmin()
+        {
+            //RavenDB-18223
+            using (var store = Sharding.GetDocumentStore())
+            {
+                Assert.Throws<RavenException>(() => store.Subscriptions.Create(new SubscriptionCreationOptions<User>() { ChangeVector = "A:322-AaAaAaAaAaAa" }));
             }
         }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Replication;
@@ -94,7 +95,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 ChangeVectorsCollection = null,
                 InitialChangeVector = null
             };
-            if (Enum.TryParse(options.ChangeVector, out Client.Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
+            if (Enum.TryParse(options.ChangeVector, out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
             {
                 switch (changeVectorSpecialValue)
                 {
@@ -119,13 +120,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         result.InitialChangeVector = options.ChangeVector;
                         break;
                     default:
-                        result.InitialChangeVector = options.ChangeVector;
-                        if (string.IsNullOrEmpty(result.InitialChangeVector) == false)
-                        {
-                            throw new InvalidOperationException("Setting initial change vector for sharded subscription is not allowed.");
-                        }
-
-                        break;
+                        throw new ArgumentOutOfRangeException($"Expected to get '{nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates)}' but got '{changeVectorSpecialValue}'");
+                }
+            }
+            else
+            {
+                result.InitialChangeVector = options.ChangeVector;
+                if (string.IsNullOrEmpty(result.InitialChangeVector) == false)
+                {
+                    throw new InvalidOperationException("Setting initial change vector for sharded subscription is not allowed.");
                 }
             }
 

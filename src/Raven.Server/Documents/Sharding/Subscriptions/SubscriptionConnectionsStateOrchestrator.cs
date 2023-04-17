@@ -121,9 +121,9 @@ public class SubscriptionConnectionsStateOrchestrator : AbstractSubscriptionConn
         _databaseContext.SubscriptionsStorage.DropSubscriptionConnections(SubscriptionId, e);
     }
 
-    public override async Task HandleConnectionException(OrchestratedSubscriptionConnection connection, Exception e)
+    public override async Task HandleConnectionExceptionAsync(OrchestratedSubscriptionConnection connection, Exception e)
     {
-        await base.HandleConnectionException(connection, e);
+        await base.HandleConnectionExceptionAsync(connection, e);
         if (e is SubscriptionException se and not SubscriptionChangeVectorUpdateConcurrencyException and not SubscriptionInUseException)
         {
             DropSubscription(se);
