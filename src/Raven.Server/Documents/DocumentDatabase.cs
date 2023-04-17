@@ -1339,7 +1339,8 @@ namespace Raven.Server.Documents
 
                 ClientConfiguration = record.Client;
                 IdentityPartsSeparator = record.Client?.IdentityPartsSeparator ?? '/';
-
+                if (record.Client?.Disabled ?? false)
+                    IdentityPartsSeparator = '/';
                 StudioConfiguration = record.Studio;
 
                 NotifyFeaturesAboutStateChange(record, index);
