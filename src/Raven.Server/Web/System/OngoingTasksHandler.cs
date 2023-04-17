@@ -342,11 +342,13 @@ namespace Raven.Server.Web.System
             }
         }
 
+        public const string UpdatePeriodicBackupDebugTag = "update-periodic-backup";
+
         [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePeriodicBackup()
         {
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
-                "update-periodic-backup",
+                UpdatePeriodicBackupDebugTag,
                 GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
                 {
@@ -436,6 +438,7 @@ namespace Raven.Server.Web.System
         }
 
         private static int _oneTimeBackupCounter;
+        public const string BackupDatabaseOnceTag = "one-time-database-backup";
 
         [RavenAction("/databases/*/admin/backup", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
         public async Task BackupDatabaseOnce()
@@ -472,9 +475,6 @@ namespace Raven.Server.Web.System
 
                     var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger);
                     var threadName = $"Backup thread {backupName} for database '{Database.Name}'";
-
-                    if (LoggingSource.AuditLog.IsInfoEnabled)
-                        LogTaskToAudit(backupParameters.Name, $"{operationId}", backupConfiguration.ToAuditJson());
 
                     var t = Database.Operations.AddOperation(
                         null,
@@ -522,6 +522,8 @@ namespace Raven.Server.Web.System
                     {
                         writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                     }
+                    
+                    LogTaskToAudit(BackupDatabaseOnceTag, operationId, json);
                 }
                 catch (Exception e)
                 {
@@ -761,10 +763,12 @@ namespace Raven.Server.Web.System
             return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings, queueConnectionStrings);
         }
 
+        public const string PutConnectionStringDebugTag = "put-connection-string";
+
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), "put-connection-string", GetRaftRequestIdFromQuery());
+            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), PutConnectionStringDebugTag, GetRaftRequestIdFromQuery());
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
@@ -776,6 +780,8 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetRaftRequestIdFromQuery(), statusCode: HttpStatusCode.OK);
         }
 
+        public const string AddEtlDebugTag = "etl-add";
+
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
@@ -784,7 +790,7 @@ namespace Raven.Server.Web.System
             if (id == null)
             {
                 await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
-                        ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), "etl-add",
+                        ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), AddEtlDebugTag,
                     GetRaftRequestIdFromQuery(),
                     beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
                     fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
@@ -1440,12 +1446,12 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            if (LoggingSource.AuditLog.IsInfoEnabled)
-            {
-                var description = (disable) ? "disable" : "enable";
-                LogTaskToAudit(description + $"-{typeStr}Task", $"{key}", conf: null);
-            }
+            var description = (disable) ? "disable" : "enable";
+            LogTaskToAudit(description + $"-{typeStr}Task", key, configuration: null);
+
         }
+
+        public const string UpdateExternalReplicationDebugTag = "update_external_replication";
 
         [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdateExternalReplication()
@@ -1457,7 +1463,7 @@ namespace Raven.Server.Web.System
             {
                 ExternalReplication watcher = null;
                 await DatabaseConfigurations(
-                    (_, databaseName, blittableJson, guid) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, guid, out watcher), "update_external_replication",
+                    (_, databaseName, blittableJson, guid) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, guid, out watcher), UpdateExternalReplicationDebugTag,
                     GetRaftRequestIdFromQuery(),
                     fillJson: (json, _, index) =>
                     {
@@ -1533,9 +1539,8 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
-
-            if (LoggingSource.AuditLog.IsInfoEnabled)
-                LogTaskToAudit($"delete-{typeStr}", $"{id}", conf: null);
+            
+            LogTaskToAudit($"delete-{typeStr}", id, configuration: null);
         }
 
         private static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString
