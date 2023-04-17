@@ -27,7 +27,7 @@ namespace Voron.Data.CompactTrees
 
         [FieldOffset(16)]
         public long DictionaryId;
-
+        
         public int NumberOfEntries
         {
             get
