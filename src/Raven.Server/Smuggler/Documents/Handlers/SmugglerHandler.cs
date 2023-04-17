@@ -150,9 +150,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     HttpContext.Abort();
                 }
-
-                if (LoggingSource.AuditLog.IsInfoEnabled)
-                    LogTaskToAudit("exprot-data", $"{operationId}", conf: null);
+                
+                LogTaskToAudit("exprot-data", operationId, configuration: null);
             }
         }
 
@@ -737,8 +736,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 await WriteImportResultAsync(context, result, ResponseBodyStream());
                 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
-                    LogTaskToAudit("import-data", $"{operationId}", conf: null);
+                LogTaskToAudit("import-data", operationId, configuration: null);
             }
         }
 

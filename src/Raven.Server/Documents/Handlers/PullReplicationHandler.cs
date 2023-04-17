@@ -19,6 +19,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class PullReplicationHandler : DatabaseRequestHandler
     {
+        public const string DefineHubDebugTag = "update-hub-pull-replication";
+
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task DefineHub()
         {
@@ -38,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
                         Definition = pullReplication
                     };
                     return ServerStore.SendToLeaderAsync(updatePullReplication);
-                }, "update-hub-pull-replication",
+                }, DefineHubDebugTag,
                 GetRaftRequestIdFromQuery(),
                 fillJson: (json, _, index) =>
                 {
@@ -148,6 +150,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        public const string UpdatePullReplicationOnSinkNodeDebugTag = "update-sink-pull-replication";
+
         [RavenAction("/databases/*/admin/tasks/sink-pull-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePullReplicationOnSinkNode()
         {
@@ -161,7 +165,7 @@ namespace Raven.Server.Documents.Handlers
                 PullReplicationAsSink pullReplication = null;
                 await DatabaseConfigurations(
                     (_, databaseName, blittableJson, guid) => ServerStore.UpdatePullReplicationAsSink(databaseName, blittableJson, guid, out pullReplication),
-                    "update-sink-pull-replication", GetRaftRequestIdFromQuery(),
+                    UpdatePullReplicationOnSinkNodeDebugTag, GetRaftRequestIdFromQuery(),
                     fillJson: (json, _, index) =>
                     {
                         using (context.OpenReadTransaction())

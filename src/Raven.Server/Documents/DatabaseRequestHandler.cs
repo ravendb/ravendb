@@ -8,12 +8,13 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Integrations.PostgreSQL.Messages;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -71,7 +72,6 @@ namespace Raven.Server.Documents
 
                 HttpContext.Response.StatusCode = (int)statusCode;
 
-                var id =string.Empty;
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var json = new DynamicJsonValue
@@ -80,15 +80,9 @@ namespace Raven.Server.Documents
                     };
                     fillJson?.Invoke(json, result.Configuration, result.Index);
                     context.Write(writer, json);
-                    id = json["TaskId"] == null ? json["RaftCommandIndex"].ToString() : json["TaskId"].ToString();
-
                 }
 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
-                {
-                    DynamicJsonValue configuration = GetCustomConfigurationAuditJson(debug, result.Configuration);
-                    LogTaskToAudit(debug, id, configuration);
-                }
+                LogTaskToAudit(debug, result.Index, result.Configuration);
             }
         }
 
@@ -171,26 +165,29 @@ namespace Raven.Server.Documents
                 Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
 
-        protected DynamicJsonValue GetCustomConfigurationAuditJson(string name, BlittableJsonReaderObject configuration)
+        private DynamicJsonValue GetCustomConfigurationAuditJson(string name, BlittableJsonReaderObject configuration)
         {
             switch (name)
             {
-                case "update-periodic-backup":
+                case OngoingTasksHandler.BackupDatabaseOnceTag:
                     return JsonDeserializationServer.BackupConfiguration(configuration).ToAuditJson();
 
-                case "update_external_replication":
+                case OngoingTasksHandler.UpdatePeriodicBackupDebugTag:
+                    return JsonDeserializationClient.PeriodicBackupConfiguration(configuration).ToAuditJson();
+
+                case OngoingTasksHandler.UpdateExternalReplicationDebugTag:
                     return JsonDeserializationClient.ExternalReplication(configuration).ToJson();
 
-                case "update-hub-pull-replication":
+                case PullReplicationHandler.DefineHubDebugTag:
                     return JsonDeserializationClient.PullReplicationDefinition(configuration).ToAuditJson();
 
-                case "update-sink-pull-replication":
+                case PullReplicationHandler.UpdatePullReplicationOnSinkNodeDebugTag:
                     return JsonDeserializationClient.PullReplicationAsSink(configuration).ToAuditJson();
 
-                case "etl-add":
+                case OngoingTasksHandler.AddEtlDebugTag:
                     return GetEtlConfigurationAuditJson(configuration);
 
-                case "put-connection-string":
+                case OngoingTasksHandler.PutConnectionStringDebugTag:
                     return GetConnectionStringConfigurationAuditJson(configuration);
             }
             return null;
@@ -245,27 +242,31 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        protected void LogTaskToAudit(string description, string id, DynamicJsonValue conf)
+        protected void LogTaskToAudit(string description, long id, BlittableJsonReaderObject configuration)
         {
-            var clientCert = GetCurrentCertificate();
-            var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
-            var line = $"Task: '{description}' with taskId: '{id}'";
-            
-            if (clientCert != null)
-                line += $"executed by {clientCert.Subject} {clientCert.Thumbprint}";
-            
-            if (conf != null)
+            if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                var confString = string.Empty;
-                using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                DynamicJsonValue conf = GetCustomConfigurationAuditJson(description, configuration);
+                var clientCert = GetCurrentCertificate();
+                var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
+                var line = $"Task: '{description}' with taskId: '{id}'";
+
+                if (clientCert != null)
+                    line += $" executed by {clientCert.Subject} {clientCert.Thumbprint}";
+
+                if (conf != null)
                 {
-                    confString = ctx.ReadObject(conf, "conf").ToString();
+                    var confString = string.Empty;
+                    using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                    {
+                        confString = ctx.ReadObject(conf, "conf").ToString();
+                    }
+
+                    line += ($"Configuration: {confString}");
                 }
 
-                line += ($"Configuration: {confString}");
+                auditLog.Info(line);
             }
-
-            auditLog.Info(line);
         }
     }
 }
