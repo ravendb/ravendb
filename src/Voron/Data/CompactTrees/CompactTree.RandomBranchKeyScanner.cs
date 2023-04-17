@@ -82,7 +82,7 @@ unsafe partial class CompactTree
                     }
                     else
                     {
-                        if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[_currentIdx], out scope, out _) == false)
+                        if (GetEntry(_tree, ref state, _currentIdx, out scope, out _) == false)
                             goto Failure;
                         
                         _currentIdx++;
@@ -96,7 +96,7 @@ unsafe partial class CompactTree
             if (state.Header->IsLeaf)
             {
                 int randomEntry = _generator.Next(state.Header->NumberOfEntries);
-                if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[randomEntry], out scope, out _) == false)
+                if (GetEntry(_tree, ref state, randomEntry, out scope, out _) == false)
                     goto Failure;
 
                 // Move the cursor to the root.                 
