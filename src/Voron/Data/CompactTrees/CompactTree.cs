@@ -143,7 +143,6 @@ namespace Voron.Data.CompactTrees
 
         public struct CursorState
         {
-            public Page LastKeyLocationPage;
             public Page Page;
             public int LastMatch;
             public int LastSearchPosition;
@@ -492,7 +491,7 @@ namespace Voron.Data.CompactTrees
             Container.Delete(_llt, _state.TermsContainerId ,keyContainerId);
         }
 
-        private void IncrementTermReferenceCount(long keyContainerId)
+        private void IncrementTermReferenceCount(ref CursorState state, long keyContainerId)
         {
             var term = Container.GetMutable(_llt, keyContainerId);
             byte oldTermCount = term[^1]++;
@@ -847,7 +846,7 @@ namespace Voron.Data.CompactTrees
             else
             {
                 state.LastSearchPosition = ~state.LastSearchPosition;
-                IncrementTermReferenceCount(key.ContainerId);
+                IncrementTermReferenceCount(ref state, key.ContainerId);
             }
 
             Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
@@ -1419,16 +1418,8 @@ namespace Voron.Data.CompactTrees
             if (cstate._pos > cstate._stk.Length) //  should never actually happen
                 Array.Resize(ref cstate._stk, cstate._stk.Length * 2); // but let's be safe
 
-
             ref var state = ref cstate._stk[++cstate._pos];
             state.Page = _llt.GetPage(nextPage);
-            
-            if (cstate._pos > 0)
-            {
-                // we assume that the last page used will be used again
-                state.LastKeyLocationPage = cstate._stk[cstate._pos - 1].LastKeyLocationPage;
-            }
-
             cstate._len++;
         }
 
@@ -1524,7 +1515,7 @@ namespace Voron.Data.CompactTrees
             }
 
             Debug.Assert(currentKeyId > 0, "Negative container id is a bad sign");
-            var keyItem = Container.MaybeGetFromSamePage(_llt, ref state.LastKeyLocationPage, currentKeyId);
+            var keyItem = Container.Get(_llt, currentKeyId);
             encodedKeyLengthInBits = *(ushort*)keyItem.Address;
             encodedKeyPtr = keyItem.Address + sizeof(ushort);
         }
@@ -1538,7 +1529,7 @@ namespace Voron.Data.CompactTrees
                 encodedKeyLengthInBits = 0;
                 return ReadOnlySpan<byte>.Empty;
             }
-            var keyItem = Container.MaybeGetFromSamePage(_llt, ref state.LastKeyLocationPage, currentKeyId);
+            var keyItem = Container.Get(_llt, currentKeyId);
             encodedKeyLengthInBits = *(ushort*)keyItem.Address;
             var encodedKeyPtr = keyItem.Address + sizeof(ushort);
             return new ReadOnlySpan<byte>(encodedKeyPtr, Bits.ToBytes(encodedKeyLengthInBits));
@@ -1560,7 +1551,7 @@ namespace Voron.Data.CompactTrees
                 return Span<byte>.Empty;
             }
             
-            var keyItem = Container.MaybeGetFromSamePage(_llt, ref state.LastKeyLocationPage, currentKeyId);
+            var keyItem = Container.Get(_llt, currentKeyId);
             encodedKeyLengthInBits = *(ushort*)keyItem.Address;
             var encodedKeyPtr = keyItem.Address + sizeof(ushort);
             return new Span<byte>(encodedKeyPtr, Bits.ToBytes(encodedKeyLengthInBits));
