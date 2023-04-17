@@ -323,7 +323,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     // If the query start before the current read ids, then we have to divide the ids in those
                     // that need to be processed for discarding and those that don't. 
-                    int nextLimit = currentIdx + ids.Length;
                     if (_query.Start < currentIdx + ids.Length)
                         limit = _query.Start - currentIdx;
                     else
@@ -356,7 +355,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         var coraxEntry = _searcher.GetReaderAndIdentifyFor(id, out var key);
                         var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, coraxEntry, key, _index.IndexFieldsPersistence);
-                        var result = _retriever.Get(ref retrieverInput, token);
+                        var result = retriever.Get(ref retrieverInput, token);
 
                         if (result.Document != null)
                         {
@@ -513,6 +512,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             THighlighting highlightings = default;
             highlightings.Initialize(query, queryTimings);
 
+            int docsToLoad = pageSize;
             bool runQuery = true;
             while (runQuery)
             {
@@ -532,7 +532,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 int bufferSize = CoraxBufferSize(_indexSearcher, take, query);
                 var ids = QueryPool.Rent(bufferSize);
 
-                int docsToLoad = pageSize;
 
                 using var queryFilter = GetQueryFilter();
 
@@ -549,8 +548,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     // If we are going to skip, we've better do it knowing how many we have passed. 
                     int i = identityTracker.RegisterDuplicates(ref hasProjections, totalResults.Value, ids.AsSpan(0, read), token);
-
-                    totalResults.Value += read;
+                    totalResults.Value += read; // important that this is *after* RegisterDuplicates
 
                     // Now for every document that was selected. document it. 
                     for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
@@ -631,11 +629,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 if (queryMatch is not SortingMatch sm)
                     break; // this is only relevant if we are sorting, since we may have filtered items and need to read more, see: RavenDB-20294
-                
+
                 if (docsToLoad == 0 ||
                     sm.TotalResults == totalResults.Value ||
                     scannedDocuments.Value >= query.FilterLimit)
                 {
+                    totalResults.Value = (int)Math.Min(sm.TotalResults, int.MaxValue);
                     runQuery = false;
                 }
                 else
