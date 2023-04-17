@@ -24,17 +24,17 @@ export class TasksStubs {
 
         return {
             OngoingTasks: [
-                TasksStubs.getRavenEtlListItem(),
-                TasksStubs.getSqlListItem(),
-                TasksStubs.getOlapListItem(),
-                TasksStubs.getElasticSearchListItem(),
+                TasksStubs.getRavenEtl(),
+                TasksStubs.getSql(),
+                TasksStubs.getOlap(),
+                TasksStubs.getElasticSearch(),
                 TasksStubs.getPeriodicBackupListItem(),
-                TasksStubs.getKafkaListItem(),
-                TasksStubs.getRabbitListItem(),
-                TasksStubs.getReplicationSinkListItem(),
-                TasksStubs.getReplicationHubListItem(),
+                TasksStubs.getKafka(),
+                TasksStubs.getRabbit(),
+                TasksStubs.getReplicationSink(),
+                TasksStubs.getReplicationHub(),
                 TasksStubs.getExternalReplicationListItem(),
-                TasksStubs.getSubscriptionListItem(),
+                TasksStubs.getSubscription(),
             ],
             PullReplications: [TasksStubs.getReplicationHubDefinition(), emptyPullReplicationDefinition],
             SubscriptionsCount: 0,
@@ -51,6 +51,19 @@ export class TasksStubs {
                 TasksStubs.getKafkaProgress(),
                 TasksStubs.getRabbitProgress(),
             ],
+        };
+    }
+
+    static subscriptionConnectionDetails(): Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails {
+        return {
+            Results: [
+                {
+                    WorkerId: "worker-1",
+                    ClientUri: "http://127.0.0.1:5344",
+                    Strategy: "OpenIfFree",
+                },
+            ],
+            SubscriptionMode: "None",
         };
     }
 
@@ -113,32 +126,32 @@ export class TasksStubs {
     }
 
     static getRavenEtlProgress(): EtlTaskProgress {
-        const taskName = TasksStubs.getRavenEtlListItem().TaskName;
+        const taskName = TasksStubs.getRavenEtl().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Raven");
     }
 
     static getSqlProgress(): EtlTaskProgress {
-        const taskName = TasksStubs.getSqlListItem().TaskName;
+        const taskName = TasksStubs.getSql().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Sql");
     }
 
     static getOlapProgress(): EtlTaskProgress {
-        const taskName = TasksStubs.getOlapListItem().TaskName;
+        const taskName = TasksStubs.getOlap().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Olap");
     }
 
     static getKafkaProgress(): EtlTaskProgress {
-        const taskName = TasksStubs.getKafkaListItem().TaskName;
+        const taskName = TasksStubs.getKafka().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Queue");
     }
 
     static getRabbitProgress(): EtlTaskProgress {
-        const taskName = TasksStubs.getRabbitListItem().TaskName;
+        const taskName = TasksStubs.getRabbit().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Queue");
     }
 
     static getElasticsearchProgress(): EtlTaskProgress {
-        const taskName = TasksStubs.getElasticSearchListItem().TaskName;
+        const taskName = TasksStubs.getElasticSearch().TaskName;
         return TasksStubs.getEtlProgress(taskName, "ElasticSearch");
     }
 
@@ -191,7 +204,7 @@ export class TasksStubs {
         };
     }
 
-    static getRavenEtlListItem(): OngoingTaskRavenEtl {
+    static getRavenEtl(): OngoingTaskRavenEtl {
         return {
             TaskName: "RavenETLTask",
             TaskId: 105,
@@ -210,7 +223,7 @@ export class TasksStubs {
         };
     }
 
-    static getSqlListItem(): OngoingTaskSqlEtl {
+    static getSql(): OngoingTaskSqlEtl {
         return {
             TaskName: "SqlTask",
             TaskId: 115,
@@ -229,7 +242,7 @@ export class TasksStubs {
         };
     }
 
-    static getOlapListItem(): OngoingTaskOlapEtl {
+    static getOlap(): OngoingTaskOlapEtl {
         return {
             TaskName: "OlapTask",
             TaskId: 145,
@@ -246,7 +259,7 @@ export class TasksStubs {
         };
     }
 
-    static getKafkaListItem(): OngoingTaskQueueEtl {
+    static getKafka(): OngoingTaskQueueEtl {
         return {
             TaskName: "KafkaTask",
             TaskId: 302,
@@ -264,7 +277,7 @@ export class TasksStubs {
         };
     }
 
-    static getRabbitListItem(): OngoingTaskQueueEtl {
+    static getRabbit(): OngoingTaskQueueEtl {
         return {
             TaskName: "RabbitTask",
             TaskId: 303,
@@ -282,7 +295,7 @@ export class TasksStubs {
         };
     }
 
-    static getReplicationSinkListItem(): OngoingTaskPullReplicationAsSink {
+    static getReplicationSink(): OngoingTaskPullReplicationAsSink {
         return {
             TaskName: "ReplicationSinkTask",
             TaskId: 243,
@@ -306,7 +319,7 @@ export class TasksStubs {
         };
     }
 
-    static getReplicationHubListItem(): OngoingTaskPullReplicationAsHub {
+    static getReplicationHub(): OngoingTaskPullReplicationAsHub {
         return {
             TaskName: "sink1",
             TaskId: 287,
@@ -337,7 +350,7 @@ export class TasksStubs {
         };
     }
 
-    static getElasticSearchListItem(): OngoingTaskElasticSearchEtl {
+    static getElasticSearch(): OngoingTaskElasticSearchEtl {
         return {
             TaskName: "ElasticSearchTask",
             TaskId: 185,
@@ -354,7 +367,7 @@ export class TasksStubs {
         };
     }
 
-    static getSubscriptionListItem(): OngoingTaskSubscription {
+    static getSubscription(): OngoingTaskSubscription {
         return {
             TaskName: "NewOrdersSubTask",
             TaskId: 524,
@@ -365,7 +378,7 @@ export class TasksStubs {
             MentorNode: null,
             TaskType: "Subscription",
             Disabled: false,
-            SubscriptionId: 101,
+            SubscriptionId: 524,
             ChangeVectorForNextBatchStartingPoint: "B:884-7YtyJhmi/k+as1eW7RRJWQ, A:856-TtyicrkQAUKtvYiwGx0yoA",
             LastBatchAckTime: moment.utc().add(-1, "hours").toISOString(),
             Query: "from Orders",

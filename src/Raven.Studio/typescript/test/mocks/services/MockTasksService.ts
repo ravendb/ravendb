@@ -25,7 +25,7 @@ export default class MockTasksService extends AutoMockService<TasksService> {
     withGetSubscriptionTaskInfo(
         dto?: MockedValue<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription>
     ) {
-        return this.mockResolvedValue(this.mocks.getSubscriptionTaskInfo, dto, TasksStubs.subscriptionTaskInfo());
+        return this.mockResolvedValue(this.mocks.getSubscriptionTaskInfo, dto, TasksStubs.getSubscription());
     }
 
     withGetSubscriptionConnectionDetails(

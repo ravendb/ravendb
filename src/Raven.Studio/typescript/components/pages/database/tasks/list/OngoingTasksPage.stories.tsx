@@ -29,9 +29,13 @@ export default {
 
 function commonInit() {
     const { accessManager } = mockStore;
+    const { tasksService } = mockServices;
     accessManager.with_securityClearance("ClusterAdmin");
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+
+    tasksService.withGetSubscriptionTaskInfo();
+    tasksService.withGetSubscriptionConnectionDetails();
 }
 
 export const EmptyView: ComponentStory<typeof OngoingTasksPage> = () => {
@@ -120,18 +124,15 @@ export const SubscriptionTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const ongoingTask = TasksStubs.getSubscriptionListItem();
+        const ongoingTask = TasksStubs.getSubscription();
         if (args.disabled) {
             ongoingTask.TaskState = "Disabled";
         }
         args.customizeTask?.(ongoingTask);
         x.OngoingTasks = [ongoingTask];
         x.PullReplications = [];
-        x.SubscriptionsCount = 0;
+        x.SubscriptionsCount = 1;
     });
-
-    tasksService.withGetSubscriptionTaskInfo();
-    tasksService.withGetSubscriptionConnectionDetails();
 
     return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
 };
@@ -168,7 +169,7 @@ export const RavenEtlTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const ravenEtl = TasksStubs.getRavenEtlListItem();
+        const ravenEtl = TasksStubs.getRavenEtl();
         if (args.disabled) {
             ravenEtl.TaskState = "Disabled";
         }
@@ -209,7 +210,7 @@ export const SqlTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const sqlEtl = TasksStubs.getSqlListItem();
+        const sqlEtl = TasksStubs.getSql();
         if (args.disabled) {
             sqlEtl.TaskState = "Disabled";
         }
@@ -250,7 +251,7 @@ export const OlapTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const etl = TasksStubs.getOlapListItem();
+        const etl = TasksStubs.getOlap();
         if (args.disabled) {
             etl.TaskState = "Disabled";
         }
@@ -291,7 +292,7 @@ export const ElasticSearchTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const etl = TasksStubs.getElasticSearchListItem();
+        const etl = TasksStubs.getElasticSearch();
         if (args.disabled) {
             etl.TaskState = "Disabled";
         }
@@ -332,7 +333,7 @@ export const KafkaTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const etl = TasksStubs.getKafkaListItem();
+        const etl = TasksStubs.getKafka();
         if (args.disabled) {
             etl.TaskState = "Disabled";
         }
@@ -373,7 +374,7 @@ export const RabbitTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const etl = TasksStubs.getRabbitListItem();
+        const etl = TasksStubs.getRabbit();
         if (args.disabled) {
             etl.TaskState = "Disabled";
         }
@@ -412,7 +413,7 @@ export const ReplicationSinkTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const sinkListItem = TasksStubs.getReplicationSinkListItem();
+        const sinkListItem = TasksStubs.getReplicationSink();
         if (args.disabled) {
             sinkListItem.TaskState = "Disabled";
         }
@@ -445,7 +446,7 @@ export const ReplicationHubTemplate = (args: {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks((x) => {
-        const listItem = TasksStubs.getReplicationHubListItem();
+        const listItem = TasksStubs.getReplicationHub();
         if (args.disabled) {
             listItem.TaskState = "Disabled";
         }
