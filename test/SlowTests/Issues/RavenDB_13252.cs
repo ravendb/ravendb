@@ -3,6 +3,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseSpacesInCounterAndCompareExchangeNames()
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.CompareExchange)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseSpacesInCounterAndCompareExchangeNames(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

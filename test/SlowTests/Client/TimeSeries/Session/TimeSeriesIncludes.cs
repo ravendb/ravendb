@@ -35,7 +35,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     session.Store(new Company { Name = "HR" }, "companies/1-A");
                     session.Store(new Order { Company = "companies/1-A" }, "orders/1-A");
                     var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
-                    tsf.Append(baseline, new[] { 67d }, "watches/apple");
+                    tsf.Append(baseline, new []{ 67d }, "watches/apple");
                     tsf.Append(baseline.AddMinutes(5), new[] { 64d }, "watches/apple");
                     tsf.Append(baseline.AddMinutes(10), new[] { 65d }, "watches/fitbit");
 
@@ -509,7 +509,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(1, ranges.Count);
                     Assert.Equal(baseline.AddMinutes(0), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(50), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
-
+                    
                     // evict just the document
                     sessionOperations.DocumentsByEntity.Evict(user);
                     sessionOperations.DocumentsById.Remove(documentId);
@@ -2123,7 +2123,7 @@ namespace SlowTests.Client.TimeSeries.Session
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanFilterByCmpXchgAndIncludeTimeSeriesAndCounters(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2649,7 +2649,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenAsyncSession())
                 {
                     var e = await Assert.ThrowsAsync<InvalidOperationException>(
-                        async () => await session.LoadAsync<Order>("orders/1-A",
+                        async () => await session.LoadAsync<Order>("orders/1-A", 
                             i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11).IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10))));
 
                     Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
@@ -2732,7 +2732,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.", e.Message);
 
-                    e = Assert.Throws<InvalidOperationException>(() => session.Query<User>()
+                    e =  Assert.Throws<InvalidOperationException>(() => session.Query<User>()
                         .Include(i => i.IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11).IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10))));
                     Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
 
@@ -2805,9 +2805,9 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.StartsWith("Time range type cannot be set to 'None' when time is specified.", e.Message);
 
-                    e = await Assert.ThrowsAsync<InvalidOperationException>(
-                         async () => await session.LoadAsync<Order>("orders/1-A",
-                             i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.None, count: 1024)));
+                   e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.None, count: 1024)));
 
                     Assert.StartsWith("Time range type cannot be set to 'None' when count is specified.", e.Message);
 
@@ -3177,7 +3177,7 @@ namespace SlowTests.Client.TimeSeries.Session
                         {
                             var query = session.Advanced.RawQuery<User>("from Users include timeseries(last(600, 'seconds'))");
                             result = query.ToList();
-                        }
+                        } 
                         else if (raw2)
                         {
                             var query = session.Advanced.RawQuery<User>($"from Users include timeseries('{Constants.TimeSeries.All}', last(600, 'seconds'))");

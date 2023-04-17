@@ -334,7 +334,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return 0;
 
                 var distinctIds = ids.Slice(0, (int)limit);
-                
+
                 if (_isMap && hasProjection.IsProjection == false)
                 {
                     // Assumptions: we're in Map, so that mean we have ID of the doc saved in the tree. So we want to keep track what we returns
@@ -521,11 +521,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 using (queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false)?.Start())
                 {
-                    var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index,
-                        query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take);
+                    IDisposable releaseServerContext = null;
+                    IDisposable closeServerTransaction = null;
+                    TransactionOperationContext serverContext = null;
 
-                    if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out orderByFields)) is null)
-                        yield break;
+                    try
+                    {
+                        if (query.Metadata.HasCmpXchg)
+                        {
+                            releaseServerContext = documentsContext.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
+                            closeServerTransaction = serverContext.OpenReadTransaction();
+                        }
+
+                        var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext, documentsContext: null, query, _index,
+                            query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take);
+
+                        using (closeServerTransaction)
+                        {
+                            if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out orderByFields)) is null)
+                                yield break;
+                        }
+                    }
+                    finally
+                    {
+                        releaseServerContext?.Dispose();
+                    }
                 }
 
                 highlightings.Setup(query, documentsContext);
@@ -1045,10 +1065,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
             SortedSet<string> results = new();
-            
+
             if (_indexSearcher.TryGetTermsOfField(_indexSearcher.FieldMetadataBuilder(field), out var terms) == false)
                 return results;
-            
+
             if (string.IsNullOrEmpty(fromValue) == false)
             {
                 Span<byte> fromValueBytes = Encodings.Utf8.GetBytes(fromValue);
@@ -1304,7 +1324,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             exceptionAggregator.Execute(() => _indexSearcher?.Dispose());
             exceptionAggregator.ThrowIfNeeded();
         }
-        
+
         internal class GrowableHashSet<TItem>
         {
             private List<HashSet<TItem>> _hashSetsBucket;
@@ -1360,12 +1380,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _newestHashSet = new(_comparer);
             }
         }
-        
+
         private static void ThrowDistinctOnBiggerCollectionThanInt32()
         {
             throw new NotSupportedInCoraxException($"Corax doesn't support 'Distinct' operation on collection bigger than int32 ({int.MaxValue}).");
         }
-        
+
         private static void ThrowExplanationsIsNotImplementedInCorax()
         {
             throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
