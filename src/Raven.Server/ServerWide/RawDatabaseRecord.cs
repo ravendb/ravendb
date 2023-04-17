@@ -379,6 +379,36 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private List<PeriodicBackupConfiguration> _periodicBackups;
+
+        public List<PeriodicBackupConfiguration> PeriodicBackups
+        {
+            get
+            {
+                if (_periodicBackups != null) 
+                    return _periodicBackups;
+
+                if (_materializedRecord != null)
+                {
+                    _periodicBackups = _materializedRecord.PeriodicBackups;
+                }
+                else
+                {
+                    _periodicBackups = new List<PeriodicBackupConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray periodicBackups) && periodicBackups != null)
+                    {
+                        foreach (BlittableJsonReaderObject backup in periodicBackups)
+                        {
+                            var backupConfiguration = JsonDeserializationServer.GetPeriodicBackupConfiguration(backup);
+                            _periodicBackups.Add(backupConfiguration);
+                        }
+                    }
+                }
+
+                return _periodicBackups;
+            }
+        }
+
         public PeriodicBackupConfiguration GetPeriodicBackupConfiguration(long taskId)
         {
             if (_materializedRecord != null)
