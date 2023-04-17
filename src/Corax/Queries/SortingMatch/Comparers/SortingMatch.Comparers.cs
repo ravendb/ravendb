@@ -68,24 +68,36 @@ unsafe partial struct SortingMatch
         {
             if (ix.Key > 0 && iy.Key > 0)
             {
+                int cmp;
                 if (typeof(TW) == typeof(SequenceItem))
                 {
-                    return _comparer.CompareSequence(
+                    cmp = _comparer.CompareSequence(
                         new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
                         new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
                 }
                 else if (typeof(TW) == typeof(NumericalItem<long>))
                 {
-                    return _comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
+                    cmp = _comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
                 }
                 else if (typeof(TW) == typeof(NumericalItem<double>))
                 {
-                    return _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
+                    cmp = _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
                 }
                 else if (typeof(TW) == typeof(NumericalItem<float>))
                 {
-                    return _comparer.CompareNumerical(((NumericalItem<float>)(object)ix.Value).Value, ((NumericalItem<float>)(object)iy.Value).Value);
+                    cmp = _comparer.CompareNumerical(((NumericalItem<float>)(object)ix.Value).Value, ((NumericalItem<float>)(object)iy.Value).Value);
                 }
+                else
+                {
+                    throw new NotSupportedException(typeof(TW).FullName + " is not supported");
+                }
+
+                if (cmp != 0)
+                    return cmp;
+                // we need to ensure that for identical values, we'll sort in the *same* order regardless of the
+                // order of elements that we are observing
+                return ix.Key.CompareTo(iy.Key);
+
             }
             else if (ix.Key > 0)
             {
@@ -100,24 +112,35 @@ unsafe partial struct SortingMatch
         {
             if (ix.Key > 0 && iy.Key > 0)
             {
+                int cmp;
                 if (typeof(TW) == typeof(SequenceItem))
                 {
-                    return _comparer.CompareSequence(
+                    cmp = _comparer.CompareSequence(
                         new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
                         new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
                 }
                 else if (typeof(TW) == typeof(NumericalItem<long>))
                 {
-                    return _comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
+                    cmp = _comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
                 }
                 else if (typeof(TW) == typeof(NumericalItem<double>))
                 {
-                    return _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
+                    cmp = _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
                 }
                 else if (typeof(TW) == typeof(NumericalItem<float>))
                 {
-                    return _comparer.CompareNumerical(((NumericalItem<float>)(object)ix.Value).Value, ((NumericalItem<float>)(object)iy.Value).Value);
+                    cmp = _comparer.CompareNumerical(((NumericalItem<float>)(object)ix.Value).Value, ((NumericalItem<float>)(object)iy.Value).Value);
                 }
+                else
+                {
+                    throw new NotSupportedException(typeof(TW).FullName + " is not supported");
+                }
+
+                if (cmp != 0)
+                    return cmp;
+                // we need to ensure that for identical values, we'll sort in the *same* order regardless of the
+                // order of elements that we are observing
+                return ix.Key.CompareTo(iy.Key);
             }
             else if (ix.Key > 0)
             {
