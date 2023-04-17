@@ -49,5 +49,7 @@ export function debugMocks() {
         .filter((x) => x.callsCount > 0 && !x.hasImplementation)
         .map((x) => x.serviceName + "::" + x.methodName + ": calls = " + x.callsCount);
 
-    console.warn("Following mocks were called but not implemented: \r\n" + info.join("\r\n"));
+    if (info.length > 0) {
+        console.warn("Following mocks were called but not implemented: \r\n" + info.join("\r\n"));
+    }
 }

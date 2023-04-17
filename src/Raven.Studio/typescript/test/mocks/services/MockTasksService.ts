@@ -21,4 +21,20 @@ export default class MockTasksService extends AutoMockService<TasksService> {
     withGetManualBackup(dto?: MockedValue<GetPeriodicBackupStatusOperationResult>) {
         return this.mockResolvedValue(this.mocks.getManualBackup, dto, TasksStubs.getManualBackup());
     }
+
+    withGetSubscriptionTaskInfo(
+        dto?: MockedValue<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription>
+    ) {
+        return this.mockResolvedValue(this.mocks.getSubscriptionTaskInfo, dto, TasksStubs.subscriptionTaskInfo());
+    }
+
+    withGetSubscriptionConnectionDetails(
+        dto?: MockedValue<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails>
+    ) {
+        return this.mockResolvedValue(
+            this.mocks.getSubscriptionConnectionDetails,
+            dto,
+            TasksStubs.subscriptionConnectionDetails()
+        );
+    }
 }
