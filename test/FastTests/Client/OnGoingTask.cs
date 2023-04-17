@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Newtonsoft.Json.Serialization;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -7,6 +10,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -91,8 +95,29 @@ namespace FastTests.Client
             }
         }
 
+
+
         [LicenseRequiredFact]
-        public void GetRavenEtlTaskInfo()
+        public void GetRavenEtlTaskInfo() => GetRavenEtlTaskInfoBase(GetDocumentStore());
+        
+        [LicenseRequiredFact]
+        public void GetRavenEtlTaskInfoWithCustomConventions() => GetRavenEtlTaskInfoBase(GetDocumentStore(new Options()
+        {
+            ModifyDocumentStore = documentStore =>
+            {
+                documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = (serializer) =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                documentStore.Conventions.PropertyNameConverter = mi => $"{Char.ToLower(mi.Name[0])}{mi.Name.Substring(1)}";
+                documentStore.Conventions.ShouldApplyPropertyNameConverter = info => true;
+            }
+        }));
+        
+        private void GetRavenEtlTaskInfoBase(IDocumentStore store)
         {
             var etlConfiguration = new RavenEtlConfiguration()
             {
@@ -109,7 +134,7 @@ namespace FastTests.Client
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (store)
             {
                 var result = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
