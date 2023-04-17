@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Changes;
 using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -34,8 +35,12 @@ namespace Raven.Server.Documents
             _context = context;
             _changes = changes;
 
-            transaction.Owner = _context;
-            transaction.OnBeforeCommit += _context.DocumentDatabase.DocumentsStorage.OnBeforeCommit;
+            if (context.DocumentDatabase is ShardedDocumentDatabase sharded)
+            {
+                transaction.Owner = _context;
+                transaction.OnBeforeCommit += sharded.ShardedDocumentsStorage.OnBeforeCommit;
+                transaction.LowLevelTransaction.OnRollBack += sharded.ShardedDocumentsStorage.OnFailure;
+            }
         }
 
         public override void BeforeCommit()

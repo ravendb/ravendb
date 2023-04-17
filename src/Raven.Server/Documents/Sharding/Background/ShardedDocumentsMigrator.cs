@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Sharding.Background
                 {
                     _token.ThrowIfCancellationRequested();
 
-                    Monitor.TryEnter(this, 250, ref monitorTaken);
+                    Monitor.TryEnter(this, 0, ref monitorTaken);
                     if (monitorTaken == false)
                         return;
 
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Sharding.Background
 
                             foreach (var bucketStats in bucketStatistics)
                             {
-                                if (bucketStats.NumberOfDocuments <= 0)
+                                if (bucketStats.NumberOfDocuments == 0)
                                     continue;
 
                                 bucket = bucketStats.Bucket;
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Sharding.Background
             }
         }
 
-        private async ValueTask MoveDocumentsToShardAsync(int bucket, int moveToShard)
+        private async Task MoveDocumentsToShardAsync(int bucket, int moveToShard)
         {
             var cmd = new StartBucketMigrationCommand(bucket, _database.ShardNumber, moveToShard, _database.ShardedDatabaseName,
                 $"{Guid.NewGuid()}/{bucket}");
@@ -101,10 +101,6 @@ namespace Raven.Server.Documents.Sharding.Background
             await _database.ServerStore.SendToLeaderAsync(cmd);
         }
 
-        public void Dispose()
-        {
-            Monitor.Enter(this);
-            Monitor.Exit(this);
-        }
+        public void Dispose() => Monitor.Enter(this);
     }
 }

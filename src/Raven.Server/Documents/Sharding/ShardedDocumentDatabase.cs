@@ -49,7 +49,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
     protected override void InitializeAndStartDocumentsMigration()
     {
         DocumentsMigrator = new ShardedDocumentsMigrator(this);
-        Task.Run(DocumentsMigrator.ExecuteMoveDocumentsAsync);
+        _ = DocumentsMigrator.ExecuteMoveDocumentsAsync();
     }
 
     protected override DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
@@ -147,7 +147,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
             if (t != null)
             {
                 _confirmations[index] = t;
-                t.ContinueWith(__ => _confirmations.TryRemove(process.MigrationIndex, out _));
+                t.ContinueWith(__ => _confirmations.TryRemove(index, out _));
             }
         }
     }
