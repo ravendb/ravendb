@@ -81,14 +81,19 @@ namespace Corax.Queries
                 if (typeof(TIn) == typeof(BoostingComparer))
                     throw new NotSupportedException($"Boosting fetching is done by the main {nameof(Fill)} method.");
 
-                var reader = searcher.GetEntryReaderFor(entryId);
+                var fieldReader = searcher
+                    .GetEntryReaderFor(entryId)
+                    .GetFieldReaderFor(binding);
 
+                if (fieldReader.Type is IndexEntryFieldType.Null)
+                    goto Failed;
+                
                 if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
                 {
                     if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
                         goto Failed;
 
-                    var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    var readX = fieldReader.Read(out (double lat, double lon) coordinates);
                     if (readX == false)
                         goto Failed;
                         
@@ -102,7 +107,11 @@ namespace Corax.Queries
                     if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
                         goto Failed;
 
-                    var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    if (fieldReader.Type != IndexEntryFieldType.SpatialPoint)
+                        goto Failed;
+                    
+                    var readX = fieldReader.Read(out (double lat, double lon) coordinates);
+                    
                     if (readX == false)
                         goto Failed;
                     
@@ -113,7 +122,7 @@ namespace Corax.Queries
                 }
                 else if (typeof(TOut) == typeof(SequenceItem))
                 {
-                    var readX = reader.GetFieldReaderFor(binding).Read(out var sv);
+                    var readX = fieldReader.Read(out var sv);
                     if (readX == false)
                         goto Failed;
                     
@@ -125,8 +134,8 @@ namespace Corax.Queries
                 }
                 else if (typeof(TOut) == typeof(NumericalItem<long>))
                 {
-                    var readX = reader.GetFieldReaderFor(binding).Read<long>(out var value);
-                    if (readX == false)
+                    var readX = fieldReader.Read<long>(out var value);
+                    if (fieldReader.Type is not IndexEntryFieldType.Tuple || readX == false)
                         goto Failed;
                     
                     storedValue = (TOut)(object)new NumericalItem<long>(value);
@@ -134,8 +143,8 @@ namespace Corax.Queries
                 }
                 else if (typeof(TOut) == typeof(NumericalItem<double>))
                 {
-                    var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
-                    if (readX == false)
+                    var readX = fieldReader.Read<double>(out var value);
+                    if (fieldReader.Type is not IndexEntryFieldType.Tuple || readX == false)
                         goto Failed;
                     
                     storedValue = (TOut)(object)new NumericalItem<double>(value);
@@ -143,8 +152,8 @@ namespace Corax.Queries
                 }
                 else if (typeof(TOut) == typeof(NumericalItem<double>))
                 {
-                    var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
-                    if (readX == false)
+                    var readX = fieldReader.Read<double>(out var value);
+                    if (fieldReader.Type is not IndexEntryFieldType.Tuple || readX == false)
                         goto Failed;
                     
                     storedValue = (TOut)(object)new NumericalItem<double>(value);
@@ -301,7 +310,11 @@ namespace Corax.Queries
                 // We are getting the top element because this is a heap and the top element is the one that is
                 // going to be removed. Then the rest of the element will be pushed up to find the new top.
                 ref var matchIdxPtr = ref Unsafe.Add(ref matchesRef, i);
-                matchIdxPtr = itemsStart.Key;
+                
+                //in case when value doesn't exist in entry we set entryId as -entryId in `Item`, let's revert that.
+                matchIdxPtr = itemsStart.Key < 0 
+                    ? -itemsStart.Key 
+                    : itemsStart.Key;
                 HeapDown(ref itemsStart, match._bufferUsedCount - i - 1);
             }
             match._bufferUsedCount -= matchesToReturn;
