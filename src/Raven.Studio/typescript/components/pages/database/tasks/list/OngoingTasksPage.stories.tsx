@@ -130,6 +130,9 @@ export const SubscriptionTemplate = (args: {
         x.SubscriptionsCount = 0;
     });
 
+    tasksService.withGetSubscriptionTaskInfo();
+    tasksService.withGetSubscriptionConnectionDetails();
+
     return <OngoingTasksPage {...forceStoryRerender()} database={db} />;
 };
 
