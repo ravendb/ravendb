@@ -123,7 +123,7 @@ namespace Sparrow.Json
 
         // Returns the tick count corresponding to the given year, month, and day.
         // Will check the if the parameters are valid.
-        private static long DateToTicks(int year, int month, int day, int hour, int minute, int second, int fraction)
+        private static bool TryDateToTicks(int year, int month, int day, int hour, int minute, int second, int fraction, out long ticks)
         {
             long dateTicks = 0;
             if (year >= 1 && year <= 9999 && month >= 1 && month <= 12)
@@ -135,6 +135,16 @@ namespace Sparrow.Json
                     int n = y * 365 + y / 4 - y / 100 + y / 400 + days[month - 1] + day - 1;
                     dateTicks = n * TicksPerDay;
                 }
+                else
+                {
+                    ticks = default;
+                    return false;
+                }
+            }
+            else
+            {
+                ticks = default;
+                return false;
             }
 
             // totalSeconds is bounded by 2^31 * 2^12 + 2^31 * 2^8 + 2^31,
@@ -143,7 +153,8 @@ namespace Sparrow.Json
             if (totalSeconds > MaxSeconds || totalSeconds < MinSeconds)
                 throw new ArgumentOutOfRangeException(null, "Overflow_TimeSpanTooLong");
 
-            return dateTicks + totalSeconds * TicksPerSecond + fraction;
+            ticks = dateTicks + totalSeconds * TicksPerSecond + fraction;
+            return true;
         }
 
         public static bool TryParseTimeSpan(byte* buffer, int len, out TimeSpan ts)
@@ -369,7 +380,12 @@ namespace Sparrow.Json
             if (TryParseNumber2(buffer, 8, out int day) == false)
                 goto Failed;
             
-            dateOnly = DateOnly.FromDayNumber((int)(DateToTicks(year, month, day, 0, 0, 0, 0)/TicksPerDay));
+            long ticks = 0;
+
+            if (TryDateToTicks(year, month, day, 0, 0, 0, 0, out ticks) == false)
+                goto Failed;
+            
+            dateOnly = DateOnly.FromDayNumber((int)(ticks / TicksPerDay));
             return true;
 
             Failed:
@@ -391,7 +407,12 @@ namespace Sparrow.Json
             if (TryParseNumber2(buffer, 8, out int day) == false)
                 goto Failed;
 
-            dateOnly = DateOnly.FromDayNumber((int)(DateToTicks(year, month, day, 0, 0, 0, 0) / TicksPerDay));
+            long ticks = 0;
+
+            if (TryDateToTicks(year, month, day, 0, 0, 0, 0, out ticks) == false)
+                goto Failed;
+            
+            dateOnly = DateOnly.FromDayNumber((int)(ticks / TicksPerDay));
             return true;
 
             Failed:
@@ -595,6 +616,7 @@ namespace Sparrow.Json
             Result result = Result.DateTime;
 
             int fractions = 0;
+            long ticks = 0;
             switch (len)
             {
                 case 20: //"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'",
@@ -631,7 +653,12 @@ namespace Sparrow.Json
                         offset = -offset;
 
                     dt = default(DateTime);
-                    dto = new DateTimeOffset(DateToTicks(year, month, day, hour, minute, second, fractions), offset);
+                    
+                    if (TryDateToTicks(year, month, day, hour, minute, second, fractions, out ticks) == false)
+                        goto Failed;
+                    
+                    dto = new DateTimeOffset(ticks, offset);
+                    
                     result = Result.DateTimeOffset;
                     goto Finished;
                 case 28: //"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
@@ -662,13 +689,21 @@ namespace Sparrow.Json
                         offset = -offset;
 
                     dt = default(DateTime);
-                    dto = new DateTimeOffset(DateToTicks(year, month, day, hour, minute, second, fractions), offset);
+                    
+                    if (TryDateToTicks(year, month, day, hour, minute, second, fractions, out ticks) == false)
+                        goto Failed;
+                    
+                    dto = new DateTimeOffset(ticks, offset);
+                    
                     result = Result.DateTimeOffset;
                     goto Finished;
             }
 
             Finished_DT:
-            dt = new DateTime(DateToTicks(year, month, day, hour, minute, second, fractions), kind);
+            if (TryDateToTicks(year, month, day, hour, minute, second, fractions, out ticks) == false)
+                goto Failed;
+            
+            dt = new DateTime(ticks, kind);
             dto = default(DateTimeOffset);
 
             Finished:
@@ -726,6 +761,7 @@ namespace Sparrow.Json
             Result result = Result.DateTime;
 
             int fractions = 0;
+            long ticks = 0;
             switch (len)
             {
                 case 20: //"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'",
@@ -762,7 +798,12 @@ namespace Sparrow.Json
                         offset = -offset;
 
                     dt = default(DateTime);
-                    dto = new DateTimeOffset(DateToTicks(year, month, day, hour, minute, second, fractions), offset);
+                    
+                    if (TryDateToTicks(year, month, day, hour, minute, second, fractions, out ticks) == false)
+                        goto Failed;
+                    
+                    dto = new DateTimeOffset(ticks, offset);
+                    
                     result = Result.DateTimeOffset;
                     goto Finished;
                 case 28: //"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
@@ -793,13 +834,21 @@ namespace Sparrow.Json
                         offset = -offset;
 
                     dt = default(DateTime);
-                    dto = new DateTimeOffset(DateToTicks(year, month, day, hour, minute, second, fractions), offset);
+                    
+                    if (TryDateToTicks(year, month, day, hour, minute, second, fractions, out ticks) == false)
+                        goto Failed;
+                    
+                    dto = new DateTimeOffset(ticks, offset);
+                    
                     result = Result.DateTimeOffset;
                     goto Finished;
             }
 
             Finished_DT:
-            dt = new DateTime(DateToTicks(year, month, day, hour, minute, second, fractions), kind);
+            if (TryDateToTicks(year, month, day, hour, minute, second, fractions, out ticks) == false)
+                goto Failed;
+            
+            dt = new DateTime(ticks, kind);
             dto = default(DateTimeOffset);
 
             Finished:
