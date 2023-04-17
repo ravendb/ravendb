@@ -18,6 +18,8 @@ internal class ShardedDatabaseNotificationCenterHandlerProcessorForPostpone : Ab
 
     protected override bool SupportsCurrentNode => true;
 
+    protected override bool SupportsOptionalShardNumber => true;
+
     protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token)
     {
         return TryGetShardNumber(out int shardNumber)

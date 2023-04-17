@@ -16,6 +16,8 @@ internal abstract class AbstractHandlerProxyProcessor<TRequestHandler, TOperatio
 
     protected abstract bool SupportsCurrentNode { get; }
 
+    protected virtual bool SupportsOptionalShardNumber { get; }
+
     protected int GetShardNumber() => RequestHandler.GetIntValueQueryString(Constants.QueryString.ShardNumber, required: true).Value;
 
     protected bool TryGetShardNumber(out int shardNumber)
@@ -30,17 +32,19 @@ internal abstract class AbstractHandlerProxyProcessor<TRequestHandler, TOperatio
         return true;
     }
 
-    protected virtual bool IsCurrentNode(out string nodeTag)
+    protected bool IsCurrentNode(out string nodeTag)
     {
         nodeTag = GetNodeTag(required: SupportsCurrentNode == false);
 
         if (SupportsCurrentNode == false)
             return false;
 
-        if (nodeTag == null)
-            return true;
+        var isCurrentNode = nodeTag == null || string.Equals(nodeTag, RequestHandler.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
 
-        return string.Equals(nodeTag, RequestHandler.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
+        if (isCurrentNode && SupportsOptionalShardNumber)
+            return TryGetShardNumber(out _) == false;
+
+        return isCurrentNode;
     }
 
     protected string GetNodeTag(bool required)

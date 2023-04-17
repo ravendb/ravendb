@@ -20,6 +20,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Notifications
 
         protected override bool SupportsCurrentNode => true;
 
+        protected override bool SupportsOptionalShardNumber => true;
+
         protected override string GetDatabaseName()
         {
             return TryGetShardNumber(out var shardNumber) == false 
