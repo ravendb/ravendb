@@ -8,6 +8,7 @@ using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -44,6 +45,11 @@ namespace Raven.Client.Documents.Operations
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/json-patch?id={UrlEncode(_id)}";
+                
+                var operationDjv = new DynamicJsonValue
+                {
+                    [nameof(JsonOperation.Operations)] =  TypeConverter.ToBlittableSupportedType(_jsonPatchDocument.Operations, _conventions, ctx)
+                };
 
                 var request = new HttpRequestMessage
                 {
@@ -53,19 +59,14 @@ namespace Raven.Client.Documents.Operations
                     {
                         await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
-                            var serializer = DocumentConventions.Default.Serialization.CreateSerializer(new CreateSerializerOptions { TypeNameHandling = TypeNameHandling.None });
-                            
-                            ctx.Write(writer, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(
-                                new JsonOperation
-                                {
-                                    Operations = _jsonPatchDocument.Operations
-                                }, ctx, serializer));
+                            ctx.Write(writer, ctx.ReadObject(operationDjv, _id));
                         }
                     }, _conventions)
                 };
-
+                
                 return request;
             }
+            
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
