@@ -80,9 +80,6 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public DynamicJsonValue ToAuditJson()
         {
-            if (string.IsNullOrEmpty(HubName))
-                throw new ArgumentException("Must be not empty", nameof(HubName));
-
             var djv = base.ToJson();
 
             djv[nameof(Mode)] = Mode;
