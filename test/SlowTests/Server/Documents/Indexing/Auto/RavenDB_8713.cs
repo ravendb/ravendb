@@ -40,7 +40,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                     var count = session.Query<Item>().Statistics(out var stats).Count(x => x.Name == "joe" || x.name == "da");
 
                     Assert.Equal(2, count);
-                    Assert.Equal("Auto/Items/BynameAndName", stats.IndexName);
+                    Assert.Equal("Auto/Items/ByNameAndname", stats.IndexName);
                 }
             }
         }
@@ -79,7 +79,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                     var results = session.Query<Item>().Statistics(out stats).Count(x => x.Name == "joe" || x.name == "da");
 
                     Assert.Equal(2, results);
-                    Assert.Equal("Auto/Items/BynameAndName", stats.IndexName);
+                    Assert.Equal("Auto/Items/ByNameAndname", stats.IndexName);
                 }
 
                 IndexInformation[] indexes = null;
@@ -87,7 +87,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                 Assert.True(SpinWait.SpinUntil(() => (indexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes).Length == 1, 1000));
 
                 Assert.Equal(1, indexes.Length);
-                Assert.Equal("Auto/Items/BynameAndName", indexes[0].Name);
+                Assert.Equal("Auto/Items/ByNameAndname", indexes[0].Name);
             }
         }
 
