@@ -8,3 +8,36 @@
     grid-template-columns: auto auto;
     z-index: 1000;
 }
+
+.change-vector-popover {
+    .change-vector-grid {
+        display: grid;
+        grid-template-columns: 60px auto;
+        &:not(:first-of-type) {
+            margin-top: sizes.$gutter-xs;
+        }
+    }
+
+    .change-vector-item {
+        line-height: 1rem;
+    }
+}
+.connected-clients-section {
+    .connected-clients-items {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, max-content));
+
+        .connected-client {
+            background: var(--panel-bg-2);
+            border-radius: sizes.$gutter-xs;
+            font-size: 12px;
+            margin: sizes.$gutter-xs/2;
+            &:first-of-type {
+                margin-left: 0;
+            }
+            div + div {
+                border-top: 1px solid var(--border-color-light);
+            }
+        }
+    }
+}
