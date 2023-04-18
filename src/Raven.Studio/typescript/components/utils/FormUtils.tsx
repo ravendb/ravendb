@@ -1,6 +1,7 @@
 import React from "react";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
 import { Input, InputProps, Label } from "reactstrap";
+import { InputType } from "reactstrap/types/lib/Input";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -20,18 +21,44 @@ type LabelProps =
           labelPosition?: "left" | "right";
       };
 
+type FormToggleInputProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = FormElementProps<
+    TFieldValues,
+    TName
+> &
+    Omit<InputProps, "type"> & { type: Extract<InputType, "checkbox" | "switch" | "radio"> } & LabelProps &
+    AfterChangeProps;
+
+type FormInputProps = InputProps & {
+    canBeChecked?: boolean;
+};
+
 interface FormSelectOptionProps<T extends string | number = string> {
     value: T;
     label: string;
 }
+interface AfterChangeProps {
+    afterChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}
 
 // TODO: simplify template
-// TODO: delete type checkbox from type input
+// TODO: delete checkbox, switch and radio from type input
 export function FormInput<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(props: FormElementProps<TFieldValues, TName> & InputProps) {
-    const { control, name, defaultValue, rules, shouldUnregister, children, type, ...restInputProps } = props;
+>(props: FormElementProps<TFieldValues, TName> & FormInputProps & AfterChangeProps) {
+    const {
+        id,
+        name,
+        control,
+        defaultValue,
+        rules,
+        canBeChecked,
+        shouldUnregister,
+        children,
+        afterChange,
+        type,
+        ...restInputProps
+    } = props;
 
     const {
         field: { onChange, onBlur, value },
@@ -44,16 +71,19 @@ export function FormInput<
         shouldUnregister,
     });
 
-    const canBeChecked = type === "checkbox" || type === "switch";
-
     return (
         <div>
             <Input
-                onBlur={onBlur}
-                onChange={onChange}
-                value={value === undefined ? "" : value}
-                invalid={invalid}
+                id={id}
+                name={name}
                 type={type}
+                onBlur={onBlur}
+                onChange={(x) => {
+                    onChange(x);
+                    afterChange?.(x);
+                }}
+                value={value || ""}
+                invalid={invalid}
                 checked={canBeChecked && value}
                 {...restInputProps}
             >
@@ -66,8 +96,7 @@ export function FormInput<
 }
 
 export function FormGeneralToggle<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
-    props: FormElementProps<TFieldValues, TName> &
-        Omit<InputProps, "type"> & { type: "checkbox" | "switch" } & LabelProps
+    props: FormToggleInputProps<TFieldValues, TName>
 ) {
     const { label, type, ...restProps } = props;
     const labelPosition = props.labelPosition || "right";
@@ -75,22 +104,17 @@ export function FormGeneralToggle<TFieldValues extends FieldValues, TName extend
     return (
         <Label className="form-check">
             {label && (!labelPosition || labelPosition === "left") && <div className="ms-2">{label}</div>}
-            <FormInput type={type} {...restProps} />
+            <FormInput type={type} canBeChecked {...restProps} />
             {label && labelPosition === "right" && <div className="ms-2">{label}</div>}
         </Label>
     );
 }
 
-export function FormCheckbox<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
-    props: FormElementProps<TFieldValues, TName> & Omit<InputProps, "type"> & LabelProps
+export function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
+    props: FormToggleInputProps<TFieldValues, TName>
 ) {
-    return <FormGeneralToggle type="checkbox" {...props} />;
-}
-
-export function FormSwitch<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
-    props: FormElementProps<TFieldValues, TName> & Omit<InputProps, "type"> & LabelProps
-) {
-    return <FormGeneralToggle type="switch" {...props} />;
+    const { type, ...restProps } = props;
+    return <FormGeneralToggle type={type} {...restProps} />;
 }
 
 export function FormSelectOption<T extends string | number = string>({ value, label }: FormSelectOptionProps<T>) {
