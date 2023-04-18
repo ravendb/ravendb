@@ -127,7 +127,7 @@ namespace Raven.Server.Web.System
             sinkReplication.Database = connection?.Database;
             sinkReplication.ConnectionString = connection;
 
-            var tag = Database.WhoseTaskIsIt(dbTopology, sinkReplication, null);
+            var tag = BackupUtils.WhoseTaskIsIt(ServerStore, dbTopology, sinkReplication, null, Database.NotificationCenter);
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.NotActive);
             IncomingReplicationHandler handler = null;
@@ -220,7 +220,7 @@ namespace Raven.Server.Web.System
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseRecord.DatabaseName)))
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var tag = Database.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
+                var tag = BackupUtils.WhoseTaskIsIt(ServerStore, databaseRecord.Topology, subscriptionState, subscriptionState, Database.NotificationCenter);
                 OngoingTaskConnectionStatus connectionStatus;
                 if (tag != ServerStore.NodeTag)
                 {
@@ -273,7 +273,7 @@ namespace Raven.Server.Web.System
             watcher.ConnectionString = connection;
 
             var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
-            var tag = Database.WhoseTaskIsIt(databaseTopology, watcher, taskStatus);
+            var tag = BackupUtils.WhoseTaskIsIt(ServerStore, databaseTopology, watcher, taskStatus, Database.NotificationCenter);
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
             if (tag == ServerStore.NodeTag)
@@ -490,7 +490,7 @@ namespace Raven.Server.Web.System
                                     {
                                         var runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupConfiguration.BackupType };
                                         var backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
-                                        BackupTask.SaveBackupStatus(runningBackupStatus, Database, Logger, backupResult, operationCancelToken: cancelToken);
+                                        BackupUtils.SaveBackupStatus(runningBackupStatus, Database.Name, Database.ServerStore, Logger, backupResult, operationCancelToken: cancelToken);
                                         tcs.SetResult(backupResult);
                                     }
                                 }
@@ -568,7 +568,7 @@ namespace Raven.Server.Web.System
             ClusterTopology clusterTopology)
         {
             var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(taskId);
-            var responsibleNodeTag = Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
+            var responsibleNodeTag = BackupUtils.WhoseTaskIsIt(ServerStore, databaseRecord.Topology, backupConfiguration, backupStatus, Database.NotificationCenter, keepTaskOnOriginalMemberNode: true);
             var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
             var onGoingBackup = Database.PeriodicBackupRunner.OnGoingBackup(taskId);
             var backupDestinations = backupConfiguration.GetFullBackupDestinations();
@@ -1013,7 +1013,7 @@ namespace Raven.Server.Web.System
 
             var processState = EtlLoader.GetProcessState(config.Transforms, Database, config.Name);
 
-            tag = Database.WhoseTaskIsIt(record.Topology, config, processState);
+            tag = BackupUtils.WhoseTaskIsIt(ServerStore, record.Topology, config, processState, Database.NotificationCenter);
 
             if (tag == ServerStore.NodeTag)
             {
@@ -1285,7 +1285,7 @@ namespace Raven.Server.Web.System
                             }
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-                            var tag = Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
+                            var tag = BackupUtils.WhoseTaskIsIt(ServerStore, record.Topology, subscriptionState, subscriptionState, Database.NotificationCenter);
                             OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
                             if (tag != ServerStore.NodeTag)
                             {
@@ -1455,7 +1455,7 @@ namespace Raven.Server.Web.System
                         {
                             var topology = ServerStore.Cluster.ReadDatabaseTopology(context, Database.Name);
                             var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
-                            json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(topology, watcher, taskStatus);
+                            json[nameof(OngoingTask.ResponsibleNode)] = BackupUtils.WhoseTaskIsIt(ServerStore, topology, watcher, taskStatus, Database.NotificationCenter);
                         }
 
                         json[nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId;

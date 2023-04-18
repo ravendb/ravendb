@@ -83,102 +83,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, responsibleNodeTag, skipErrorLog: true);
         }
 
-        private DateTime? GetNextWakeupTimeLocal(string databaseName, long lastEtag, PeriodicBackupConfiguration configuration, TransactionOperationContext context)
-        {
-            // we will always wake up the database for a full backup.
-            // but for incremental we will wake the database only if there were changes made.
-
-            if (configuration.Disabled || configuration.IncrementalBackupFrequency == null && configuration.FullBackupFrequency == null || configuration.HasBackup() == false)
-                return null;
-
-            var backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, databaseName, configuration.TaskId);
-            if (backupStatus == null)
-            {
-                // we want to wait for the backup occurrence
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' is never backed up yet.");
-
-                return DateTime.UtcNow;
-            }
-
-            var topology = _serverStore.LoadDatabaseTopology(_database.Name);
-            var responsibleNodeTag = _database.WhoseTaskIsIt(topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
-            if (responsibleNodeTag == null)
-            {
-                // cluster is down
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Could not find the responsible node for backup task '{configuration.TaskId}' of database '{databaseName}'.");
-
-                return DateTime.UtcNow;
-            }
-
-            if (responsibleNodeTag != _serverStore.NodeTag)
-            {
-                // not responsive for this backup task
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Current server '{_serverStore.NodeTag}' is not responsible node for backup task '{configuration.TaskId}' of database '{databaseName}'. Backup Task responsible node is '{responsibleNodeTag}'.");
-
-                return null;
-            }
-
-            var nextBackup = GetNextBackupDetails(configuration, backupStatus, _serverStore.NodeTag);
-            if (nextBackup == null)
-            {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' doesn't have next backup. Should not happen and likely a bug.");
-
-                return null;
-            }
-
-            var nowUtc = SystemTime.UtcNow;
-            if (nextBackup.DateTime < nowUtc)
-            {
-                // this backup is delayed
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' is delayed.");
-                return DateTime.UtcNow;
-            }
-
-            if (backupStatus.LastEtag != lastEtag)
-            {
-                // we have changes since last backup
-                var type = nextBackup.IsFull ? "full" : "incremental";
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' have changes since last backup. Wakeup timer will be set to the next {type} backup at '{nextBackup.DateTime}'.");
-                return nextBackup.DateTime;
-            }
-
-            if (nextBackup.IsFull)
-            {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' doesn't have changes since last backup. Wakeup timer will be set to the next full backup at '{nextBackup.DateTime}'.");
-                return nextBackup.DateTime;
-            }
-
-            // we don't have changes since the last backup and the next backup is incremental
-            var lastFullBackup = backupStatus.LastFullBackupInternal ?? nowUtc;
-            var nextFullBackup = BackupUtils.GetNextBackupOccurrence(new BackupUtils.NextBackupOccurrenceParameters
-            {
-                BackupFrequency = configuration.FullBackupFrequency,
-                LastBackupUtc = lastFullBackup,
-                Configuration = configuration,
-                OnParsingError = OnParsingError
-            });
-
-            if (nextFullBackup < nowUtc)
-            {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' doesn't have changes since last backup but has delayed backup.");
-                // this backup is delayed
-                return DateTime.UtcNow;
-            }
-
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' doesn't have changes since last backup. Wakeup timer set to next full backup at {nextFullBackup}, and will skip the incremental backups.");
-
-            return nextFullBackup;
-        }
-
         private NextBackup GetNextBackupDetails(
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus,
@@ -311,7 +215,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var topology = _serverStore.LoadDatabaseTopology(_database.Name);
             var backupStatus = GetBackupStatus(taskId);
-            return _database.WhoseTaskIsIt(topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
+            return BackupUtils.WhoseTaskIsIt(_serverStore, topology, periodicBackup.Configuration, backupStatus, _database.NotificationCenter, keepTaskOnOriginalMemberNode: true);
         }
 
         public long StartBackupTask(long taskId, bool isFullBackup)
@@ -386,9 +290,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             throw new InvalidOperationException($"Fail to delay backup task with task id '{taskId}', the operation with that number isn't registered");
         }
 
-        public DateTime? GetWakeDatabaseTimeUtc(string databaseName)
+        public IdleDatabaseActivity GetNextIdleDatabaseActivity(string databaseName)
         {
-            if (_periodicBackups.Count == 0)
+            if (_periodicBackups.IsEmpty)
                 return null;
 
             long lastEtag;
@@ -399,30 +303,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                 lastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
             }
 
-            DateTime? wakeupDatabase = null;
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            return BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
             {
-                foreach (var backup in _periodicBackups)
-                {
-                    var nextBackup = GetNextWakeupTimeLocal(databaseName, lastEtag, backup.Value.Configuration, context);
-                    if (nextBackup == null)
-                        continue;
-
-                    if (wakeupDatabase == null)
-                    {
-                        // first time
-                        wakeupDatabase = nextBackup;
-                    }
-                    else if (nextBackup < wakeupDatabase)
-                    {
-                        // next backup is earlier than the current one
-                        wakeupDatabase = nextBackup.Value;
-                    }
-                }
-            }
-
-            return wakeupDatabase?.ToUniversalTime();
+                DatabaseName = databaseName,
+                DatabaseWakeUpTimeUtc = _databaseWakeUpTimeUtc,
+                LastEtag = lastEtag,
+                Logger = _logger,
+                NotificationCenter = _database.NotificationCenter,
+                OnParsingError = OnParsingError,
+                OnMissingNextBackupInfo = OnMissingNextBackupInfo,
+                ServerStore = _serverStore
+            });
         }
 
         private long CreateBackupTask(PeriodicBackup periodicBackup, bool isFullBackup, DateTime startTimeInUtc)
@@ -518,7 +409,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     else
                         periodicBackup.BackupStatus.LastIncrementalBackupInternal = startTimeInUtc;
                     
-                    BackupTask.SaveBackupStatus(periodicBackup.BackupStatus, _database, _logger, operationCancelToken: periodicBackup.CancelToken);
+                    BackupUtils.SaveBackupStatus(periodicBackup.BackupStatus, _database.Name, _database.ServerStore, _logger, operationCancelToken: periodicBackup.CancelToken);
 
                     var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
                     if (_logger.IsOperationsEnabled)
@@ -942,7 +833,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var backupStatus = GetBackupStatus(configuration.TaskId);
-            var whoseTaskIsIt = _database.WhoseTaskIsIt(topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
+            var whoseTaskIsIt = BackupUtils.WhoseTaskIsIt(_serverStore, topology, configuration, backupStatus, _database.NotificationCenter, keepTaskOnOriginalMemberNode: true);
             if (whoseTaskIsIt == null)
                 return TaskStatus.ClusterDown;
 

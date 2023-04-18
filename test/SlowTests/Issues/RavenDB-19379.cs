@@ -2,37 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using Esprima.Ast;
-using FastTests;
-using Microsoft.Diagnostics.Tracing.Parsers.AspNet;
-using Nest;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Session;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Monitoring.Snmp.Objects.Server;
-using Raven.Server.Rachis;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow;
-using Sparrow.Json;
-using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
-using static NpgsqlTypes.NpgsqlTsQuery;
 using TimeUnit = Raven.Server.Config.Settings.TimeUnit;
 
 namespace SlowTests.Issues
@@ -79,7 +59,7 @@ namespace SlowTests.Issues
                         dbIdEtagDictionary[kvp.Key] = kvp.Value;
                 }
 
-                Assert.True(server.ServerStore.DatabasesLandlord.UnloadDirectly(database.Name, database.PeriodicBackupRunner.GetWakeDatabaseTimeUtc(database.Name)),
+                Assert.True(server.ServerStore.DatabasesLandlord.UnloadDirectly(database.Name, database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name)),
                     $"didn't unload on node {server.ServerStore.NodeTag}");
                 server.ServerStore.IdleDatabases[database.Name] = dbIdEtagDictionary;
 
