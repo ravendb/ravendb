@@ -9,15 +9,11 @@ public readonly struct ShardedDropSubscriptionConnectionOperation : IShardedOper
 {
     private readonly HttpContext _httpContext;
     private readonly string _subscriptionName;
-    private readonly long? _subscriptionTaskId;
-    private readonly string _workerId;
 
-    public ShardedDropSubscriptionConnectionOperation(HttpContext httpContext, string subscriptionName, long? subscriptionTaskId, string workerId = null)
+    public ShardedDropSubscriptionConnectionOperation(HttpContext httpContext, string subscriptionName)
     {
         _httpContext = httpContext;
         _subscriptionName = subscriptionName;
-        _subscriptionTaskId = subscriptionTaskId;
-        _workerId = workerId;
     }
 
     public HttpRequest HttpRequest => _httpContext.Request;
@@ -27,8 +23,5 @@ public readonly struct ShardedDropSubscriptionConnectionOperation : IShardedOper
         return null;
     }
 
-    public RavenCommand<object> CreateCommandForShard(int shardNumber)
-    {
-        return new DropSubscriptionConnectionCommand(_subscriptionName, _subscriptionTaskId, _workerId);
-    }
+    public RavenCommand<object> CreateCommandForShard(int shardNumber) => new DropSubscriptionConnectionCommand(_subscriptionName);
 }

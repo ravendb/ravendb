@@ -116,6 +116,23 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
             }
         }
     }
+    
+    public string GetSubscriptionNameById(TransactionOperationContext serverStoreContext, long id)
+    {
+        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
+                     SubscriptionState.SubscriptionPrefix(_databaseName)))
+        {
+            if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long _id) == false)
+                continue;
+            if (_id == id)
+            {
+                if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionName), out string name))
+                    return name;
+            }
+        }
+
+        return null;
+    }
 
     public TState GetSubscriptionConnectionsState<T>(TransactionOperationContext<T> context, string subscriptionName) where T : RavenTransaction
     {

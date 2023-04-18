@@ -182,23 +182,6 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public string GetSubscriptionNameById(TransactionOperationContext serverStoreContext, long id)
-        {
-            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
-                SubscriptionState.SubscriptionPrefix(_databaseName)))
-            {
-                if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long _id) == false)
-                    continue;
-                if (_id == id)
-                {
-                    if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionName), out string name))
-                        return name;
-                }
-            }
-
-            return null;
-        }
-
         public SubscriptionConnectionsState GetSubscriptionStateById(long id) => _subscriptions[id];
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
