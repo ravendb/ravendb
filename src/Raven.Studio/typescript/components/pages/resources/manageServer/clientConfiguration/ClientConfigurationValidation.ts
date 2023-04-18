@@ -12,6 +12,7 @@ const schema = yup
         maximumNumberOfRequestsEnabled: yup.boolean().optional(),
         maximumNumberOfRequestsValue: yup
             .number()
+            .typeError(Messages.number)
             .positive(Messages.positiveNumber)
             .integer(Messages.integerNumber)
             .when("maximumNumberOfRequestsEnabled", {
@@ -22,6 +23,7 @@ const schema = yup
         seedEnabled: yup.boolean().optional(),
         seedValue: yup
             .number()
+            .typeError(Messages.number)
             .positive(Messages.positiveNumber)
             .integer(Messages.integerNumber)
             .when("seedEnabled", {
