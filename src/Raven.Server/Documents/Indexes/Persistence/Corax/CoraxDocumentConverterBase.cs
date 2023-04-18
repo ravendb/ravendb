@@ -274,7 +274,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var iterator = (IEnumerable)value;
 
                 var canFinishEnumerableWriting = false;
-                shouldSkip = true;
                 
                 if (scope is not EnumerableWriterScope enumerableWriterScope)
                 {
@@ -284,11 +283,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                
                 foreach (var item in iterator)
                 {
-                    InsertRegularField(field, item, indexContext, ref entryWriter, enumerableWriterScope, out var innerShouldSkip, nestedArray);
-                    //Should override shouldSkip to false when something is not skipped.
-                    shouldSkip &= innerShouldSkip;
+                    InsertRegularField(field, item, indexContext, ref entryWriter, enumerableWriterScope, out var _, nestedArray);
                 }
-
+                
                 if (canFinishEnumerableWriting)
                 {
                     enumerableWriterScope.Finish(path, fieldId, ref entryWriter);
