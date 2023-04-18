@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,8 +13,9 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
-using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -547,6 +547,40 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                         Assert.Equal(10, await session.Query<DailyInvoice, DailyInvoicesIndex>().CountAsync());
                     }
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding | RavenTestCategory.Indexes)]
+        public async Task ShouldSkipUnsupportedFeaturesInShardingOnImport_OutputReduceToCollection()
+        {
+            using (var srcStore = GetDocumentStore())
+            using (var dstStore = Sharding.GetDocumentStore())
+            {
+                await CreateDataAndIndexes(srcStore);
+
+                var collectionStats = await srcStore.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(5, collectionStats.Collections.Count);
+
+                var record = await srcStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(srcStore.Database));
+
+                Assert.NotNull(record.Indexes);
+                Assert.Equal(3, record.Indexes.Count);
+                foreach (var (_, indexDefinition) in record.Indexes)
+                {
+                    Assert.NotNull(indexDefinition.OutputReduceToCollection);
+                }
+
+                var exportFile = GetTempFileName();
+
+                var exportOperation = await srcStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+                await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var operation = await dstStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                record = await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstStore.Database));
+
+                Assert.Empty(record.Indexes);
             }
         }
 

@@ -93,9 +93,9 @@ namespace Raven.Server.Smuggler.Documents
             msg = null;
             var definition = (IndexDefinition)index.IndexDefinition;
 
-            if (index.Type is IndexType.MapReduce or IndexType.AutoMapReduce)
+            if (definition.OutputReduceToCollection != null)
             {
-                msg = $"Skipped index '{definition.Name}'. Map-Reduce is currently not supported in Sharding";
+                msg = $"Skipped index '{definition.Name}'. Map-Reduce output documents feature is currently not supported in Sharding";
                 return true;
             }
 
