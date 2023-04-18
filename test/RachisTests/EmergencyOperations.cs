@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Server;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -54,5 +52,27 @@ namespace RachisTests
             Assert.NotEqual(old.TopologyId, @new.TopologyId);
         }
 
+        [Fact]
+        public async Task ClusterRecreationShouldKeepClusterTransactionAndDatabaseTopologyIds()
+        {
+            var databaseName = GetDatabaseName();
+            var (_, leader) = await CreateRaftCluster(2, shouldRunInMemory: false);
+            await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
+            
+            var old = GetDatabaseTopology();
+            leader.ServerStore.Engine.HardResetToNewCluster();
+            await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
+
+            var @new = GetDatabaseTopology();
+            Assert.Equal(old.ClusterTransactionIdBase64, @new.ClusterTransactionIdBase64);
+            Assert.Equal(old.DatabaseTopologyIdBase64, @new.DatabaseTopologyIdBase64);
+            
+            DatabaseTopology GetDatabaseTopology()
+            {
+                using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                    return leader.ServerStore.Cluster.ReadDatabaseTopology(ctx, databaseName);
+            }
+        }
     }
 }
