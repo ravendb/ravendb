@@ -124,15 +124,34 @@ namespace Raven.Server.Documents
         {
             var size = Sodium.crypto_generichash_bytes();
             Debug.Assert((int)size == 32);
-            var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();
-            byte* state = stackalloc byte[cryptoGenerichashStatebytes];
+            var cryptoGenericHashStateBytes = (int)Sodium.crypto_generichash_statebytes();
+            byte* state = stackalloc byte[cryptoGenericHashStateBytes];
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ThrowFailToInitHash();
 
+            var index = 0;
+            string first = null;
             foreach (var etag in etags)
             {
-                HashChangeVector(state, etag);
+                switch (index)
+                {
+                    case 0:
+                        first = etag;
+                        break;
+                    case 1:
+                        HashChangeVector(state, first);
+                        goto default;
+                    default:
+                        HashChangeVector(state, etag);
+                        break;
+                }
+
+                index++;
             }
+
+            // if we have a result only from a single shard, simply return without hashing
+            if (index == 1)
+                return first;
 
             byte* final = stackalloc byte[(int)size];
             if (Sodium.crypto_generichash_final(state, final, size) != 0)
