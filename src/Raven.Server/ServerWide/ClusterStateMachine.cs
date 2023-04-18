@@ -2598,7 +2598,11 @@ namespace Raven.Server.ServerWide
                             continue;
 
                         var record = rawRecord.MaterializedRecord;
-                        record.Topology = new DatabaseTopology();
+                        record.Topology = new DatabaseTopology
+                        {
+                            ClusterTransactionIdBase64 = rawRecord.Topology.ClusterTransactionIdBase64,
+                            DatabaseTopologyIdBase64 = rawRecord.Topology.DatabaseTopologyIdBase64
+                        };
                         record.Topology.Members.Add(newTag);
                         toShrink.Add(record);
                     }
