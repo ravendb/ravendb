@@ -33,6 +33,9 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
+                    var dateTimeUtcNow = DateTime.UtcNow;
+                    var dateTimeToday = DateTime.Today;
+                    
                     var query = from x in session.Query<Article>()
                                 let test = 1
                                 select new
@@ -40,22 +43,22 @@ namespace SlowTests.Issues
                                     x.DateTime,
                                     DateTimeMinValue = DateTime.MinValue,
                                     DateTimeMaxValue = DateTime.MaxValue,
-                                    DateTimeUtcNow = DateTime.UtcNow,
-                                    DateTimeToday = DateTime.Today
+                                    DateTimeUtcNow = dateTimeUtcNow,
+                                    DateTimeToday = dateTimeToday
                                 };
 
-                    RavenTestHelper.AssertEqualRespectingNewLines(@"declare function output(x) {
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"declare function output(x, $p0, $p1) {
 	var test = 1;
-	return { DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999), DateTimeUtcNow : ((date) => new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds()))(new Date()), DateTimeToday : new Date(new Date().setHours(0,0,0,0)) };
+	return { DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999), DateTimeUtcNow : $p0, DateTimeToday : $p1 };
 }
-from 'Articles' as x select output(x)", query.ToString());
+from 'Articles' as x select output(x, $p0, $p1)", query.ToString());
 
                     var result = query.ToList();
 
                     Assert.Equal(DateTime.MinValue, result[0].DateTimeMinValue);
 
-                    Assert.Equal(DateTime.UtcNow, result[0].DateTimeUtcNow, TimeSpan.FromSeconds(5));
-                    Assert.Equal(DateTime.Today, result[0].DateTimeToday, TimeSpan.FromSeconds(5));
+                    Assert.Equal(dateTimeUtcNow, result[0].DateTimeUtcNow);
+                    Assert.Equal(dateTimeToday, result[0].DateTimeToday);
 
                     // Only missing 0.9999 ms, but with additional timezone
                     var epsilon = 1 + Math.Abs((DateTime.UtcNow - DateTime.Now).TotalSeconds); // Lower than 1 ms
