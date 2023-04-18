@@ -91,6 +91,10 @@ namespace Raven.Server.Smuggler.Documents
         protected override bool ShouldSkipIndex(IndexDefinitionAndType index, out string msg)
         {
             msg = null;
+
+            if (index.Type == IndexType.AutoMap || index.Type == IndexType.AutoMapReduce)
+                return false;
+
             var definition = (IndexDefinition)index.IndexDefinition;
 
             if (definition.OutputReduceToCollection != null)
