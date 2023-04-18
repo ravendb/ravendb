@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Tests.Infrastructure;
 using FastTests.Voron.Sets;
 using FastTests.Corax.Bugs;
+using FastTests.Sharding;
 using RachisTests.DatabaseCluster;
 using Raven.Server.Utils;
 using SlowTests.Cluster;
@@ -30,10 +31,10 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new ReshardingTests(testOutputHelper))
+                using (var test = new RavenDB_17760(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.RestoreShardedDatabaseFromIncrementalBackupAfterBucketMigration();
+                    await test.CanGetTombstonesByBucket();
                 }
             }
             catch (Exception e)

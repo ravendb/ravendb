@@ -5,6 +5,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -178,7 +179,7 @@ public class ClusterTransactionMergedCommand : TransactionMergedCommand
         return Reply.Count;
     }
 
-    public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+    public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
     {
         return new ClusterTransactionMergedCommandDto
         {

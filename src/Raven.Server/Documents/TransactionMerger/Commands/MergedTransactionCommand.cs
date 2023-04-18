@@ -7,6 +7,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands;
 
+public abstract class DocumentMergedTransactionCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+{
+
+}
+
 public abstract class MergedTransactionCommand<TOperationContext, TTransaction> : IRecordableCommand<TOperationContext, TTransaction>
     where TOperationContext : TransactionOperationContext<TTransaction>
     where TTransaction : RavenTransaction

@@ -18,6 +18,7 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -97,18 +98,18 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override int GetNextReplicationStatsId() => _parent.GetNextReplicationStatsId();
 
-        protected virtual TransactionOperationsMerger.MergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
+        protected virtual DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
         {
             return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, sourceDatabaseId, trigger);
         }
 
-        protected virtual TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
+        protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
             return new MergedDocumentReplicationCommand(data, lastDocumentEtag);
         }
 
-        internal class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedUpdateDatabaseChangeVectorCommand : DocumentMergedTransactionCommand
         {
             private readonly string _changeVector;
             private readonly long _lastDocumentEtag;
@@ -144,7 +145,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return operationsCount;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
             {
                 return new MergedUpdateDatabaseChangeVectorCommandDto
                 {
@@ -178,7 +179,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        internal class MergedUpdateDatabaseChangeVectorCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedUpdateDatabaseChangeVectorCommand>
+        internal class MergedUpdateDatabaseChangeVectorCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorCommand>
         {
             public string ChangeVector;
             public long LastDocumentEtag;
@@ -287,7 +288,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override void InvokeOnDocumentsReceived() => DocumentsReceived?.Invoke(this);
 
-        internal class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedDocumentReplicationCommand : DocumentMergedTransactionCommand
         {
             private readonly long _lastEtag;
             private readonly DataForReplicationCommand _replicationInfo;
@@ -752,7 +753,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
             {
                 var replicatedAttachmentStreams = _replicationInfo.ReplicatedAttachmentStreams?
                     .Select(kv => KeyValuePair.Create(kv.Key.ToString(), kv.Value.Stream))
@@ -770,7 +771,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
     }
 
-    internal class MergedDocumentReplicationCommandDto : TransactionOperationsMerger.IReplayableCommandDto<IncomingReplicationHandler.MergedDocumentReplicationCommand>
+    internal class MergedDocumentReplicationCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, IncomingReplicationHandler.MergedDocumentReplicationCommand>
     {
         public ReplicationBatchItem[] ReplicatedItemDtos;
         public long LastEtag;

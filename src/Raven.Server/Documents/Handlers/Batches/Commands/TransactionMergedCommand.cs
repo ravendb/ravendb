@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
 
-public abstract class TransactionMergedCommand : TransactionOperationsMerger.MergedTransactionCommand, IBatchCommand
+public abstract class TransactionMergedCommand : DocumentMergedTransactionCommand, IBatchCommand
 {
     protected readonly DocumentDatabase Database;
 

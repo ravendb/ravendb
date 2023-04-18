@@ -7,6 +7,7 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
+using Voron.Debugging;
 
 namespace Raven.Server.ServerWide.TransactionMerger;
 
@@ -31,6 +32,10 @@ public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsM
     {
     }
 
+    internal override void NotifyAboutSlowWrite(CommitStats stats)
+    {
+    }
+
     protected override void UpdateLastAccessTime(DateTime time)
     {
     }
@@ -40,7 +45,7 @@ public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsM
         Enqueue(cmd).GetAwaiter().GetResult();
     }
 
-    private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim();
+    private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim(false);
     public bool IsDisposed => _disposeEvent.IsSet;
 
     public override void Dispose()

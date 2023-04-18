@@ -1,6 +1,9 @@
 ﻿using System;
 using JetBrains.Annotations;
+using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
+using Voron.Debugging;
+using Voron.Util;
 
 namespace Raven.Server.Documents.TransactionMerger;
 
@@ -44,5 +47,14 @@ public class DocumentsTransactionOperationsMerger : AbstractTransactionOperation
     protected override void UpdateLastAccessTime(DateTime time)
     {
         _database.LastAccessTime = time;
+    }
+
+    internal override void NotifyAboutSlowWrite(CommitStats stats)
+    {
+        if (NotificationCenter is not AbstractDatabaseNotificationCenter)
+        {
+            throw new InvalidOperationException("DocumentsTransactionOperationsMerger NotificationCenter should be 'AbstractDatabaseNotificationCenter'");
+        }
+        SlowWriteNotification.Notify(stats, (AbstractDatabaseNotificationCenter)NotificationCenter);
     }
 }

@@ -12,9 +12,11 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.Handlers.Batches.Commands;
+using Raven.Server.Documents.Handlers.Processors.BulkInsert;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json.Converters;
 using Raven.Server.ServerWide;
@@ -244,7 +246,7 @@ namespace SlowTests.Blittable
                     (patchRequest, arg),
                     (null, null),
                     null,
-                    database,
+                    database.IdentityPartsSeparator,
                     false, false, false, false);
 
                 //Action
@@ -306,7 +308,7 @@ namespace SlowTests.Blittable
 
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<DeleteDocumentCommand, DocumentsOperationContext, DocumentsTransaction>(context));
-            }   
+            }
         }
 
         [Fact]
@@ -327,7 +329,7 @@ namespace SlowTests.Blittable
                         Patch = new PatchRequest("Some Script", PatchRequestType.None)
                     }
                 };
-                var expected = new BatchHandler.MergedBatchCommand(null)
+                var expected = new MergedBatchCommand(null)
                 {
                     ParsedCommands = commands
                 };
@@ -345,7 +347,7 @@ namespace SlowTests.Blittable
                 }
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
-                BatchHandler.MergedBatchCommand actual;
+                MergedBatchCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
                     reader.Initialize(fromStream);
@@ -355,7 +357,7 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, new CustomComparer<BatchHandler.MergedBatchCommand, DocumentsOperationContext, DocumentsTransaction>(context));
+                Assert.Equal(expected, actual, new CustomComparer<MergedBatchCommand, DocumentsOperationContext, DocumentsTransaction>(context));
             }
         }
 
@@ -430,7 +432,7 @@ namespace SlowTests.Blittable
                         Patch = new PatchRequest("Some Script", PatchRequestType.None)
                     }
                 };
-                var expected = new BulkInsertHandler.MergedInsertBulkCommand
+                var expected = new MergedInsertBulkCommand
                 {
                     NumberOfCommands = commands.Length,
                     Commands = commands
@@ -449,7 +451,7 @@ namespace SlowTests.Blittable
                 }
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
-                BulkInsertHandler.MergedInsertBulkCommand actual;
+                MergedInsertBulkCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
                     reader.Initialize(fromStream);
@@ -459,7 +461,7 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, new CustomComparer<BulkInsertHandler.MergedInsertBulkCommand, DocumentsOperationContext, DocumentsTransaction>(context));
+                Assert.Equal(expected, actual, new CustomComparer<MergedInsertBulkCommand, DocumentsOperationContext, DocumentsTransaction>(context));
             }
         }
 
@@ -475,7 +477,8 @@ namespace SlowTests.Blittable
         private class CustomComparer<TRecordableCommand, TOperationContext, TTransaction> : IEqualityComparer<TRecordableCommand>
             where TOperationContext : TransactionOperationContext<TTransaction>
             where TRecordableCommand : IRecordableCommand<TOperationContext, TTransaction>
-            where TTransaction : RavenTransaction        {
+            where TTransaction : RavenTransaction
+        {
             private readonly IEnumerable<Type> _notCheckTypes;
             private readonly TOperationContext _context;
 
@@ -491,6 +494,12 @@ namespace SlowTests.Blittable
 
             public bool Equals(TRecordableCommand expected, TRecordableCommand actual)
             {
+                if (expected == null && actual == null)
+                    return true;
+
+                if (expected == null || actual == null)
+                    return false;
+
                 var expectedDot = expected.ToDto(_context);
                 var actualDot = actual.ToDto(_context);
 

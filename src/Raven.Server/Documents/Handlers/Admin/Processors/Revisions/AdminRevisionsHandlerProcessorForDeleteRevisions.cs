@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
         }
 
-        internal class DeleteRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class DeleteRevisionsCommand : DocumentMergedTransactionCommand
         {
             private readonly Microsoft.Extensions.Primitives.StringValues _ids;
             private readonly DocumentDatabase _database;
@@ -38,13 +39,14 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
             {
                 return new DeleteRevisionsCommandDto {Ids = _ids};
             }
         }
 
-        internal class DeleteRevisionsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<DeleteRevisionsCommand>
+        internal class DeleteRevisionsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsCommand>
         {
             public string[] Ids;
 

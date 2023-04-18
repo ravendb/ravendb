@@ -222,7 +222,7 @@ namespace Tests.Infrastructure
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], new DummyNotificationCenter(), new SystemTime(), out _, CancellationToken.None);
+            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], new DummyNotificationCenter(serverStore), new SystemTime(), out _, CancellationToken.None);
             rachis.OnDispose += (sender, args) =>
             {
                 serverStore.Dispose();
@@ -629,9 +629,9 @@ namespace Tests.Infrastructure
             }
         }
 
-        private class DummyNotificationCenter : NotificationCenter
+        private class DummyNotificationCenter : ServerNotificationCenter
         {
-            public DummyNotificationCenter() : base(null, null, CancellationToken.None, null)
+            public DummyNotificationCenter(ServerStore serverStore) : base(serverStore, serverStore.NotificationCenter.Storage)
             {
             }
         }

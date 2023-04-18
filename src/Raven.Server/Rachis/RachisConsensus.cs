@@ -19,6 +19,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
@@ -433,7 +434,7 @@ namespace Raven.Server.Rachis
             Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
-        public void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, NotificationCenter.NotificationCenter notificationCenter, SystemTime time, out long clusterTopologyEtag, CancellationToken shutdown)
+        public void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, ServerNotificationCenter notificationCenter, SystemTime time, out long clusterTopologyEtag, CancellationToken shutdown)
         {
             try
             {

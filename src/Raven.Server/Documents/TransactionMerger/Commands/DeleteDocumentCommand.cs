@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands
 {
-    public class DeleteDocumentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    public class DeleteDocumentCommand : DocumentMergedTransactionCommand
     {
         private readonly string _id;
         private readonly string _expectedChangeVector;
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
             return 1;
         }
 
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
         {
             return new DeleteDocumentCommandDto
             {

@@ -11,7 +11,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.Smuggler;
 using Raven.Server.Web;

@@ -18,7 +18,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Patch
 {
-    public abstract class PatchDocumentCommandBase : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    public abstract class PatchDocumentCommandBase : DocumentMergedTransactionCommand
     {
         private readonly bool _skipPatchIfChangeVectorMismatch;
 
@@ -426,7 +426,7 @@ namespace Raven.Server.Documents.Patch
             return null;
         }
 
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, BatchPatchDocumentCommand> ToDto(DocumentsOperationContext context)
         {
             var dto = new BatchPatchDocumentCommandDto();
             FillDto(dto);
@@ -483,7 +483,7 @@ namespace Raven.Server.Documents.Patch
             return HandleReply(_id, PatchResult, reply, modifiedCollections);
         }
 
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
         {
             var dto = new PatchDocumentCommandDto();
             FillDto(dto);

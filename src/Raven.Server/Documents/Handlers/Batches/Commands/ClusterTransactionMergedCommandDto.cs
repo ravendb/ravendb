@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
 
-public class ClusterTransactionMergedCommandDto : TransactionOperationsMerger.IReplayableCommandDto<ClusterTransactionMergedCommand>
+public class ClusterTransactionMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ClusterTransactionMergedCommand>
 {
     public List<ClusterTransactionCommand.SingleClusterDatabaseCommand> Batch { get; set; }
 

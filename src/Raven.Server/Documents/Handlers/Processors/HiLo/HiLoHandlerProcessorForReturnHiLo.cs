@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Identity;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -30,7 +31,7 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorF
         await RequestHandler.Database.TxMerger.Enqueue(cmd);
     }
 
-    internal class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand
+    internal class MergedHiLoReturnCommand : DocumentMergedTransactionCommand
     {
         public string Key;
         public DocumentDatabase Database;
@@ -63,7 +64,7 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorF
             return 1;
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
         {
             return new MergedHiLoReturnCommandDto
             {
@@ -74,7 +75,7 @@ internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessorF
         }
     }
 
-    internal class MergedHiLoReturnCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedHiLoReturnCommand>
+    internal class MergedHiLoReturnCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedHiLoReturnCommand>
     {
         public string Key;
         public long End;

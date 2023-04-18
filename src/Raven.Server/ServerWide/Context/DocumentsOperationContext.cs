@@ -4,6 +4,7 @@ using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Sparrow.Threading;
 using Voron;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -12,7 +13,7 @@ namespace Raven.Server.ServerWide.Context
         private readonly DocumentDatabase _documentDatabase;
 
         public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
-            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
+            : base(documentDatabase?.DocumentsStorage?.Environment, initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             _documentDatabase = documentDatabase;
         }
@@ -114,8 +115,6 @@ namespace Raven.Server.ServerWide.Context
 
             return tx;
         }
-
-        public StorageEnvironment Environment => _documentDatabase.DocumentsStorage.Environment;
 
         public DocumentDatabase DocumentDatabase => _documentDatabase;
 
