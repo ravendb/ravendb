@@ -9,14 +9,6 @@ import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
 export default function ClientConfiguration() {
     const { handleSubmit, control, resetField } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
-        defaultValues: {
-            identityPartsSeparatorEnabled: false,
-            maximumNumberOfRequestsEnabled: false,
-            seedEnabled: false,
-            sessionContextEnabled: false,
-            readBalanceBehaviorEnabled: false,
-            readBalanceBehaviorValue: "None",
-        },
     });
 
     const {
@@ -106,7 +98,6 @@ export default function ClientConfiguration() {
                         <Col>
                             <Row>
                                 <Col>
-                                    {/* // TODO: check if disabled is in type */}
                                     <FormToggle
                                         type="switch"
                                         control={control}
@@ -117,7 +108,6 @@ export default function ClientConfiguration() {
                                     />
                                 </Col>
                                 <Col>
-                                    {/* // TODO: fix number validation if null */}
                                     <FormInput
                                         type="number"
                                         control={control}
