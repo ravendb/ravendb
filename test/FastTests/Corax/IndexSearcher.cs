@@ -9,6 +9,7 @@ using Corax.Pipeline;
 using Corax.Queries;
 using Corax.Utils;
 using FastTests.Voron;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -25,6 +26,59 @@ namespace FastTests.Corax
     {
         public IndexSearcherTest(ITestOutputHelper output) : base(output)
         {
+        }
+        
+        [Fact]
+        public void GetTermFromEntryIdViaEntriesFields()
+        {
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"muddy", "road"},};
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
+
+            {
+                Span<long> ids = stackalloc long[16];
+
+                using var searcher = new IndexSearcher(Env);
+                var match = searcher.TermQuery("Content", "road");
+                Assert.Equal(2, match.Count);
+                Assert.Equal(2, match.Fill(ids));
+                using var reader = searcher.TermsReaderFor("Content");
+                Assert.True(reader.TryGetTermFor(ids[0], out var term));
+                Assert.Equal("lake", term);
+                Assert.True(reader.TryGetTermFor(ids[1], out  term));
+                Assert.Equal("muddy", term);
+            }
+        }
+        
+        [Fact]
+        public void CanCompareEntriesDirectly()
+        {
+            var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
+            var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"muddy", "road"},};
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
+
+            {
+                Span<long> ids = stackalloc long[16];
+
+                using var searcher = new IndexSearcher(Env);
+                var match = searcher.TermQuery("Content", "road");
+                Assert.Equal(2, match.Count);
+                Assert.Equal(2, match.Fill(ids));
+                using var reader = searcher.TermsReaderFor("Content");
+                Assert.True(ids[0] < ids[1]);
+                var cmp = reader.Compare(ids[0], ids[1]);
+                Assert.True(cmp > 0);
+                cmp = reader.Compare(ids[1], ids[0]);
+                Assert.True(cmp < 0);
+                cmp = reader.Compare(ids[0], ids[0]);
+                Assert.True(cmp == 0);
+                cmp = reader.Compare(ids[1], ids[1]);
+                Assert.True(cmp == 0);
+            }
         }
 
         [Fact]

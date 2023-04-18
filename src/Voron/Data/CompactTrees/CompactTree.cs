@@ -7,7 +7,6 @@ using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.Containers;
@@ -134,8 +133,7 @@ namespace Voron.Data.CompactTrees
             encodedKey.CopyTo(allocated[1..]);
             var remainderBits = encodedKey.Length * 8 - encodedKeyLengthInBits;
             Debug.Assert(remainderBits is >= 0 and < 16);
-            const int initialReferenceCount = 1;
-            allocated[0] = (byte)(remainderBits << 4 | initialReferenceCount);
+            allocated[0] = (byte)(remainderBits << 4); // ref count of 0, will be incremented shortly
             return id;
         }
         
@@ -415,11 +413,19 @@ namespace Voron.Data.CompactTrees
             return TryGetValue(span, out value);
         }
 
-        
         public bool TryGetValue(ReadOnlySpan<byte> key, out long value)
         {
-            FindPageFor(key, ref _internalCursor);
+            using var scope = new CompactKeyCacheScope(this._llt);
+            var encodedKey = scope.Key;
+            encodedKey.Set(key);
 
+            return TryGetValue(encodedKey, out value);
+        }
+        
+        public bool TryGetValue(CompactKey key, out long termContainerId, out long value)
+        {
+            FindPageFor(key, ref _internalCursor);
+            termContainerId = key.ContainerId;
             return ReturnValue(ref _internalCursor._stk[_internalCursor._pos], out value);
         }
 
@@ -450,7 +456,7 @@ namespace Voron.Data.CompactTrees
             state.LastSearchPosition = 0;
         }
 
-        public bool TryGetNextValue(ReadOnlySpan<byte> key, out long value, out CompactKeyCacheScope cacheScope)
+        public bool TryGetNextValue(ReadOnlySpan<byte> key, out long termContainerId, out long value, out CompactKeyCacheScope cacheScope)
         {
             cacheScope = new CompactKeyCacheScope(this._llt, key);
             var encodedKey = cacheScope.Key;
@@ -466,7 +472,10 @@ namespace Voron.Data.CompactTrees
                 state = ref _internalCursor._stk[_internalCursor._pos];
 
                 if (state.LastMatch == 0) // found it
+                {
+                    termContainerId = encodedKey.ContainerId;
                     return ReturnValue(ref state, out value);
+                }
                 // did *not* find it, but we are somewhere on the tree that is ensured
                 // to be at the key location *or before it*, so we can now start scanning *up*
             }
@@ -477,6 +486,8 @@ namespace Voron.Data.CompactTrees
             SearchInCurrentPage(encodedKey, ref state);
             if (state.LastSearchPosition  >= 0) // found it, yeah!
             {
+                Debug.Assert(encodedKey.ContainerId > 0);
+                termContainerId = encodedKey.ContainerId;
                 value = GetValue(ref state, state.LastSearchPosition);
                 return true;
             }
@@ -528,6 +539,7 @@ namespace Voron.Data.CompactTrees
                 // therefore, we don't have it (we know the previous key was in this page
                 // so if there is a greater key in this page, we didn't find it
                 value = default;
+                termContainerId = -1;
                 return false;
             }
 
@@ -547,12 +559,13 @@ namespace Voron.Data.CompactTrees
                 if (state.LastSearchPosition > previousSearchPosition && state.LastSearchPosition < state.Header->NumberOfEntries )
                 {
                     FindPageFor(ref _internalCursor, ref state, encodedKey);
+                    termContainerId = encodedKey.ContainerId;
                     return ReturnValue(ref _internalCursor._stk[_internalCursor._pos], out value);
                 }
             }
             
             // if we go to here, we are at the root, so operate normally
-            return TryGetValue(encodedKey, out value);
+            return TryGetValue(encodedKey, out termContainerId, out value);
         }
 
 
@@ -865,7 +878,7 @@ namespace Voron.Data.CompactTrees
             Add(scope.Key, value);
         }
 
-        public void Add(CompactKey key, long value)
+        public long Add(CompactKey key, long value)
         {
             CompactTreeDumper.WriteAddition(this, key.Decoded(), value);
 
@@ -879,6 +892,8 @@ namespace Voron.Data.CompactTrees
                 $"Got {_internalCursor._stk[_internalCursor._pos].Header->PageFlags} flag instead of {nameof(CompactPageFlags.Leaf)}");
 
             AddToPage(key, value);
+
+            return key.ContainerId;
         }
 
         [SkipLocalsInit]
@@ -1239,6 +1254,7 @@ namespace Voron.Data.CompactTrees
                     // we have to account for failure to compress the entries in the page, and we have to *undo* the operations in this case
                     deleteOnSuccess.Add(currentKeyId);
                     currentKeyId = WriteTermToContainer(encodedKey, encodedKeyLengthInBits, newDictionary.DictionaryId);
+                    IncrementTermReferenceCount(currentKeyId);
                     deleteOnFailure.Add(currentKeyId);
                 }
 
