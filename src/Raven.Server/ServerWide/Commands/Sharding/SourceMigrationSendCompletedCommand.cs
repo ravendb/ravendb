@@ -1,7 +1,6 @@
 ﻿using System;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
-using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sharding

@@ -69,7 +69,6 @@ using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
-//using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
 
 namespace Raven.Server.ServerWide
 {
@@ -2711,7 +2710,11 @@ namespace Raven.Server.ServerWide
                 case nameof(EditLockModeCommand):
                 case nameof(EditPostgreSqlConfigurationCommand):
                 case nameof(PutIndexHistoryCommand):    
-                case nameof(DeleteIndexHistoryCommand):    
+                case nameof(DeleteIndexHistoryCommand):
+                case nameof(StartBucketMigrationCommand):
+                case nameof(SourceMigrationSendCompletedCommand):
+                case nameof(DestinationMigrationConfirmCommand):
+                case nameof(SourceMigrationCleanupCommand):
                     databaseRecord.EtagForBackup = index;
                     break;
             }
