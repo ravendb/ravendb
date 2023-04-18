@@ -40,9 +40,9 @@ public unsafe class CompactKey : IDisposable
     private readonly long* _keyMappingCacheIndex;
     private int _lastKeyMappingItem;
 
-    public int MaxLength { get; private set; }
+    public int MaxLength;
 
-    public long Dictionary { get; private set; }
+    public long Dictionary;
 
     private const int Invalid = -1;
 
