@@ -5,6 +5,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace FastTests.Client.Documents
         {
         }
 
-        [Fact]
-        public async Task CanStoreAnonymousObject()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStoreAnonymousObject(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -31,10 +33,11 @@ namespace FastTests.Client.Documents
             }
         }
 
-        [Fact]
-        public async Task CanChangeDocumentCollectionWithDeleteAndSave()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanChangeDocumentCollectionWithDeleteAndSave(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string documentId = "users/1";
                 using (var session = store.OpenAsyncSession())
@@ -57,10 +60,11 @@ namespace FastTests.Client.Documents
             }
         }
 
-        [Fact]
-        public async Task GetAsync()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task GetAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dummy = JObject.FromObject(new User());
                 dummy.Remove("Id");

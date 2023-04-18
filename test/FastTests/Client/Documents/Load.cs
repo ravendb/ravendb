@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,10 +32,11 @@ namespace FastTests.Client.Documents
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void LoadWithIncludes()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void LoadWithIncludes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string barId;
                 using (var session = store.OpenSession())
@@ -71,10 +73,11 @@ namespace FastTests.Client.Documents
             }
         }
 
-        [Fact]
-        public void LoadWithIncludesAndMissingDocument()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void LoadWithIncludesAndMissingDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string barId;
                 using (var session = store.OpenSession())
