@@ -111,6 +111,7 @@ namespace Voron.Data.Containers
             var root = new Container(page);
             root.Header.NumberOfPages = 1;
             root.Header.NumberOfOverflowPages = 0;
+            root.Header.PageLevelMetadata = -1;
             
             root.Allocate(sizeof(TreeRootHeader), ContainerPageHeader.FreeListOffset, out var freeListTreeState);
             root.Allocate(sizeof(TreeRootHeader), ContainerPageHeader.AllPagesOffset, out var allPagesTreeState);
@@ -188,7 +189,7 @@ namespace Voron.Data.Containers
 
         public static long Allocate(LowLevelTransaction llt, long containerId, int size, out Span<byte> allocatedSpace)
         {
-            return Allocate(llt, containerId, size, pageLevelMetadata: 0, out allocatedSpace);
+            return Allocate(llt, containerId, size, pageLevelMetadata: -1, out allocatedSpace);
         }
 
         /// <summary>
@@ -230,12 +231,11 @@ namespace Voron.Data.Containers
             var container = new Container(activePage);
             
             var (reqSize, pos) = GetRequiredSizeAndPosition(size, container);
-            if (container.HasEnoughSpaceFor(reqSize) == false || 
-                container.Header.PageLevelMetadata != pageLevelMetadata)
+            bool pageMetadataMatch = PageMetadataMatch(container, pageLevelMetadata);
+            if (pageMetadataMatch == false || container.HasEnoughSpaceFor(reqSize) == false)
             {
                 var freedSpace = false;
-                if (container.Header.PageLevelMetadata == pageLevelMetadata &&
-                    container.SpaceUsed(container.Offsets) < (Constants.Storage.PageSize / 2))
+                if (pageMetadataMatch && container.SpaceUsed(container.Offsets) < (Constants.Storage.PageSize / 2))
                 {
                     container.Defrag(llt);
                     // IMPORTANT: We have to account for the *larger* size here, otherwise we may
@@ -253,7 +253,9 @@ namespace Voron.Data.Containers
 
             if (container.HasEnoughSpaceFor(reqSize) == false)
                 throw new VoronErrorException($"After checking for space and defrag, we ended up with not enough free space ({reqSize}) on page {container.Header.PageNumber}");
-            
+
+            Debug.Assert(container.Header.PageLevelMetadata == -1 || container.Header.PageLevelMetadata == pageLevelMetadata);
+            container.Header.PageLevelMetadata = pageLevelMetadata;
             return container.Allocate(size, pos, out allocatedSpace);
         }
 
@@ -322,7 +324,8 @@ namespace Voron.Data.Containers
                 // if we exclude this based on the pageLevelMetadata match, this is fine,
                 // since we assume that there are *long* usage periods for each pageLevelMetadata
                 // so we aren't expected to switch between them too often
-                if (!isBigEntry || pageLevelMetadata != maybe.Header.PageLevelMetadata)
+                if (!isBigEntry || 
+                    PageMetadataMatch(maybe, pageLevelMetadata))
                 {
                     RemovePageFromContainerFreeList(rootContainer, maybe);
                 }
@@ -332,6 +335,8 @@ namespace Voron.Data.Containers
                 
                 // we register it as the next free page
                 rootContainer.UpdateNextFreePage(page.PageNumber);
+                
+                Debug.Assert(container.Header.PageLevelMetadata == pageLevelMetadata || pageLevelMetadata == -1);
                 return  maybe;
             }
 
@@ -343,7 +348,6 @@ namespace Voron.Data.Containers
             container = new Container(newPage);
             container.Header.PageLevelMetadata = pageLevelMetadata;
 
-            Debug.Assert(container.Header.PageLevelMetadata == pageLevelMetadata);
             
             AddPageToContainerFreeList(rootContainer, container);
 
@@ -360,6 +364,15 @@ namespace Voron.Data.Containers
                 page.Header.OnFreeList = true;
                 ModifyMetadataList(llt, parent, ContainerPageHeader.AllPagesOffset, add: true, page.Header.PageNumber);
             }
+        }
+
+        private static bool PageMetadataMatch(Container maybe, long pageLevelMetadata)
+        {
+            if (pageLevelMetadata == -1) // caller doesn't care, can be anything
+                return true;
+            if (maybe.Header.PageLevelMetadata == -1) // page doesn't have any entries that care, we can modify
+                return true;
+            return pageLevelMetadata == maybe.Header.PageLevelMetadata;
         }
 
         public static List<long> GetAllIds(LowLevelTransaction llt, long containerId)
