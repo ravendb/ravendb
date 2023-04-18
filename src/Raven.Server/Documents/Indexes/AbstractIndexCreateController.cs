@@ -170,7 +170,7 @@ public abstract class AbstractIndexCreateController
         }
         catch (TimeoutException toe)
         {
-            IndexStore.ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {ServerStore.Engine.OperationTimeout}.", ServerStore);
+            IndexStore.ThrowIndexCreationException("auto", definition.Name, toe, $"the operation timed out after: {ServerStore.Engine.OperationTimeout}.", ServerStore);
         }
 
         return index;
