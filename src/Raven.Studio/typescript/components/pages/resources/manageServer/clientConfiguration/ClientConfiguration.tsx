@@ -1,58 +1,31 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Form, FormGroup, Col, Button, Card, Row } from "reactstrap";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { FormCheckbox, FormInput, FormSelectOption, FormSwitch } from "components/utils/FormUtils";
+import { FormInput, FormSelectOption, FormToggle } from "components/utils/FormUtils";
 import { ClientConfigurationFormData, clientConfigurationYupResolver } from "./ClientConfigurationValidation";
 import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
 
 // TODO: server wide
 export default function ClientConfiguration() {
-    const { handleSubmit, control, watch, resetField } = useForm<ClientConfigurationFormData>({
+    const { handleSubmit, control, resetField } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
         defaultValues: {
+            identityPartsSeparatorEnabled: false,
+            maximumNumberOfRequestsEnabled: false,
+            seedEnabled: false,
+            sessionContextEnabled: false,
+            readBalanceBehaviorEnabled: false,
             readBalanceBehaviorValue: "None",
         },
     });
 
-    const [
+    const {
         identityPartsSeparatorEnabled,
         maximumNumberOfRequestsEnabled,
         readBalanceBehaviorEnabled,
         sessionContextEnabled,
         seedEnabled,
-    ] = watch([
-        "identityPartsSeparatorEnabled",
-        "maximumNumberOfRequestsEnabled",
-        "readBalanceBehaviorEnabled",
-        "sessionContextEnabled",
-        "seedEnabled",
-    ]);
-
-    // TODO: reset after change checkbox, not in effect
-    useEffect(() => {
-        if (!identityPartsSeparatorEnabled) {
-            resetField("identityPartsSeparatorValue");
-        }
-        if (!maximumNumberOfRequestsEnabled) {
-            resetField("maximumNumberOfRequestsValue");
-        }
-        if (!readBalanceBehaviorEnabled) {
-            resetField("readBalanceBehaviorValue");
-        }
-        if (!sessionContextEnabled) {
-            resetField("seedEnabled");
-        }
-        if (!seedEnabled) {
-            resetField("seedValue");
-        }
-    }, [
-        resetField,
-        identityPartsSeparatorEnabled,
-        maximumNumberOfRequestsEnabled,
-        readBalanceBehaviorEnabled,
-        seedEnabled,
-        sessionContextEnabled,
-    ]);
+    } = useWatch({ control });
 
     // TODO: logic
     const onSave: SubmitHandler<ClientConfigurationFormData> = (data) => {
@@ -71,10 +44,14 @@ export default function ClientConfiguration() {
                 <Card className="p-4 mt-4">
                     <FormGroup className="flex-horizontal">
                         <Col>
-                            <FormCheckbox
+                            <FormToggle
+                                type="checkbox"
                                 control={control}
                                 name="identityPartsSeparatorEnabled"
                                 label="Identity parts separator"
+                                afterChange={(event) =>
+                                    !event.target.checked && resetField("identityPartsSeparatorValue")
+                                }
                             />
                         </Col>
                         <Col>
@@ -90,10 +67,14 @@ export default function ClientConfiguration() {
 
                     <FormGroup className="flex-horizontal">
                         <Col>
-                            <FormCheckbox
+                            <FormToggle
+                                type="checkbox"
                                 control={control}
                                 name="maximumNumberOfRequestsEnabled"
                                 label="Maximum number of requests per session"
+                                afterChange={(event) =>
+                                    !event.target.checked && resetField("maximumNumberOfRequestsValue")
+                                }
                             />
                         </Col>
                         <Col>
@@ -109,22 +90,30 @@ export default function ClientConfiguration() {
 
                     <FormGroup className="flex-horizontal">
                         <Col>
-                            <FormCheckbox
+                            <FormToggle
+                                type="checkbox"
                                 control={control}
                                 name="sessionContextEnabled"
                                 label="Use Session Context for Load Balancing"
+                                afterChange={(event) => {
+                                    if (!event.target.checked) {
+                                        resetField("seedValue");
+                                        resetField("seedEnabled");
+                                    }
+                                }}
                             />
                         </Col>
                         <Col>
                             <Row>
                                 <Col>
                                     {/* // TODO: check if disabled is in type */}
-                                    <FormSwitch
+                                    <FormToggle
+                                        type="switch"
                                         control={control}
                                         name="seedEnabled"
-                                        type="switch"
                                         disabled={!sessionContextEnabled}
                                         label="Seed"
+                                        afterChange={(event) => !event.target.checked && resetField("seedValue")}
                                     />
                                 </Col>
                                 <Col>
@@ -143,10 +132,12 @@ export default function ClientConfiguration() {
 
                     <FormGroup className="flex-horizontal">
                         <Col>
-                            <FormCheckbox
+                            <FormToggle
+                                type="checkbox"
                                 control={control}
                                 name="readBalanceBehaviorEnabled"
                                 label="Read balance behavior"
+                                afterChange={(event) => !event.target.checked && resetField("readBalanceBehaviorValue")}
                             />
                         </Col>
                         <Col>
