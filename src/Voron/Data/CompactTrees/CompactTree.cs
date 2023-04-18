@@ -125,6 +125,110 @@ namespace Voron.Data.CompactTrees
             return 1 + keyLen + valLen;
         }
         
+        private long WriteTermToContainer(ReadOnlySpan<byte> encodedKey, int encodedKeyLengthInBits)
+        {
+            // the term in the container is:  [ metadata -1 byte ] [ term bytes ]
+            // the metadata is composed of two nibbles - the first says the *remainder* of bits in the last byte in the term
+            // the second nibble is the reference count
+            var id = Container.Allocate(_llt, _state.TermsContainerId, encodedKey.Length + 1, out var allocated);
+            encodedKey.CopyTo(allocated[1..]);
+            var remainderBits = encodedKey.Length * 8 - encodedKeyLengthInBits;
+            Debug.Assert(remainderBits is >= 0 and < 16);
+            const int initialReferenceCount = 1;
+            allocated[0] = (byte)(remainderBits << 4 | initialReferenceCount);
+            return id;
+        }
+        
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private int CompareKeys(ref CursorState state, long currentKeyId, byte* keyPtr, int keyLength, int keyLengthInBits)
+        {
+            GetEncodedKeyPtr(ref state, currentKeyId, out byte* encodedKeyPtr, out var encodedKeyLength, out var encodedKeyLengthInBits);
+
+            // CompactKey current = new(_llt);
+            // current.Set(encodedKeyLengthInBits, new (encodedKeyPtr, encodedKeyLength), state.Header->DictionaryId);
+            // var key = current.ToString();
+            
+            int match = AdvMemory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
+            match = match == 0 ? keyLengthInBits - encodedKeyLengthInBits : match;
+            return match;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private void GetEncodedKeyPtr(ref CursorState state, long currentKeyId, out byte* encodedKeyPtr, out int encodedKeyLen, out int encodedKeyLengthInBits)
+        {
+            if (currentKeyId == 0)
+            {
+                encodedKeyPtr = null;
+                encodedKeyLengthInBits = 0;
+                encodedKeyLen = 0;
+                return;
+            }
+
+            Debug.Assert(currentKeyId > 0, "Negative container id is a bad sign");
+            var keyItem = Container.Get(_llt, currentKeyId);
+            int remainderInBits = *keyItem.Address >> 4;
+            encodedKeyLen = keyItem.Length - 1;
+            encodedKeyLengthInBits = encodedKeyLen * 8 - remainderInBits;
+            encodedKeyPtr = keyItem.Address + 1;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private ReadOnlySpan<byte> GetEncodedKeySpan(ref CursorState state, int pos, out int encodedKeyLengthInBits)
+        {
+            long currentKeyId = DecodeKey(state.Page.Pointer + state.EntriesOffsetsPtr[pos]);
+            GetEncodedKeyPtr(ref state, currentKeyId, out var encodedKeyPtr, out var encodedKeyLen, out encodedKeyLengthInBits);
+            return new ReadOnlySpan<byte>(encodedKeyPtr, encodedKeyLen);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private Span<byte> GetEncodedKeySpan(ref CursorState state, int pos, out int encodedKeyLengthInBits, out long currentKeyId, out long value)
+        {
+            DecodeEntry(state.Page.Pointer + state.EntriesOffsetsPtr[pos], out currentKeyId, out value);
+            GetEncodedKeyPtr(ref state, currentKeyId, out var encodedKeyPtr, out var encodedKeyLen, out encodedKeyLengthInBits);
+            return new Span<byte>(encodedKeyPtr, encodedKeyLen);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private Span<byte> GetEncodedKeySpan(ref CursorState state, int pos, out int encodedKeyLengthInBits, out long value)
+        {
+            return GetEncodedKeySpan(ref state, pos, out encodedKeyLengthInBits, out _, out value);
+        }
+
+        
+        private void DecrementTermReferenceCount(long keyContainerId)
+        {
+            var term = Container.GetMutable(_llt, keyContainerId);
+            int termRefCount = term[0] & 0xF;
+            if(termRefCount == 0)
+                throw new VoronErrorException("A term exists without any references? That should be impossible");
+            if (termRefCount == 1) // no more references, can delete
+            {
+                Container.Delete(_llt, _state.TermsContainerId ,keyContainerId);
+                return;
+            }
+            
+            term[0] = (byte)( (term[0] & 0xF0) | (termRefCount - 1));
+        }
+
+        private void IncrementTermReferenceCount(long keyContainerId)
+        {
+            var term = Container.GetMutable(_llt, keyContainerId);
+            int termRefCount = term[0] & 0xF;
+            // A term usage count means that it is used by multiple pages at the same time. That can happen only if a leaf & branches are using
+            // the same term as the separator. However, that has natural limits. As the term can only be in one path through the tree, the tree height
+            // is a natural limit. Compact tree at maximum storage will take ~17 bytes, which means at *least* 425 items, which means that that the 
+            // height of the tree if we store 2^64 items it in would be 8. So even if we assume bad insert factor, which will increase the height of the
+            // tree, having a limit of 15 is reasonable
+            if (termRefCount == 15)
+                throw new VoronErrorException($"A term is used at max(tree-height), but we have term: {keyContainerId} used: {termRefCount}. This is a bug");
+
+            term[0] = (byte)((term[0] & 0xF0) | termRefCount + 1);
+        }
+
+
+        
         private LowLevelTransaction _llt;
         internal CompactTreeState _state;
         
@@ -478,29 +582,6 @@ namespace Voron.Data.CompactTrees
             state.LastMatch = 0;
             RemoveFromPage(allowRecurse, oldValue: out _);
         }
-
-        private void DecrementTermReferenceCount(long keyContainerId)
-        {
-            var term = Container.GetMutable(_llt, keyContainerId);
-            byte oldTermCount = term[^1]--;
-            if(oldTermCount == 0)
-                throw new VoronErrorException("A term exists without any references? That should be impossible");
-            if (oldTermCount > 1)
-                return;
-            // no more references, can delete
-            Container.Delete(_llt, _state.TermsContainerId ,keyContainerId);
-        }
-
-        private void IncrementTermReferenceCount(ref CursorState state, long keyContainerId)
-        {
-            var term = Container.GetMutable(_llt, keyContainerId);
-            byte oldTermCount = term[^1]++;
-            if (oldTermCount <= 128) 
-                return;
-            
-            throw new VoronErrorException("A term is used by more than 128 pages? That should be impossible but was: " + oldTermCount);
-        }
-
         
         private bool RemoveFromPage(bool allowRecurse, out long oldValue)
         {
@@ -846,7 +927,7 @@ namespace Voron.Data.CompactTrees
             else
             {
                 state.LastSearchPosition = ~state.LastSearchPosition;
-                IncrementTermReferenceCount(ref state, key.ContainerId);
+                IncrementTermReferenceCount(key.ContainerId);
             }
 
             Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
@@ -906,15 +987,6 @@ namespace Voron.Data.CompactTrees
 
             AddEntryToPage(key, state, requiredSize, entryBufferPtr);
             VerifySizeOf(ref state);
-        }
-
-        private long WriteTermToContainer(ReadOnlySpan<byte> encodedKey, int encodedKeyLengthInBits)
-        {
-            var id = Container.Allocate(_llt, _state.TermsContainerId, encodedKey.Length + sizeof(short) + 1, out var allocated);
-            Unsafe.WriteUnaligned(ref allocated[0], (ushort)encodedKeyLengthInBits);
-            encodedKey.CopyTo(allocated[sizeof(ushort)..]);
-            allocated[sizeof(ushort) + encodedKey.Length] = 1; // reference count, single reference here
-            return id;
         }
 
         private void AddEntryToPage(CompactKey key, CursorState state, int requiredSize, byte* entryBufferPtr)
@@ -1066,7 +1138,7 @@ namespace Voron.Data.CompactTrees
         private int CompareEntryWith(ref CursorState state, int position, CompactKey encodedKey)
         {
             long containerId = DecodeKey(state.Page.Pointer + state.EntriesOffsetsPtr[position]);
-            GetEncodedKeyPtr(ref state, containerId, out var lastEntryFromPreviousPage, out var sizeInBits);
+            GetEncodedKeyPtr(ref state, containerId, out var lastEntryFromPreviousPage, out _, out var sizeInBits);
             return encodedKey.CompareEncodedWith(lastEntryFromPreviousPage, sizeInBits, state.Header->DictionaryId);
         }
 
@@ -1488,75 +1560,7 @@ namespace Voron.Data.CompactTrees
             state.LastSearchPosition = ~(bot + (match > 0).ToInt32());
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private int CompareKeys(ref CursorState state, long currentKeyId, byte* keyPtr, int keyLength, int keyLengthInBits)
-        {
-            GetEncodedKeyPtr(ref state, currentKeyId, out byte* encodedKeyPtr, out var encodedKeyLengthInBits);
-
-            int encodedKeyLength = Bits.ToBytes(encodedKeyLengthInBits);
-
-            // CompactKey current = new(_llt);
-            // current.Set(encodedKeyLengthInBits, new (encodedKeyPtr, encodedKeyLength), state.Header->DictionaryId);
-            // var key = current.ToString();
-            
-            int match = AdvMemory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
-            match = match == 0 ? keyLengthInBits - encodedKeyLengthInBits : match;
-            return match;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private void GetEncodedKeyPtr(ref CursorState state, long currentKeyId, out byte* encodedKeyPtr, out int encodedKeyLengthInBits)
-        {
-            if (currentKeyId == 0)
-            {
-                encodedKeyPtr = null;
-                encodedKeyLengthInBits = 0;
-                return;
-            }
-
-            Debug.Assert(currentKeyId > 0, "Negative container id is a bad sign");
-            var keyItem = Container.Get(_llt, currentKeyId);
-            encodedKeyLengthInBits = *(ushort*)keyItem.Address;
-            encodedKeyPtr = keyItem.Address + sizeof(ushort);
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private ReadOnlySpan<byte> GetEncodedKeySpan(ref CursorState state, int pos, out int encodedKeyLengthInBits)
-        {
-            long currentKeyId = DecodeKey(state.Page.Pointer + state.EntriesOffsetsPtr[pos]);
-            if (currentKeyId == 0)
-            {
-                encodedKeyLengthInBits = 0;
-                return ReadOnlySpan<byte>.Empty;
-            }
-            var keyItem = Container.Get(_llt, currentKeyId);
-            encodedKeyLengthInBits = *(ushort*)keyItem.Address;
-            var encodedKeyPtr = keyItem.Address + sizeof(ushort);
-            return new ReadOnlySpan<byte>(encodedKeyPtr, Bits.ToBytes(encodedKeyLengthInBits));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private Span<byte> GetEncodedKeySpan(ref CursorState state, int pos, out int encodedKeyLengthInBits, out long value)
-        {
-            return GetEncodedKeySpan(ref state, pos, out encodedKeyLengthInBits, out _, out value);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private Span<byte> GetEncodedKeySpan(ref CursorState state, int pos, out int encodedKeyLengthInBits, out long currentKeyId, out long value)
-        {
-            DecodeEntry(state.Page.Pointer + state.EntriesOffsetsPtr[pos], out currentKeyId, out value);
-            if (currentKeyId == 0)
-            {
-                encodedKeyLengthInBits = 0;
-                return Span<byte>.Empty;
-            }
-            
-            var keyItem = Container.Get(_llt, currentKeyId);
-            encodedKeyLengthInBits = *(ushort*)keyItem.Address;
-            var encodedKeyPtr = keyItem.Address + sizeof(ushort);
-            return new Span<byte>(encodedKeyPtr, Bits.ToBytes(encodedKeyLengthInBits));
-        }
-
+    
         private static int DictionaryOrder(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
         {
             // Bed - Tree: An All-Purpose Index Structure for String Similarity Search Based on Edit Distance
