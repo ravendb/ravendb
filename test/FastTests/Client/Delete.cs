@@ -1,4 +1,5 @@
 ﻿using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,10 +11,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void Delete_Document_By_entity()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Delete_Document_By_entity(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -29,10 +31,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Delete_Documents_By_id()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Delete_Documents_By_id(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {

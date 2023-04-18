@@ -31,10 +31,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public async Task Hilo_Cannot_Go_Down()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Hilo_Cannot_Go_Down(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -71,10 +72,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task HiLo_Async_MultiDb()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task HiLo_Async_MultiDb(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -102,10 +104,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task Generate_HiLo_Ids()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Generate_HiLo_Ids(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var multiDbHiLo = new AsyncMultiDatabaseHiLoIdGenerator(store);
 
@@ -151,10 +154,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task Capacity_Should_Double()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Capacity_Should_Double(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", store, store.Database,
                     store.Conventions.IdentityPartsSeparator);
@@ -191,8 +195,9 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Return_Unused_Range_On_Dispose()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Return_Unused_Range_On_Dispose(Options options)
         {
             using (var store = GetDocumentStore())
             {
@@ -236,11 +241,12 @@ namespace FastTests.Client
             }
         }
 
-        [LicenseRequiredFact]
-        public async Task Should_Resolve_Conflict_With_Highest_Number()
+        [RavenTheory(RavenTestCategory.ClientApi, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Should_Resolve_Conflict_With_Highest_Number(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo1" }))
-            using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo2" }))
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var s1 = store1.OpenSession())
                 {
@@ -294,10 +300,11 @@ namespace FastTests.Client
         private const int GeneratedIdCount = 2000;
         private const int ThreadCount = 100;
 
-        [Fact]
-        public void ParallelGeneration_NoClashesOrGaps()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ParallelGeneration_NoClashesOrGaps(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var gen = new AsyncHiLoIdGenerator("When_generating_lots_of_keys_concurrently_there_are_no_clashes", store,
                     store.Database, store.Conventions.IdentityPartsSeparator);
@@ -305,10 +312,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void SequentialGeneration_NoClashesOrGaps()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SequentialGeneration_NoClashesOrGaps(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var gen = new AsyncHiLoIdGenerator("When_generating_lots_of_keys_concurrently_there_are_no_clashes", store,
                     store.Database, store.Conventions.IdentityPartsSeparator);
@@ -357,10 +365,11 @@ namespace FastTests.Client
                 Assert.True(ids.Contains(i), "Id " + i + " was not generated.");
         }
 
-        [Fact]
-        public async Task HiLoKeyGenerator_works_without_aggressive_caching()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task HiLoKeyGenerator_works_without_aggressive_caching(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", store, store.Database,
                     store.Conventions.IdentityPartsSeparator);
@@ -370,10 +379,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task HiLoKeyGenerator_async_hangs_when_aggressive_caching_enabled()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task HiLoKeyGenerator_async_hangs_when_aggressive_caching_enabled(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (store.AggressivelyCache())
                 {
@@ -386,10 +396,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task HiLoKeyGenerator_hangs_when_aggressive_caching_enabled()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task HiLoKeyGenerator_hangs_when_aggressive_caching_enabled(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (store.AggressivelyCache())
                 {
@@ -402,13 +413,18 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task HiLoKeyGenerator_hangs_when_aggressive_caching_enabled_on_other_documentstore()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task HiLoKeyGenerator_hangs_when_aggressive_caching_enabled_on_other_documentstore(Options options)
         {
-            using (var server = GetNewServer())
-            using (var otherServer = GetNewServer())
-            using (var store = GetDocumentStore(new Options { Server = server }))
-            using (var otherStore = GetDocumentStore(new Options { Server = otherServer }))
+            using var server = GetNewServer();
+            using var otherServer = GetNewServer();
+
+            var o1 = options.Clone();
+            var o2 = options.Clone();
+
+            using (var store = GetDocumentStore(o1))
+            using (var otherStore = GetDocumentStore(o2))
             {
                 using (otherStore.AggressivelyCache()) // Note that we don't even use the other store, we just call AggressivelyCache on it
                 {
@@ -420,13 +436,18 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task HiLoKeyGenerator_async_hangs_when_aggressive_caching_enabled_on_other_documentstore()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task HiLoKeyGenerator_async_hangs_when_aggressive_caching_enabled_on_other_documentstore(Options options)
         {
-            using (var server = GetNewServer())
-            using (var otherServer = GetNewServer())
-            using (var store = GetDocumentStore(new Options { Server = server }))
-            using (var otherStore = GetDocumentStore(new Options { Server = otherServer }))
+            using var server = GetNewServer();
+            using var otherServer = GetNewServer();
+
+            var o1 = options.Clone();
+            var o2 = options.Clone();
+
+            using (var store = GetDocumentStore(o1))
+            using (var otherStore = GetDocumentStore(o2))
             {
                 using (otherStore.AggressivelyCache()) // Note that we don't even use the other store, we just call AggressivelyCache on it
                 {
@@ -438,11 +459,12 @@ namespace FastTests.Client
             }
         }
 
-        [LicenseRequiredFact]
-        public async Task CanReplicateHiLoTombstone()
+        [RavenTheory(RavenTestCategory.ClientApi, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateHiLoTombstone(Options options)
         {
-            using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo1" }))
-            using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo2" }))
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 using (var s1 = store1.OpenSession())
                 {

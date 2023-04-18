@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -67,14 +68,15 @@ namespace FastTests.Client
             public long? Size { get; set; }
         }
 
-        [Fact]
-        public void CanPatch()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanPatch(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Numbers = new[] { 66 }, Stuff = stuff };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -111,12 +113,13 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanPatchAndModify()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanPatchAndModify(Options options)
         {
             var user = new User { Numbers = new[] { 66 } };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -137,14 +140,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanPatchComplex()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanPatchComplex(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -203,14 +207,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanAddToArray()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanAddToArray(Options options)
         {
             var stuff = new Stuff[1];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2 } };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -262,14 +267,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanAddToArrayUsingParamsOverload()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanAddToArrayUsingParamsOverload(Options options)
         {
             var stuff = new Stuff[1];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2 } };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -319,15 +325,16 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanRemoveFromArray()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanRemoveFromArray(Options options)
         {
             var stuff = new Stuff[2];
             stuff[0] = new Stuff { Key = 6 };
             stuff[1] = new Stuff { Phone = "123456" };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2, 3 } };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -355,14 +362,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanIncrement()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanIncrement(Options options)
         {
             Stuff[] s = new Stuff[3];
             s[0] = new Stuff { Key = 6 };
             var user = new User { Numbers = new[] { 66 }, Stuff = s };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -395,8 +403,9 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void ShouldMergePatchCalls()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldMergePatchCalls(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
@@ -405,7 +414,7 @@ namespace FastTests.Client
             var docId2 = "users/2-A";
 
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -452,8 +461,9 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanRemoveAllFromArray()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanRemoveAllFromArray(Options options)
         {
             var customer = new Customer
             {
@@ -469,7 +479,7 @@ namespace FastTests.Client
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -523,14 +533,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanPatchAsync()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanPatchAsync(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Numbers = new[] { 66 }, Stuff = stuff };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -567,12 +578,13 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanPatchAndModifyAsync()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanPatchAndModifyAsync(Options options)
         {
             var user = new User { Numbers = new[] { 66 } };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -593,14 +605,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanPatchComplexAsync()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanPatchComplexAsync(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -659,14 +672,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanAddToArrayAsync()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanAddToArrayAsync(Options options)
         {
             var stuff = new Stuff[1];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2 } };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -716,15 +730,16 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanRemoveFromArrayAsync()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRemoveFromArrayAsync(Options options)
         {
             var stuff = new Stuff[2];
             stuff[0] = new Stuff { Key = 6 };
             stuff[1] = new Stuff { Phone = "123456" };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2, 3 } };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -752,14 +767,15 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanIncrementAsync()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanIncrementAsync(Options options)
         {
             Stuff[] s = new Stuff[3];
             s[0] = new Stuff { Key = 6 };
             var user = new User { Numbers = new[] { 66 }, Stuff = s };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -793,8 +809,9 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task ShouldMergePatchCallsAsync()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldMergePatchCallsAsync(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
@@ -803,7 +820,7 @@ namespace FastTests.Client
             var docId2 = "users/2-A";
 
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -850,8 +867,9 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanRemoveAllFromArrayAsync()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRemoveAllFromArrayAsync(Options options)
         {
             var customer = new Customer
             {
@@ -867,7 +885,7 @@ namespace FastTests.Client
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -920,10 +938,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void PatchNullField_ExpectFieldSetToNull()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void PatchNullField_ExpectFieldSetToNull(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string entityId;
                 using (var session = store.OpenSession())
@@ -960,10 +979,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanUseLinq()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string changeVector = "ravendb-logo.png";
                 const string id = "doc";
@@ -1004,10 +1024,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanUseNullableType()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseNullableType(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "doc";
                 const int newSize = 2;

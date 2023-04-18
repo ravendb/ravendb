@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +13,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void ConditionalLoad_CanGetDocumentById()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ConditionalLoad_CanGetDocumentById(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -44,10 +46,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void ConditionalLoad_GetNotModifiedDocumentByIdShouldReturnNull()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ConditionalLoad_GetNotModifiedDocumentByIdShouldReturnNull(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -75,10 +78,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void ConditionalLoad_NonExistsDocumentShouldReturnNull()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ConditionalLoad_NonExistsDocumentShouldReturnNull(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -111,10 +115,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task ConditionalLoadAsync_CanGetDocumentById()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ConditionalLoadAsync_CanGetDocumentById(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -143,10 +148,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task ConditionalLoadAsync_GetNotModifiedDocumentByIdShouldReturnNull()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ConditionalLoadAsync_GetNotModifiedDocumentByIdShouldReturnNull(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -174,10 +180,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task ConditionalLoadAsync_NonExistsDocumentShouldReturnNull()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ConditionalLoadAsync_NonExistsDocumentShouldReturnNull(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
