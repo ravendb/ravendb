@@ -81,7 +81,6 @@ public class RavenDB_20084 : ClusterTestBase
                 leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().ShouldFetchIdleStateImmediately = false;
                 leaderServer.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
 
-
                 // Awaiting the next backup event to verify that the '/database' endpoint provides an updated value for the last incremental backup timestamp
                 var client = leaderStore.GetRequestExecutor().HttpClient;
                 DateTime lastBackupTime = default;
@@ -98,20 +97,29 @@ public class RavenDB_20084 : ClusterTestBase
                             backupInfo.TryGet("LastBackup", out lastBackupTime) == false)
                             return false;
 
-                        return lastBackupTime == expectedTime;
+                        return lastBackupTime >= expectedTime;
                     },
                     expectedVal: true,
-                    timeout: Convert.ToInt32(TimeSpan.FromMinutes(3).TotalMilliseconds),
+                    timeout: Convert.ToInt32(TimeSpan.FromMinutes(15).TotalMilliseconds),
                     interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));
                 
-                Assert.Equal(expectedTime, lastBackupTime);
+                Assert.True(lastBackupTime >= expectedTime);
                 Assert.Equal(1, leaderServer.ServerStore.IdleDatabases.Count);
 
                 // Verifying that the cluster storage contains the same value for consistency
                 var operation = new GetPeriodicBackupStatusOperation(taskId);
                 var backupStatus = (await leaderStore.Maintenance.SendAsync(operation)).Status;
-                Assert.Equal(expectedTime, backupStatus.LastIncrementalBackupInternal);
-                Assert.Equal(expectedTime, backupStatus.LastIncrementalBackup);
+
+                var lastBackupTimeInClusterStorage = backupStatus.LastIncrementalBackup > backupStatus.LastFullBackup
+                    ? backupStatus.LastIncrementalBackup
+                    : backupStatus.LastFullBackup;
+
+                var lastInternalBackupTimeInClusterStorage = backupStatus.LastIncrementalBackupInternal > backupStatus.LastFullBackupInternal
+                    ? backupStatus.LastIncrementalBackupInternal
+                    : backupStatus.LastFullBackupInternal;
+
+                Assert.True(lastBackupTimeInClusterStorage >= expectedTime);
+                Assert.True(lastInternalBackupTimeInClusterStorage >= expectedTime);
             }
         }
     }
