@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition.Type == IndexType.AutoMap)
             {
-                var result = new AutoMapIndexDefinition(definition.Collection, mapFields, indexDeployment, definition.ClusterState, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                var result = new AutoMapIndexDefinition(definition.Name, definition.Collection, mapFields, indexDeployment, definition.ClusterState, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Indexes
                     })
                     .ToArray();
 
-                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields, definition.GroupByFieldNames, indexDeployment, definition.ClusterState, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                var result = new AutoMapReduceIndexDefinition(definition.Name, definition.Collection, mapFields, groupByFields, definition.GroupByFieldNames, indexDeployment, definition.ClusterState, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;

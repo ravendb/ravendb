@@ -21,8 +21,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public List<string> GroupByFieldNames { get; }
 
-        public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, List<string> groupByFieldNames, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
-            : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, deploymentMode, clusterState, indexVersion)
+        public AutoMapReduceIndexDefinition(string indexName, string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, List<string> groupByFieldNames, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
+            : base(indexName, collection, mapFields, deploymentMode, clusterState, indexVersion)
         {
             OrderedGroupByFields = groupByFields.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
 
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         // For Legacy test
         public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, long? indexVersion = null)
-            : this(collection, mapFields, groupByFields, groupByFieldNames: groupByFields.Select(x => x.Name).ToList(), deploymentMode: null, clusterState: null, indexVersion)
+            : this(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, groupByFields, groupByFieldNames: groupByFields.Select(x => x.Name).ToList(), deploymentMode: null, clusterState: null, indexVersion)
         {
 
         }
@@ -211,6 +211,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             var priority = ReadPriority(reader);
             var state = ReadState(reader);
             var version = ReadVersion(reader);
+            var indexName = ReadName(reader);
 
             if (reader.TryGet(nameof(Collections), out BlittableJsonReaderArray jsonArray) == false)
                 throw new InvalidOperationException("No persisted collections");
@@ -297,7 +298,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 }
             }
 
-            return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields, groupByFieldNames, deploymentMode: null, clusterState: null, version)
+            return new AutoMapReduceIndexDefinition(indexName, collection, mapFields, groupByFields, groupByFieldNames, deploymentMode: null, clusterState: null, version)
             {
                 LockMode = lockMode,
                 Priority = priority,

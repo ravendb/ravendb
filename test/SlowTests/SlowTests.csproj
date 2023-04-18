@@ -130,6 +130,7 @@
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_9912\2.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_18687\auto_indexes.ravendbdump" />
     <EmbeddedResource Include="Data\testing.ravendbdump" />
     <EmbeddedResource Include="Data\data.txt" />
     <EmbeddedResource Include="Data\data2.txt" />
