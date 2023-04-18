@@ -20,6 +20,11 @@ namespace Raven.Client
             }
         }
 
+        public class Identities
+        {
+            public const char DefaultSeparator = '/';
+        }
+
         public class Headers
         {
             private Headers()
