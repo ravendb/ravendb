@@ -264,8 +264,6 @@ public unsafe class CompactKey : IDisposable
             if (Avx.IsSupported)
             {
                 // Find out the last element where a full vector can be copied.
-                int lastVectorElement = (key._lastKeyMappingItem / Vector256<long>.Count) * Vector256<long>.Count;
-
                 while (currentElementIdx < lastElementIdx)
                 {
                     Avx.Store(_keyMappingCache + currentElementIdx, Avx.LoadDquVector256(key._keyMappingCache + currentElementIdx));
@@ -319,33 +317,39 @@ public unsafe class CompactKey : IDisposable
 
     public void Set(int keyLengthInBits, ReadOnlySpan<byte> key, long dictionaryId)
     {
+        fixed (byte* keyPtr = key)
+        {
+            Set(keyLengthInBits, keyPtr, dictionaryId);
+        }
+    }
+
+    public void Set(int keyLengthInBits, byte* keyPtr, long dictionaryId)
+    {
         _lastKeyMappingItem = Invalid;
 
         // This is the operation to set an unencoded key, therefore we need to restart everything.
         _currentPtr = _storage.Ptr;
 
         // Since the size is big enough to store twice the unencoded key, we don't check the remaining size here.
-        fixed (byte* keyPtr = key)
-        {
-            // This is the current state after the setup with the encoded value.
-            _decodedKeyIdx = Invalid;
-            _currentKeyIdx = (int)(_currentPtr - (long)_storage.Ptr);
-            Dictionary = dictionaryId;
 
-            int bucketIdx = SelectBucketForWrite();
-            _keyMappingCache[bucketIdx] = dictionaryId;
-            _keyMappingCacheIndex[bucketIdx] = _currentKeyIdx;
+        // This is the current state after the setup with the encoded value.
+        _decodedKeyIdx = Invalid;
+        _currentKeyIdx = (int)(_currentPtr - (long)_storage.Ptr);
+        Dictionary = dictionaryId;
 
-            // We write the size and the key. 
-            *(int*)_currentPtr = keyLengthInBits;
-            _currentPtr += sizeof(int);
+        int bucketIdx = SelectBucketForWrite();
+        _keyMappingCache[bucketIdx] = dictionaryId;
+        _keyMappingCacheIndex[bucketIdx] = _currentKeyIdx;
 
-            int keyLength = Bits.ToBytes(keyLengthInBits);
-            Memory.Copy(_currentPtr, keyPtr, keyLength);
-            _currentPtr += keyLength; // We update the new pointer. 
+        // We write the size and the key. 
+        *(int*)_currentPtr = keyLengthInBits;
+        _currentPtr += sizeof(int);
 
-            MaxLength = keyLength;
-        }
+        int keyLength = Bits.ToBytes(keyLengthInBits);
+        Memory.Copy(_currentPtr, keyPtr, keyLength);
+        _currentPtr += keyLength; // We update the new pointer. 
+
+        MaxLength = keyLength;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
