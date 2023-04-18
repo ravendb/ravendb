@@ -140,9 +140,9 @@ public partial class RavenTestBase
             return toShard;
         }
 
-        public async Task<ShardingConfiguration> GetShardingConfigurationAsync(IDocumentStore store)
+        public async Task<ShardingConfiguration> GetShardingConfigurationAsync(IDocumentStore store, string database = null)
         {
-            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database ?? store.Database));
             return record.Sharding;
         }
 

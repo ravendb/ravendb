@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
                 "RavenDB-19202 : consider using the most up-to-date database record");
             
-            // add the subscription data to all but one of the shards
+            // add the subscription data to just one of the shards
             // get the minimum in order to ensure we get the same shard every time we reach here
             if (GetMinShard(RestoreSettings.DatabaseRecord.Sharding) != _shardNumber)
                 smuggler._options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;

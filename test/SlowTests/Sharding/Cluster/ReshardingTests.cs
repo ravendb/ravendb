@@ -3,8 +3,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
- using Raven.Client.Documents;
+using Raven.Client.Documents;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Orders;
@@ -26,6 +27,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Client.Util;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
@@ -942,17 +944,8 @@ namespace SlowTests.Sharding.Cluster
 
                 foreach (var dir in dirs)
                 {
-                    var indexOf = dir.LastIndexOf('$');
-                    Assert.True(indexOf > -1);
-
-                    var shardIndex = int.Parse(dir[indexOf + 1].ToString());
-                    Assert.True(shardIndex is >= 0 and <= 2);
-
                     var files = Directory.GetFiles(dir);
-                    if (shardIndex == oldLocation || shardIndex == newLocation)
-                        Assert.Equal(2, files.Length);
-                    else
-                        Assert.Equal(1, files.Length);
+                    Assert.Equal(2, files.Length);
                 }
 
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
@@ -1002,8 +995,31 @@ namespace SlowTests.Sharding.Cluster
                     {
                         for (int i = 1; i <= 11; i++)
                         {
-                            var doc = session.Load<User>($"users/{i}${suffix}");
-                            Assert.NotNull(doc);
+                            var docId = $"users/{i}${suffix}";
+                            var doc = session.Load<User>(id);
+                            Assert.True(doc != null, await AddDebugInfoOnFailure(docId));
+                        }
+
+                        async Task<string> AddDebugInfoOnFailure(string docId)
+                        {
+                            var sb = new StringBuilder();
+                            sb.AppendLine($"failed to load document '{docId}' from restored database");
+
+                            var count = session.Query<User>().Count();
+                            sb.AppendLine($"count of documents : {count}");
+
+                            var restored = await Sharding.GetShardingConfigurationAsync(store, restoredDatabaseName);
+
+                            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                            {
+                                sb.AppendLine("sharding configuration of original database :")
+                                    .AppendLine(store.Conventions.Serialization.DefaultConverter.ToBlittable(sharding, ctx).ToString());
+
+                                sb.AppendLine("sharding configuration of restored database :")
+                                    .AppendLine(store.Conventions.Serialization.DefaultConverter.ToBlittable(restored, ctx).ToString());
+                            }
+
+                            return sb.ToString();
                         }
                     }
                 }

@@ -44,7 +44,7 @@ namespace Raven.Server.Utils
         {
             var bucket = GetBucketFor(lowerId);
 
-            if (configuration.Prefixed != null)
+            if (configuration?.Prefixed != null)
             {
                 foreach (var setting in configuration.Prefixed)
                 {
