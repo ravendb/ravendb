@@ -28,7 +28,7 @@ namespace Voron.Data.Containers
         public int NumberOfOverflowPages;
 
         [FieldOffset(22)]
-        public long NextFreePage;
+        public long PageLevelMetadata;
 
         [FieldOffset(30)]
         public bool OnFreeList;
@@ -36,6 +36,7 @@ namespace Voron.Data.Containers
         public const int FreeListOffset = 0;
         public const int AllPagesOffset = 1;
         public const int NumberOfEntriesOffset = 2;
+        public const int NextFreePageOffset = 3;
 
         public int CeilingOfOffsets => NumberOfOffsets * sizeof(Container.ItemMetadata) + PageHeader.SizeOf;
     }
