@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
             
             int take = pageSize + query.Start;
-            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
+            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct || query.Metadata.OrderBy != null)
                 take = CoraxConstants.IndexSearcher.TakeAll;
             
             bool isDistinctCount = query.PageSize == 0 && typeof(TDistinct) == typeof(HasDistinct);
