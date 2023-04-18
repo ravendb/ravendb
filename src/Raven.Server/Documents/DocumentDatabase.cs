@@ -1040,7 +1040,7 @@ namespace Raven.Server.Documents
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        protected virtual void DisposeBackgroundWorkers(ExceptionAggregator exceptionAggregator)
+        private void DisposeBackgroundWorkers(ExceptionAggregator exceptionAggregator)
         {
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ExpiredDocumentsCleaner");
             exceptionAggregator.Execute(() =>

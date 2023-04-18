@@ -7,7 +7,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Background
 {
-    public class ShardedDocumentsMigrator : IDisposable
+    public class ShardedDocumentsMigrator
     {
         private readonly ShardedDocumentDatabase _database;
         private readonly CancellationToken _token;
@@ -24,58 +24,46 @@ namespace Raven.Server.Documents.Sharding.Background
         {
             try
             {
+                _token.ThrowIfCancellationRequested();
+
+                if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
+                    return;
+
                 int bucket = -1;
                 int moveToShard = -1;
                 bool found = false;
-                bool monitorTaken = false;
-                try
+                using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
                 {
-                    _token.ThrowIfCancellationRequested();
+                    var configuration = _database.ShardingConfiguration;
 
-                    Monitor.TryEnter(this, 0, ref monitorTaken);
-                    if (monitorTaken == false)
-                        return;
-
-                    if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
-                        return;
-
-                    using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    for (var index = 0; index < configuration.BucketRanges.Count; index++)
                     {
-                        var configuration = _database.ShardingConfiguration;
-                        for (var index = 0; index < configuration.BucketRanges.Count; index++)
+                        var range = configuration.BucketRanges[index];
+                        if (range.ShardNumber == _database.ShardNumber)
+                            continue;
+
+                        var start = range.BucketRangeStart;
+                        var end = index == configuration.BucketRanges.Count - 1
+                            ? int.MaxValue
+                            : configuration.BucketRanges[index + 1].BucketRangeStart - 1;
+
+                        var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
+
+                        foreach (var bucketStats in bucketStatistics)
                         {
-                            var range = configuration.BucketRanges[index];
-                            if (range.ShardNumber == _database.ShardNumber)
+                            if (bucketStats.NumberOfDocuments == 0)
                                 continue;
 
-                            var start = range.BucketRangeStart;
-                            var end = index == configuration.BucketRanges.Count - 1
-                                ? int.MaxValue
-                                : configuration.BucketRanges[index + 1].BucketRangeStart - 1;
-
-                            var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
-
-                            foreach (var bucketStats in bucketStatistics)
-                            {
-                                if (bucketStats.NumberOfDocuments == 0)
-                                    continue;
-
-                                bucket = bucketStats.Bucket;
-                                moveToShard = range.ShardNumber;
-                                found = true;
-                                break;
-                            }
-
-                            if (found)
-                                break;
+                            bucket = bucketStats.Bucket;
+                            moveToShard = range.ShardNumber;
+                            found = true;
+                            break;
                         }
+
+                        if (found)
+                            break;
                     }
-                }
-                finally
-                {
-                    if (monitorTaken)
-                        Monitor.Exit(this);
                 }
 
                 if (found)
@@ -100,7 +88,5 @@ namespace Raven.Server.Documents.Sharding.Background
 
             await _database.ServerStore.SendToLeaderAsync(cmd);
         }
-
-        public void Dispose() => Monitor.Enter(this);
     }
 }

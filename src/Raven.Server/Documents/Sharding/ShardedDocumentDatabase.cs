@@ -168,18 +168,6 @@ public class ShardedDocumentDatabase : DocumentDatabase
         return batchCollector;
     }
 
-    protected override void DisposeBackgroundWorkers(ExceptionAggregator exceptionAggregator)
-    {
-        base.DisposeBackgroundWorkers(exceptionAggregator);
-
-        ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ShardedPeriodicDocumentsMigrator");
-        exceptionAggregator.Execute(() =>
-        {
-            DocumentsMigrator?.Dispose();
-        });
-        ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ShardedPeriodicDocumentsMigrator");
-    }
-
     protected class ShardedClusterTransactionBatchCollector : ClusterTransactionBatchCollector
     {
         private readonly ShardedDocumentDatabase _database;
