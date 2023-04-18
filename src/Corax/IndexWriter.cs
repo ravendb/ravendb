@@ -424,6 +424,7 @@ namespace Corax
             for (int i = 0; i < bufferSize; ++i)
                 _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i));
 
+            _entriesAlreadyAdded = new HashSet<long>();
         }
         
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -871,6 +872,7 @@ namespace Corax
         }
 
         private readonly long _initialNumberOfEntries;
+        private HashSet<long> _entriesAlreadyAdded;
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
         private void AddSuggestions(IndexedField field, Slice slice)
@@ -1438,6 +1440,7 @@ namespace Corax
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
             Tree fieldsTree = Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
+            Tree entriesToTermsTree = Transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfTermsInIndex, _numberOfTermModifications);
             ProcessDeletes();
@@ -1450,7 +1453,7 @@ namespace Corax
                 if (indexedField.Textual.Count == 0)
                     continue; 
 
-                InsertTextualField(fieldsTree, indexedField, workingBuffer, ref keys);
+                InsertTextualField(fieldsTree, entriesToTermsTree, indexedField, workingBuffer, ref keys);
                 InsertNumericFieldLongs(fieldsTree, indexedField, workingBuffer);
                 InsertNumericFieldDoubles(fieldsTree, indexedField, workingBuffer);
             }
@@ -1459,7 +1462,7 @@ namespace Corax
             {
                 foreach (var (_, indexedField) in _dynamicFieldsTerms)
                 {
-                    InsertTextualField(fieldsTree, indexedField, workingBuffer, ref keys);
+                    InsertTextualField(fieldsTree, entriesToTermsTree, indexedField, workingBuffer, ref keys);
                     InsertNumericFieldLongs(fieldsTree, indexedField, workingBuffer);
                     InsertNumericFieldDoubles(fieldsTree, indexedField, workingBuffer);
 
@@ -1499,11 +1502,14 @@ namespace Corax
         }
 
 
-        private void InsertTextualField(Tree fieldsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
+        private void InsertTextualField(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
         {
             var fieldTree = fieldsTree.CompactTreeFor(indexedField.Name);
+            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(long)); 
             var currentFieldTerms = indexedField.Textual;
             int termsCount = currentFieldTerms.Count;
+            
+            _entriesAlreadyAdded.Clear();
 
             if (sortedTermsBuffer.Length < termsCount)
             {
@@ -1532,7 +1538,8 @@ namespace Corax
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 
-                bool found = fieldTree.TryGetNextValue(termsSpan, out var existingIdInTree, out var scope);
+                bool found = fieldTree.TryGetNextValue(termsSpan, out var termContainerId, out var existingIdInTree, out var scope);
+                Debug.Assert(found || entries.TotalRemovals == 0, "Cannot remove entries from term that isn't already there");
                 if (entries.TotalAdditions > 0 && found == false)
                 {
                     if (entries.TotalRemovals != 0)
@@ -1542,20 +1549,17 @@ namespace Corax
                     _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, entries.TermSize);
                     
                     dumper.WriteAddition(term, termId);
-                    fieldTree.Add(scope.Key, termId);
+                    termContainerId = fieldTree.Add(scope.Key, termId);
                 }
                 else
                 {
                     switch (AddEntriesToTerm(tmpBuf, existingIdInTree, ref entries, out termId))
                     {
                         case AddEntriesToTermResult.UpdateTermId:
-#if ENABLE_TERMDUMPER
                             if (termId != existingIdInTree)
                             {
                                 dumper.WriteRemoval(term, existingIdInTree);
                             }
-#endif
-     
                             dumper.WriteAddition(term, termId);
                             fieldTree.Add(scope.Key, termId);
                             break;
@@ -1578,9 +1582,24 @@ namespace Corax
                     {
                         throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
                     }
-
                 }
 
+                var removals = entries.Removals;
+                for (int i = 0; i < removals.Length; i++)
+                {
+                    // if already added, we don't need to remove it in this batch
+                    if(_entriesAlreadyAdded.Contains(removals[i])) 
+                        continue;
+                    entriesToTerms.Delete(removals[i]);
+                }
+                var additions = entries.Additions;
+                for (int i = 0; i < additions.Length; i++)
+                {
+                    if(_entriesAlreadyAdded.Add(additions[i]) == false)
+                        continue;
+                    entriesToTerms.Add(additions[i], termContainerId);
+                }
+                
                 scope.Dispose();
             }
         }

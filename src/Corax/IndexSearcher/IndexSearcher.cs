@@ -54,6 +54,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly Tree _metadataTree;
     private readonly Tree _fieldsTree;
+    private readonly Tree _entriesToTermsTree;
 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
@@ -65,6 +66,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
     }
 
@@ -396,6 +398,19 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
 
         return sliceFieldName;
+    }
+
+    public TermsReader TermsReaderFor(string name)
+    {
+        using (Slice.From(Allocator, name, ByteStringType.Immutable, out var nameSlice))
+        {
+            return TermsReaderFor(nameSlice);
+        }
+    }
+    
+    public TermsReader TermsReaderFor(Slice name)
+    {
+        return new TermsReader(_transaction.LowLevelTransaction, _entriesToTermsTree, name);
     }
 
     public void Dispose()
