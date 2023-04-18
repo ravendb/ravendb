@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Client.Documents
@@ -9,10 +10,11 @@ namespace FastTests.Client.Documents
         {
         }
 
-        [Fact]
-        public void PatchOnEnumShouldWork()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void PatchOnEnumShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string id;
                 using (var session = store.OpenSession())

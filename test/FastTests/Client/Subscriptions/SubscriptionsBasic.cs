@@ -33,10 +33,11 @@ namespace FastTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void SubscriptionLongName()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SubscriptionLongName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Assert.Throws<SubscriptionNameException>(() => store.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>
                 {
@@ -45,10 +46,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanDeleteSubscription()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDeleteSubscription(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id1 = store.Subscriptions.Create<User>();
                 var id2 = store.Subscriptions.Create<User>();
@@ -66,10 +68,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ShouldThrowWhenOpeningNoExisingSubscription()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldThrowWhenOpeningNoExisingSubscription(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions("1")
                 {
@@ -79,10 +82,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ShouldThrowOnAttemptToOpenAlreadyOpenedSubscription()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldThrowOnAttemptToOpenAlreadyOpenedSubscription(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
@@ -113,10 +117,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
-        public void ShouldBeAbleToChangeBufferSizes()
+        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldBeAbleToChangeBufferSizes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -135,32 +140,30 @@ namespace FastTests.Client.Subscriptions
                     ReceiveBufferSizeInBytes = 3 * 1024
                 }))
                 {
-                    var keys = new BlockingCollection<string>();
-                    var ages = new BlockingCollection<int>();
+                    var users = new BlockingCollection<User>();
 
                     subscription.Run(batch =>
                     {
-                        batch.Items.ForEach(x => keys.Add(x.Id));
-                        batch.Items.ForEach(x => ages.Add(x.Result.Age));
+                        batch.Items.ForEach(x => users.Add(x.Result));
                     });
 
-                    Assert.True(keys.TryTake(out string key, _reasonableWaitTime));
-                    Assert.Equal("users/1", key);
+                    var expected = new Dictionary<string, int>
+                    {
+                        ["users/1"] = 31, 
+                        ["users/12"] = 27, 
+                        ["users/3"] = 25
+                    };
+                    Assert.True(users.TryTake(out User user, _reasonableWaitTime));
+                    Assert.True(expected.Remove(user.Id, out var age), $"missing {user.Id}");
+                    Assert.Equal(age, user.Age);
 
-                    Assert.True(keys.TryTake(out key, _reasonableWaitTime));
-                    Assert.Equal("users/12", key);
+                    Assert.True(users.TryTake(out user, _reasonableWaitTime));
+                    Assert.True(expected.Remove(user.Id, out age), $"missing {user.Id}");
+                    Assert.Equal(age, user.Age);
 
-                    Assert.True(keys.TryTake(out key, _reasonableWaitTime));
-                    Assert.Equal("users/3", key);
-
-                    Assert.True(ages.TryTake(out int age, _reasonableWaitTime));
-                    Assert.Equal(31, age);
-
-                    Assert.True(ages.TryTake(out age, _reasonableWaitTime));
-                    Assert.Equal(27, age);
-
-                    Assert.True(ages.TryTake(out age, _reasonableWaitTime));
-                    Assert.Equal(25, age);
+                    Assert.True(users.TryTake(out user, _reasonableWaitTime));
+                    Assert.True(expected.Remove(user.Id, out age), $"missing {user.Id}");
+                    Assert.Equal(age, user.Age);
 
                     var expectedSendBufferSize = 4 * 1024;
                     var expectedReceiveBufferSize = 3 * 1024;
@@ -177,10 +180,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
-        public void ShouldStreamAllDocumentsAfterSubscriptionCreation()
+        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldStreamAllDocumentsAfterSubscriptionCreation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -197,32 +201,30 @@ namespace FastTests.Client.Subscriptions
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
-                    var keys = new BlockingCollection<string>();
-                    var ages = new BlockingCollection<int>();
+                    var users = new BlockingCollection<User>();
 
                     subscription.Run(batch =>
                     {
-                        batch.Items.ForEach(x => keys.Add(x.Id));
-                        batch.Items.ForEach(x => ages.Add(x.Result.Age));
+                        batch.Items.ForEach(x => users.Add(x.Result));
                     });
 
-                    Assert.True(keys.TryTake(out string key, _reasonableWaitTime));
-                    Assert.Equal("users/1", key);
+                    var expected = new Dictionary<string, int>
+                    {
+                        ["users/1"] = 31, 
+                        ["users/12"] = 27, 
+                        ["users/3"] = 25
+                    };
+                    Assert.True(users.TryTake(out User user, _reasonableWaitTime));
+                    Assert.True(expected.Remove(user.Id, out var age), $"missing {user.Id}");
+                    Assert.Equal(age, user.Age);
 
-                    Assert.True(keys.TryTake(out key, _reasonableWaitTime));
-                    Assert.Equal("users/12", key);
+                    Assert.True(users.TryTake(out user, _reasonableWaitTime));
+                    Assert.True(expected.Remove(user.Id, out age), $"missing {user.Id}");
+                    Assert.Equal(age, user.Age);
 
-                    Assert.True(keys.TryTake(out key, _reasonableWaitTime));
-                    Assert.Equal("users/3", key);
-
-                    Assert.True(ages.TryTake(out int age, _reasonableWaitTime));
-                    Assert.Equal(31, age);
-
-                    Assert.True(ages.TryTake(out age, _reasonableWaitTime));
-                    Assert.Equal(27, age);
-
-                    Assert.True(ages.TryTake(out age, _reasonableWaitTime));
-                    Assert.Equal(25, age);
+                    Assert.True(users.TryTake(out user, _reasonableWaitTime));
+                    Assert.True(expected.Remove(user.Id, out age), $"missing {user.Id}");
+                    Assert.Equal(age, user.Age);
 
                     var expectedSendBufferSize = SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
                     var expectedReceiveBufferSize = SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
@@ -239,10 +241,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void ShouldSendAllNewAndModifiedDocs()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldSendAllNewAndModifiedDocs(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
@@ -295,10 +298,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void ShouldRespectMaxDocCountInBatch()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldRespectMaxDocCountInBatch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -340,10 +344,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void ShouldRespectCollectionCriteria()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldRespectCollectionCriteria(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -422,10 +427,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void WillAcknowledgeEmptyBatches()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void WillAcknowledgeEmptyBatches(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
 
@@ -466,8 +472,9 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task ShouldKeepPullingDocsAfterServerRestart()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldKeepPullingDocsAfterServerRestart(Options options)
         {
             var dataPath = NewDataPath();
 
@@ -487,17 +494,8 @@ namespace FastTests.Client.Subscriptions
                 };
 
                 server = GetNewServer(co);
-
-                store = new DocumentStore()
-                {
-                    Urls = new[] { server.ServerStore.GetNodeHttpServerUrl() },
-                    Database = "RavenDB_2627",
-
-                }.Initialize();
-
-                var doc = new DatabaseRecord(store.Database);
-                var result = store.Maintenance.Server.Send(new CreateDatabaseOperationWithoutNameValidation(doc));
-                await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex, _reasonableWaitTime);
+                options.Server = server;
+                store = GetDocumentStore(options);
 
                 using (var session = store.OpenSession())
                 {
@@ -564,15 +562,16 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanReleaseSubscription()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReleaseSubscription(Options options)
         {
             SubscriptionWorker<dynamic> subscriptionWorker = null;
             SubscriptionWorker<dynamic> throwingSubscriptionWorker = null;
             SubscriptionWorker<dynamic> notThrowingSubscriptionWorker = null;
 
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(options);
             try
             {
                 Cluster.SuspendObserver(Server);
@@ -636,10 +635,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void ShouldPullDocumentsAfterBulkInsert()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldPullDocumentsAfterBulkInsert(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
@@ -688,10 +688,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void CanSetToIgnoreSubscriberErrors()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanSetToIgnoreSubscriberErrors(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
@@ -718,8 +719,9 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task RavenDB_3452_ShouldStopPullingDocsIfReleased()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RavenDB_3452_ShouldStopPullingDocsIfReleased(Options options)
         {
             DoNotReuseServer();
             using (var store = GetDocumentStore())
@@ -773,11 +775,12 @@ namespace FastTests.Client.Subscriptions
                 }
             }
         }
-
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void RavenDB_3453_ShouldDeserializeTheWholeDocumentsAfterTypedSubscription()
+        
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void RavenDB_3453_ShouldDeserializeTheWholeDocumentsAfterTypedSubscription(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(id))
@@ -804,28 +807,34 @@ namespace FastTests.Client.Subscriptions
 
                     subscription.Run(x => x.Items.ForEach(i => users.Add(i.Result)));
 
-                    User user;
-                    Assert.True(users.TryTake(out user, _reasonableWaitTime));
-                    Assert.Equal("users/1", user.Id);
-                    Assert.Equal(31, user.Age);
+                    var expected = new Dictionary<string, int>
+                    {
+                        ["users/1"] = 31, 
+                        ["users/12"] = 27, 
+                        ["users/3"] = 25
+                    };
+                    Assert.True(users.TryTake(out User user, _reasonableWaitTime));
+                    Assert.True(expected.Remove(user.Id, out var age), $"missing {user.Id}");
+                    Assert.Equal(age, user.Age);
 
                     Assert.True(users.TryTake(out user, _reasonableWaitTime));
-                    Assert.Equal("users/12", user.Id);
-                    Assert.Equal(27, user.Age);
+                    Assert.True(expected.Remove(user.Id, out age), $"missing {user.Id}");
+                    Assert.Equal(age, user.Age);
 
                     Assert.True(users.TryTake(out user, _reasonableWaitTime));
-                    Assert.Equal("users/3", user.Id);
-                    Assert.Equal(25, user.Age);
+                    Assert.True(expected.Remove(user.Id, out age), $"missing {user.Id}");
+                    Assert.Equal(age, user.Age);
                 }
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void DisposingOneSubscriptionShouldNotAffectOnNotificationsOfOthers()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void DisposingOneSubscriptionShouldNotAffectOnNotificationsOfOthers(Options options)
         {
             SubscriptionWorker<User> subscription1 = null;
             SubscriptionWorker<User> subscription2 = null;
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(options);
             try
             {
                 var id1 = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
@@ -846,16 +855,18 @@ namespace FastTests.Client.Subscriptions
                 var items2 = new BlockingCollection<User>();
                 subscription2.Run(x => x.Items.ForEach(i => items2.Add(i.Result)));
 
+                var expected = new List<string> { "users/1", "users/2" };
 
                 Assert.True(items1.TryTake(out var user, _reasonableWaitTime));
-                Assert.Equal("users/1", user.Id);
+                Assert.True(expected.Contains(user.Id), $"missing {user.Id}");
                 Assert.True(items1.TryTake(out user, _reasonableWaitTime));
-                Assert.Equal("users/2", user.Id);
+                Assert.True(expected.Contains(user.Id), $"missing {user.Id}");
 
                 Assert.True(items2.TryTake(out user, _reasonableWaitTime));
-                Assert.Equal("users/1", user.Id);
+                Assert.True(expected.Contains(user.Id), $"missing {user.Id}");
                 Assert.True(items2.TryTake(out user, _reasonableWaitTime));
-                Assert.Equal("users/2", user.Id);
+                Assert.True(expected.Contains(user.Id), $"missing {user.Id}");
+
 
                 subscription1.Dispose();
 
@@ -866,10 +877,13 @@ namespace FastTests.Client.Subscriptions
                     s.SaveChanges();
                 }
 
+                expected = new List<string> { "users/3", "users/4" };
+
                 Assert.True(items2.TryTake(out user, _reasonableWaitTime));
-                Assert.Equal("users/3", user.Id);
+                Assert.True(expected.Contains(user.Id), $"missing {user.Id}");
                 Assert.True(items2.TryTake(out user, _reasonableWaitTime));
-                Assert.Equal("users/4", user.Id);
+                Assert.True(expected.Contains(user.Id), $"missing {user.Id}");
+
             }
             finally
             {
@@ -879,10 +893,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanUpdateSubscriptionByName()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUpdateSubscriptionByName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var subsId = store.Subscriptions.Create(new SubscriptionCreationOptions
                 {
@@ -913,10 +928,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanUpdateSubscriptionById()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUpdateSubscriptionById(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Subscriptions.Create(new SubscriptionCreationOptions
                 {
@@ -947,10 +963,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void UpdateNonExistentSubscriptionShouldThrow()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void UpdateNonExistentSubscriptionShouldThrow(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var name = "Update";
                 var id = int.MaxValue;
@@ -973,10 +990,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task UpdateSubscriptionShouldReturnNotModified()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task UpdateSubscriptionShouldReturnNotModified(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var updateOptions = new SubscriptionUpdateOptions
                 {
@@ -1002,10 +1020,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanCreateByUpdateSubscription()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanCreateByUpdateSubscription(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var query = "from Users";
                 var name = "Created";
@@ -1093,10 +1112,12 @@ namespace FastTests.Client.Subscriptions
             public string SomeProp { get; set; }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "RavenDB-20336")]
+        public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             const string someProp = "SomeValue";
             using (var session = store.OpenAsyncSession())
@@ -1136,10 +1157,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction()
+        [RavenTheory(RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             var entity = new User();
             using (var session = store.OpenAsyncSession())

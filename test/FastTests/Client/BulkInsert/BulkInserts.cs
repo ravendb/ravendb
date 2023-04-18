@@ -63,8 +63,9 @@ namespace FastTests.Client.BulkInsert
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
-        public async Task AsyncSimpleBulkInsertShouldWork()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task AsyncSimpleBulkInsertShouldWork(Options options)
         {
             var fooBars = new[]
             {
@@ -74,7 +75,7 @@ namespace FastTests.Client.BulkInsert
                 new FooBar { Name = "Mega Jane" }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -104,12 +105,13 @@ namespace FastTests.Client.BulkInsert
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
-        public async Task KilledTooEarly()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task KilledTooEarly(Options options)
         {
             var exception = await Assert.ThrowsAnyAsync<Exception>(async () =>
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(options))
                 {
                     using (var bulkInsert = store.BulkInsert())
                     {
@@ -126,10 +128,11 @@ namespace FastTests.Client.BulkInsert
             Assert.True(exception is BulkInsertAbortedException);
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
-        public void ShouldNotAcceptIdsEndingWithPipeLine()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldNotAcceptIdsEndingWithPipeLine(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -140,11 +143,12 @@ namespace FastTests.Client.BulkInsert
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
-        public void CanModifyMetadataWithBulkInsert()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanModifyMetadataWithBulkInsert(Options options)
         {
             var expirationDate = DateTime.Today.AddYears(1).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -167,20 +171,20 @@ namespace FastTests.Client.BulkInsert
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
-        public async Task BulkInsertDynamic_WhenProvideDelegateForDynamicCollectionAndType_ShouldUseIt()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task BulkInsertDynamic_WhenProvideDelegateForDynamicCollectionAndType_ShouldUseIt(Options options)
         {
             const string customCollection = "CustomCollection";
             const string customType = "CustomType";
-            using var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
-                {
-                    s.Conventions.AddIdFieldToDynamicObjects = false;
-                    s.Conventions.FindCollectionNameForDynamic = (entity) => customCollection;
-                    s.Conventions.FindClrTypeNameForDynamic = (entity) => customType;
-                }
-            });
+                s.Conventions.AddIdFieldToDynamicObjects = false;
+                s.Conventions.FindCollectionNameForDynamic = (entity) => customCollection;
+                s.Conventions.FindClrTypeNameForDynamic = (entity) => customType;
+            };
+
+            using var store = GetDocumentStore(options);
 
             var str = @"
 {
