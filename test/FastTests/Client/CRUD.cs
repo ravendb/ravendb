@@ -20,16 +20,16 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.ClientApi)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void CRUD_Operations(bool useCompression)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations(Options options, bool useCompression)
         {
-            using (var store = GetDocumentStore(new Options(){ ModifyDocumentStore = x =>
-                       {
-                           x.Conventions.UseHttpCompression = useCompression;
-                           x.Conventions.UseHttpDecompression = useCompression;
-                       }
-                   }))
+            options.ModifyDocumentStore = x =>
+            {
+                x.Conventions.UseHttpCompression = useCompression;
+                x.Conventions.UseHttpDecompression = useCompression;
+            };
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -63,59 +63,11 @@ namespace FastTests.Client
             }
         }
 
-        private static IEnumerable<object[]>  GetMetadataStaticFields()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations_with_what_changed(Options options)
         {
-            return typeof(Constants.Documents.Metadata)
-                .GetFields( System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
-                .Select(p => p.GetValue(null).ToString())
-                .Distinct()
-                .SelectMany(s =>
-                {
-                    var builder = new StringBuilder(s);
-                    //Just replacing one char in the end
-                    builder[^1] = builder[^1] == 'a' ? 'b' : 'a';
-                    return new[] {new object[] {builder.ToString()}};
-                });
-        }
-        
-        [Theory]
-        [MemberData(nameof(GetMetadataStaticFields))]
-        public async Task StoreDocument_WheHasUserMetadataPropertyWithLengthEqualsToInternalRavenDbMetadataPropertyLength(string metadataPropNameToTest)
-        {
-            const string id = "id1";
-            const string value = "Value";
-
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
-                {
-                    var executor = store.GetRequestExecutor();
-                    using var dis = executor.ContextPool.AllocateOperationContext(out var context);
-                    var p = context.ReadObject(new DynamicJsonValue
-                    {
-                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                        {
-                            [metadataPropNameToTest] = value
-
-                        }
-                    }, $"{nameof(metadataPropNameToTest)} {metadataPropNameToTest}");
-                    await session.StoreAsync(p, null, id);
-                    await session.SaveChangesAsync();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var entity = await session.LoadAsync<DynamicJsonValue>(id);
-                    var metadata = session.Advanced.GetMetadataFor(entity);
-                    Assert.Equal(value, metadata[metadataPropNameToTest]);
-                }
-            }
-        }
-
-        [Fact]
-        public void CRUD_Operations_with_what_changed()
-        {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -152,10 +104,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CRUD_Operations_With_Array_In_Object()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations_With_Array_In_Object(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -175,10 +128,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CRUD_Operations_With_Array_In_Object_2()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations_With_Array_In_Object_2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -199,10 +153,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CRUD_Operations_With_Array_In_Object_3()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations_With_Array_In_Object_3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -222,10 +177,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CRUD_Operations_With_Array_In_Object_4()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations_With_Array_In_Object_4(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -245,10 +201,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CRUD_Operations_With_Array_In_Object_6()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations_With_Array_In_Object_6(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -268,10 +225,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CRUD_Operations_With_Null()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations_With_Null(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -303,10 +261,11 @@ namespace FastTests.Client
             public int Age { get; set; }
         }
 
-        [Fact]
-        public void CRUD_Operations_With_Array_of_objects()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations_With_Array_of_objects(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -424,10 +383,11 @@ namespace FastTests.Client
             public Arr1[] arr1 { get; set; }
         }
 
-        [Fact]
-        public void CRUD_Operations_With_Array_of_Arrays()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations_With_Array_of_Arrays(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -508,12 +468,13 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CRUD_Can_Update_Property_To_Null()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Can_Update_Property_To_Null(Options options)
         {
             //RavenDB-8345
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -536,12 +497,13 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CRUD_Can_Update_Property_From_Null_To_Object()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Can_Update_Property_From_Null_To_Object(Options options)
         {
             //RavenDB-8345
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -574,10 +536,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task Load_WhenDocumentNotFound_ShouldTrack()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Load_WhenDocumentNotFound_ShouldTrack(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             const string notExistId1 = "notExistId1";
             const string notExistId2 = "notExistId2";
             var user = new User();

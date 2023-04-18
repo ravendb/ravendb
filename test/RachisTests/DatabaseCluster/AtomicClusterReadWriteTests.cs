@@ -21,6 +21,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Sparrow.Extensions;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -631,6 +632,56 @@ namespace RachisTests.DatabaseCluster
                 var compareExchangeValues = await dest.Operations.SendAsync(new GetCompareExchangeValuesOperation<object>(""));
                 return compareExchangeValues.Any() == false;
             });
+        }
+
+        
+        private static IEnumerable<object[]>  GetMetadataStaticFields()
+        {
+            return typeof(Constants.Documents.Metadata)
+                .GetFields( System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
+                .Select(p => p.GetValue(null).ToString())
+                .Distinct()
+                .SelectMany(s =>
+                {
+                    var builder = new StringBuilder(s);
+                    //Just replacing one char in the end
+                    builder[^1] = builder[^1] == 'a' ? 'b' : 'a';
+                    return new[] {new object[] {builder.ToString()}};
+                });
+        }
+        
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenMemberData(nameof(GetMetadataStaticFields), DatabaseMode = RavenDatabaseMode.All)]
+        public async Task StoreDocument_WheHasUserMetadataPropertyWithLengthEqualsToInternalRavenDbMetadataPropertyLength(Options options, string metadataPropNameToTest)
+        {
+            const string id = "id1";
+            const string value = "Value";
+
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    var executor = store.GetRequestExecutor();
+                    using var dis = executor.ContextPool.AllocateOperationContext(out var context);
+                    var p = context.ReadObject(new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [metadataPropNameToTest] = value
+
+                        }
+                    }, $"{nameof(metadataPropNameToTest)} {metadataPropNameToTest}");
+                    await session.StoreAsync(p, null, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var entity = await session.LoadAsync<DynamicJsonValue>(id);
+                    var metadata = session.Advanced.GetMetadataFor(entity);
+                    Assert.Equal(value, metadata[metadataPropNameToTest]);
+                }
+            }
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]

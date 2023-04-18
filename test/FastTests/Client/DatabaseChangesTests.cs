@@ -20,20 +20,18 @@ namespace FastTests.Client
         {
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task DatabaseChanges_WhenRetryAfterCreatingDatabase_ShouldSubscribe(bool disableTopologyUpdates)
+        [RavenTheory(RavenTestCategory.ChangesApi)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DatabaseChanges_WhenRetryAfterCreatingDatabase_ShouldSubscribe(Options options, bool disableTopologyUpdates)
         {
-            var database = GetDatabaseName();
             var server = GetNewServer();
-            using var store = new DocumentStore
-            {
-                Database = database,
-                Urls = new[] { server.WebUrl },
-                Conventions = new DocumentConventions { DisableTopologyUpdates = disableTopologyUpdates }
-            }.Initialize();
 
+            options.ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = disableTopologyUpdates;
+            options.Server = server;
+            options.CreateDatabase = false;
+
+            using var store = GetDocumentStore(options);
             await server.ServerStore.EnsureNotPassiveAsync();
 
             using (var changes = store.Changes())
@@ -61,15 +59,13 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task DatabaseChanges_WhenTryToReconnectAfterDeletingDatabase_ShouldFailToSubscribe(bool disableTopologyUpdates)
+        [RavenTheory(RavenTestCategory.ChangesApi)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DatabaseChanges_WhenTryToReconnectAfterDeletingDatabase_ShouldFailToSubscribe(Options options, bool disableTopologyUpdates)
         {
-            using var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = documentStore => documentStore.Conventions = new DocumentConventions { DisableTopologyUpdates = disableTopologyUpdates }
-            });
+            options.ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = disableTopologyUpdates;
+            using var store = GetDocumentStore(options);
 
             using (var changes = store.Changes())
             {
@@ -96,15 +92,13 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task DatabaseChanges_WhenDeleteDatabaseAfterSubscribe_ShouldSetConnectionStateToDatabaseDoesNotExistException(bool disableTopologyUpdates)
+        [RavenTheory(RavenTestCategory.ChangesApi)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DatabaseChanges_WhenDeleteDatabaseAfterSubscribe_ShouldSetConnectionStateToDatabaseDoesNotExistException(Options options, bool disableTopologyUpdates)
         {
-            using var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = documentStore => documentStore.Conventions = new DocumentConventions { DisableTopologyUpdates = disableTopologyUpdates }
-            });
+            options.ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = disableTopologyUpdates;
+            using var store = GetDocumentStore(options);
 
             using (var changes = store.Changes())
             {
@@ -117,15 +111,13 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task DatabaseChanges_WhenDisposeDatabaseChanges_ShouldSetConnectionStateDisposed(bool disableTopologyUpdates)
+        [RavenTheory(RavenTestCategory.ChangesApi)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DatabaseChanges_WhenDisposeDatabaseChanges_ShouldSetConnectionStateDisposed(Options options, bool disableTopologyUpdates)
         {
-            using var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = documentStore => documentStore.Conventions = new DocumentConventions { DisableTopologyUpdates = disableTopologyUpdates }
-            });
+            options.ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = disableTopologyUpdates;
+            using var store = GetDocumentStore(options);
 
             using (var changes = store.Changes())
             {

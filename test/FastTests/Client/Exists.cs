@@ -1,4 +1,5 @@
 ﻿using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,10 +11,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void CheckIfDocumentExists()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CheckIfDocumentExists(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
