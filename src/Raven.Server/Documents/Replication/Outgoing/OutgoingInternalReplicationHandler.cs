@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Senders;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _lastDestinationEtag = replicationBatchReply.CurrentEtag;
         }
 
-        internal class UpdateSiblingCurrentEtag : TransactionOperationsMerger.MergedTransactionCommand
+        internal class UpdateSiblingCurrentEtag : DocumentMergedTransactionCommand
         {
             private readonly ReplicationMessageReply _replicationBatchReply;
             private readonly AsyncManualResetEvent _trigger;
@@ -143,13 +144,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 return result.IsValid ? 1 : 0;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
             {
                 return new UpdateSiblingCurrentEtagDto { ReplicationBatchReply = _replicationBatchReply };
             }
         }
 
-        internal class UpdateSiblingCurrentEtagDto : TransactionOperationsMerger.IReplayableCommandDto<UpdateSiblingCurrentEtag>
+        internal class UpdateSiblingCurrentEtagDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, UpdateSiblingCurrentEtag>
         {
             public ReplicationMessageReply ReplicationBatchReply;
 

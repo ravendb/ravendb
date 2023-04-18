@@ -23,7 +23,7 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json.Converters;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -163,14 +163,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static TransactionOperationsMerger.MergedTransactionCommand DeserializeCommand(
+        private static MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction> DeserializeCommand(
             DocumentsOperationContext context,
             DocumentDatabase database,
             string type,
             BlittableJsonReaderObject wrapCmdReader,
             PeepingTomStream peepingTomStream)
         {
-            if (!wrapCmdReader.TryGet(nameof(RecordingCommandDetails.Command), out BlittableJsonReaderObject commandReader))
+            if (!wrapCmdReader.TryGet(nameof(RecordingCommandDetails<DocumentsOperationContext, DocumentsTransaction>.Command), out BlittableJsonReaderObject commandReader))
             {
                 throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> DeserializeCommandDto(
+        private static IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> DeserializeCommandDto(
             string type,
             JsonSerializer jsonSerializer,
             BlittableJsonReader reader,
@@ -329,9 +329,11 @@ namespace Raven.Server.Documents
         }
     }
 
-    internal class RecordingCommandDetails : RecordingDetails
+    internal class RecordingCommandDetails<TOperationContext, TTransaction> : RecordingDetails
+        where TOperationContext : TransactionOperationContext<TTransaction>
+        where TTransaction : RavenTransaction
     {
-        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> Command;
+        public IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> Command;
 
         public RecordingCommandDetails(string type) : base(type)
         {

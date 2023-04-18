@@ -4,7 +4,7 @@ namespace Raven.Server.Documents
 {
     public class SlowWriteNotification
     {
-        public static void Notify(CommitStats stats, NotificationCenter.NotificationCenter notificationCenter)
+        public static void Notify(CommitStats stats, NotificationCenter.AbstractDatabaseNotificationCenter notificationCenter)
         {
             if (stats.NumberOf4KbsWrittenToDisk == 0 ||
                 // we don't want to raise the error too often

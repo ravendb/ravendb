@@ -13,7 +13,7 @@ public class DatabaseStatsSender : AbstractDatabaseStatsSender
 {
     private readonly DocumentDatabase _database;
 
-    public DatabaseStatsSender([NotNull] DocumentDatabase database, DatabaseNotificationCenter notificationCenter)
+    public DatabaseStatsSender([NotNull] DocumentDatabase database, AbstractDatabaseNotificationCenter notificationCenter)
         : base(database.Name, notificationCenter, database.DatabaseShutdown)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));

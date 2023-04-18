@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
@@ -86,7 +87,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
         return Math.Max(32, lastSize);
     }
 
-    internal class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
+    internal class MergedNextHiLoCommand : DocumentMergedTransactionCommand
     {
         public string Key;
         public DocumentDatabase Database;
@@ -152,7 +153,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
             return 1;
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
         {
             return new MergedNextHiLoCommandDto
             {
@@ -166,7 +167,7 @@ internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor
         }
     }
 
-    internal class MergedNextHiLoCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedNextHiLoCommand>
+    internal class MergedNextHiLoCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedNextHiLoCommand>
     {
         public string Key;
         public long Capacity;

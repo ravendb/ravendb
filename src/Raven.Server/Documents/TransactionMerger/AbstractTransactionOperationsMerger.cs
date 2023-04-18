@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.TransactionMerger
     {
         private readonly string _resourceName;
         private JsonContextPoolBase<TOperationContext> _contextPool;
-        private NotificationCenter.NotificationCenter _notificationCenter;
+        protected NotificationCenter.AbstractNotificationCenter NotificationCenter;
         private readonly RavenConfiguration _configuration;
         private readonly SystemTime _time;
         private readonly CancellationToken _shutdown;
@@ -77,10 +77,10 @@ namespace Raven.Server.Documents.TransactionMerger
             _lastHighDirtyMemCheck = time.GetUtcNow();
         }
 
-        public void Initialize([NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] NotificationCenter.NotificationCenter notificationCenter)
+        public void Initialize([NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] NotificationCenter.AbstractNotificationCenter notificationCenter)
         {
             _contextPool = contextPool ?? throw new ArgumentNullException(nameof(contextPool));
-            _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
+            NotificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
 
             _initialized = true;
         }
@@ -400,7 +400,8 @@ namespace Raven.Server.Documents.TransactionMerger
                                 _recording.State?.TryRecord(context, TxInstruction.Commit);
                                 tx.Commit();
 
-                                SlowWriteNotification.Notify(stats, _notificationCenter);
+                                // SlowWriteNotification.Notify(stats, _notificationCenter);
+                                NotifyAboutSlowWrite(stats);
                                 _recording.State?.TryRecord(context, TxInstruction.DisposeTx, tx.Disposed == false);
                                 tx.Dispose();
                             }
@@ -457,6 +458,7 @@ namespace Raven.Server.Documents.TransactionMerger
         }
 
         internal abstract void UpdateGlobalReplicationInfoBeforeCommit(TOperationContext context);
+        internal abstract void NotifyAboutSlowWrite(CommitStats stats);
 
         private void NotifyTransactionFailureAndRerunIndependently(List<MergedTransactionCommand<TOperationContext, TTransaction>> pendingOps, Exception e)
         {
@@ -603,7 +605,8 @@ namespace Raven.Server.Documents.TransactionMerger
                                 _recording.State?.TryRecord(current, TxInstruction.Commit);
                                 previous.Transaction.Commit();
 
-                                SlowWriteNotification.Notify(stats, _notificationCenter);
+                                // SlowWriteNotification.Notify(stats, NotificationCenter);
+                                NotifyAboutSlowWrite(stats);
                             }
                             catch (Exception e)
                             {
@@ -652,7 +655,7 @@ namespace Raven.Server.Documents.TransactionMerger
                 //not sure about this 'if'
                 if (commitStats != null)
                 {
-                    SlowWriteNotification.Notify(commitStats, _notificationCenter);
+                    NotifyAboutSlowWrite(commitStats);
                 }
 
                 if (_log.IsInfoEnabled)
@@ -921,7 +924,7 @@ namespace Raven.Server.Documents.TransactionMerger
 
                                     _recording.State?.TryRecord(context, TxInstruction.Commit);
                                     tx.Commit();
-                                    SlowWriteNotification.Notify(stats, _notificationCenter);
+                                    NotifyAboutSlowWrite(stats);
                                 }
                             }
 

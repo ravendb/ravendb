@@ -7,6 +7,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -118,7 +119,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         public override string FromToString => base.FromToString +
                                                $"{(_incomingPullReplicationParams?.Name == null ? null : $"(pull definition: {_incomingPullReplicationParams?.Name})")}";
 
-        protected override TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
+        protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
             var cmd = new MergedDocumentForPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams);
@@ -130,7 +131,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             return cmd;
         }
 
-        protected override TransactionOperationsMerger.MergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
+        protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
         {
             return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo.SourceDatabaseId, trigger, _incomingPullReplicationParams);
         }
@@ -296,7 +297,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return base.TryUpdateChangeVector(context);
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
             {
                 return new MergedUpdateDatabaseChangeVectorForHubCommandDto
                 {
@@ -306,7 +307,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        internal class MergedUpdateDatabaseChangeVectorForHubCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedUpdateDatabaseChangeVectorForHubCommand>
+        internal class MergedUpdateDatabaseChangeVectorForHubCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorForHubCommand>
         {
             public MergedUpdateDatabaseChangeVectorCommandDto BaseDto;
             public ReplicationLoader.PullReplicationParams PullReplicationParams;

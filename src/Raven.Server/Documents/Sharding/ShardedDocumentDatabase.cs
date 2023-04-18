@@ -10,6 +10,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding.Background;
 using Raven.Server.Documents.Sharding.Smuggler;
 using Raven.Server.Documents.Subscriptions.Sharding;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -227,7 +228,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public static ShardedDocumentDatabase CastToShardedDocumentDatabase(DocumentDatabase database) => database as ShardedDocumentDatabase ?? throw new ArgumentException($"Database {database.Name} must be sharded!");
 
-    public class DeleteBucketCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class DeleteBucketCommand : DocumentMergedTransactionCommand
     {
         private readonly ShardedDocumentDatabase _database;
         private readonly int _bucket;
@@ -250,7 +251,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
             return 1;
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
         {
             throw new NotImplementedException();
         }

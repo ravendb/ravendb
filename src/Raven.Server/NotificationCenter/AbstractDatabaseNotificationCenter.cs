@@ -17,7 +17,12 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
     public readonly SlowWriteNotifications SlowWrites;
 
     protected AbstractDatabaseNotificationCenter(ServerStore serverStore, string database, RavenConfiguration configuration, CancellationToken shutdown)
-        : base(serverStore.NotificationCenter.Storage.GetStorageFor(database), configuration, LoggingSource.Instance.GetLogger<DatabaseNotificationCenter>(database))
+        : this(serverStore.NotificationCenter.Storage.GetStorageFor(database), database, configuration, shutdown)
+    {
+    }
+
+    protected AbstractDatabaseNotificationCenter(NotificationsStorage notificationsStorage, string database, RavenConfiguration configuration, CancellationToken shutdown)
+        : base(notificationsStorage, configuration, LoggingSource.Instance.GetLogger<DatabaseNotificationCenter>(database))
     {
         Database = database;
         Paging = new Paging(this);

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -13,7 +14,7 @@ using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;
 
-public class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
+public class MergedInsertBulkCommand : DocumentMergedTransactionCommand
 {
     public Logger Logger;
     public DocumentDatabase Database;
@@ -157,7 +158,7 @@ public class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransac
         return NumberOfCommands;
     }
 
-    public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+    public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
     {
         return new MergedInsertBulkCommandDto
         {

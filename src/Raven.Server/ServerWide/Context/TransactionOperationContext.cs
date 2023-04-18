@@ -12,12 +12,9 @@ namespace Raven.Server.ServerWide.Context
     {
         public bool IgnoreStalenessDueToReduceOutputsToDelete;
 
-        public readonly StorageEnvironment Environment;
-
         public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
-            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
+            : base(environment, initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
-            Environment = environment;
         }
 
         protected override RavenTransaction CloneReadTransaction(RavenTransaction previous)
@@ -53,10 +50,12 @@ namespace Raven.Server.ServerWide.Context
         private readonly int _maxOfAllocatedChangeVectors;
         private int _numberOfAllocatedChangeVectors;
         private FastList<ChangeVector> _allocatedChangeVectors;
+        public readonly StorageEnvironment Environment;
 
-        protected TransactionOperationContext(int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
+        protected TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
             : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
+            Environment = environment;
             PersistentContext = new TransactionPersistentContext();
             Allocator = new ByteStringContext(lowMemoryFlag);
 

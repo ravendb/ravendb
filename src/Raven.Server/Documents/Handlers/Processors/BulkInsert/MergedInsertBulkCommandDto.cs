@@ -1,11 +1,12 @@
 ﻿using System.Linq;
 using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;
 
-public class MergedInsertBulkCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedInsertBulkCommand>
+public class MergedInsertBulkCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedInsertBulkCommand>
 {
     public BatchRequestParser.CommandData[] Commands { get; set; }
 

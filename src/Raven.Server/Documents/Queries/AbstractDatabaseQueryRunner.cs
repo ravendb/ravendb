@@ -11,7 +11,8 @@ using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Suggestions;
-using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -148,7 +149,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         Action<DeterminateProgress> onProgress,
         Func<string, bool, BulkOperationCommand<T>> createCommandForId,
         OperationCancelToken token)
-        where T : TransactionOperationsMerger.MergedTransactionCommand
+        where T : DocumentMergedTransactionCommand
     {
         if (index.Type.IsMapReduce())
             throw new InvalidOperationException("Cannot execute bulk operation on Map-Reduce indexes.");
@@ -229,7 +230,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         };
     }
 
-    internal class BulkOperationCommand<T> : TransactionOperationsMerger.MergedTransactionCommand where T : TransactionOperationsMerger.MergedTransactionCommand
+    internal class BulkOperationCommand<T> : DocumentMergedTransactionCommand where T : DocumentMergedTransactionCommand
     {
         private readonly T _command;
         private readonly bool _retrieveDetails;
@@ -244,7 +245,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
             _afterExecuted = afterExecuted;
         }
 
-        public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
+        public override long Execute(DocumentsOperationContext context, AbstractTransactionOperationsMerger<DocumentsOperationContext, DocumentsTransaction>.RecordingState recording)
         {
             try
             {
@@ -261,7 +262,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
             }
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
         {
             throw new NotSupportedException($"ToDto() of {nameof(BulkOperationCommand<T>)} Should not be called");
         }

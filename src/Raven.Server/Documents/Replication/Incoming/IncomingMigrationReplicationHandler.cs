@@ -2,6 +2,7 @@
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             _shardedDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(parent.Database);
         }
 
-        protected override TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
+        protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
             return new MergedIncomingMigrationCommand(_shardedDatabase, data, lastDocumentEtag, _currentMigrationIndex);
