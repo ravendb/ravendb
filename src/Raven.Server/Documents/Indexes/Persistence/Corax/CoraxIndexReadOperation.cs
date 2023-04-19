@@ -297,8 +297,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             private bool _isMap;
 
-            private HashSet<UnmanagedSpan> _alreadySeenDocumentKeysInPreviousPage;
-            private HashSet<ulong> _alreadySeenProjections;
+            private GrowableHashSet<UnmanagedSpan> _alreadySeenDocumentKeysInPreviousPage;
+            private GrowableHashSet<ulong> _alreadySeenProjections;
 
             public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, IndexFieldsMapping fieldsMapping, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever)
             {
@@ -611,8 +611,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         {
                             foreach (Document item in fetchedDocument.List)
                             {
-                                var qr = CreateQueryResult(ref identityTracker, fetchedDocument.Document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults,
-                                    ref hasProjections, ref markedAsSkipped);
+                                var qr = CreateQueryResult(ref identityTracker, item, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections,
+                                    ref markedAsSkipped);
                                 if (qr.Result is null)
                                 {
                                     docsToLoad++;

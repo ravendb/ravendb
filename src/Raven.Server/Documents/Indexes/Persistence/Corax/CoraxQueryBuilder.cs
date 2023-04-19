@@ -42,7 +42,7 @@ internal static class CoraxQueryBuilder
         public readonly IndexFieldsMapping IndexFieldsMapping;
         public readonly FieldsToFetch FieldsToFetch;
         public readonly Dictionary<string, CoraxHighlightingTermIndex> HighlightingTerms;
-        public readonly long Take;
+        public readonly int Take;
         public readonly List<string> BuildSteps;
         public readonly MemoizationMatchProvider<AllEntriesMatch> AllEntries;
         public readonly QueryMetadata Metadata;
@@ -53,7 +53,7 @@ internal static class CoraxQueryBuilder
 
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, long take, List<string> buildSteps = null)
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, List<string> buildSteps = null)
         {
             IndexSearcher = searcher;
             ServerContext = serverContext;
@@ -109,7 +109,7 @@ internal static class CoraxQueryBuilder
                 coraxQuery = allEntries.Replay();
             }
 
-                sortMetadata = GetSortMetadata(builderParameters);
+            sortMetadata = GetSortMetadata(builderParameters);
 
             if (sortMetadata is not null)
                 coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
