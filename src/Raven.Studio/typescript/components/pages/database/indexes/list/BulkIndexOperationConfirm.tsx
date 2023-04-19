@@ -5,6 +5,7 @@ import { IndexSharedInfo } from "components/models/indexes";
 import { MultipleDatabaseLocationSelector } from "components/common/MultipleDatabaseLocationSelector";
 import { capitalize } from "lodash";
 import assertUnreachable from "components/utils/assertUnreachable";
+import { Icon } from "components/common/Icon";
 
 type operationType = "pause" | "resume" | "enable" | "disable";
 
@@ -21,6 +22,7 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
 
     const infinitive = getInfinitiveForType(type);
     const gerund = getGerund(type);
+    const icon = getIcon(type);
 
     const [selectedLocations, setSelectedLocations] = useState<databaseLocationSpecifier[]>(() => locations);
 
@@ -45,11 +47,11 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
         <Modal isOpen toggle={toggle} wrapClassName="bs5">
             <ModalHeader toggle={toggle}>{title}</ModalHeader>
             <ModalBody>
-                {subtitle}
-                <ul style={{ maxHeight: "200px", overflowY: "auto" }}>
+                <div className="mb-2">{subtitle}</div>
+                <ul style={{ maxHeight: "300px", overflowY: "auto" }}>
                     {indexes.map((index) => (
-                        <li key={index.name} className="padding-xs">
-                            {index.name}
+                        <li key={index.name}>
+                            <strong>{index.name}</strong>
                         </li>
                     ))}
                 </ul>
@@ -70,7 +72,7 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                     Cancel
                 </Button>
                 <Button color="danger" onClick={onSubmit}>
-                    {infinitive}
+                    <Icon icon={icon} /> {infinitive}
                 </Button>
             </ModalFooter>
         </Modal>
@@ -91,6 +93,21 @@ function getGerund(type: operationType) {
             return "pausing";
         case "resume":
             return "resuming";
+        default:
+            assertUnreachable(type);
+    }
+}
+
+function getIcon(type: operationType) {
+    switch (type) {
+        case "disable":
+            return "stop";
+        case "enable":
+            return "play";
+        case "pause":
+            return "pause";
+        case "resume":
+            return "play";
         default:
             assertUnreachable(type);
     }

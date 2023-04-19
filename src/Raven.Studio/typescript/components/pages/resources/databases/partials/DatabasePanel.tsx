@@ -347,7 +347,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                     ? "Remove database"
                                                     : "Database cannot be deleted because of the set lock mode"
                                             }
-                                            color={db.lockMode === "Unlock" && "danger"}
+                                            color={db.lockMode === "Unlock" ? "danger" : "secondary"}
                                             disabled={db.lockMode !== "Unlock"}
                                         >
                                             {lockChanges && <Spinner size="sm" />}
@@ -363,7 +363,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         </Button>
                                         <DropdownToggle
                                             caret
-                                            color={db.lockMode === "Unlock" && "danger"}
+                                            color={db.lockMode === "Unlock" ? "danger" : "secondary"}
                                         ></DropdownToggle>
                                     </ButtonGroup>
 

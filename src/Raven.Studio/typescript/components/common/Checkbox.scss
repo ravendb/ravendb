@@ -8,18 +8,18 @@ input {
     }
 }
 
-@mixin check-variant($color) {
+@mixin check-variant($color-name) {
     .form-check-input {
-        border-color: $color;
+        border-color: rgb(var(--bs-#{$color-name}-rgb));
 
         &:focus {
             box-shadow: 0 0 bs5variables.$input-btn-focus-blur bs5variables.$input-btn-focus-width
-                rgba($color, bs5variables.$input-btn-focus-color-opacity);
+                rgba(var(--bs-#{$color-name}-rgb), bs5variables.$input-btn-focus-color-opacity);
         }
 
         &:checked {
-            background-color: $color;
-            border-color: $color;
+            background-color: rgb(var(--bs-#{$color-name}-rgb));
+            border-color: rgb(var(--bs-#{$color-name}-rgb));
         }
     }
 }
@@ -66,7 +66,7 @@ input {
 
 @each $color, $value in bs5variables.$theme-colors {
     .form-check-#{$color} {
-        @include check-variant($value);
+        @include check-variant($color);
     }
 }
 @mixin check-size-variant($ratio, $name) {

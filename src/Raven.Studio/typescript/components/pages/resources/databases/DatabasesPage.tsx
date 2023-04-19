@@ -1,10 +1,19 @@
 ﻿import React, { useEffect, useState } from "react";
 import { DatabasePanel } from "./partials/DatabasePanel";
 import { useAccessManager } from "hooks/useAccessManager";
-import { DatabasesToolbarActions } from "./partials/DatabasesToolbarActions";
+import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import { Button, Col, DropdownItem, DropdownMenu, DropdownToggle, Row, UncontrolledDropdown } from "reactstrap";
+import {
+    Button,
+    ButtonGroup,
+    Col,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    Row,
+    UncontrolledDropdown,
+} from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
@@ -21,6 +30,7 @@ import {
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { databasesViewSelectors } from "components/pages/resources/databases/store/databasesViewSelectors";
 import { StickyHeader } from "components/common/StickyHeader";
+import { Icon } from "components/common/Icon";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -103,12 +113,15 @@ export function DatabasesPage(props: DatabasesPageProps) {
                 <Row>
                     <Col sm="auto" className="align-self-center">
                         {canCreateNewDatabase && (
-                            <UncontrolledDropdown group>
-                                <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>
-                                    <i className="icon-new-database" />
-                                    <span>New database</span>
-                                </Button>
-                                <DropdownToggle color="primary" caret></DropdownToggle>
+                            <UncontrolledDropdown>
+                                <ButtonGroup className="rounded-group">
+                                    <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>
+                                        <Icon icon="database" addon="plus" />
+                                        New database
+                                    </Button>
+                                    <DropdownToggle color="primary" caret></DropdownToggle>
+                                </ButtonGroup>
+
                                 <DropdownMenu>
                                     <DropdownItem onClick={() => dispatch(openCreateDatabaseFromRestoreDialog())}>
                                         <i className="icon-restore-backup" /> New database from backup (Restore)
@@ -122,7 +135,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
                     </Col>
                 </Row>
 
-                <DatabasesToolbarActions
+                <DatabasesSelectActions
                     databaseNames={filteredDatabaseNames}
                     selectedDatabases={selectedDatabases}
                     setSelectedDatabaseNames={setSelectedDatabaseNames}

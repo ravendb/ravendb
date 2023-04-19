@@ -13,13 +13,16 @@
     --well-bg: #{$base-well-bg};
 
     --hover-filter: #{$hover-filter};
+    --shadow-color: #{to-rgb($shadow-color)};
 }
 
 .modal-content,
 .panel,
 .dropdown-menu,
 .card,
-.popup {
+.popup,
+[class^="bg-faded-"],
+[class*=" bg-faded-"] {
     --text-color: #{$text-color};
     --text-muted: #{$text-muted-color};
     --text-emphasis: #{$text-emphasis-color};

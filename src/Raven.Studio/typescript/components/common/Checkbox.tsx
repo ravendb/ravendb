@@ -51,7 +51,7 @@ export function Checkbox(props: CheckboxProps) {
                 type="checkbox"
                 innerRef={inputEl}
                 id={inputId}
-                checked={indeterminate ? undefined : selected}
+                checked={selected}
                 onChange={toggleSelection}
                 disabled={disabled}
             />

@@ -31,13 +31,7 @@
         }
 
         .index-sidebyside {
-            border-left: 31px solid #d2923d;
-        }
-
-        .sidebyside-actions {
-            .panel {
-                margin-bottom: 0;
-            }
+            border-left: sizes.$gutter solid colors.$warning-var;
         }
     }
 }
