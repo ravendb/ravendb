@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
-using Sparrow.Utils;
 
 namespace Sparrow.Server.Collections
 {
@@ -199,8 +198,7 @@ namespace Sparrow.Server.Collections
 
             while (elementIdx >= 0)
             {
-                ref TKey current = ref keys[elementIdx];
-                if (current.Equals(key))
+                if (keys[elementIdx].Equals(key))
                     return elementIdx;
 
                 elementIdx--;
@@ -212,15 +210,16 @@ namespace Sparrow.Server.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int RequestWritableBucket()
         {
+            _currentIdx++;
+
             if (_currentIdx >= _length && _overflowStorage == null)
             {
                 var storage = new Dictionary<TKey, TValue>(_currentIdx * 2);
-                for (int i = 0; i <= _currentIdx; i++)
+                for (int i = 0; i < _length; i++)
                     storage[_keys[i]] = _values[i];
                 _overflowStorage = storage;
             }
-            
-            _currentIdx++;
+
             return _currentIdx % _length;
         }
 

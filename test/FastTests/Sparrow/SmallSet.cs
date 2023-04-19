@@ -194,10 +194,10 @@ namespace FastTests.Sparrow
 
             var Nl = Vector<long>.Count;
             var llSet = new SmallSet<long, long>(Nl);
-            for (int i = 0; i < 2 * Nl; i++)
+            for (int i = 0; i < 4 * Nl; i++)
                 llSet.Add(i, i);
 
-            for (int i = 0; i < 2 * Nl; i++)
+            for (int i = 0; i < 4 * Nl; i++)
             {
                 Assert.True(llSet.TryGetValue(i, out var lv));
                 Assert.Equal(i, lv);
