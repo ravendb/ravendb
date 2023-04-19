@@ -347,23 +347,20 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         )}
 
                         {!IndexUtils.hasAnyFaultyNode(index) && (
-                            <ButtonGroup className="me-1">
+                            <UncontrolledDropdown group className="me-1">
                                 <Button variant="secondary" href={queryUrl}>
                                     <Icon icon="search" />
                                     <span>Query</span>
                                 </Button>
+                                <DropdownToggle className="dropdown-toggle" />
 
-                                <UncontrolledDropdown>
-                                    <DropdownToggle className="dropdown-toggle" />
-
-                                    <DropdownMenu end>
-                                        <DropdownItem href={termsUrl}>
-                                            {" "}
-                                            <Icon icon="terms" /> Terms{" "}
-                                        </DropdownItem>
-                                    </DropdownMenu>
-                                </UncontrolledDropdown>
-                            </ButtonGroup>
+                                <DropdownMenu end>
+                                    <DropdownItem href={termsUrl}>
+                                        {" "}
+                                        <Icon icon="terms" /> Terms{" "}
+                                    </DropdownItem>
+                                </DropdownMenu>
+                            </UncontrolledDropdown>
                         )}
 
                         <ButtonGroup className="me-1">

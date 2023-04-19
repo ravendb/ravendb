@@ -10,7 +10,7 @@
     left: 50%;
     transform: translate(-50%, bs5variables.$gutter-xxs) scale(0.95);
     opacity: 0;
-    transition: all 0.2s bs5variables.$global-easing;
+    transition: all 0.25s bs5variables.$global-easing;
     pointer-events: none;
     z-index: bs5variables.$zindex-selection-actions;
     box-shadow: bs5variables.$box-shadow;
@@ -19,5 +19,6 @@
         transform: translate(-50%, 0) scale(1);
         opacity: 1;
         pointer-events: all;
+        transition: all 0.15s bs5variables.$global-easing;
     }
 }

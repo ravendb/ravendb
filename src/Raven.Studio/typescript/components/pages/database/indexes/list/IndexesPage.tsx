@@ -2,10 +2,10 @@
 import database from "models/resources/database";
 import { IndexPanel } from "./IndexPanel";
 import { IndexFilterDescription } from "./IndexFilter";
-import IndexToolbarActions from "./IndexToolbarActions";
+import IndexSelectActions from "./IndexSelectActions";
 import IndexUtils from "../../../../utils/IndexUtils";
-import { CheckboxTriple } from "components/common/CheckboxTriple";
 import { useAccessManager } from "hooks/useAccessManager";
+import { useAppUrls } from "hooks/useAppUrls";
 
 import "./IndexesPage.scss";
 import { Button, Card, Col, Row, Spinner } from "reactstrap";
@@ -30,6 +30,9 @@ export function IndexesPage(props: IndexesPageProps) {
     const { canReadWriteDatabase } = useAccessManager();
     const { reportEvent } = useEventsCollector();
 
+    const { forCurrentDatabase: urls } = useAppUrls();
+    const newIndexUrl = urls.newIndex();
+
     const {
         loading,
         bulkOperationConfirm,
@@ -47,7 +50,7 @@ export function IndexesPage(props: IndexesPageProps) {
         highlightCallback,
         confirmSwapSideBySide,
         confirmSetLockModeSelectedIndexes,
-        indexesSelectionState,
+        indexesCount,
         setIndexPriority,
         toggleDisableIndexes,
         togglePauseIndexes,
@@ -81,47 +84,46 @@ export function IndexesPage(props: IndexesPageProps) {
 
     return (
         <>
-            <StickyHeader>
-                {stats.indexes.length > 0 && (
+            {stats.indexes.length > 0 && (
+                <StickyHeader>
                     <Row>
-                        <Col></Col>
-                        <Col sm="auto">
-                            {canReadWriteDatabase(database) && (
-                                <CheckboxTriple
-                                    onChanged={toggleSelectAll}
-                                    state={indexesSelectionState()}
-                                    title="Select all or none"
-                                />
-                            )}
+                        <Col sm="auto" className="align-self-center">
+                            <Button color="primary" href={newIndexUrl} className="rounded-pill px-3">
+                                <Icon icon="index" addon="plus" />
+                                <span>New index</span>
+                            </Button>
                         </Col>
-                        <Col sm="auto">
-                            {canReadWriteDatabase(database) && (
-                                <IndexToolbarActions
-                                    selectedIndexes={selectedIndexes}
-                                    deleteSelectedIndexes={deleteSelectedIndexes}
-                                    enableSelectedIndexes={enableSelectedIndexes}
-                                    disableSelectedIndexes={disableSelectedIndexes}
-                                    pauseSelectedIndexes={pauseSelectedIndexes}
-                                    resumeSelectedIndexes={resumeSelectedIndexes}
-                                    setLockModeSelectedIndexes={confirmSetLockModeSelectedIndexes}
-                                />
-                            )}
+                        <Col>
+                            <IndexFilterDescription
+                                filter={filter}
+                                setFilter={(x) => setFilter(x)}
+                                indexes={getAllIndexes(groups, replacements)}
+                            />
                         </Col>
+
                         {/*  TODO  <IndexGlobalIndexing /> */}
                     </Row>
-                )}
-                <IndexFilterDescription
-                    filter={filter}
-                    setFilter={(x) => setFilter(x)}
-                    indexes={getAllIndexes(groups, replacements)}
-                />
-            </StickyHeader>
-            <div className="indexes content-margin no-transition">
+                    {canReadWriteDatabase(database) && (
+                        <IndexSelectActions
+                            indexesCount={indexesCount}
+                            selectedIndexes={selectedIndexes}
+                            deleteSelectedIndexes={deleteSelectedIndexes}
+                            enableSelectedIndexes={enableSelectedIndexes}
+                            disableSelectedIndexes={disableSelectedIndexes}
+                            pauseSelectedIndexes={pauseSelectedIndexes}
+                            resumeSelectedIndexes={resumeSelectedIndexes}
+                            setLockModeSelectedIndexes={confirmSetLockModeSelectedIndexes}
+                            toggleSelectAll={toggleSelectAll}
+                        />
+                    )}
+                </StickyHeader>
+            )}
+            <div className="indexes p-4 pt-0 no-transition">
                 <div className="indexes-list">
                     {groups.map((group) => {
                         return (
-                            <div key={"group-" + group.name}>
-                                <h2 className="on-base-background mt-4" title={"Collection: " + group.name}>
+                            <div className="mb-4" key={"group-" + group.name}>
+                                <h2 className="mt-0" title={"Collection: " + group.name}>
                                     {group.name}
                                 </h2>
 
@@ -153,7 +155,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                 ref={indexToHighlight === index.name ? highlightCallback : undefined}
                                             />
                                             {replacement && (
-                                                <Card className="sidebyside-actions px-5 py-2 bg-faded-warning">
+                                                <Card className="mb-0 px-5 py-2 bg-faded-warning">
                                                     <div className="flex-horizontal">
                                                         <div className="title me-4">
                                                             <Icon icon="swap" /> Side by side

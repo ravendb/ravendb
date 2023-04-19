@@ -85,26 +85,24 @@ export function MultiCheckboxToggle<T extends string | number = string>({
                     </>
                 )}
                 {inputItems.map((inputItem) => (
-                    <>
+                    <div className="multi-toggle-item" key={uniqueId + inputItem.value}>
                         {inputItem.verticalSeparatorLine && <div className="vr" />}
-                        <div className="multi-toggle-item" key={uniqueId + inputItem.value}>
-                            <input
-                                id={uniqueId + inputItem.value}
-                                type="checkbox"
-                                name={uniqueId + inputItem.value}
-                                checked={!selectAllEnabled && selectedItems.includes(inputItem.value)}
-                                onChange={(x) => toggleItem(x.currentTarget.checked, inputItem.value)}
-                            />
-                            <label htmlFor={uniqueId + inputItem.value}>
-                                <span>
-                                    {inputItem.label}
-                                    {inputItem.count >= 0 && (
-                                        <span className="multi-toggle-item-count">{inputItem.count}</span>
-                                    )}
-                                </span>
-                            </label>
-                        </div>
-                    </>
+                        <input
+                            id={uniqueId + inputItem.value}
+                            type="checkbox"
+                            name={uniqueId + inputItem.value}
+                            checked={!selectAllEnabled && selectedItems.includes(inputItem.value)}
+                            onChange={(x) => toggleItem(x.currentTarget.checked, inputItem.value)}
+                        />
+                        <label htmlFor={uniqueId + inputItem.value}>
+                            <span>
+                                {inputItem.label}
+                                {inputItem.count >= 0 && (
+                                    <span className="multi-toggle-item-count">{inputItem.count}</span>
+                                )}
+                            </span>
+                        </label>
+                    </div>
                 ))}
             </div>
         </div>

@@ -467,7 +467,6 @@ export function useIndexesPage(database: database, stale: boolean) {
 
     const toggleSelectAll = () => {
         eventsCollector.reportEvent("indexes", "toggle-select-all");
-
         const selectedIndexesCount = selectedIndexes.length;
 
         if (selectedIndexesCount > 0) {
@@ -482,17 +481,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         }
     };
 
-    const indexesSelectionState = (): checkbox => {
-        const selectedCount = selectedIndexes.length;
-        const indexesCount = getAllIndexes(groups, replacements).length;
-        if (indexesCount && selectedCount === indexesCount) {
-            return "checked";
-        }
-        if (selectedCount > 0) {
-            return "some_checked";
-        }
-        return "unchecked";
-    };
+    const indexesCount = getAllIndexes(groups, replacements).length;
 
     return {
         loading,
@@ -511,7 +500,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         highlightCallback,
         confirmSwapSideBySide,
         confirmSetLockModeSelectedIndexes,
-        indexesSelectionState,
+        indexesCount,
         setIndexPriority,
         getSelectedIndexes,
         toggleDisableIndexes,

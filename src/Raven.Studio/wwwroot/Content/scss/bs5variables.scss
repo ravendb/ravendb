@@ -293,10 +293,10 @@ $border-radius-pill: 30px !default;
 // scss-docs-end border-radius-variables
 
 // scss-docs-start box-shadow-variables
-$box-shadow: 0 0.5rem 2rem rgba($black, 0.9) !default;
-$box-shadow-sm: 0 0.125rem 0.5rem rgba($black, 0.6) !default;
-$box-shadow-lg: 0 1rem 3rem rgba($black, 1) !default;
-$box-shadow-inset: inset 0 1px 2px rgba($black, 0.075) !default;
+$box-shadow: 0 0.5rem 2rem rgba($shadow-color-var, 0.9) !default;
+$box-shadow-sm: 0 0.125rem 0.5rem rgba($shadow-color-var, 0.6) !default;
+$box-shadow-lg: 0 1rem 3rem rgba($shadow-color-var, 1) !default;
+$box-shadow-inset: inset 0 1px 2px rgba($shadow-color-var, 0.075) !default;
 // scss-docs-end box-shadow-variables
 
 $component-active-color: $white !default;

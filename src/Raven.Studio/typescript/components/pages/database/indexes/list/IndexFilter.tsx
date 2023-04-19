@@ -7,6 +7,7 @@ import useBoolean from "hooks/useBoolean";
 import { DropdownPanel } from "components/common/DropdownPanel";
 import { Switch } from "components/common/Checkbox";
 import produce from "immer";
+import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -120,8 +121,8 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
     };
 
     return (
-        <Row className="d-flex align-items-end mb-3">
-            <Col>
+        <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
+            <div className="flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <Input
                     type="text"
@@ -132,10 +133,10 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
                     value={filter.searchText}
                     onChange={(e) => onSearchTextChange(e.target.value)}
                 />
-            </Col>
-            <Col>
-                {/* TODO: add selectedItems and setSelectedItems
-                <MultiCheckboxToggle
+            </div>
+            <div>
+                {/* TODO: add selectedItems and setSelectedItems */}
+                {/* <MultiCheckboxToggle
                     inputItems={indexesStatesList}
                     label="Filter by state"
                     selectedItems={[]}
@@ -143,21 +144,20 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
                         // TODO: add logic
                     }}
                 /> */}
-            </Col>
-            <Col sm="auto">
-                <Switch id="autoRefresh" toggleSelection={null} selected={null} color="info" className="mt-1">
-                    <span>Auto refresh is {filter.autoRefresh ? "on" : "off"}</span>
-                </Switch>
-                <UncontrolledPopover target="autoRefresh" trigger="hover" placement="bottom">
-                    <PopoverBody>
-                        Automatically refreshes the list of indexes.
-                        <br />
-                        Might result in list flickering.
-                    </PopoverBody>
-                </UncontrolledPopover>
-            </Col>
+            </div>
             {/* TODO: `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;*/}
-        </Row>
+            {/* TODO: add auto refresh (is it needed) */}
+            {/* <Switch id="autoRefresh" toggleSelection={null} selected={null} color="info" className="mt-1">
+                <span>Auto refresh is {filter.autoRefresh ? "on" : "off"}</span>
+            </Switch>
+            <UncontrolledPopover target="autoRefresh" trigger="hover" placement="bottom">
+                <PopoverBody>
+                    Automatically refreshes the list of indexes.
+                    <br />
+                    Might result in list flickering.
+                </PopoverBody>
+            </UncontrolledPopover> */}
+        </div>
     );
 }
 

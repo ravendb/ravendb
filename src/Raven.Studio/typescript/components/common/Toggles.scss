@@ -258,7 +258,7 @@ $separator-color: colors.$border-color-light-var;
         padding: 4px;
 
         .vr {
-            margin: $separator-margin 0 $separator-margin 0;
+            margin: $separator-margin 4px $separator-margin 0;
             background-color: colors.$border-color-var;
         }
 

@@ -5,3 +5,15 @@
 .btn-outline-secondary {
     @include button-outline-variant($secondary-outline); //fix outline button contrast
 }
+
+.rounded-group {
+    & > .btn {
+        border-radius: $border-radius-lg;
+        &:first-child {
+            padding-left: $gutter-xs;
+        }
+        &:last-child {
+            padding-right: $gutter-xs;
+        }
+    }
+}

@@ -86,6 +86,7 @@ $light: $gray-100;
 $dark: $gray-900;
 
 $link-color: #c072ee;
+$shadow-color: $black;
 
 $hover-filter: brightness(1.2) saturate(1.1);
 
@@ -207,6 +208,7 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $base-well-bg: $body-bg;
 
     $link-color: $primary;
+    $shadow-color: $gray-700;
 
     $hover-filter: brightness(1.03) saturate(1.4);
 }
@@ -404,5 +406,6 @@ $panel-bg-2-var: var(--panel-bg-2);
 $panel-bg-3-var: var(--panel-bg-3);
 
 $well-bg-var: var(--well-bg);
+$shadow-color-var: var(--shadow-color);
 
 $hover-filter-var: var(--hover-filter);
