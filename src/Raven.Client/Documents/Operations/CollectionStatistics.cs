@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
@@ -8,7 +9,7 @@ namespace Raven.Client.Documents.Operations
     {
         public CollectionStatistics()
         {
-            Collections = new Dictionary<string, long>();
+            Collections = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
         }
 
         public long CountOfDocuments { get; set; }
@@ -40,7 +41,7 @@ namespace Raven.Client.Documents.Operations
     {
         public DetailedCollectionStatistics()
         {
-            Collections = new Dictionary<string, CollectionDetails>();
+            Collections = new Dictionary<string, CollectionDetails>(StringComparer.OrdinalIgnoreCase);
         }
 
         public long CountOfDocuments { get; set; }
