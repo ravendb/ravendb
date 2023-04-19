@@ -399,7 +399,7 @@ public class CoraxSlowQueryTests : RavenTestBase
     }
 
     [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
     public void Alphanumerical(Options options)
     {
         int size = 100;

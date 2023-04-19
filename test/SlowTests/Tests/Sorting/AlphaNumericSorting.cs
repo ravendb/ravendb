@@ -578,7 +578,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void dynamic_query_should_work(Options options)
         {
             var titles = new List<string>
@@ -640,7 +640,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void OrderByPrefixes(Options options)
         {
             var localTracks = new List<Track>();
@@ -703,7 +703,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void NumbersTests(Options options)
         {
             var localTracks = new List<Track>();
