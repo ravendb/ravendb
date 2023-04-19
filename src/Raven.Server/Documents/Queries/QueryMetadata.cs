@@ -2754,6 +2754,7 @@ function execute(doc, args){
             private readonly BlittableJsonReaderObject _parameters;
             internal HashSet<string> _referencedParameters;
             private HashSet<string> _maybeUnknowns;
+            private HashSet<string> _knownIdentifiers;
             private Identifier _currentProp;
 
             public ScriptValidator(QueryMetadata queryMetadata, BlittableJsonReaderObject parameters)
@@ -2772,6 +2773,12 @@ function execute(doc, args){
                 _currentProp ??= identifier;
 
                 return base.VisitIdentifier(identifier);
+            }
+
+            protected override object VisitArrowFunctionExpression(ArrowFunctionExpression arrowFunctionExpression)
+            {
+                RemoveFromUnknowns(arrowFunctionExpression.Params);
+                return base.VisitArrowFunctionExpression(arrowFunctionExpression);
             }
 
             protected override object VisitFunctionExpression(FunctionExpression expression)
@@ -2812,23 +2819,19 @@ function execute(doc, args){
             {
                 return _queryMetadata.RootAliasPaths.TryGetValue(identifier, out _) == false &&
                        JsBaseObjects.Contains(identifier) == false &&
-                       (_parameters == null ||
-                        identifier.StartsWith('$') == false ||
-                        _parameters.TryGet(identifier.Substring(1), out object _) == false);
+                       (_parameters == null || identifier.StartsWith('$') == false || _parameters.TryGet(identifier.Substring(1), out object _) == false)
+                       && (_knownIdentifiers == null || _knownIdentifiers.Contains(identifier) == false);
             }
 
-            void RemoveFromUnknowns(in NodeList<Node> functionParameters)
+            private void RemoveFromUnknowns(in NodeList<Node> functionParameters)
             {
-                if (_maybeUnknowns == null || _maybeUnknowns.Count == 0)
-                {
-                    return;
-                }
-
                 foreach (var p in functionParameters)
                 {
                     if (p is Identifier i)
                     {
-                        _maybeUnknowns.Remove(i.Name);
+                        _knownIdentifiers ??= new HashSet<string>();
+                        _knownIdentifiers.Add(i.Name);
+                        _maybeUnknowns?.Remove(i.Name);
                     }
                 }
             }
@@ -2837,7 +2840,10 @@ function execute(doc, args){
         private (Esprima.Ast.Program, HashSet<string>) ValidateScript(BlittableJsonReaderObject parameters)
         {
             ScriptValidator validator = new(this, parameters);
-            JavaScriptParser parser = new(new ParserOptions());
+            JavaScriptParser parser = new(new ParserOptions
+            {
+                OnNodeCreated = n => validator.Visit(n)
+            });
             Script script = parser.ParseScript("return " + Query.SelectFunctionBody.FunctionText);
 
             return (script, validator._referencedParameters);
