@@ -844,7 +844,8 @@ namespace Voron.Data.Containers
 
             public Item IncrementOffset(int offset)
             {
-                return new Item(Page, _ptr + offset, Length - offset);
-            }        }
+                return new Item(_page, _ptr + offset, Length - offset);
+            }
+        }
     }
 }
