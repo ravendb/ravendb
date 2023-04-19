@@ -1048,11 +1048,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
             SortedSet<string> results = new();
-
+            
             if (_indexSearcher.TryGetTermsOfField(_indexSearcher.FieldMetadataBuilder(field), out var terms) == false)
                 return results;
-
-            if (fromValue is not null)
+            
+            if (string.IsNullOrEmpty(fromValue) == false)
             {
                 Span<byte> fromValueBytes = Encodings.Utf8.GetBytes(fromValue);
                 while (terms.GetNextTerm(out var termSlice))
