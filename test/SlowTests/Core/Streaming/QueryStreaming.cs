@@ -334,7 +334,7 @@ namespace SlowTests.Core.Streaming
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void QueryStreamingGetIds(Options options)
+        public async Task QueryStreamingGetIds(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -350,7 +350,8 @@ namespace SlowTests.Core.Streaming
 
                     session.SaveChanges();
 
-                    Assert.NotEqual(Sharding.GetShardNumberFor(store, "dogs/1"), Sharding.GetShardNumberFor(store, "dogs/2"));
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                        Assert.NotEqual(await Sharding.GetShardNumberForAsync(store, "dogs/1"), await Sharding.GetShardNumberForAsync(store, "dogs/2"));
 
                     var q = session.Query<Dog>().Where(d => d.Id == "dogs/1" || d.Id == "dogs/2").OrderBy(x => x.Id);
                     var queryResult = session.Advanced.Stream<Dog>(q);
@@ -371,7 +372,7 @@ namespace SlowTests.Core.Streaming
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void QueryStreamingLoadIds(Options options)
+        public async Task QueryStreamingLoadIds(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -387,7 +388,8 @@ namespace SlowTests.Core.Streaming
 
                     session.SaveChanges();
 
-                    Assert.NotEqual(Sharding.GetShardNumberFor(store, "dogs/1"), Sharding.GetShardNumberFor(store, "dogs/2"));
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                        Assert.NotEqual(await Sharding.GetShardNumberForAsync(store, "dogs/1"), await Sharding.GetShardNumberForAsync(store, "dogs/2"));
 
                     var q = session.Advanced.DocumentQuery<Dog>().WhereIn(x => x.Id, new[] { "dogs/1", "dogs/2" }).OrderBy("Id");
                     

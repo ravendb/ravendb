@@ -38,13 +38,11 @@ namespace FastTests.Server.Documents.Revisions
         {
         }
 
-
-
-
-        [Fact]
-        public async Task CanGetNonExistingRevisionsByChangeVectorAsyncLazily()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetNonExistingRevisionsByChangeVectorAsyncLazily(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -56,10 +54,12 @@ namespace FastTests.Server.Documents.Revisions
                 }
             }
         }
-        [Fact]
-        public async Task CanGetRevisionsByChangeVectorsLazily()
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsByChangeVectorsLazily(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = "users/1";
                 await RevisionsHelper.SetupRevisionsAsync(store);
@@ -100,10 +100,11 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task CanGetForLazily()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetForLazily(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = "users/1";
                 var id2 = "users/2";
@@ -138,10 +139,11 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task CanGetRevisionsByIdAndTimeLazily()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsByIdAndTimeLazily(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = "users/1";
                 var id2 = "users/2";
@@ -402,8 +404,8 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CanGetRevisionsByChangeVectors2Shards(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -445,7 +447,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 //make sure revisions are saved on different shards
-                Assert.NotEqual(Sharding.GetShardNumberFor(store, user.Id), Sharding.GetShardNumberFor(store, product.Id));
+                Assert.NotEqual(await Sharding.GetShardNumberForAsync(store, user.Id), await Sharding.GetShardNumberForAsync(store, product.Id));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1752,9 +1754,12 @@ namespace FastTests.Server.Documents.Revisions
                     await session.StoreAsync(new Order() {Employee = "Stav"}, "orders/1");
                     await session.SaveChangesAsync();
 
-                    var usersShard = Sharding.GetShardNumberFor(store, "users/1");
-                    var ordersShard = Sharding.GetShardNumberFor(store, "orders/1");
-                    Assert.NotEqual(usersShard, ordersShard);
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                    {
+                        var usersShard = await Sharding.GetShardNumberForAsync(store, "users/1");
+                        var ordersShard = await Sharding.GetShardNumberForAsync(store, "orders/1");
+                        Assert.NotEqual(usersShard, ordersShard);
+                    }
 
                     var user = await session.LoadAsync<User>("users/1");
                     var order = await session.LoadAsync<Order>("orders/1");

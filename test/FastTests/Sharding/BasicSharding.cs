@@ -284,8 +284,8 @@ namespace FastTests.Sharding
                     ["Pet"] = "pets/3"
                 }, "users/3");
 
-                int shard1 = await Sharding.GetShardNumberFor(store, "pets/1");
-                int shard2 = await Sharding.GetShardNumberFor(store, "pets/2");
+                int shard1 = await Sharding.GetShardNumberForAsync(store, "pets/1");
+                int shard2 = await Sharding.GetShardNumberForAsync(store, "pets/2");
                 
                 Assert.NotEqual(shard1, shard2);
                 

@@ -45,7 +45,7 @@ namespace SlowTests.Sharding
                         {
                             var id = $"user/{i}";
                             var bucket = Sharding.GetBucket(sharding, id);
-                            var shardNumberForDoc = await Sharding.GetShardNumberFor(store, id);
+                            var shardNumberForDoc = await Sharding.GetShardNumberForAsync(store, id);
                             var user = new User()
                             {
                                 Name = name
@@ -71,7 +71,7 @@ namespace SlowTests.Sharding
                     for (int i = 0; i < 20; i++)
                     {
                         var id = $"user/{i}";
-                        var shardNumberForDoc = await Sharding.GetShardNumberFor(store, id);
+                        var shardNumberForDoc = await Sharding.GetShardNumberForAsync(store, id);
                         var cmd = new GetDocumentSizeCommand(id);
                         executor.Execute(cmd, ctx);
                         var size = cmd.Result.ActualSize;

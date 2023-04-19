@@ -102,7 +102,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {
-                    Assert.NotEqual(Sharding.GetShardNumberFor(store, "companies/apple"), Sharding.GetShardNumberFor(store, "companies/google"));
+                    Assert.NotEqual(await Sharding.GetShardNumberForAsync(store, "companies/apple"), await Sharding.GetShardNumberForAsync(store, "companies/google"));
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -148,7 +148,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {
-                    Assert.NotEqual(Sharding.GetShardNumberFor(store, "companies/apple"), Sharding.GetShardNumberFor(store, "companies/google"));
+                    Assert.NotEqual(await Sharding.GetShardNumberForAsync(store, "companies/apple"), await Sharding.GetShardNumberForAsync(store, "companies/google"));
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -193,9 +193,9 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {
-                    var s1 = await Sharding.GetShardNumberFor(store, "orders/1-A");
-                    var s2 = await Sharding.GetShardNumberFor(store, "Companies/google");
-                    var s3 = await Sharding.GetShardNumberFor(store, "Companies/apple");
+                    var s1 = await Sharding.GetShardNumberForAsync(store, "orders/1-A");
+                    var s2 = await Sharding.GetShardNumberForAsync(store, "Companies/google");
+                    var s3 = await Sharding.GetShardNumberForAsync(store, "Companies/apple");
                     Assert.Equal(s1, s2);
                     Assert.NotEqual(s1, s3);
                 }

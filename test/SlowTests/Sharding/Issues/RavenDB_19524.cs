@@ -61,7 +61,7 @@ namespace SlowTests.Sharding.Issues
 
             
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shard = await Sharding.GetShardNumberFor(store, id);
+                var shard = await Sharding.GetShardNumberForAsync(store, id);
                 var bucket = Sharding.GetBucket(record.Sharding, id);
               
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard)) as ShardedDocumentDatabase;
@@ -121,7 +121,7 @@ namespace SlowTests.Sharding.Issues
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shard = await Sharding.GetShardNumberFor(store, id);
+                var shard = await Sharding.GetShardNumberForAsync(store, id);
                 var bucket = Sharding.GetBucket(record.Sharding, id);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard)) as ShardedDocumentDatabase;
@@ -169,7 +169,7 @@ namespace SlowTests.Sharding.Issues
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shard = await Sharding.GetShardNumberFor(store, id);
+                var shard = await Sharding.GetShardNumberForAsync(store, id);
                 var bucket = Sharding.GetBucket(record.Sharding, id);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard)) as ShardedDocumentDatabase;

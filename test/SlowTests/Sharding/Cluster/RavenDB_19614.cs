@@ -30,7 +30,7 @@ namespace SlowTests.Sharding.Cluster
             {
                 var id = "users/1/$abc";
                 var bucket = await Sharding.GetBucketAsync(store, id);
-                var shardNumber = await Sharding.GetShardNumberFor(store, id);
+                var shardNumber = await Sharding.GetShardNumberForAsync(store, id);
 
                 // insert
                 using (var session = store.OpenAsyncSession())
@@ -121,7 +121,7 @@ namespace SlowTests.Sharding.Cluster
             using (var store = Sharding.GetDocumentStore())
             {
                 var bucket = await Sharding.GetBucketAsync(store, "users/1/$abc");
-                var shardNumber = await Sharding.GetShardNumberFor(store, "users/1/$abc");
+                var shardNumber = await Sharding.GetShardNumberForAsync(store, "users/1/$abc");
                 var shardName = ShardHelper.ToShardName(store.Database, shardNumber);
                 var baseline = DateTime.UtcNow;
 

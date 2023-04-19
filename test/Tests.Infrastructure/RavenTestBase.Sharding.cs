@@ -158,7 +158,7 @@ public partial class RavenTestBase
             return GetBucket(record.Sharding, id);
         }
 
-        public async Task<int> GetShardNumberFor(IDocumentStore store, string id)
+        public async Task<int> GetShardNumberForAsync(IDocumentStore store, string id)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))

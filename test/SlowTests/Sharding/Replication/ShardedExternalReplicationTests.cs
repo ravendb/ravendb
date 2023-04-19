@@ -1084,7 +1084,7 @@ namespace SlowTests.Sharding.Replication
 
                     Assert.True(WaitForDocument(srcStore, "users/2$users/1", 30_000));
 
-                    var oldLocation = await Sharding.GetShardNumberFor(dstStore, "users/2$users/1");
+                    var oldLocation = await Sharding.GetShardNumberForAsync(dstStore, "users/2$users/1");
                     await Sharding.Resharding.MoveShardForId(dstStore, "users/2$users/1", servers: dstNodes);
 
                     var db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, oldLocation));
@@ -1108,7 +1108,7 @@ namespace SlowTests.Sharding.Replication
                         Assert.Equal(changeVector, existingChangeVector);
                     }
 
-                    var newLocation = await Sharding.GetShardNumberFor(dstStore, "users/2$users/1");
+                    var newLocation = await Sharding.GetShardNumberForAsync(dstStore, "users/2$users/1");
                     db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, newLocation));
                     storage = db.DocumentsStorage;
                     using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -1214,7 +1214,7 @@ namespace SlowTests.Sharding.Replication
 
                     Assert.True(WaitForDocument(srcStore, "users/2$users/1", 30_000));
 
-                    var oldLocation = await Sharding.GetShardNumberFor(dstStore, "users/2$users/1");
+                    var oldLocation = await Sharding.GetShardNumberForAsync(dstStore, "users/2$users/1");
                     await Sharding.Resharding.MoveShardForId(dstStore, "users/2$users/1", servers: dstNodes);
 
                     var db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, oldLocation));
@@ -1230,7 +1230,7 @@ namespace SlowTests.Sharding.Replication
                     var docsCount = storage.GetNumberOfDocuments();
                     Assert.Equal(0, docsCount);
 
-                    var srcLocation = await Sharding.GetShardNumberFor(srcStore, "users/1");
+                    var srcLocation = await Sharding.GetShardNumberForAsync(srcStore, "users/1");
                     db = await srcLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(srcDB, srcLocation));
                     storage = db.DocumentsStorage;
                     using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -1246,7 +1246,7 @@ namespace SlowTests.Sharding.Replication
                         }
                     }
 
-                    var newLocation = await Sharding.GetShardNumberFor(dstStore, "users/2$users/1");
+                    var newLocation = await Sharding.GetShardNumberForAsync(dstStore, "users/2$users/1");
                     db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, newLocation));
                     storage = db.DocumentsStorage;
                     using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -1399,7 +1399,7 @@ namespace SlowTests.Sharding.Replication
 
                 await CheckData(store);
 
-                var oldLocation = await Sharding.GetShardNumberFor(replica, id);
+                var oldLocation = await Sharding.GetShardNumberForAsync(replica, id);
 
                 await Sharding.Resharding.MoveShardForId(replica, id);
 
@@ -1411,7 +1411,7 @@ namespace SlowTests.Sharding.Replication
                     Assert.Equal(24, tombs.Count);
                 }
 
-                var newLocation = await Sharding.GetShardNumberFor(replica, id);
+                var newLocation = await Sharding.GetShardNumberForAsync(replica, id);
 
                 await CheckData(replica, ShardHelper.ToShardName(replica.Database, newLocation));
 
@@ -1442,23 +1442,23 @@ namespace SlowTests.Sharding.Replication
 
                 Assert.True(WaitForDocument<User>(replica, id, u => u.AddressId == "New"));
 
-                var oldLocation = await Sharding.GetShardNumberFor(store, id);
+                var oldLocation = await Sharding.GetShardNumberForAsync(store, id);
                 await CheckData(store, ShardHelper.ToShardName(store.Database, oldLocation));
 
                 await Sharding.Resharding.MoveShardForId(store, id);
 
-                oldLocation = await Sharding.GetShardNumberFor(replica, id);
+                oldLocation = await Sharding.GetShardNumberForAsync(replica, id);
                 await CheckData(replica, ShardHelper.ToShardName(replica.Database, oldLocation));
 
                 await Sharding.Resharding.MoveShardForId(replica, id);
 
                 await WaitForValueAsync(async () =>
                 {
-                    var newLocation = await Sharding.GetShardNumberFor(replica, id);
+                    var newLocation = await Sharding.GetShardNumberForAsync(replica, id);
                     return newLocation != oldLocation;
                 }, true);
 
-                var newLocation = await Sharding.GetShardNumberFor(replica, id);
+                var newLocation = await Sharding.GetShardNumberForAsync(replica, id);
                 await CheckData(replica, ShardHelper.ToShardName(replica.Database, newLocation));
 
                 // wait for the replication ping-pong to settle down
@@ -1505,7 +1505,7 @@ namespace SlowTests.Sharding.Replication
 
                 Assert.True(WaitForDocument<User>(replica, id1, u => u.AddressId == "New"));
 
-                var oldLocation1 = await Sharding.GetShardNumberFor(store, id1);
+                var oldLocation1 = await Sharding.GetShardNumberForAsync(store, id1);
 
                 var db1 = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation1));
                 var storage1 = db1.DocumentsStorage;
@@ -1513,7 +1513,7 @@ namespace SlowTests.Sharding.Replication
                 var docsCount = storage1.GetNumberOfDocuments();
                 Assert.Equal(8, docsCount);
 
-                var oldLocation2 = await Sharding.GetShardNumberFor(replica, id2);
+                var oldLocation2 = await Sharding.GetShardNumberForAsync(replica, id2);
                 var db2 = await GetDocumentDatabaseInstanceFor(replica, ShardHelper.ToShardName(replica.Database, oldLocation2));
                 var storage2 = db2.DocumentsStorage;
 
@@ -1525,8 +1525,8 @@ namespace SlowTests.Sharding.Replication
 
                 await WaitForValueAsync(async () =>
                 {
-                    var newLocation1 = await Sharding.GetShardNumberFor(replica, id1);
-                    var newLocation2 = await Sharding.GetShardNumberFor(replica, id2);
+                    var newLocation1 = await Sharding.GetShardNumberForAsync(replica, id1);
+                    var newLocation2 = await Sharding.GetShardNumberForAsync(replica, id2);
                     return newLocation1 != oldLocation1 && newLocation2 != oldLocation2;
                 }, true, 30_000, 333);
 
@@ -1565,7 +1565,7 @@ namespace SlowTests.Sharding.Replication
 
                 await CheckData(replica);
 
-                var oldLocation = await Sharding.GetShardNumberFor(store, id);
+                var oldLocation = await Sharding.GetShardNumberForAsync(store, id);
                 await Sharding.Resharding.MoveShardForId(store, id);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
@@ -1576,7 +1576,7 @@ namespace SlowTests.Sharding.Replication
                     Assert.Equal(24, tombs.Count);
                 }
 
-                var newLocation = await Sharding.GetShardNumberFor(store, id);
+                var newLocation = await Sharding.GetShardNumberForAsync(store, id);
 
                 await CheckData(store, ShardHelper.ToShardName(store.Database, newLocation));
                 await CheckData(replica);
@@ -1687,7 +1687,7 @@ namespace SlowTests.Sharding.Replication
                     Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
                 }
 
-                var location = await Sharding.GetShardNumberFor(store2, id1);
+                var location = await Sharding.GetShardNumberForAsync(store2, id1);
 
                 using (var s1 = store1.OpenSession())
                 {
@@ -1737,7 +1737,7 @@ namespace SlowTests.Sharding.Replication
                     Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
                 }
 
-                var location = await Sharding.GetShardNumberFor(store2, id1);
+                var location = await Sharding.GetShardNumberForAsync(store2, id1);
 
                 using (var s1 = store1.OpenSession())
                 {
@@ -1790,7 +1790,7 @@ namespace SlowTests.Sharding.Replication
                     Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
                 }
 
-                var location = await Sharding.GetShardNumberFor(store2, id1);
+                var location = await Sharding.GetShardNumberForAsync(store2, id1);
        
                 using (var s1 = store1.OpenSession())
                 {
@@ -1834,7 +1834,7 @@ namespace SlowTests.Sharding.Replication
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store1);
 
-                var location = await Sharding.GetShardNumberFor(store2, id1);
+                var location = await Sharding.GetShardNumberForAsync(store2, id1);
 
                 using (var s1 = store1.OpenSession())
                 {

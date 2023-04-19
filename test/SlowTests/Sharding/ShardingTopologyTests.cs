@@ -36,7 +36,7 @@ namespace SlowTests.Sharding
                     session.SaveChanges();
                 }
 
-                var shardToDelete = await Sharding.GetShardNumberFor(store, "users/1");
+                var shardToDelete = await Sharding.GetShardNumberForAsync(store, "users/1");
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var nodesContainingNewShard = record.Sharding.Shards[shardToDelete].Members;

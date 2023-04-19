@@ -1372,7 +1372,7 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                var shard = await Sharding.GetShardNumberFor(source, "FoObAr/0");
+                var shard = await Sharding.GetShardNumberForAsync(source, "FoObAr/0");
                 var sourceDb = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(source.Database, shard));
                 sourceDb.Configuration.Replication.RetryMaxTimeout = new TimeSetting((long)TimeSpan.FromMinutes(15).TotalMilliseconds, TimeUnit.Minutes);
                 sourceDb.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = (o) =>
