@@ -125,9 +125,16 @@ namespace FastTests.Voron.Sets
 
         public override void Dispose()
         {
-            _releaseStr.Dispose();
-            _tx?.Dispose();
-            _env?.Dispose();
+            try
+            {
+                _releaseStr.Dispose();
+                _tx?.Dispose();
+                _env?.Dispose();
+            }
+            finally
+            {
+                base.Dispose();
+            }
         }
     }
 }

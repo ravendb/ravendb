@@ -56,12 +56,12 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
         if (bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_WRITE_RUNNING_TESTS_TO_FILE"), out var writeToFile))
         {
             WriteToFile = writeToFile;
+        }
 
-            if (WriteToFile)
-            {
-                FileName = $"RunningTests-{Guid.NewGuid():N}.txt";
-                Console.WriteLine($"Writing running tests to '{FileName}'.");
-            }
+        if (WriteToFile)
+        {
+            FileName = $"RunningTests-{Guid.NewGuid():N}.txt";
+            Console.WriteLine($"Writing running tests to '{FileName}'.");
         }
     }
 

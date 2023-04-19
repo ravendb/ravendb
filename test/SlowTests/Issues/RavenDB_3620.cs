@@ -52,7 +52,14 @@ namespace SlowTests.Issues
 
         public override void Dispose()
         {
-            _client.Dispose();
+            try
+            {
+                _client.Dispose();
+            }
+            finally
+            {
+                base.Dispose();
+            }
         }
     }
 }

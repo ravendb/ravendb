@@ -90,12 +90,19 @@ namespace FastTests.Server.Documents.Indexing.Static
 
         public override void Dispose()
         {
-            foreach (var docReader in _docs)
+            try
             {
-                docReader.Dispose();
-            }
+                foreach (var docReader in _docs)
+                {
+                    docReader.Dispose();
+                }
 
-            _ctx.Dispose();
+                _ctx.Dispose();
+            }
+            finally
+            {
+                base.Dispose();
+            }
         }
     }
 }
