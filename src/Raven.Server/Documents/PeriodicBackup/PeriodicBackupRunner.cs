@@ -1040,7 +1040,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 periodicBackup.BackupStatus ??= new PeriodicBackupStatus();
                 periodicBackup.BackupStatus.DelayUntil = state.DelayUntil;
-                ScheduleNextBackup(periodicBackup, state.DelayUntil.Subtract(DateTime.UtcNow), lockTaken: false);
             }
         }
 
