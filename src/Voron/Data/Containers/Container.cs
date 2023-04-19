@@ -701,6 +701,11 @@ namespace Voron.Data.Containers
             }
         }
 
+        public static long GetNextFreePage(LowLevelTransaction llt, long containerId)
+        {
+             return new Container(llt.GetPage(containerId)).GetNextFreePage();
+        }
+
         private long GetNextFreePage()
         {
             ref var metadata = ref MetadataFor(ContainerPageHeader.NextFreePageOffset);
