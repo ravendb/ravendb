@@ -679,7 +679,7 @@ class databases extends viewModelBase {
                 if (result.can) {
                     db.inProgressAction("Restarting the database");
 
-                    new restartDatabaseCommand(db)
+                    new restartDatabaseCommand(db.asDatabase())
                         .execute()
                         .always(() => db.inProgressAction(null));
                 }

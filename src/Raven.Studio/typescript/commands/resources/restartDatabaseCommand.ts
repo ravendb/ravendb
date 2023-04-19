@@ -1,21 +1,17 @@
 import commandBase = require("commands/commandBase");
-import databaseInfo = require("models/resources/info/databaseInfo");
+import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class restartDatabaseCommand extends commandBase {
 
-    constructor(private db: databaseInfo) {
+    constructor(private db: database) {
         super();
     }
 
     execute(): JQueryPromise<statusDto<disableDatabaseResult>> {
-        const args = {
-            name: this.db.name
-        };
+        const url = endpoints.databases.studioDatabaseTasks.adminStudioTasksRestart;
 
-        const url = endpoints.global.adminDatabases.adminDatabasesRestart + this.urlEncodeArgs(args);
-
-        return this.post(url, null, null, { dataType: undefined })
+        return this.post(url, null, this.db, { dataType: undefined })
             .fail((response: JQueryXHR) => this.reportError("Failed to restart the database", response.responseText, response.statusText));
     }
 
