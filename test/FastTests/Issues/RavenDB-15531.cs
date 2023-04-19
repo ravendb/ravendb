@@ -13,7 +13,7 @@ namespace FastTests.Issues
         }
 
         [Fact]
-        public void ShouldWork()
+        public void UpdateSessionChangesAfterTrackedEntityIsRefreshed()
         {
             using (var store = GetDocumentStore())
             {

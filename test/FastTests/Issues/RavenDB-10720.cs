@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Issues
@@ -9,10 +10,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void CanSaveDocumentWithMetadata()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanSaveDocumentWithMetadata(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

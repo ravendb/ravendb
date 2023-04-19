@@ -16,10 +16,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void Can_Load_With_Include()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Load_With_Include(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -330,10 +331,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Can_Include_By_Secondary_String_Property_Using_IIncludeBuilder()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Include_By_Secondary_String_Property_Using_IIncludeBuilder(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -403,7 +405,7 @@ namespace FastTests.Client
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Include_By_List_Of_Secondary_String_Property_Using_IIncludeBuilder(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -444,10 +446,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Can_Include_Nested_Dictionary_Values_Property()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Include_Nested_Dictionary_Values_Property(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string userId1 = "users/1";
                 const string userId2 = "users/2";
@@ -510,10 +513,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Can_Include_Nested_Dictionary_Keys_Property()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Include_Nested_Dictionary_Keys_Property(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string userId1 = "users/1";
                 const string userId2 = "users/2";
@@ -576,10 +580,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Can_Include_Dictionary_Key_And_Value_Properties()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Include_Dictionary_Key_And_Value_Properties(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string userId1 = "users/1";
                 const string userId2 = "users/2";

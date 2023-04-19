@@ -12,7 +12,7 @@ namespace FastTests.Client
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void NextIdentityFor(Options options)
         {
@@ -60,7 +60,7 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void SeedIdentityFor(Options options)
         {
@@ -118,11 +118,11 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void NextIdentityForOperationShouldCreateANewIdentityIfThereIsNone(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

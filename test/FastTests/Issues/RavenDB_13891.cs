@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public async Task PatchedDocumentShouldBeReplaced()
+        [RavenTheory(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task PatchedDocumentShouldBeReplaced(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string personId = null;
                 using (var s = store.OpenAsyncSession())
