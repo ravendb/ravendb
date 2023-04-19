@@ -767,7 +767,7 @@ public class RavenDB_14541 : RavenTestBase
                                 let __ = RavenQuery.IncludeTimeSeries(a, "CurViews")
                                 let ___ = RavenQuery.Include<State>("a.StateId")
                                 let city = RavenQuery.Load<City>(a.CityId)
- 
+
                                 select new { Name = a.UserName, HomeTown = city};
 
                     var AsString = query.ToString();
