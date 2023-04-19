@@ -7,10 +7,11 @@ using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Sets
 {
-    public unsafe class PostingListLeafPageTests : IDisposable
+    public unsafe class PostingListLeafPageTests : NoDisposalNeeded
     {
         private readonly Transaction _tx;
         private readonly StorageEnvironment _env;
@@ -18,7 +19,7 @@ namespace FastTests.Voron.Sets
         private readonly byte* _pagePtr;
         private readonly LowLevelTransaction _llt;
 
-        public PostingListLeafPageTests()
+        public PostingListLeafPageTests(ITestOutputHelper output) : base(output)
         {
             _env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
             _tx = _env.WriteTransaction();
@@ -36,7 +37,7 @@ namespace FastTests.Voron.Sets
         public void CanAddAndRead(int size)
         {
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
-            PostingListLeafPage.InitLeaf(leaf.Header, 0);
+            PostingListLeafPage.InitLeaf(leaf.Header);
             var list = new List<long>();
             var buf = new int[] {12, 18};
             var start = 24;
@@ -48,9 +49,17 @@ namespace FastTests.Voron.Sets
 
             Span<long> span = list.ToArray();
             var empty = Span<long>.Empty;
-            var extras = leaf.Update(_llt, ref span, ref empty, long.MaxValue);
-            Assert.Null(extras);
-            Assert.True(span.IsEmpty);
+            fixed (long* p = span)
+            {
+                var len = span.Length;
+                var rp = p;
+                long* rr = null;
+                var zero = 0;
+                var extras = leaf.Update(_llt,ref rp, ref len, ref rr, ref zero, long.MaxValue);
+                Assert.Null(extras);
+                Assert.Equal(0, len);
+                Assert.Equal((long)(p+ span.Length), (long)rp);
+            }
 
             Assert.Equal(list, leaf.GetDebugOutput());
         }
@@ -64,7 +73,7 @@ namespace FastTests.Voron.Sets
         public void CanAddAndRemove(int size)
         {
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
-            PostingListLeafPage.InitLeaf(leaf.Header, 0);
+            PostingListLeafPage.InitLeaf(leaf.Header);
             var buf = new int[] {12, 18};
             var start = 24;
             var list = new long[size];
@@ -74,19 +83,31 @@ namespace FastTests.Voron.Sets
                 list[i] = start;
             }
             Span<long> additions = list;
-            var empty = Span<long>.Empty;
-            var extras = leaf.Update(_llt, ref additions, ref empty, long.MaxValue);
-            Assert.Null(extras);
-            Assert.True(additions.IsEmpty);
-            
+            fixed (long* p = additions)
+            {
+                var pp = p;
+                var pl = additions.Length;
+                long* none = null;
+                int zero = 0;
+                var extras = leaf.Update(_llt, ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                Assert.Null(extras);
+                Assert.Equal(0, pl);
+            }
             
             Assert.NotEmpty(leaf.GetDebugOutput());
             
             Span<long> reomvals = list; // now remove
-            extras = leaf.Update(_llt, ref empty, ref reomvals, long.MaxValue);
-            Assert.Null(extras);
-            Assert.True(reomvals.IsEmpty);
-            Assert.Empty(leaf.GetDebugOutput());
+            fixed (long* p = reomvals)
+            {
+                var pp = p;
+                var pl = additions.Length;
+                long* none = null;
+                int zero = 0;
+                var extras = leaf.Update(_llt, ref none, ref zero, ref pp, ref pl, long.MaxValue);
+                Assert.Null(extras);
+                Assert.Equal(0, pl);
+                Assert.Empty(leaf.GetDebugOutput());
+            }
         }
 
         
@@ -99,7 +120,7 @@ namespace FastTests.Voron.Sets
         public void CanHandleDuplicateValues(int size)
         {
             var leaf = new PostingListLeafPage(new Page(_pagePtr));
-            PostingListLeafPage.InitLeaf(leaf.Header, 0);
+            PostingListLeafPage.InitLeaf(leaf.Header);
             var list = new List<long>();
             var buf = new int[] {12, 18};
             var start = 24;
@@ -109,24 +130,44 @@ namespace FastTests.Voron.Sets
                 start += buf[i % buf.Length];
             }
             Span<long> additions = list.ToArray();
-            var empty = Span<long>.Empty;
-            var extras = leaf.Update(_llt, ref additions, ref empty, long.MaxValue);
-            Assert.Null(extras);
-            Assert.True(additions.IsEmpty);
+            fixed (long* p = additions)
+            {
+                var pp = p;
+                var pl = additions.Length;
+                long* none = null;
+                int zero = 0;
+                var extras = leaf.Update(_llt, ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                Assert.Null(extras);
+                Assert.Equal(0, pl);
+            }
             additions = new long[] { 24 };
             
-            extras = leaf.Update(_llt, ref additions, ref empty, long.MaxValue);
-            Assert.Null(extras);
-            Assert.True(additions.IsEmpty);
+            fixed (long* p = additions)
+            {
+                var pp = p;
+                var pl = additions.Length;
+                long* none = null;
+                int zero = 0;
+                var extras = leaf.Update(_llt, ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                Assert.Null(extras);
+                Assert.Equal(0, pl);
+            }
 
             Assert.Equal(list, leaf.GetDebugOutput());
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
-            _releaseStr.Dispose();
-            _tx?.Dispose();
-            _env?.Dispose();
+            try
+            {
+                _releaseStr.Dispose();
+                _tx?.Dispose();
+                _env?.Dispose();
+            }
+            finally
+            {
+                base.Dispose();
+            }
         }
     }
 }

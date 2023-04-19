@@ -1669,15 +1669,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public string WhoseTaskIsIt(
-            DatabaseTopology databaseTopology,
-            IDatabaseTask configuration,
-            IDatabaseTaskStatus taskStatus,
-            bool keepTaskOnOriginalMemberNode = false)
-        {
-            return ServerStore.WhoseTaskIsIt(databaseTopology, configuration, taskStatus, keepTaskOnOriginalMemberNode);
-        }
-
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
         {
             yield return TxMerger.GeneralWaitPerformanceMetrics;

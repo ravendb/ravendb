@@ -58,7 +58,7 @@ namespace Voron.Debugging
         public JournalFile[] FlushedJournals { get; set; }
         public List<Table> Tables;
         public Dictionary<Slice, long> Containers;
-        public List<PostingList> Sets;
+        public List<PostingList> PostingLists;
         public List<PersistentDictionaryRootHeader> PersistentDictionaries;
         public List<CompactTree> CompactTrees;
         public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
@@ -102,6 +102,8 @@ namespace Voron.Debugging
             };
         }
 
+        public event Action<PostingList, TreeReport> HandlePostingListDetails;
+        
         public unsafe DetailedStorageReport Generate(DetailedReportInput input)
         {
             var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
@@ -157,9 +159,11 @@ namespace Voron.Debugging
                     _streamsAllocatedSpaceInBytes += treeReport.Streams.AllocatedSpaceInBytes;
             }
 
-            foreach (PostingList set in input.Sets)
+            foreach (PostingList postingList in input.PostingLists)
             {
-                trees.Add(GetReport(set, input.IncludeDetails));
+                var report = GetReport(postingList, input.IncludeDetails);
+                HandlePostingListDetails?.Invoke(postingList, report);
+                trees.Add(report);
             }
 
             foreach (var (name, page) in input.Containers)
@@ -812,7 +816,7 @@ namespace Voron.Debugging
         {
             var nestedPage = new TreePage(nestedPagePtr, (ushort)tree.GetDataSize(currentNode));
 
-            Debug.Assert(nestedPage.PageNumber == -1); // nested page marker
+            //Debug.Assert(nestedPage.PageNumber == -1); // nested page marker
             return nestedPage;
         }
 

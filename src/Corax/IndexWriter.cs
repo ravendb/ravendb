@@ -16,6 +16,8 @@ using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Utils;
+using Sparrow.Server.Platform;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Containers;
@@ -36,8 +38,8 @@ namespace Corax
         
         EnsureIsSingleMask = 0b11,
         
-        Small = 1,
-        Set = 2
+        SmallPostingList = 1,
+        PostingList = 2
     }
 
     public partial class IndexWriter : IDisposable // single threaded, controlled by caller
@@ -397,6 +399,7 @@ namespace Corax
 
         private readonly long _postingListContainerId, _entriesContainerId;
         private IndexFieldsMapping _dynamicFieldsMapping;
+        private PostingList _largePostingListSet;
 
         public void UpdateDynamicFieldsMapping(IndexFieldsMapping current)
         {
@@ -570,7 +573,7 @@ namespace Corax
         }
         
        /// <returns>Encoded entryId</returns>
-        public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data)
+        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data)
         {
             if (TryGetEntryTermId(field, key, out var idInTree) == false)
             {
@@ -612,6 +615,13 @@ namespace Corax
                 UpdateModifiedTermsOnly(context, ref oldEntryReader, data, fieldBinding, entryId);
             }
 
+            // In the case of dynamic "update", there are some challenges. We may not know what fields exist in both index entries, so we would need to create a cache of one of them
+            // (since we need to enumerate through them) and check if it is the same as in the other entry. Also proceed Remove/Insert of unique fields. 
+            // Fortunately, since we have the "EntriesModification" struct, we can be certain that removing and adding the same item in one batch will be a no-op at the end.
+            // In conclusion, implementing this as "RemoveOldDynamicFields" and "IndexDynamicFields" methods would be a sufficient solution for now.
+            RemoveOldDynamicFields();
+            IndexDynamicFields(data);
+            
             // now we can update the actual details here...
             var space = Container.GetMutable(Transaction.LowLevelTransaction, entryId);
             buf.Slice(0, idLen).CopyTo(space);
@@ -623,6 +633,36 @@ namespace Corax
             space.Clear(); // remove any extra data from old value
           
             return idInTree;
+            
+            void RemoveOldDynamicFields()
+            {
+                var oldDynamicFieldIterator = new IndexEntryReader.DynamicFieldEnumerator(oldEntryReader);
+                while (oldDynamicFieldIterator.MoveNext())
+                {
+                    var dynamicIndexedField = GetDynamicIndexedField(context, ref oldDynamicFieldIterator);
+                    if (dynamicIndexedField.FieldIndexingMode is FieldIndexingMode.No)
+                        continue;
+                    RemoveSingleTerm(dynamicIndexedField, oldEntryReader.GetFieldReaderFor(oldDynamicFieldIterator.CurrentFieldName), entryId);
+                }
+            }
+
+            void IndexDynamicFields(Span<byte> newEntry)
+            {
+                fixed (byte* buffer = newEntry)
+                {
+                    var newEntryReader = new IndexEntryReader(buffer, newEntry.Length);
+                    var newDynamicIterator = new IndexEntryReader.DynamicFieldEnumerator(newEntryReader);
+                    while (newDynamicIterator.MoveNext())
+                    {
+                        var dynamicIndexedField = GetDynamicIndexedField(context, ref newDynamicIterator);
+                        if (dynamicIndexedField.FieldIndexingMode is FieldIndexingMode.No)
+                            continue;
+                    
+                        var indexer = new TermIndexer(this, context, newEntryReader.GetFieldReaderFor(newDynamicIterator.CurrentFieldName), dynamicIndexedField, entryId);
+                        indexer.InsertToken();            
+                    }
+                }
+            }
         }
 
         private unsafe void UpdateModifiedTermsOnly(ByteStringContext context, ref IndexEntryReader oldEntryReader, Span<byte> newEntryData,
@@ -1329,7 +1369,7 @@ namespace Corax
         private void RecordDeletion(long idInTree)
         {
             var entryId = EntryIdEncodings.GetContainerId(idInTree);
-            if ((idInTree & (long)TermIdMask.Set) != 0)
+            if ((idInTree & (long)TermIdMask.PostingList) != 0)
             {
                 var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, entryId);
                 ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
@@ -1343,19 +1383,25 @@ namespace Corax
                     _numberOfModifications--;
                 }
             }
-            else if ((idInTree & (long)TermIdMask.Small) != 0)
+            else if ((idInTree & (long)TermIdMask.SmallPostingList) != 0)
             {
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, entryId).ToSpan();
                 // combine with existing value
-                var cur = 0L;
-                var count = ZigZagEncoding.Decode<int>(smallSet, out var pos);
-                for (int idX = 0; idX < count; ++idX)
+                _ = VariableSizeEncoding.Read<int>(smallSet, out var pos);
+                var entries = smallSet[pos..];
+                var decoderState = new PForDecoder.DecoderState(entries.Length);
+                Span<long> output = stackalloc long[PForEncoder.BufferLen];
+                while (true)
                 {
-                    var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
-                    pos += len;
-                    cur += value;
-                    _deletedEntries.Add(EntryIdEncodings.DecodeAndDiscardFrequency(cur));
-                    _numberOfModifications--;
+                    var read = PForDecoder.Decode(ref decoderState, entries, output);
+                    if (read == 0) 
+                        break;
+                    EntryIdEncodings.DecodeAndDiscardFrequency(output, read);
+                    for (int i = 0; i < read; i++)
+                    {
+                        _deletedEntries.Add(output[i]);
+                        _numberOfModifications--;
+                    }
                 }
             }
             else
@@ -1551,64 +1597,67 @@ namespace Corax
         /// <param name="termId">encoded</param>
         private AddEntriesToTermResult AddEntriesToTerm(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
-            if ((idInTree & (long)TermIdMask.Set) != 0)
+            if ((idInTree & (long)TermIdMask.PostingList) != 0)
             {
-                return AddEntriesToTermResultViaLargeSet(ref entries, out termId, idInTree & Constants.StorageMask.ContainerType);
+                return AddEntriesToTermResultViaLargePostingList(ref entries, out termId, idInTree & Constants.StorageMask.ContainerType);
             }
-            if ((idInTree & (long)TermIdMask.Small) != 0)
+            if ((idInTree & (long)TermIdMask.SmallPostingList) != 0)
             {
-                return AddEntriesToTermResultViaSmallSet(tmpBuf, ref entries, out termId, idInTree & Constants.StorageMask.ContainerType);
+                return AddEntriesToTermResultViaSmallPostingList(tmpBuf, ref entries, out termId, idInTree & Constants.StorageMask.ContainerType);
             }
             return AddEntriesToTermResultSingleValue(tmpBuf, idInTree, ref entries, out termId);
         }
 
-        private AddEntriesToTermResult AddEntriesToTermResultViaSmallSet(Span<byte> tmpBuf, ref EntriesModifications entries, out long termIdInTree, long idInTree)
+        private unsafe AddEntriesToTermResult AddEntriesToTermResultViaSmallPostingList(Span<byte> tmpBuf, ref EntriesModifications entries, out long termIdInTree, long idInTree)
         {
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
             
             var llt = Transaction.LowLevelTransaction;
-            var smallSet = Container.GetMutable(llt, containerId);
+            var mutableSpace = Container.GetMutable(llt, containerId);
             Debug.Assert(entries.Removals.ToArray().Distinct().Count() == entries.TotalRemovals, $"Removals list is not distinct.");
             int removalIndex = 0;
             
             // combine with existing values
-            var currentId = 0L;
-            var count = ZigZagEncoding.Decode<int>(smallSet, out var positionInEncodedBuffer);
-
+            Span<long> buffer = stackalloc long[PForEncoder.BufferLen];
+            VariableSizeEncoding.Read<int>(mutableSpace, out var offset);
+            var smallSet = mutableSpace[offset..];
+            var state = new PForDecoder.DecoderState(smallSet.Length);
             var removals = entries.Removals;
             long freeSpace = entries.FreeSpace;
-            for (int idX = 0; idX < count; ++idX)
+            while (true) 
             {
-                var value = ZigZagEncoding.Decode<long>(smallSet, out var lengthOfDelta, positionInEncodedBuffer);
-                positionInEncodedBuffer += lengthOfDelta;
-                currentId += value;
+                var read = PForDecoder.Decode(ref state, smallSet, buffer);
+                if (read == 0)
+                    break;
 
-                var entryId = EntryIdEncodings.DecodeAndDiscardFrequency(currentId);
-                if (removalIndex < removals.Length)
+                EntryIdEncodings.DecodeAndDiscardFrequency(buffer, read);
+                for (int i = 0; i < read; i++)
                 {
-                    if (entryId == removals[removalIndex])
+                    if (removalIndex < removals.Length)
                     {
-                        removalIndex++;
-                        continue;
+                        if (buffer[i] == removals[removalIndex])
+                        {
+                            removalIndex++;
+                            continue;
+                        }
+
+                        if (buffer[i] > removals[removalIndex])
+                            throw new InvalidDataException("Attempt to remove value " + removals[removalIndex] + ", but got " + buffer[i] );
+                    } 
+                    entries.Addition(buffer[i]);
+
+                    // PERF: Check if we have free space, in order to avoid copying the removals list in case
+                    // an addition requires an invalidation of the removals, we check if the conditions 
+                    // for a buffer growth are met. 
+                    if (freeSpace == 0)
+                    {
+                        removals = entries.Removals;
+                        freeSpace = entries.FreeSpace;
                     }
-
-                    if (entryId > removals[removalIndex])
-                        throw new InvalidDataException("Attempt to remove value " + removals[removalIndex] + ", but got " + currentId);
-                }
-
-                entries.Addition(entryId);
-
-                // PERF: Check if we have free space, in order to avoid copying the removals list in case
-                // an addition requires an invalidation of the removals, we check if the conditions 
-                // for a buffer growth are met. 
-                if (freeSpace == 0)
-                {
-                    removals = entries.Removals;
-                    freeSpace = entries.FreeSpace;
-                }
-                else
-                {
-                    freeSpace--;
+                    else
+                    {
+                        freeSpace--;
+                    }
                 }
             }
 
@@ -1621,27 +1670,39 @@ namespace Corax
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
-            if (TryDeltaEncodingToBuffer(entries.Additions, tmpBuf, out var encoded) == false)
+            
+            if (TryEncodingToBuffer(entries.Additions, tmpBuf, out var encoded) == false)
             {
                 AddNewTermToSet(entries.Additions, out termIdInTree);
                 return AddEntriesToTermResult.UpdateTermId;
             }
-
-            if (encoded.TryCopyTo(smallSet))
+            
+            if (encoded.Length <= mutableSpace.Length)
             {
+                encoded.CopyTo(mutableSpace);
+
                 // can update in place
                 termIdInTree = -1;
                 return AddEntriesToTermResult.NothingToDo;
             }
 
             Container.Delete(llt, _postingListContainerId, containerId);
-            var allocatedSize = encoded.Length + 32 - (encoded.Length % 32);
+         
+            termIdInTree = AllocatedSpaceForSmallSet(encoded,llt, out Span<byte> space);
 
-            termIdInTree = Container.Allocate(llt, _postingListContainerId, allocatedSize, out var space);
-            termIdInTree = EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.Small);
-            
             encoded.CopyTo(space);
+
             return AddEntriesToTermResult.UpdateTermId;
+        }
+
+        private long AllocatedSpaceForSmallSet(Span<byte> encoded, LowLevelTransaction llt, out Span<byte> space)
+        {
+            var sizeToAlloc = encoded.Length;
+            var alignSize = 32 - sizeToAlloc % 32;
+            var allocatedSize = sizeToAlloc + alignSize;
+
+            long termIdInTree = Container.Allocate(llt, _postingListContainerId, allocatedSize, out space);
+            return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
 
         private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
@@ -1710,7 +1771,7 @@ namespace Corax
             return AddEntriesToTermResult.UpdateTermId;
         }
 
-        private AddEntriesToTermResult AddEntriesToTermResultViaLargeSet(ref EntriesModifications entries, out long termId, long id)
+        private AddEntriesToTermResult AddEntriesToTermResultViaLargePostingList(ref EntriesModifications entries, out long termId, long id)
         {
             var containerId = EntryIdEncodings.GetContainerId(id);
             var llt = Transaction.LowLevelTransaction;
@@ -1806,36 +1867,34 @@ namespace Corax
             }
         }
         
-        private unsafe bool TryDeltaEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
+        private unsafe bool TryEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
         {
-            // try to insert to container value
-            //TODO: using simplest delta encoding, need to do better here
-            fixed (byte* tmpBufferPtr = tmpBuf)
+            uint* scratch = stackalloc uint[PForEncoder.BufferLen];
+            var offset = VariableSizeEncoding.Write(tmpBuf, additions.Length);
+            var pForEncoder = new PForEncoder(tmpBuf[offset..], scratch);
+
+            for (int i = 0; i < additions.Length; i++)
             {
-                int pos = ZigZagEncoding.Encode(tmpBufferPtr, additions.Length);
-                pos += ZigZagEncoding.Encode(tmpBufferPtr, additions[0], pos);
-
-                for (int i = 1; i < additions.Length; i++)
+                if (pForEncoder.TryAdd(additions[i]) == false)
                 {
-                    if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)
-                    {
-                        encoded = default;
-                        return false;
-                    }
-
-                    long entry = additions[i] - additions[i - 1];
-                    if (entry == 0)
-                        continue; // we don't need to store duplicates
-
-                    pos += ZigZagEncoding.Encode(tmpBufferPtr, entry, pos);
+                    goto Fail;
                 }
-
-                encoded = tmpBuf[..pos];
-                return true;
             }
+
+            if (pForEncoder.TryClose() == false)
+            {
+                goto Fail;
+            }
+
+            encoded = tmpBuf[..(pForEncoder.SizeInBytes+offset)];
+            return true;
+
+            Fail:
+            encoded = default;
+            return false;
         }
 
-        private void AddNewTerm(ref EntriesModifications entries, Span<byte> tmpBuf, out long termId)
+        private unsafe void AddNewTerm(ref EntriesModifications entries, Span<byte> tmpBuf, out long termId)
         {
             var additions = entries.Additions;
             
@@ -1850,29 +1909,31 @@ namespace Corax
             }
 
             entries.PrepareDataForCommiting();
-            if (TryDeltaEncodingToBuffer(additions, tmpBuf, out var encoded) == false)
+            if (TryEncodingToBuffer(additions, tmpBuf, out var encoded) == false)
             {
                 // too big, convert to a set
                 AddNewTermToSet(additions, out termId);
                 return;
             }
 
-            // we'll increase the size of the allocation to 32 byte boundary. To make it cheaper to add to it in the future
-            var allocatedSize = encoded.Length + 32 - (encoded.Length % 32);  
-            var containerId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, allocatedSize, out var space);
+            termId = AllocatedSpaceForSmallSet(encoded,  Transaction.LowLevelTransaction, out Span<byte> space);
             encoded.CopyTo(space);
-
-            termId = EntryIdEncodings.Encode(containerId, 0, TermIdMask.Small);
         }
 
         private unsafe void AddNewTermToSet(ReadOnlySpan<long> additions, out long termId)
         {
             long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
+            
+            // we need to account for the size of the posting lists, once a term has been switch to a posting list
+            // it will always be in this model, so we don't need to do any cleanup
+            _largePostingListSet ??= Transaction.OpenPostingList(Constants.IndexWriter.LargePostingListsSetSlice);
+            _largePostingListSet.Add(setId); 
+
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             PostingList.Create(Transaction.LowLevelTransaction, ref postingListState);
 
             PostingList.Update(Transaction.LowLevelTransaction, ref postingListState, additions, ReadOnlySpan<long>.Empty);
-            termId = EntryIdEncodings.Encode(setId, 0, TermIdMask.Set);
+            termId = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
         }
 
         private void UnlikelyGrowAnalyzerBuffer(int newBufferSize, int newTokenSize)

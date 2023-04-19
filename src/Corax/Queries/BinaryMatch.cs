@@ -63,7 +63,8 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
-            // Nothing to do if there is no boosting happening at this level. 
+            // Nothing to do if there is no boosting happening at this level.
+            // Remember: When you're sorting by score and primitives can be boosted, those should be true!
             bool innerBoosting = _inner.IsBoosting;
             bool outerBoosting = _outer.IsBoosting;
             if (innerBoosting == false && outerBoosting == false)

@@ -7,7 +7,12 @@ namespace Corax
     public static class Constants
     {
         public const string NullValue = "NULL_VALUE";
+        public static readonly ReadOnlyMemory<char> NullValueCharSpan = new(Constants.NullValue.ToCharArray());
+        
+        
         public const string EmptyString = "EMPTY_STRING";
+        public static readonly ReadOnlyMemory<char> EmptyStringCharSpan = new(Constants.EmptyString.ToCharArray());
+        
         public const string IndexMetadata = "@index_metadata";
         public const string IndexTimeFields = "@index_time_fields";
         public const string DocumentBoost = "@document_boost";
@@ -52,7 +57,7 @@ namespace Corax
             private static readonly byte[] LongTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'L' };
 
             
-            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex;
+            public static readonly Slice LargePostingListsSetSlice, PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice, DynamicFieldsAnalyzersSlice, TimeFieldsSlice, NumberOfTermsInIndex;
             public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const short ShortKnownFieldMask = unchecked((short)0x8000);
             public const byte ByteKnownFieldMask = unchecked((byte)0x80);
@@ -63,6 +68,7 @@ namespace Corax
                 {
                     Slice.From(ctx, "Fields", ByteStringType.Immutable, out FieldsSlice);
                     Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
+                    Slice.From(ctx, "LargePostingListsSet", ByteStringType.Immutable, out LargePostingListsSetSlice);
                     Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
                     Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
                     Slice.From(ctx, "SuggestionFields", ByteStringType.Immutable, out SuggestionsFieldsSlice);
@@ -82,12 +88,12 @@ namespace Corax
             public const byte Wildcard = (byte)'*';
 
             [Flags]
-            internal enum SearchMatchOptions
+            public enum SearchMatchOptions
             {
                 TermMatch = 0,
                 StartsWith = 1,
                 EndsWith = 2,
-                Contains = 4
+                Contains = StartsWith | EndsWith
             }
 
             public enum Operator

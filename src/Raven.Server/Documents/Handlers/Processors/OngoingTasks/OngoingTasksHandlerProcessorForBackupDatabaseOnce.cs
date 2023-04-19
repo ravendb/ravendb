@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                             {
                                 var runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupConfiguration.BackupType };
                                 var backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
-                                BackupTask.SaveBackupStatus(runningBackupStatus, RequestHandler.Database, Logger, backupResult);
+                                BackupUtils.SaveBackupStatus(runningBackupStatus, RequestHandler.DatabaseName, RequestHandler.Database.ServerStore, Logger, backupResult);
                                 tcs.SetResult(backupResult);
                             }
                         }

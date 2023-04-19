@@ -84,14 +84,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RetryFact(delayBetweenRetriesMs: 1000, Skip = "Uses NPOI and downloads 150MB of packages")]
         public void AdditionalAssemblies_NuGet_With_Prerelease_Dependency()
         {
             using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
-                    Name = "XmlIndex",
+                    Name = "NPOIIndex",
                     Maps =
                     {
                         "from c in docs.Companies select new { Name = typeof(NPOI.OpenXml4Net.Util.XmlHelper).Name }"

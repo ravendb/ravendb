@@ -18,6 +18,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions
@@ -104,7 +105,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(serverContext, _databaseName, name);
             var topology = _serverStore.Cluster.ReadDatabaseTopology(serverContext, _db.Name);
-            return _db.WhoseTaskIsIt(topology, subscription, subscription);
+            return BackupUtils.WhoseTaskIsIt(_serverStore, topology, subscription, subscription, _db.NotificationCenter);
         }
 
         public static async Task DeleteSubscriptionInternal(ServerStore serverStore, string databaseName, string name, string raftRequestId, Logger logger)

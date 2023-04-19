@@ -28,28 +28,28 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
     {
     }
 
-    protected override QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
-        IndexQueryServerSide query,
-        DocumentsOperationContext documentsContext, long indexEntryId, OrderMetadata[] orderByFields, ref THighlighting highlightings, Reference<long> skippedResults,
-        ref THasProjection hasProjections,
-        ref bool markedAsSkipped)
-    {
-        var result = base.CreateQueryResult(ref tracker, document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
+    //protected override QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
+    //    IndexQueryServerSide query,
+    //    DocumentsOperationContext documentsContext, long indexEntryId, OrderMetadata[] orderByFields, ref THighlighting highlightings, Reference<long> skippedResults,
+    //    ref THasProjection hasProjections,
+    //    ref bool markedAsSkipped)
+    //{
+    //    var result = base.CreateQueryResult(ref tracker, document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
 
-        if (result.Result != null && query.ReturnOptions != null)
-        {
-            if (query.ReturnOptions.AddOrderByFieldsMetadata)
-            {
-                if (_index.Type.IsMapReduce() == false) // for a map-reduce index the returned results already have fields that are used for sorting
-                    result.Result = AddOrderByFields(result.Result, query, indexEntryId, orderByFields);
-            }
+    //    if (result.Result != null && query.ReturnOptions != null)
+    //    {
+    //        if (query.ReturnOptions.AddOrderByFieldsMetadata)
+    //        {
+    //            if (_index.Type.IsMapReduce() == false) // for a map-reduce index the returned results already have fields that are used for sorting
+    //                result.Result = AddOrderByFields(result.Result, query, indexEntryId, orderByFields);
+    //        }
 
-            if (query.ReturnOptions.AddDataHashMetadata) 
-                result.Result = result.Result.EnsureDataHashInQueryResultMetadata();
-        }
+    //        if (query.ReturnOptions.AddDataHashMetadata) 
+    //            result.Result = result.Result.EnsureDataHashInQueryResultMetadata();
+    //    }
 
-        return result;
-    }
+    //    return result;
+    //}
 
     private ShardedQueryResultDocument AddOrderByFields(Document queryResult, IndexQueryServerSide query, long indexEntryId, OrderMetadata[] orderByFields)
     {

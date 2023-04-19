@@ -6,13 +6,19 @@
 
 using System;
 using System.Net.Http;
+using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_3620 : IDisposable
+    public class RavenDB_3620 : ParallelTestBase
     {
         private readonly HttpClient _client = new HttpClient();
+
+        public RavenDB_3620(ITestOutputHelper output) : base(output)
+        {
+        }
 
         [Fact]
         public void VerifyLicenseRelatedLinks()
@@ -44,9 +50,16 @@ namespace SlowTests.Issues
             Assert.True(response.IsSuccessStatusCode, url);
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
-            _client.Dispose();
+            try
+            {
+                _client.Dispose();
+            }
+            finally
+            {
+                base.Dispose();
+            }
         }
     }
 }

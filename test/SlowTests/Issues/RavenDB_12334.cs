@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Map_reduce_results_should_not_contains_implicit_nulls_wich_were_not_indexed(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -29,7 +29,6 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
 
                     Indexes.WaitForIndexing(store);
-                    WaitForUserToContinueTheTest(store);
 
                     var result = await session.Query<BlittableJsonReaderObject, DocsIndex>().FirstAsync();
 
@@ -55,6 +54,7 @@ namespace SlowTests.Issues
             public double? NumVal { get; set; }
         }
 
+        
         public class DocsIndex : AbstractMultiMapIndexCreationTask<DocView>
         {
             public DocsIndex()

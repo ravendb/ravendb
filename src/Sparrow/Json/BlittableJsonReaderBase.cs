@@ -227,6 +227,36 @@ namespace Sparrow.Json
             ThrowInvalidShift();
             return -1;
         }
+        
+        public static long ReadVariableSizeLongInReverse(byte* buffer, int pos, out byte offset)
+        {
+            // Read out an Int32 7 bits at a time.  The high bit 
+            // of the byte when on means to continue reading more bytes.
+            // we assume that the value shouldn't be zero very often
+            // because then we'll always take 5 bytes to store it
+            offset = 0;
+            long count = 0;
+            byte shift = 0;
+            byte b;
+            do
+            {
+                if (shift == 70)
+                    goto Error; // PERF: Using goto to diminish the size of the loop.
+
+                b = buffer[pos];
+                pos--;
+                offset++;
+
+                count |= ((long)(b & 0x7F)) << shift;
+                shift += 7;                
+            }
+            while ((b & 0x80) != 0);
+            return count;
+
+            Error:
+            ThrowInvalidShift();
+            return -1;
+        }
 
         protected long ReadVariableSizeLong(int pos)
         {

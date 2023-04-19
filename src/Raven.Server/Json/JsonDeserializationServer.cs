@@ -44,7 +44,6 @@ using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;
@@ -259,6 +258,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LegacySourceReplicationInformation> LegacySourceReplicationInformation = GenerateJsonDeserializationRoutine<LegacySourceReplicationInformation>();
 
         public static readonly Func<BlittableJsonReaderObject, BackupConfiguration> BackupConfiguration = GenerateJsonDeserializationRoutine<BackupConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> GetPeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, WaitForIndexNotificationRequest> WaitForIndexNotificationRequest = GenerateJsonDeserializationRoutine<WaitForIndexNotificationRequest>();
 
