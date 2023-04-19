@@ -69,6 +69,12 @@
             min-height: auto;
         }
 
+        .rich-panel-info {
+            .max-width-heading {
+                max-width: 640px;
+            }
+        }
+
         .rich-panel-info,
         .rich-panel-actions {
             padding: bs5variables.$gutter-xs bs5variables.$gutter-sm;

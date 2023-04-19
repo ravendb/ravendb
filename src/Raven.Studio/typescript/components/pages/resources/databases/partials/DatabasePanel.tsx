@@ -237,11 +237,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 <Input type="checkbox" checked={selected} onChange={toggleSelection} />
                             </RichPanelSelect>
 
-                            <RichPanelName>
+                            <RichPanelName className="max-width-heading">
                                 {canNavigateToDatabase ? (
                                     <a
                                         href={documentsUrl}
                                         className={classNames(
+                                            "d-block text-truncate",
                                             { "link-disabled": db.currentNode.isBeingDeleted },
                                             { "link-shard": db.sharded }
                                         )}
@@ -256,7 +257,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         {db.name}
                                     </a>
                                 ) : (
-                                    <span title="Database is disabled">
+                                    <span title="Database is disabled" className="d-block text-truncate">
                                         <Icon
                                             icon="database"
                                             addon={db.currentNode.relevant ? "home" : null}
