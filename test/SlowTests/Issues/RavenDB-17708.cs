@@ -54,7 +54,8 @@ public class RavenDB_17708 : RavenTestBase
         using (var s = store.OpenAsyncSession())
         {
             var r1 = await QueryRawCollection(s);
-            //Both Details_Description and Details_Value from document, we query raw collection
+            
+            // Both Details_Description and Details_Value from document, we query raw collection
             Assert.Collection(r1, a =>
             {
                 Assert.Equal("Test Description", a.Details_Description);
@@ -62,7 +63,8 @@ public class RavenDB_17708 : RavenTestBase
             });
             
             var r2 = await QueryUsingJavaScriptProjection(s);
-            //Details_Description from index, Details_Value from document, as provided in convention
+            
+            // Details_Description from index, Details_Value from document, as provided in convention
             Assert.Collection(r2, a =>
             {
                 Assert.Equal("Testabc", a.Details_Description);
@@ -105,7 +107,8 @@ public class RavenDB_17708 : RavenTestBase
         using (var s = store.OpenAsyncSession())
         {
             var res = await QueryUsingJavaScriptProjection(s);
-            //Both fields from index
+            
+            // Both fields from index
             Assert.Collection(res, a =>
             {
                 Assert.Equal("Testabc", a.Details_Description);
