@@ -25,7 +25,8 @@ namespace Raven.Client.Documents.Smuggler
         private readonly Func<string, string, IDatabaseChanges> _getChanges;
         private readonly Func<string, RequestExecutor> _getRequestExecutor;
         private readonly string _databaseName;
-        private readonly RequestExecutor _requestExecutor;
+        private RequestExecutor _requestExecutor;
+        private RequestExecutor RequestExecutor => _requestExecutor ?? (_databaseName != null ? _requestExecutor = _getRequestExecutor(_databaseName) : null);
 
         public DatabaseSmuggler(IDocumentStore store, string databaseName = null) 
             : this(store.Changes, store.GetRequestExecutor, databaseName ?? store.Database)
@@ -42,9 +43,6 @@ namespace Raven.Client.Documents.Smuggler
             _getChanges = getChanges;
             _databaseName = databaseName;
             _getRequestExecutor = getRequestExecutor;
-
-            if (_databaseName != null)
-                _requestExecutor = getRequestExecutor(databaseName);
         }
 
         public DatabaseSmuggler ForDatabase(string databaseName)
@@ -109,7 +107,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
-            if (_requestExecutor == null)
+            if (RequestExecutor == null)
                 throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
             IDisposable returnContext = null;
@@ -117,17 +115,17 @@ namespace Raven.Client.Documents.Smuggler
 
             try
             {
-                returnContext = _requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+                returnContext = RequestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
                 var getOperationIdCommand = new GetNextOperationIdCommand();
-                await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 var operationId = getOperationIdCommand.Result;
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
+                var command = new ExportCommand(RequestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
 
-                requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
+                requestTask = RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
                     .ContinueWith(t =>
                     {
                         cancellationTokenRegistration.Dispose();
@@ -152,9 +150,9 @@ namespace Raven.Client.Documents.Smuggler
                 }
 
                 return new Operation(
-                    _requestExecutor,
+                    RequestExecutor,
                     () => _getChanges(_databaseName, getOperationIdCommand.NodeTag),
-                    _requestExecutor.Conventions,
+                    RequestExecutor.Conventions,
                     operationId,
                     getOperationIdCommand.NodeTag,
                     additionalTask);
@@ -262,20 +260,20 @@ namespace Raven.Client.Documents.Smuggler
                     throw new ArgumentNullException(nameof(options));
                 if (stream == null)
                     throw new ArgumentNullException(nameof(stream));
-                if (_requestExecutor == null)
+                if (RequestExecutor == null)
                     throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
-                returnContext = _requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+                returnContext = RequestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
                 var getOperationIdCommand = new GetNextOperationIdCommand();
-                await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 var operationId = getOperationIdCommand.Result;
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
+                var command = new ImportCommand(RequestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
-                var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
+                var task = RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
                 requestTask = task
                         .ContinueWith(t =>
                         {
@@ -303,7 +301,7 @@ namespace Raven.Client.Documents.Smuggler
                     await tcs.Task.ConfigureAwait(false);
                 }
 
-                return new Operation(_requestExecutor, () => _getChanges(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
+                return new Operation(RequestExecutor, () => _getChanges(_databaseName, getOperationIdCommand.NodeTag), RequestExecutor.Conventions, operationId,
                     nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
 
             }

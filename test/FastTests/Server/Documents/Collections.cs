@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,14 +17,16 @@ namespace FastTests.Server.Documents
         {
         }
 
-        [Fact]
-        public void CanSurviveRestart()
+        [RavenTheory(RavenTestCategory.None)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanSurviveRestart(Options options)
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(new Options
-            {
-                Path = path
-            }))
+            options.Path = path;
+            var name = "CanSurviveRestart_" + Guid.NewGuid();
+            options.ModifyDatabaseName = _ => name;
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var commands = store.Commands())
                 {
@@ -53,19 +57,26 @@ namespace FastTests.Server.Documents
                 }
             }
 
-            for (int i = 0; i < 15; i++)
+            switch (options.DatabaseMode)
             {
-                if (File.Exists(Path.Combine(path, "db.lock")) == false)
+                case RavenDatabaseMode.Single:
+                    AssertForDbLockFile(path);
                     break;
-                Thread.Sleep(50);
+                case RavenDatabaseMode.Sharded:
+                    var folders = Directory.GetDirectories(path);
+                    foreach (string folder in folders)
+                    {
+                        if (Path.GetFileName(folder).StartsWith(name) == false)
+                            continue;
+
+                        AssertForDbLockFile(folder);
+                    }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
-            Assert.False(File.Exists(Path.Combine(path, "db.lock")), "The database lock file was still there?");
 
-
-            using (var store = GetDocumentStore(new Options
-            {
-                Path = path
-            }))
+            using (var store = GetDocumentStore(options))
             {
                 var collectionStats = store.Maintenance.Send(new GetCollectionStatisticsOperation());
 
@@ -77,6 +88,18 @@ namespace FastTests.Server.Documents
                 var people = collectionStats.Collections.First(x => x.Key == "People");
                 Assert.Equal(1, people.Value);
             }
+        }
+
+        private static void AssertForDbLockFile(string path)
+        {
+            for (int i = 0; i < 15; i++)
+            {
+                if (File.Exists(Path.Combine(path, "db.lock")) == false)
+                    break;
+                Thread.Sleep(50);
+            }
+
+            Assert.False(File.Exists(Path.Combine(path, "db.lock")), "The database lock file was still there?");
         }
     }
 }

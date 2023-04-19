@@ -108,6 +108,10 @@ namespace Raven.Server.Documents.Sharding.Executors
 
             foreach ((int shardNumber, var topology) in _databaseRecord.Sharding.Shards)
             {
+                // might be when this shard being deleted
+                if (topology.Count == 0)
+                    continue;
+
                 var urls = topology.AllNodes.Select(tag => ServerStore.PublishedServerUrls.SelectUrl(tag, clusterTopology)).ToArray();
 
                 requestExecutors[shardNumber] = RequestExecutor.CreateForShard(

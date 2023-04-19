@@ -85,7 +85,7 @@ namespace Raven.Client.Documents.Operations
         {
             using (GetContext(out JsonOperationContext context))
             {
-                var command = operation.GetCommand(_requestExecutor.Conventions, context);
+                var command = operation.GetCommand(RequestExecutor.Conventions, context);
                 ApplyNodeTagAndShardNumberToCommandIfSet(command);
 
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
@@ -96,7 +96,7 @@ namespace Raven.Client.Documents.Operations
         {
             using (GetContext(out JsonOperationContext context))
             {
-                var command = operation.GetCommand(_requestExecutor.Conventions, context);
+                var command = operation.GetCommand(RequestExecutor.Conventions, context);
                 ApplyNodeTagAndShardNumberToCommandIfSet(command);
 
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);

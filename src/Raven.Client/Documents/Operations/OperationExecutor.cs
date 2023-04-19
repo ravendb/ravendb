@@ -12,7 +12,9 @@ namespace Raven.Client.Documents.Operations
     {
         private readonly IDocumentStore _store;
         private readonly string _databaseName;
-        private readonly RequestExecutor _requestExecutor;
+        private RequestExecutor _requestExecutor;
+        
+        private RequestExecutor RequestExecutor => _requestExecutor ?? (_databaseName != null ? _requestExecutor = _store.GetRequestExecutor(_databaseName) : null);
 
         public OperationExecutor(DocumentStoreBase store, string databaseName = null) 
             : this((IDocumentStore)store, databaseName)
@@ -23,8 +25,6 @@ namespace Raven.Client.Documents.Operations
         {
             _store = store;
             _databaseName = databaseName ?? store.Database;
-            if (string.IsNullOrWhiteSpace(_databaseName) == false)
-                _requestExecutor = store.GetRequestExecutor(_databaseName);
         }
 
         public virtual OperationExecutor ForDatabase(string databaseName)
@@ -49,9 +49,9 @@ namespace Raven.Client.Documents.Operations
         {
             using (GetContext(out JsonOperationContext context))
             {
-                var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
+                var command = operation.GetCommand(_store, RequestExecutor.Conventions, context, RequestExecutor.Cache);
 
-                await _requestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
             }
         }
 
@@ -59,9 +59,9 @@ namespace Raven.Client.Documents.Operations
         {
             using (GetContext(out JsonOperationContext context))
             {
-                var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
+                var command = operation.GetCommand(_store, RequestExecutor.Conventions, context, RequestExecutor.Cache);
 
-                await _requestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
 
                 return command.Result;
             }
@@ -69,9 +69,9 @@ namespace Raven.Client.Documents.Operations
 
         protected virtual IDisposable GetContext(out JsonOperationContext context)
         {
-            if (_requestExecutor == null)
+            if (RequestExecutor == null)
                 throw new InvalidOperationException("Cannot use Operations without a database defined, did you forget to call ForDatabase?");
-            return _requestExecutor.ContextPool.AllocateOperationContext(out context);
+            return RequestExecutor.ContextPool.AllocateOperationContext(out context);
         }
     }
 }
