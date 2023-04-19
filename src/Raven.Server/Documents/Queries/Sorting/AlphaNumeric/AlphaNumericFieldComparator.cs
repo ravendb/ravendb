@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
         public override IComparable this[int slot] => _values[slot];
 
-
+        // based on: https://www.dotnetperls.com/alphanumeric-sorting
         internal abstract class AbstractAlphanumericComparisonState<T>
         {
             public readonly T OriginalString;
@@ -116,11 +116,9 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             protected abstract int GetStartPosition();
 
-            protected abstract char ReadOneChar(out int bytesUsed);
+            protected abstract int ReadOneChar(int offset, out char ch);
 
             protected abstract int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<T> string2State);
-
-            protected abstract int CompareStrings(AbstractAlphanumericComparisonState<T> string2State);
 
             public int CompareTo(AbstractAlphanumericComparisonState<T> other)
             {
@@ -151,7 +149,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             private void ScanNextAlphabeticOrNumericSequence()
             {
                 CurrentSequenceStartPosition = GetStartPosition();
-                CurrentCharacter = ReadOneChar(out var bytesUsed);
+                var used = ReadOneChar(CurrentPositionInString, out CurrentCharacter);
                 _currentSequenceIsNumber = char.IsDigit(CurrentCharacter);
                 NumberLength = 0;
 
@@ -177,11 +175,11 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     }
 
                     CurrentPositionInString++;
-                    StringBufferOffset += bytesUsed;
+                    StringBufferOffset += used;
 
                     if (CurrentPositionInString < _stringLength)
                     {
-                        CurrentCharacter = ReadOneChar(out bytesUsed);
+                        used = ReadOneChar(CurrentPositionInString, out CurrentCharacter);
                         currentCharacterIsDigit = char.IsDigit(CurrentCharacter);
                     }
                     else
@@ -217,14 +215,40 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return 1;
                 }
 
-                return CompareStrings(other);
+                // should be case insensitive
+                var offset1 = CurrentSequenceStartPosition;
+                var offset2 = other.CurrentSequenceStartPosition;
+
+                var length1 = StringBufferOffset - CurrentSequenceStartPosition;
+                var length2 = other.StringBufferOffset - other.CurrentSequenceStartPosition;
+
+                while (length1 > 0 && length2 > 0)
+                {
+                    var read1 = ReadOneChar(offset1, out var ch1);
+                    var read2 = other.ReadOneChar(offset2, out var ch2);
+
+                    length1 -= read1;
+                    length2 -= read2;
+
+                    var result = char.ToLowerInvariant(ch1) - char.ToLowerInvariant(ch2);
+
+                    if (result == 0)
+                    {
+                        offset1 += read1;
+                        offset2 += read2;
+                        continue;
+                    }
+
+                    return result;
+                }
+
+                return length1 - length2;
             }
         }
 
-        // based on: https://www.dotnetperls.com/alphanumeric-sorting
         internal sealed class StringAlphanumComparer : IComparer<string>
         {
-            public static readonly StringAlphanumComparer Instance = new StringAlphanumComparer();
+            public static readonly StringAlphanumComparer Instance = new();
 
             private StringAlphanumComparer()
             {
@@ -242,10 +266,10 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return CurrentPositionInString;
                 }
 
-                protected override char ReadOneChar(out int bytesUsed)
+                protected override int ReadOneChar(int offset, out char ch)
                 {
-                    bytesUsed = 0; // irrelevant
-                    return OriginalString[CurrentPositionInString];
+                    ch = OriginalString[offset];
+                    return 1;
                 }
 
                 protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<string> other)
@@ -253,13 +277,6 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
                         OriginalString, CurrentPositionInString - NumberLength, NumberLength,
                         other.OriginalString, other.CurrentPositionInString - other.NumberLength, other.NumberLength);
-                }
-
-                protected override int CompareStrings(AbstractAlphanumericComparisonState<string> other)
-                {
-                    return System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
-                        OriginalString, CurrentSequenceStartPosition, CurrentPositionInString - CurrentSequenceStartPosition,
-                        other.OriginalString, other.CurrentSequenceStartPosition, other.CurrentPositionInString - other.CurrentSequenceStartPosition);
                 }
             }
 
@@ -282,10 +299,9 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             }
         }
 
-        // based on: https://www.dotnetperls.com/alphanumeric-sorting
         internal sealed class UnmanagedStringAlphanumComparer : IComparer<UnmanagedStringArray.UnmanagedString>
         {
-            public static readonly UnmanagedStringAlphanumComparer Instance = new UnmanagedStringAlphanumComparer();
+            public static readonly UnmanagedStringAlphanumComparer Instance = new();
 
             private UnmanagedStringAlphanumComparer()
             {
@@ -307,10 +323,27 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return StringBufferOffset;
                 }
 
-                protected override char ReadOneChar(out int bytesUsed)
+                protected override unsafe int ReadOneChar(int offset, out char ch)
                 {
-                    bytesUsed = ReadOneChar(OriginalString.StringAsBytes, StringBufferOffset, ref CurrentCharacter);
-                    return CurrentCharacter;
+                    var str = OriginalString.StringAsBytes;
+
+                    fixed (byte* buffer = str)
+                    fixed (char* c = &ch)
+                    {
+                        var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
+                        decoder.Convert(buffer + offset, str.Length - offset, c, charCount: 1, flush: true, out var bytesUsed,
+                            out var charUsed, out _);
+
+                        if (charUsed != 1)
+                            ThrowUnexpectedNumberOfCharacters(offset, charUsed, str);
+
+                        return bytesUsed;
+                    }
+                }
+
+                private static void ThrowUnexpectedNumberOfCharacters(int offset, int charUsed, Span<byte> str)
+                {
+                    throw new InvalidOperationException($"Read unexpected number of chars {charUsed} from string: '{Encoding.UTF8.GetString(str)}' at offset: {offset}");
                 }
 
                 protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString> other)
@@ -318,56 +351,6 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     return OriginalString.StringAsBytes.Slice(StringBufferOffset - NumberLength, NumberLength)
                         .SequenceCompareTo(other.OriginalString.StringAsBytes.Slice(other.StringBufferOffset - other.NumberLength,
                             other.NumberLength));
-                }
-
-                protected override int CompareStrings(AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString> other)
-                {
-                    // should be case insensitive
-                    char ch1 = default;
-                    char ch2 = default;
-                    var offset1 = CurrentSequenceStartPosition;
-                    var offset2 = other.CurrentSequenceStartPosition;
-
-                    var length1 = StringBufferOffset - CurrentSequenceStartPosition;
-                    var length2 = other.StringBufferOffset - other.CurrentSequenceStartPosition;
-
-                    while (length1 > 0 && length2 > 0)
-                    {
-                        var read1 = ReadOneChar(OriginalString.StringAsBytes, offset1, ref ch1);
-                        var read2 = ReadOneChar(other.OriginalString.StringAsBytes, offset2, ref ch2);
-
-                        length1 -= read1;
-                        length2 -= read2;
-
-                        var result = char.ToLowerInvariant(ch1) - char.ToLowerInvariant(ch2);
-
-                        if (result == 0)
-                        {
-                            offset1 += read1;
-                            offset2 += read2;
-                            continue;
-                        }
-
-                        return result;
-                    }
-
-                    return length1 - length2;
-                }
-
-                private static unsafe int ReadOneChar(Span<byte> str, int offset, ref char ch)
-                {
-                    fixed (byte* buffer = str)
-                    fixed (char* c = &ch)
-                    {
-                        var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
-                        decoder.Convert(buffer + offset, str.Length - offset, c, 1, flush: true, out var bytesUsed,
-                            out var charUsed, out _);
-
-                        if (charUsed != 1)
-                            throw new InvalidOperationException($"Read unexpected number of chars {charUsed} from string: '{Encoding.UTF8.GetString(str)}' at offset: {offset}");
-
-                        return bytesUsed;
-                    }
                 }
             }
 
