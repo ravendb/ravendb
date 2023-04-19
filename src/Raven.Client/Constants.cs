@@ -20,11 +20,6 @@ namespace Raven.Client
             }
         }
 
-        public class Identities
-        {
-            public const char DefaultSeparator = '/';
-        }
-
         public class Headers
         {
             private Headers()
@@ -447,6 +442,11 @@ namespace Raven.Client
 
                 public const string DestinationDocumentChangeVector = null;
             }
+        }
+
+        internal static class Identities
+        {
+            public const char DefaultSeparator = '/';
         }
     }
 }
