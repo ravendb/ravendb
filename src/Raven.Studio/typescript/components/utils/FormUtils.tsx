@@ -109,9 +109,9 @@ export function FormToggleGeneral<TFieldValues extends FieldValues, TName extend
 
     return (
         <Label className="form-check">
-            {label && (!labelPosition || labelPosition === "left") && <div className="ms-2">{label}</div>}
+            {label && (!labelPosition || labelPosition === "left") && <label className="me-2">{label}</label>}
             <FormInputGeneral type={type} canBeChecked {...restProps} />
-            {label && labelPosition === "right" && <div className="ms-2">{label}</div>}
+            {label && labelPosition === "right" && <label className="ms-2">{label}</label>}
         </Label>
     );
 }
