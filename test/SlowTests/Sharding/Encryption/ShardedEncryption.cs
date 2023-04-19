@@ -245,7 +245,7 @@ namespace SlowTests.Sharding.Encryption
                             Name = $"user-{i}"
                         }, id);
 
-                        var shardNumber = await Sharding.GetShardNumberFor(store, id);
+                        var shardNumber = await Sharding.GetShardNumberForAsync(store, id);
                         if (dic.TryGetValue(shardNumber, out var idsList) == false)
                         {
                             dic[shardNumber] = idsList = new List<string>();

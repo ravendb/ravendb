@@ -682,7 +682,7 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 Assert.True(expected.Count == 0,
-                    $"Missing {string.Join(Environment.NewLine, expected.Select(async e => $"{e} (shard: {await Sharding.GetShardNumberFor(store, e)})"))}");
+                    $"Missing {string.Join(Environment.NewLine, expected.Select(async e => $"{e} (shard: {await Sharding.GetShardNumberForAsync(store, e)})"))}");
 
 
                 await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id);

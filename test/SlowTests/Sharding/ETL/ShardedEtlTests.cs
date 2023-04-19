@@ -1772,10 +1772,10 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 const string id = "users/0/$eu";
-                var originalLocation = Sharding.GetShardNumberFor(src, id);
+                var originalLocation = await Sharding.GetShardNumberForAsync(src, id);
 
                 await Sharding.Resharding.MoveShardForId(src, id);
-                var newLocation = Sharding.GetShardNumberFor(src, id);
+                var newLocation = await Sharding.GetShardNumberForAsync(src, id);
 
                 Assert.NotEqual(originalLocation, newLocation);
 
@@ -1840,7 +1840,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 100);
 
-                var originalLocation = await Sharding.GetShardNumberFor(src, id);
+                var originalLocation = await Sharding.GetShardNumberForAsync(src, id);
                 string originalShard = ShardHelper.ToShardName(src.Database, originalLocation);
 
                 // move bucket of users/1-A while writing
@@ -1873,7 +1873,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     }
                 }, 101);
 
-                var newLocation = await Sharding.GetShardNumberFor(src, id);
+                var newLocation = await Sharding.GetShardNumberForAsync(src, id);
                 string newShard = ShardHelper.ToShardName(src.Database, newLocation);
 
                 using (var session = src.OpenSession(originalShard))

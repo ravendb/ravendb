@@ -446,11 +446,11 @@ namespace SlowTests.Sharding.Cluster
 
                 var shardToCX = new Dictionary<int, CompareExchangeResult<User>>();
                 var shard2User = "users/1";
-                Assert.Equal(2, await Sharding.GetShardNumberFor(store, shard2User));
+                Assert.Equal(2, await Sharding.GetShardNumberForAsync(store, shard2User));
                 var shard0User = "users/0";
-                Assert.Equal(0, await Sharding.GetShardNumberFor(store, shard0User));
+                Assert.Equal(0, await Sharding.GetShardNumberForAsync(store, shard0User));
                 var shard1User = "users/6";
-                Assert.Equal(1, await Sharding.GetShardNumberFor(store, shard1User));
+                Assert.Equal(1, await Sharding.GetShardNumberForAsync(store, shard1User));
 
                 //create one 3 compare exchanges in cluster
                 shardToCX[0] = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard0User, user, 0));
@@ -553,11 +553,11 @@ namespace SlowTests.Sharding.Cluster
                 var shardOnLeader = serverToShard[leader];
                 
                 var shard2User = "users/1";
-                Assert.Equal(2, await Sharding.GetShardNumberFor(store, shard2User));
+                Assert.Equal(2, await Sharding.GetShardNumberForAsync(store, shard2User));
                 var shard0User = "users/0";
-                Assert.Equal(0, await Sharding.GetShardNumberFor(store, shard0User));
+                Assert.Equal(0, await Sharding.GetShardNumberForAsync(store, shard0User));
                 var shard1User = "users/6";
-                Assert.Equal(1, await Sharding.GetShardNumberFor(store, shard1User));
+                Assert.Equal(1, await Sharding.GetShardNumberForAsync(store, shard1User));
 
                 //create 3 compare exchanges in cluster
                 var cx1 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard0User, user, 0));

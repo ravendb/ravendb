@@ -1,4 +1,5 @@
 ﻿using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,10 +11,11 @@ namespace FastTests.Server.Basic
         {
         }
 
-        [Fact]
-        public void UnlessAccessedLazyLoadsAreNoOp()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void UnlessAccessedLazyLoadsAreNoOp(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -24,10 +26,11 @@ namespace FastTests.Server.Basic
             }
         }
 
-        [Fact]
-        public void WithPaging()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void WithPaging(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

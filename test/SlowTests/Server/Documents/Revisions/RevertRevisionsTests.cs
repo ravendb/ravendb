@@ -78,7 +78,7 @@ namespace SlowTests.Server.Documents.Revisions
             var company2 = new Company { Name = "Company Name2" };
             using (var store = GetDocumentStore(options))
             {
-                Assert.NotEqual(Sharding.GetShardNumberFor(store, "Companies/1"), Sharding.GetShardNumberFor(store, "Companies/2"));
+                Assert.NotEqual(await Sharding.GetShardNumberForAsync(store, "Companies/1"), await Sharding.GetShardNumberForAsync(store, "Companies/2"));
                 DateTime last = default;
                 await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())

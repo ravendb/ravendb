@@ -206,7 +206,7 @@ namespace InterversionTests
 
                 Assert.True(WaitForDocument<User>(oldStore, id1, u => u.AddressId == "New"));
 
-                var oldLocation = await Sharding.GetShardNumberFor(store, id1);
+                var oldLocation = await Sharding.GetShardNumberForAsync(store, id1);
                 await Sharding.Resharding.MoveShardForId(store, id1);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
@@ -223,7 +223,7 @@ namespace InterversionTests
                     Assert.True(WaitForDocument<User>(oldStore, currentId, null));
                 }
 
-                var newLocation = await Sharding.GetShardNumberFor(store, id1);
+                var newLocation = await Sharding.GetShardNumberForAsync(store, id1);
 
                 db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, newLocation));
                 var storage = db.DocumentsStorage;
@@ -268,7 +268,7 @@ namespace InterversionTests
                 await EnsureReplicatingAsync(oldStore, store);
                 await EnsureReplicatingAsync(store, oldStore);
 
-                var location = await Sharding.GetShardNumberFor(store, id);
+                var location = await Sharding.GetShardNumberForAsync(store, id);
 
                 using (var s1 = store.OpenSession())
                 {
