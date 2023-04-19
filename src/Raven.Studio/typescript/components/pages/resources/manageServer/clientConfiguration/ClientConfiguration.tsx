@@ -26,15 +26,15 @@ export default function ClientConfiguration() {
 
     return (
         <Form onSubmit={handleSubmit(onSave)}>
-            <Col md={6}>
+            <Col md={6} className="p-4">
                 {/* TODO: add spinner on save */}
                 <Button type="submit" color="primary">
                     <i className="icon-save margin-right-xxs" />
                     Save
                 </Button>
 
-                <Card className="p-4 mt-4">
-                    <FormGroup className="flex-horizontal">
+                <Card className="card flex-row p-2 mt-4">
+                    <Row className="flex-grow-1">
                         <Col>
                             <FormToggle
                                 type="checkbox"
@@ -46,7 +46,7 @@ export default function ClientConfiguration() {
                                 }
                             />
                         </Col>
-                        <Col>
+                        <Col md={5}>
                             <FormInput
                                 type="text"
                                 control={control}
@@ -55,9 +55,11 @@ export default function ClientConfiguration() {
                                 disabled={!identityPartsSeparatorEnabled}
                             />
                         </Col>
-                    </FormGroup>
+                    </Row>
+                </Card>
 
-                    <FormGroup className="flex-horizontal">
+                <Card className="flex-row mt-1 p-2">
+                    <Row className="flex-grow-1">
                         <Col>
                             <FormToggle
                                 type="checkbox"
@@ -69,7 +71,7 @@ export default function ClientConfiguration() {
                                 }
                             />
                         </Col>
-                        <Col>
+                        <Col lg={5}>
                             <FormInput
                                 type="number"
                                 control={control}
@@ -78,9 +80,11 @@ export default function ClientConfiguration() {
                                 disabled={!maximumNumberOfRequestsEnabled}
                             />
                         </Col>
-                    </FormGroup>
+                    </Row>
+                </Card>
 
-                    <FormGroup className="flex-horizontal">
+                <Card className="mt-1">
+                    <Row className="p-2">
                         <Col>
                             <FormToggle
                                 type="checkbox"
@@ -95,7 +99,7 @@ export default function ClientConfiguration() {
                                 }}
                             />
                         </Col>
-                        <Col>
+                        <Col md={5}>
                             <Row>
                                 <Col>
                                     <FormToggle
@@ -118,9 +122,9 @@ export default function ClientConfiguration() {
                                 </Col>
                             </Row>
                         </Col>
-                    </FormGroup>
+                    </Row>
 
-                    <FormGroup className="flex-horizontal">
+                    <Row className="p-2">
                         <Col>
                             <FormToggle
                                 type="checkbox"
@@ -130,7 +134,7 @@ export default function ClientConfiguration() {
                                 afterChange={(event) => !event.target.checked && resetField("readBalanceBehaviorValue")}
                             />
                         </Col>
-                        <Col>
+                        <Col md={5}>
                             <FormInput
                                 control={control}
                                 name="readBalanceBehaviorValue"
@@ -142,7 +146,7 @@ export default function ClientConfiguration() {
                                 <FormSelectOption<ReadBalanceBehavior> label="Fastest Node" value="FastestNode" />
                             </FormInput>
                         </Col>
-                    </FormGroup>
+                    </Row>
                 </Card>
             </Col>
         </Form>
