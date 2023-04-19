@@ -297,8 +297,18 @@ namespace Voron.Debugging
         public static void RenderAndShow(CompactTree tree, string message = null)
         {
             var headerData = $"{tree.State}";
-            Container container = new Container(tree.Llt.GetPage(tree.State.TermsContainerId));
-            headerData += $" Terms container pages: {container.Header.NumberOfPages}";
+            var it = Container.GetAllPagesSet(tree.Llt, tree.State.TermsContainerId);
+            long numOfCounterPages = 0, containerSpace = 0, freeSpace =0, entries = 0;
+            while (it.TryMoveNext(out var p))
+            {
+                Container container = new Container(tree.Llt.GetPage(p));
+                containerSpace += container.SpaceUsed();
+                entries += container.Header.NumberOfOffsets;
+                freeSpace += container.Header.FloorOfData - container.Header.CeilingOfOffsets;
+                numOfCounterPages++;
+            }
+
+            headerData += $" Terms container pages: {numOfCounterPages:#,#}, Used: {containerSpace:#,#}, Free: {freeSpace:#,#}, Entries: {entries:#,#}";
             if (!string.IsNullOrWhiteSpace(message))
                 headerData = $"{message}-{headerData}";
 
