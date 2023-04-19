@@ -109,13 +109,11 @@ namespace SlowTests.Sharding
                 Assert.Contains("already exists on all the nodes of the cluster", error.Message);
             }
         }
-
-        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
-        public async Task EnsureAddingNewShardNodesListCantContainDuplicates()
+        
+        [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void EnsureTopologyCantContainDuplicates(Options options)
         {
-            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
-            var options = Sharding.GetOptionsForCluster(leader, shards: 1, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
-
             using (var store = GetDocumentStore(options))
             {
                 //try to add a new shard with a list of the same node twice
