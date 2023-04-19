@@ -98,7 +98,7 @@ namespace FastTests
             LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
             RachisStateMachine.EnableDebugLongCommit = true;
             RavenServer.SkipCertificateDispose = true;
-
+            RavenFtpClient.ValidateAnyCertificate = true;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
 
