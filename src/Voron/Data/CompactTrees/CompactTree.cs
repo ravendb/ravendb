@@ -87,7 +87,7 @@ namespace Voron.Data.CompactTrees
             // from the initial key in the page. In most cases, it'll lead to a 
             // value that is smaller than the original, but it shouldn't generate
             // a value that is *larger* than the previous one once encoded
-            var diff = (keyContainerId - state.Header->ContainerBasePage );
+            var diff = (keyContainerId - state.Header->ContainerBasePage);
             // the diff may be *negative*, so we use zig/zag encoding to handle this
             return (diff << 1) ^ (diff >> 63);
         }
@@ -350,7 +350,7 @@ namespace Voron.Data.CompactTrees
                 compactPageHeader->Upper = Constants.Storage.PageSize;
                 compactPageHeader->FreeSpace = Constants.Storage.PageSize - (PageHeader.SizeOf);
                 compactPageHeader->DictionaryId = dictionaryId;
-                compactPageHeader->ContainerBasePage = Container.GetNextFreePage(llt, containerId) * Constants.Storage.PageSize;
+                compactPageHeader->ContainerBasePage = ComputeContainerBasePage(llt, containerId);
 
                 using var _ = parent.DirectAdd(name, sizeof(CompactTreeState), out var p);
                 header = (CompactTreeState*)p;
@@ -385,6 +385,16 @@ namespace Voron.Data.CompactTrees
                 _llt = llt,
                 _state = *header
             };
+        }
+
+        private static long ComputeContainerBasePage(long containerKeyId)
+        {
+            return containerKeyId & 0x1FFF;
+        }
+
+        private static long ComputeContainerBasePage(LowLevelTransaction llt, long containerId)
+        {
+            return Container.GetNextFreePage(llt, containerId) * Constants.Storage.PageSize;
         }
 
         public void PrepareForCommit()
@@ -1083,7 +1093,7 @@ namespace Voron.Data.CompactTrees
             header->Lower = PageHeader.SizeOf ;
             header->Upper = Constants.Storage.PageSize;
             header->FreeSpace = Constants.Storage.PageSize - PageHeader.SizeOf;
-            header->ContainerBasePage = currentCauseForSplit.ContainerId & ~0x1FFF;
+            header->ContainerBasePage = ComputeContainerBasePage(currentCauseForSplit.ContainerId);
             
             if (header->PageFlags.HasFlag(CompactPageFlags.Branch))
             {
@@ -1263,7 +1273,7 @@ namespace Voron.Data.CompactTrees
             state.Header->Upper = Constants.Storage.PageSize;
             state.Header->Lower = PageHeader.SizeOf;
             state.Header->FreeSpace = (ushort)(state.Header->Upper - state.Header->Lower);
-            state.Header->ContainerBasePage = Container.GetNextFreePage(_llt, State.TermsContainerId) * Constants.Storage.PageSize;
+            state.Header->ContainerBasePage = ComputeContainerBasePage(_llt, State.TermsContainerId);
 
             using var __ = _llt.Allocator.Allocate(4096, out var buffer);
             var decodeBuffer = new Span<byte>(buffer.Ptr, 2048);
