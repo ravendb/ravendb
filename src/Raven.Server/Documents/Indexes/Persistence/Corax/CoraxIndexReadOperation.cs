@@ -8,9 +8,11 @@ using System.Threading;
 using Amazon.SQS.Model;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Highlightings;
@@ -65,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override long EntriesCount() => _indexSearcher.NumberOfEntries;
 
 
-        private interface ISupportsHighlighting
+        protected interface ISupportsHighlighting
         {
             QueryTimingsScope TimingsScope { get; }
             Dictionary<string, CoraxHighlightingTermIndex> Terms { get; }
@@ -274,7 +276,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        private interface IHasDistinct
+        protected interface IHasDistinct
         {
         }
 
@@ -285,7 +287,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         // Even if there are no distinct statements we have to be sure that we are not including
         // documents that we have already included during this request. 
-        private struct IdentityTracker<TDistinct> where TDistinct : struct, IHasDistinct
+        protected struct IdentityTracker<TDistinct> where TDistinct : struct, IHasDistinct
         {
             private Index _index;
             private IndexQueryServerSide _query;
@@ -413,7 +415,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        private interface ISupportsQueryFilter : IDisposable
+        protected interface ISupportsQueryFilter : IDisposable
         {
             FilterResult Apply(ref RetrieverInput input, string key);
         }
@@ -440,7 +442,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             public FilterResult Apply(ref RetrieverInput input, string key) => _filter.Apply(ref input, key);
         }
 
-        private interface IHasProjection
+        protected interface IHasProjection
         {
             bool IsProjection { get; }
         }
@@ -493,16 +495,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
             
             long take = pageSize + query.Start;
-            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct || query.Metadata.OrderBy != null)
+            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct || query.Metadata.OrderBy != null || take > int.MaxValue)
                 take = CoraxConstants.IndexSearcher.TakeAll;
             
             bool isDistinctCount = query.PageSize == 0 && typeof(TDistinct) == typeof(HasDistinct);
             if (isDistinctCount)
             {
+                if (pageSize > int.MaxValue)
+                    ThrowDistinctOnBiggerCollectionThanInt32();
+                
                 pageSize = int.MaxValue;
                 take = CoraxConstants.IndexSearcher.TakeAll;
             }
 
+            if (query.Metadata.HasExplanations)
+                ThrowExplanationsIsNotImplementedInCorax();
+            
             THasProjection hasProjections = default;
             THighlighting highlightings = default;
             highlightings.Initialize(query, queryTimings);
@@ -512,13 +520,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             while (runQuery)
             {
                 IQueryMatch queryMatch;
+                OrderMetadata[] orderByFields;
 
                 using (queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false)?.Start())
                 {
                     var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index,
-                        query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, take);
+                        query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take);
 
-                    if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out _)) is null)
+                    if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out orderByFields)) is null)
                         yield break;
                 }
 
@@ -549,7 +558,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                     {
                         token.ThrowIfCancellationRequested();
-
+                        
+                        long indexEntryId = ids[i];
+                        
                         // If we are going to include no matter what, lets skip everything else.
                         if (willAlwaysIncludeInResults)
                             goto Include;
@@ -586,7 +597,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         var fetchedDocument = retriever.Get(ref retrieverInput, token);
                         if (fetchedDocument.Document != null)
                         {
-                            var qr = GetQueryResult(ref identityTracker, fetchedDocument.Document, ref markedAsSkipped);
+                            var qr = CreateQueryResult(ref identityTracker, fetchedDocument.Document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults,
+                                ref hasProjections, ref markedAsSkipped);
                             if (qr.Result is null)
                             {
                                 docsToLoad++;
@@ -599,7 +611,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         {
                             foreach (Document item in fetchedDocument.List)
                             {
-                                var qr = GetQueryResult(ref identityTracker, item, ref markedAsSkipped);
+                                var qr = CreateQueryResult(ref identityTracker, fetchedDocument.Document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults,
+                                    ref hasProjections, ref markedAsSkipped);
                                 if (qr.Result is null)
                                 {
                                     docsToLoad++;
@@ -657,28 +670,34 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 else
                     throw new UnsupportedOperationException($"The type {typeof(TQueryFilter)} is not supported.");
             }
-
-            QueryResult GetQueryResult(ref IdentityTracker<TDistinct> tracker, Document document, ref bool markedAsSkipped)
+        }
+        
+        protected virtual QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
+            IndexQueryServerSide query, DocumentsOperationContext documentsContext, long indexEntryId, OrderMetadata[] orderByFields, ref THighlighting highlightings,
+            Reference<long> skippedResults,
+            ref THasProjection hasProjections, ref bool markedAsSkipped) 
+            where TDistinct : struct, IHasDistinct
+            where THasProjection : struct, IHasProjection
+            where THighlighting : struct, ISupportsHighlighting
+        {
+            if (tracker.ShouldIncludeDocument(ref hasProjections, document) == false)
             {
-                if (tracker.ShouldIncludeDocument(ref hasProjections, document) == false)
+                document?.Dispose();
+
+                if (markedAsSkipped == false)
                 {
-                    document?.Dispose();
-
-                    if (markedAsSkipped == false)
-                    {
-                        skippedResults.Value++;
-                        markedAsSkipped = true;
-                    }
-
-                    return default;
+                    skippedResults.Value++;
+                    markedAsSkipped = true;
                 }
 
-                return new QueryResult
-                {
-                    Result = document,
-                    Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
-                };
+                return default;
             }
+
+            return new QueryResult
+            {
+                Result = document,
+                Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
+            };
         }
 
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
@@ -1287,6 +1306,72 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxIndexReadOperation)} of {_index.Name}");
             exceptionAggregator.Execute(() => _indexSearcher?.Dispose());
             exceptionAggregator.ThrowIfNeeded();
+        }
+        
+        internal class GrowableHashSet<TItem>
+        {
+            private List<HashSet<TItem>> _hashSetsBucket;
+            private HashSet<TItem> _newestHashSet;
+            private readonly int _maxSizePerCollection;
+            private readonly IEqualityComparer<TItem> _comparer;
+
+            public bool HasMultipleHashSets => _hashSetsBucket != null;
+
+            public GrowableHashSet(IEqualityComparer<TItem> comparer = null, int? maxSizePerCollection = null)
+            {
+                _comparer = comparer;
+                _hashSetsBucket = null;
+                _maxSizePerCollection = maxSizePerCollection ?? int.MaxValue;
+                CreateNewHashSet();
+            }
+
+            public bool Add(TItem item)
+            {
+                if (_newestHashSet!.Count >= _maxSizePerCollection)
+                    UnlikelyGrowBuffer();
+
+                if (_hashSetsBucket != null && Contains(item))
+                    return false;
+
+                return _newestHashSet.Add(item);
+            }
+
+            private void UnlikelyGrowBuffer()
+            {
+                _hashSetsBucket ??= new();
+                _hashSetsBucket.Add(_newestHashSet);
+                CreateNewHashSet();
+            }
+
+            public bool Contains(TItem item)
+            {
+                if (_hashSetsBucket != null)
+                {
+                    foreach (var hashSet in _hashSetsBucket)
+                        if (hashSet.Contains(item))
+                            return true;
+                }
+
+                return _newestHashSet!.Contains(item);
+            }
+
+            private void CreateNewHashSet()
+            {
+                if (_comparer == null)
+                    _newestHashSet = new();
+                else
+                    _newestHashSet = new(_comparer);
+            }
+        }
+        
+        private static void ThrowDistinctOnBiggerCollectionThanInt32()
+        {
+            throw new NotSupportedInCoraxException($"Corax doesn't support 'Distinct' operation on collection bigger than int32 ({int.MaxValue}).");
+        }
+        
+        private static void ThrowExplanationsIsNotImplementedInCorax()
+        {
+            throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
         }
     }
 }
