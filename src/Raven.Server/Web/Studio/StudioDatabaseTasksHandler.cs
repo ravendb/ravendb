@@ -40,7 +40,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/databases/*/admin/studio-tasks/restart", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/studio-tasks/restart", "POST", AuthorizationStatus.DatabaseAdmin, SkipUsagesCount = true)]
         public async Task RestartDatabase()
         {
             await ServerStore.DatabasesLandlord.RestartDatabase(Database.Name);
