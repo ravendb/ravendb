@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -148,8 +147,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded, Skip = "RavenDB-20320 Sharding: Failing test AlphaNumericSorting.basic_sequence_of_characters")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void basic_sequence_of_characters(Options options)
         {
             var titles = new List<string>
