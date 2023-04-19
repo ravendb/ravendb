@@ -28,6 +28,9 @@ namespace Voron.Data.CompactTrees
         [FieldOffset(16)]
         public long DictionaryId;
         
+        [FieldOffset(24)]
+        public long ContainerBasePage;
+        
         public int NumberOfEntries
         {
             get
