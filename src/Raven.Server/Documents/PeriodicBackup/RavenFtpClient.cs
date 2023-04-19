@@ -32,9 +32,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly string _certificateAsBase64;
         private readonly string _certificateFileName;
         private readonly bool _useSsl;
-        private const int DefaultBufferSize = 81920;
         private const int DefaultFtpPort = 21;
-        private readonly bool _isTesting;
+        public static bool ValidateAnyCertificate = false;
 
         public RavenFtpClient(FtpSettings ftpSettings, Progress progress = null, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
@@ -60,9 +59,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _url += "/";
 
             Debug.Assert(_url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase));
-            _isTesting = Environment.GetEnvironmentVariable("isTesting") != null;
         }
 
+        /// <summary>
+        /// Uploading a give file stream to a remote ftp server
+        /// </summary>
+        /// <param name="folderName">The name of the folder that will be created for the file</param>
+        /// <param name="fileName">The name of the file that will be created in the remote ftp server</param>
+        /// <param name="stream">The requested file stream to upload</param>
         public void UploadFile(string folderName, string fileName, Stream stream)
         {
             TestConnection();
@@ -77,37 +81,30 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 try
                 {
-                    var readBuffer = new byte[DefaultBufferSize];
-
-                    int count;
-                    while ((count = stream.Read(readBuffer, 0, readBuffer.Length)) != 0)
+                    client.UploadStream(stream, path, progress: (p) =>
                     {
-                        client.UploadBytes(readBuffer, path, FtpRemoteExists.Resume, progress: (p) =>
+                        if (Progress == null)
+                            return;
+                        switch (p.Progress)
                         {
-                            if (Progress == null)
-                                return;
-                            switch (p.Progress)
-                            {
-                                case 100:
-                                    Progress?.UploadProgress.ChangeState(UploadState.Done);
-                                    break;
-                                case 0:
-                                    Progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
-                                    break;
-                                case > 0 and < 100:
-                                    Progress?.UploadProgress.ChangeState(UploadState.Uploading);
-                                    break;
-                            }
-
-                        });
-                        Progress?.UploadProgress.UpdateUploaded(count);
+                            case 100:
+                                Progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
+                                break;
+                            case 0:
+                                Progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
+                                break;
+                            case > 0 and < 100:
+                                Progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                                break;
+                        }
+                        Progress?.UploadProgress.SetUploaded(p.TransferredBytes);
                         Progress?.OnUploadProgress();
-                    }
+                    });
                 }
                 finally
                 {
                     Progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
-                    if (client.FileExists(url))
+                    if (client.FileExists(path + "/" + fileName))
                     {
                         Progress?.UploadProgress.ChangeState(UploadState.Done);
                     }
@@ -115,6 +112,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        /// <summary>
+        /// Creating the folder, include subfolders, for the uploaded file as specified in the url
+        /// </summary>
+        /// <param name="folderName">The folder name the uploaded file will upload into</param>
+        /// <param name="path">The extracted path including all the subfolders and the created folder</param>
+        /// <returns>The url without any subfolders</returns>
         private string CreateNestedFoldersIfNeeded(string folderName, out string path)
         {
             ExtractUrlAndDirectories(out var url, out var directories);
@@ -138,6 +141,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             return url;
         }
 
+        /// <summary>
+        /// Generating the url without any subfolders and a list of those subfolders given the original url
+        /// </summary>
+        /// <param name="url">The url without any subfolders from the original url</param>
+        /// <param name="dirs">The list of subfolders from the original url</param>
         private void ExtractUrlAndDirectories(out string url, out List<string> dirs)
         {
             var uri = new Uri(_url);
@@ -147,10 +155,17 @@ namespace Raven.Server.Documents.PeriodicBackup
             url = $"{uri.Scheme}://{uri.Host}";
         }
 
+        /// <summary>
+        /// Creating an instance of ftp client
+        /// </summary>
+        /// <param name="url">The ftp server url, include subfolder/s in case of needed</param>
+        /// <param name="keepAlive">The condition that control if the ftp client whether should be keep alive or not</param>
+        /// <returns>The ftp client instance</returns>
+        /// <exception cref="ArgumentException">In case of invalid certificate</exception>
         internal FtpClient CreateFtpClient(string url, bool keepAlive)
         {
             var client = new FtpClient(url);
-            client.Config.ConnectTimeout = -1;
+            client.Config.ConnectTimeout = 300000; // Wait 5 min when trying to connect
             client.Credentials = new NetworkCredential(_userName, _password);
             if (_useSsl)
             {
@@ -161,7 +176,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var x509Certificate = new X509Certificate2(byteArray);
                     client.Config.EncryptionMode = FtpEncryptionMode.Explicit;
                     client.Config.ClientCertificates.Add(x509Certificate);
-                    if (_isTesting)
+                    if (ValidateAnyCertificate)
                         client.Config.ValidateAnyCertificate = true;
                     else
                         client.ValidateCertificate += new FtpSslValidation(OnValidateCertificate);
@@ -189,10 +204,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             else
             {
-                throw new Exception($"{e.PolicyErrors}{Environment.NewLine}{e.Certificate}");
+                throw new AuthenticationException($"Couldn't establish connection using this certificate due to these errors: {e.PolicyErrors}");
             }
         }
 
+        /// <summary>
+        /// Testing the connection between the ftp client and the ftp server
+        /// </summary>
+        /// <exception cref="ArgumentException">When giving invalid certificate</exception>
+        /// <exception cref="AuthenticationException">When giving wrong certificate or url not matched</exception>
         public void TestConnection()
         {
             if (_useSsl && string.IsNullOrWhiteSpace(_certificateAsBase64))
@@ -212,6 +232,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        /// <summary>
+        /// Getting the url directories path
+        /// </summary>
+        /// <returns>A string of all the directories</returns>
         private string GetPath()
         {
             var path = "";
@@ -224,6 +248,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             return path;
         }
 
+        /// <summary>
+        /// Getting a list of items according to which object type is passed
+        /// </summary>
+        /// <param name="url">The ftp server url</param>
+        /// <param name="path">The path to get from</param>
+        /// <param name="type">The object type to filter</param>
+        /// <returns>A complete list of the items after filtered</returns>
         private List<string> GetItemsInternal(string url, string path, FtpObjectType type)
         {
             var list = new List<string>();
@@ -241,6 +272,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             return list;
         }
 
+        /// <summary>
+        /// Getting all the folders that are in the ftp server according the original url
+        /// </summary>
+        /// <returns>A complete list of all the folders names</returns>
         public List<string> GetFolders()
         {
             TestConnection();
@@ -249,6 +284,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             return GetItemsInternal(url, path, FtpObjectType.Directory);
         }
 
+        /// <summary>
+        /// Getting all the files in a specific folder name
+        /// </summary>
+        /// <param name="folderName">The folder name to look for all the files inside it</param>
+        /// <returns>A complete list of all files names</returns>
+        /// <exception cref="ArgumentException">When giving invalid certificate</exception>
         public List<string> GetFiles([NotNull] string folderName)
         {
             if (string.IsNullOrEmpty(folderName)) throw new ArgumentException("Value cannot be null or empty.", nameof(folderName));
@@ -256,6 +297,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             return GetItemsInternal(url, folderName, FtpObjectType.File);
         }
 
+        /// <summary>
+        /// Deleting a specific folder in the ftp server
+        /// </summary>
+        /// <param name="folderName">The folder to which to delete in the ftp server</param>
+        /// <exception cref="ArgumentException">When giving invalid certificate</exception>
         public void DeleteFolder([NotNull] string folderName)
         {
             if (string.IsNullOrEmpty(folderName)) throw new ArgumentException("Value cannot be null or empty.", nameof(folderName));

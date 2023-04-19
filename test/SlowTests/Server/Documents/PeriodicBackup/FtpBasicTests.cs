@@ -188,7 +188,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Password = "itay@ravendb.net",
                         CertificateAsBase64 = Convert.ToBase64String(cert.Export(X509ContentType.Cert))
                     };
-                    Environment.SetEnvironmentVariable("isTesting", "true");
                     using (var client = new RavenFtpClient(settings))
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("abc")))
                     {
@@ -228,7 +227,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Password = "itay@ravendb.net",
                         CertificateAsBase64 = Convert.ToBase64String(cert.Export(X509ContentType.Cert))
                     };
-                    Environment.SetEnvironmentVariable("isTesting", "true");
                     using (var client = new RavenFtpClient(settings))
                     using (var store = GetDocumentStore(options: new Options
                            {
@@ -282,7 +280,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Password = "itay@ravendb.net",
                         CertificateAsBase64 = Convert.ToBase64String(cert.Export(X509ContentType.Cert))
                     };
-                    Environment.SetEnvironmentVariable("isTesting", "true");
                     using (var client = new RavenFtpClient(settings))
                     using (var store = GetDocumentStore(options: new Options
                            {
@@ -336,10 +333,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var ftpClient = client.CreateFtpClient(outputUrl, keepAlive: true))
             {
-                if (ftpClient.FileExists(path + "/" + folderName + "/" + fileName))
-                    return true;
+                return ftpClient.FileExists(path + "/" + folderName + "/" + fileName);
             }
-            return false;
         }
 
         private bool CheckBackupFile(string url, string backupName, RavenFtpClient client)
