@@ -96,24 +96,12 @@ namespace Raven.Server.Web.System
                         $"Problem trying to create a new sharded database {record.DatabaseName}."+
                         $" Sharded database can't have field {nameof(record.Topology)} defined in its record. Only the topologies inside {nameof(record.Sharding)} are relevant.");
                 }
-
-                var shardNodes = new HashSet<string>();
+                
                 if (record.Sharding?.Shards?.Count > 0)
                 {
                     foreach (var (shardNumber, topology) in record.Sharding.Shards)
                     {
-                        if (topology?.Count > 0)
-                        {
-                            shardNodes.Clear();
-                            foreach (var node in topology.AllNodes)
-                            {
-                                if (shardNodes.Contains(node))
-                                    throw new InvalidOperationException(
-                                        $"Attempting to create sharded database {record.DatabaseName} but the topology of shard {shardNumber} contains node {node} more than once." +
-                                        " Can't have multiple replicas of the same shard on the same node.");
-                                shardNodes.Add(node);
-                            }
-                        }
+                        topology.ValidateTopology(ShardHelper.ToShardName(record.DatabaseName, shardNumber));
                     }
                 }
             }
@@ -122,6 +110,8 @@ namespace Raven.Server.Web.System
                 if (record.Sharding != null)
                     throw new InvalidOperationException(
                         $"Problem trying to create a new database {record.DatabaseName}. Can't have a sharding configuration in the record while no shards are defined.");
+                
+                record.Topology?.ValidateTopology(record.DatabaseName);
             }
         }
     }

@@ -213,6 +213,22 @@ namespace Raven.Client.ServerWide
             return true;
         }
 
+        public void ValidateTopology(string databaseName)
+        {
+            var nodes = new HashSet<string>();
+            if (Count > 0)
+            {
+                nodes.Clear();
+                foreach (var node in AllNodes)
+                {
+                    if (nodes.Contains(node))
+                        throw new InvalidOperationException(
+                            $"Database {databaseName} cannot have multiple replicas reside on the same node {node}.");
+                    nodes.Add(node);
+                }
+            }
+        }
+
         private bool IsReorderNeeded()
         {
             if (PriorityOrder == null || PriorityOrder.Count == 0)
