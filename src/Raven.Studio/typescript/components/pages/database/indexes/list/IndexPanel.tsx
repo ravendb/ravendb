@@ -210,8 +210,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             )}
                         </RichPanelSelect>
 
-                        <RichPanelName>
-                            <a href={editUrl} title={index.name}>
+                        <RichPanelName className="max-width-heading">
+                            <a href={editUrl} title={index.name} className="d-block text-truncate">
                                 {index.name}
                             </a>
                         </RichPanelName>
