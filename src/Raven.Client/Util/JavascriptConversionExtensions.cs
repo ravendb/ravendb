@@ -1030,7 +1030,6 @@ namespace Raven.Client.Util
                     return;
 
                 context.PreventDefault();
-                
                 var writer = context.GetWriter();
 
                 //if not a lambda expression then
@@ -1131,10 +1130,9 @@ namespace Raven.Client.Util
 
                 if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
                     return;
-                
+
                 if (methodCallExpression.Arguments.Count != 2)
                     return;
-                
 
                 context.PreventDefault();
 

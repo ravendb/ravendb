@@ -3147,7 +3147,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case string s when s.StartsWith("includes.counters("):
                     HandleInclude(name, s, "let _ = RavenQuery.includeCounters(T documentInstance, string CounterName)");
                     break;
-                default: 
+                default:
                     _declareBuilder ??= new StringBuilder();
                     _declareBuilder.Append('\t')
                     .Append("var ").Append(name)

@@ -1,10 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
-using Sparrow;
 
 namespace Raven.Client.Documents.Queries
 {

@@ -964,8 +964,8 @@ namespace Raven.Server.Documents.Patch
                     CountersValueIncludes.Add(key);
 
                     return self;
-                } 
-                
+                }
+
                 if (args.Length == 1)
                 {
 
@@ -980,15 +980,13 @@ namespace Raven.Server.Documents.Patch
                     if (CountersValueIncludes == null)
                         CountersValueIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                  
                     var myCounters = _database.DocumentsStorage.CountersStorage.GetCountersForDocument(_docsCtx, key);
 
                     foreach (var counter in myCounters)
-                    { 
-                        CountersValueIncludes.Add(counter);  
+                    {
+                        CountersValueIncludes.Add(counter);
                     }
 
-                    
                     return self;
                 }
 

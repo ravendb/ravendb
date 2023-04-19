@@ -82,7 +82,7 @@ public class RavenDB_14541 : RavenTestBase
         using (DocumentStore store = GetDocumentStore())
         {
             using (var session = store.OpenSession())
-            { 
+            {
                 session.Store(new Address { CountryState = "states/1#zip07", City = "new-york", StateId = "states/1" });
                 session.Store(new Address { CountryState = "states/2#zip05", City = "haifa", StateId = "states/2" });
 
@@ -230,7 +230,7 @@ public class RavenDB_14541 : RavenTestBase
                     select new { Name = a.City };
                 var res1 = query3.ToString();
                 var res2 = query3.ToList();
-                
+
                 Assert.Equal(2, res2.Count);
                 Assert.Equal("new-york", res2[0].Name);
                 Assert.Equal("haifa", res2[1].Name);
@@ -702,9 +702,9 @@ public class RavenDB_14541 : RavenTestBase
                 {
                     var query = from a in session.Query<User>()
                         let name = a.UserName
-                        let _ = RavenQuery.IncludeAllCounters(a) 
-                        let __ = RavenQuery.IncludeTimeSeries(a, "CurViews") 
-                        let ___ = RavenQuery.Include<State>("a.StateId") 
+                        let _ = RavenQuery.IncludeAllCounters(a)
+                        let __ = RavenQuery.IncludeTimeSeries(a, "CurViews")
+                        let ___ = RavenQuery.Include<State>("a.StateId")
                         select new { Name = name };
 
                     var AsString = query.ToString();
@@ -767,7 +767,7 @@ public class RavenDB_14541 : RavenTestBase
                                 let __ = RavenQuery.IncludeTimeSeries(a, "CurViews")
                                 let ___ = RavenQuery.Include<State>("a.StateId")
                                 let city = RavenQuery.Load<City>(a.CityId)
-                               
+ 
                                 select new { Name = a.UserName, HomeTown = city};
 
                     var AsString = query.ToString();

@@ -2,12 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Amqp.Framing;
-using JetBrains.Annotations;
 using Raven.Client;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -43,12 +39,12 @@ namespace Raven.Server.Documents.Includes
            var hs = new HashSet<AbstractTimeSeriesRange>();
 
            foreach (var timeSeriesName in timeSeriesNames)
-            { 
+            {
                 var target = new TimeSeriesRange();
                 target.From = Start;
                 target.To = End;
-                target.Name = timeSeriesName; 
-                hs.Add(target);  
+                target.Name = timeSeriesName;
+                hs.Add(target);
             }
 
            if (_timeSeriesRangesBySourcePath.Count < 1)
