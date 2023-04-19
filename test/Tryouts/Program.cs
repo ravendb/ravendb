@@ -34,7 +34,7 @@ public static class Program
                 using (var test = new CompactTreeTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    test.CanEncodeAndDecode((int)DateTime.Now.Ticks);
+                    test.CanHandleMerges();
                 }
             }
             catch (Exception e)
