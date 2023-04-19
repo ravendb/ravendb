@@ -29,7 +29,7 @@ namespace Voron.Data.CompactTrees
 
         public override string ToString()
         {
-            return $"{nameof(RootObjectType)}: {RootObjectType}, {nameof(Flags)}: {Flags}, {nameof(RootPage)}: {RootPage}, {nameof(NumberOfEntries)}: {NumberOfEntries}, {nameof(BranchPages)}: {BranchPages}, {nameof(LeafPages)}: {LeafPages}, {nameof(TreeDictionaryId)}: {TreeDictionaryId}";
+            return $"{nameof(RootObjectType)}: {RootObjectType}, {nameof(Flags)}: {Flags}, {nameof(RootPage)}: {RootPage}, {nameof(NumberOfEntries)}: {NumberOfEntries:#,#}, {nameof(BranchPages)}: {BranchPages:#,#}, {nameof(LeafPages)}: {LeafPages:#,#}, {nameof(TreeDictionaryId)}: {TreeDictionaryId}";
         }
 
         public void CopyTo(CompactTreeState* header)
