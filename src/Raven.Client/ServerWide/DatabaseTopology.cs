@@ -213,7 +213,7 @@ namespace Raven.Client.ServerWide
             return true;
         }
 
-        public void ValidateTopology(string databaseName)
+        internal void ValidateTopology(string databaseName)
         {
             var nodes = new HashSet<string>();
             if (Count > 0)
