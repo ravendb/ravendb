@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Client
@@ -9,10 +10,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void CRUD_Operations()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CRUD_Operations(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -24,7 +26,7 @@ namespace FastTests.Client
                     };
                     newSession.Store(doc, "docs/1");
                     newSession.SaveChanges();
-                 }
+                }
 
                 using (var session = store.OpenSession())
                 {

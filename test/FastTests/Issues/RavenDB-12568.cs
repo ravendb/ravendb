@@ -3,6 +3,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void PuttingBlittableWithAttachmentsShouldThrowIfNotExist()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void PuttingBlittableWithAttachmentsShouldThrowIfNotExist(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var requestExecutor = store.GetRequestExecutor();
 

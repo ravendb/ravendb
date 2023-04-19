@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,12 +13,13 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Raven_Should_Support_Include_More_Than_Once_On_Same_Doc()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Raven_Should_Support_Include_More_Than_Once_On_Same_Doc(Options options)
         {
             const int numberOfDocs = 335;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

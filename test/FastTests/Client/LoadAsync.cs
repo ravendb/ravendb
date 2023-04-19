@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,10 +12,11 @@ namespace FastTests.Client
         {
         }
         
-        [Fact]
-        public void Load_Document_And_Expect_Null_User()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Load_Document_And_Expect_Null_User(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using var session = store.OpenSession();
 
@@ -29,10 +31,11 @@ namespace FastTests.Client
             Assert.Null(user3);
         }
         
-        [Fact]
-        public async Task Load_Document_And_Expect_Null_User_Async()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Load_Document_And_Expect_Null_User_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -49,10 +52,11 @@ namespace FastTests.Client
             }
         }
         
-        [Fact]
-        public async Task Load_Document_By_id_Async()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Load_Document_By_id_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -66,10 +70,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task Load_Documents_By_ids_Async()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Load_Documents_By_ids_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

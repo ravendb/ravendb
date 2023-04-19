@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +13,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void PatchOperationShouldReceiveCompleteInformation()
+        [RavenTheory(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void PatchOperationShouldReceiveCompleteInformation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

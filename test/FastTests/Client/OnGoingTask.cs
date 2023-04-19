@@ -24,15 +24,16 @@ namespace FastTests.Client
         {
         }
 
-        [LicenseRequiredFact, Trait("Category", "Smuggler")]
-        public void GetBackupTaskInfo()
+        [RavenTheory(RavenTestCategory.Studio | RavenTestCategory.ClientApi | RavenTestCategory.BackupExportImport, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetBackupTaskInfo(Options options)
         {
             var backupConfig = Backup.CreateBackupConfiguration(backupPath: NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", azureSettings: new AzureSettings
             {
                 StorageContainer = "abc"
             }, disabled: true, name: "backup1");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var updateBackupResult = store.Maintenance.Send(new UpdatePeriodicBackupOperation(backupConfig));
 
@@ -56,15 +57,16 @@ namespace FastTests.Client
             }
         }
 
-        [LicenseRequiredFact]
-        public void GetExternalReplicationTaskInfo()
+        [RavenTheory(RavenTestCategory.Studio | RavenTestCategory.ClientApi | RavenTestCategory.Replication, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetExternalReplicationTaskInfo(Options options)
         {
             var watcher = new ExternalReplication("Watcher1", "Connection")
             {
                 Name = "MyExternalReplication"
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var result = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
@@ -95,12 +97,11 @@ namespace FastTests.Client
             }
         }
 
-
-
-        [LicenseRequiredFact]
-        public void GetRavenEtlTaskInfo() => GetRavenEtlTaskInfoBase(GetDocumentStore());
+        [RavenTheory(RavenTestCategory.Studio | RavenTestCategory.ClientApi | RavenTestCategory.Etl, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetRavenEtlTaskInfo(Options options) => GetRavenEtlTaskInfoBase(GetDocumentStore(options));
         
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Etl, LicenseRequired = true)]
         public void GetRavenEtlTaskInfoWithCustomConventions() => GetRavenEtlTaskInfoBase(GetDocumentStore(new Options()
         {
             ModifyDocumentStore = documentStore =>
@@ -170,8 +171,9 @@ namespace FastTests.Client
             }
         }
 
-        [LicenseRequiredFact]
-        public void GetSqlEtlTaskInfo()
+        [RavenTheory(RavenTestCategory.Studio | RavenTestCategory.ClientApi | RavenTestCategory.Etl, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetSqlEtlTaskInfo(Options options)
         {
             var sqlScript = @"
 var orderData = {
@@ -203,7 +205,7 @@ loadToOrders(orderData);
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var sqlConnectionString = new SqlConnectionString
                 {
@@ -243,8 +245,9 @@ loadToOrders(orderData);
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public void GetSubscriptionTaskInfo()
+        [RavenTheory(RavenTestCategory.Studio | RavenTestCategory.ClientApi | RavenTestCategory.Subscriptions, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetSubscriptionTaskInfo(Options options)
         {
             var subscriptionOption = new SubscriptionCreationOptions<Order>
             {
@@ -253,7 +256,7 @@ loadToOrders(orderData);
                 MentorNode = "B"
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var sub = store.Subscriptions.Create(subscriptionOption);
                 
