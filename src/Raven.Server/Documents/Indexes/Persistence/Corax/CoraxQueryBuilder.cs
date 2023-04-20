@@ -827,44 +827,9 @@ internal static class CoraxQueryBuilder
             else
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, queryParameters, fieldExpression);
         }
-
-
-        List<string> termMatches = null;
-        List<(string Term, Constants.Search.SearchMatchOptions Match)> othersMatches = null;
         
-        foreach (var v in GetValues())
-        {
-            var type = GetTermType(v);
-            if (type is Constants.Search.SearchMatchOptions.TermMatch)
-            {
-                termMatches ??= new();
-                termMatches.Add(v);
-                continue;
-            }
-
-            othersMatches ??= new();
-            othersMatches.Add((v, type));
-        }
-
-        return indexSearcher.SearchQuery(fieldMetadata, termMatches, othersMatches, @operator);
-
-        Constants.Search.SearchMatchOptions GetTermType(string termValue)
-        {
-            if (string.IsNullOrEmpty(termValue))
-                return Constants.Search.SearchMatchOptions.TermMatch;
-            Constants.Search.SearchMatchOptions mode = default;
-            if (termValue[0] == LuceneQueryHelper.AsteriskChar)
-                mode |= Constants.Search.SearchMatchOptions.EndsWith;
-
-            if (termValue[^1] == LuceneQueryHelper.AsteriskChar)
-            {
-                if (termValue[^2] != '\\')
-                    mode |= Constants.Search.SearchMatchOptions.StartsWith;
-            }
-
-            return mode;
-        }
-
+        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator);
+        
         /*
          * Here we need to deal with value that comes from the user, which means that we
          * have to be careful.
