@@ -346,24 +346,26 @@ namespace Raven.Client.Http
             UpdateConnectionLimit(initialUrls);
         }
 
-        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool usePrivateUrls = false)
         {
-            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);
+            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls)
+            {
+                _usePrivateUrls = usePrivateUrls
+            };
             executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls, GlobalApplicationIdentifier);
             return executor;
         }
 
-        internal static RequestExecutor CreateForServer(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        internal static RequestExecutor CreateForServer(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions, bool usePrivateUrls = false)
         {
-            var executor = Create(initialUrls, databaseName, certificate, conventions);
+            var executor = Create(initialUrls, databaseName, certificate, conventions, usePrivateUrls);
             executor._disableClientConfigurationUpdates = true;
             return executor;
         }
-
+        
         internal static RequestExecutor CreateForShard(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            var executor = CreateForServer(initialUrls, databaseName, certificate, conventions);
-            executor._usePrivateUrls = true;
+            var executor = CreateForServer(initialUrls, databaseName, certificate, conventions, usePrivateUrls: true);
             return executor;
         }
 
