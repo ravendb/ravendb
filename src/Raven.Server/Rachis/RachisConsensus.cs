@@ -650,7 +650,8 @@ namespace Raven.Server.Rachis
                         case Leader.TopologyModification.Remove:
                             if (clusterTopology.Members.ContainsKey(tag) == false &&
                                 clusterTopology.Promotables.ContainsKey(tag) == false &&
-                                clusterTopology.Watchers.ContainsKey(tag) == false)
+                                clusterTopology.Watchers.ContainsKey(tag) == false &&
+                                clusterTopology.Witnesses.ContainsKey(tag) == false)
                                 return;
                             break;
 

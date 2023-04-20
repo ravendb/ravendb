@@ -29,9 +29,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new BasicCluster(testOutputHelper))
+                    using (var test = new ElectionTests(testOutputHelper))
                     {
-                         await test.ClusterWithNodeAsWitness();
+                         await test.ForceStepDownWithWitness();
                     }
                 }
                 catch (Exception e)

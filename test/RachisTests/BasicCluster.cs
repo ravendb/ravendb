@@ -167,12 +167,40 @@ namespace RachisTests
         [Fact]
         public async Task ClusterWithNodeAsWitness()
         {
-            LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs", TimeSpan.MaxValue, 1000000, false);
+            // LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs", TimeSpan.MaxValue, 1000000, false); //#FOR DEBUG AND LOGGING THE ERRORS.
             var expected = "0123456789";
             var a = SetupServer(true);
             var b = SetupServer();
-            await a.AddWitnessToClusterAsync(b.Url);
-            await b.WaitForTopology(Leader.TopologyModification.Witness);
+            var c = SetupServer();
+            var d = SetupServer();
+            var followers = new[] { b, c, d };
+            foreach (var follower in followers)
+            {
+                if (follower == d)
+                { //case for witness
+                    await a.AddWitnessToClusterAsync(follower.Url);
+                    await follower.WaitForTopology(Leader.TopologyModification.Witness);
+                    break;
+                }
+                await a.AddToClusterAsync(follower.Url);
+                await follower.WaitForTopology(Leader.TopologyModification.Voter);
+            }
+
+            var tasks = new List<Task>();
+            for (var i = 0; i < 9; i++)
+            {
+                tasks.Add(a.PutAsync(new TestCommand { Name = "test", Value = i }));
+            }
+
+            var (lastIndex, _) = await a.PutAsync(new TestCommand { Name = "test", Value = 9 });
+            var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            Assert.True(await waitForCommitIndexChange.WaitWithoutExceptionAsync(TimeSpan.FromSeconds(5)));
+
+            using (b.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                Assert.Equal(expected, b.StateMachine.Read(context, "test"));
+            }
         }
 
         [Fact]

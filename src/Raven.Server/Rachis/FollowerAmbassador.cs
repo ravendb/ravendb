@@ -45,6 +45,7 @@ namespace Raven.Server.Rachis
         private readonly string _tag;
         private readonly string _url;
         private string _statusMessage;
+        private bool _isWitness;
 
         public string StatusMessage
         {
@@ -96,6 +97,7 @@ namespace Raven.Server.Rachis
         public string Url => _url;
 
         public int FollowerCommandsVersion { get; set; }
+        public bool IsWitness { get => _isWitness; set => _isWitness = value; }
 
         private readonly string _debugName;
         private readonly RachisLogRecorder _debugRecorder;
@@ -124,7 +126,7 @@ namespace Raven.Server.Rachis
             Interlocked.Exchange(ref _lastReplyFromFollower, DateTime.UtcNow.Ticks);
         }
 
-        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, RemoteConnection connection = null)
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, RemoteConnection connection = null, bool isWitness = false)
         {
             _engine = engine;
             _term = leader.Term;
@@ -138,6 +140,7 @@ namespace Raven.Server.Rachis
             var id = Interlocked.Increment(ref _uniqueId);
             _debugName = $"Follower Ambassador for {_tag} in term {_term} (id:{id})";
             _debugRecorder = _engine.InMemoryDebug.GetNewRecorder(_debugName);
+            _isWitness = isWitness;
         }
 
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)

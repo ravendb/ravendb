@@ -365,6 +365,28 @@ namespace RachisTests
             Assert.True(await firstLeader.WaitForState(RachisState.Follower, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)), "Old leader hasn't stepped down.");
         }
 
+        [Fact]
+        public async Task ForceStepDownWithWitness()
+        {
+            var a = SetupServer(true);
+            var b = SetupServer();
+            var c = SetupServer();
+            var d = SetupServer();
+            var followers = new[] { b, c, d };
+            foreach (var follower in followers)
+            {
+                if (follower == d)
+                { //case for witness
+                    await a.AddWitnessToClusterAsync(follower.Url);
+                    await follower.WaitForTopology(Leader.TopologyModification.Witness);
+                    break;
+                }
+                await a.AddToClusterAsync(follower.Url);
+                await follower.WaitForTopology(Leader.TopologyModification.Voter);
+            }
+            a.CurrentLeader.StepDown();
+        }
+
         /// <summary>
         /// This test checks a few things (I didn't want to have to repeat the same logic in multiple tests)
         /// 1) it checks that a new leader is elected when the old leader is cut-off the cluster

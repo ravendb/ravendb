@@ -123,8 +123,7 @@ namespace Raven.Server.Rachis
                 _errorOccurred.TrySetException(new NotLeadingException("Was forced to step down"));
                 return;
             }
-
-            var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
+            var nextLeader = _voters.Values.Where(x=> !x.IsWitness).OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"Stepping as down as leader and will ask {nextLeader} to become the next leader");
@@ -209,7 +208,11 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(voter.Key, out connection);
-                    var ambassador = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, connection);
+                    FollowerAmbassador ambassador;
+                    if(clusterTopology.Witnesses.ContainsKey(voter.Key)) // this case is that the ambassador is going to be a witness follower ambassador
+                        ambassador = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, connection,true);
+                    else
+                        ambassador = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, connection);
                     _voters[voter.Key] = ambassador;
                     _engine.AppendStateDisposable(this, ambassador);
                     if (_engine.Log.IsInfoEnabled)
@@ -260,11 +263,6 @@ namespace Raven.Server.Rachis
                         _engine.Log.Info($"{ToString()}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
                     }
                     ambassador.Start();
-                }
-
-                foreach (var witness in clusterTopology.Witnesses)
-                {
-                    //WE NEED TO REFRESH HERE WITNESSES AMBASSADORS FOR THIS LEADER
                 }
 
                 if (old.Count > 0)

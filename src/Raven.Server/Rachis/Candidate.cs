@@ -10,6 +10,7 @@ using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Sparrow.Threading;
 using Raven.Server.Utils;
+using System.Linq;
 
 namespace Raven.Server.Rachis
 {
@@ -86,7 +87,7 @@ namespace Raven.Server.Rachis
                         ElectionTerm = ElectionTerm + 1;
                     }
 
-                    foreach (var voter in clusterTopology.Members)
+                    foreach (var voter in clusterTopology.Members.Concat(clusterTopology.Witnesses))
                     {
                         if (voter.Key == _engine.Tag)
                             continue; // we already voted for ourselves
@@ -98,10 +99,7 @@ namespace Raven.Server.Rachis
                         _engine.AppendStateDisposable(this, candidateAmbassador); // concurrency exception here will dispose the current candidate and it ambassadors
                         candidateAmbassador.Start();
                     }
-                    foreach (var witness in clusterTopology.Witnesses)
-                    {
 
-                    }
                     while (_running && _engine.CurrentState == RachisState.Candidate)
                     {
                         if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
