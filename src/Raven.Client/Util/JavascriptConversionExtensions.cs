@@ -1149,14 +1149,7 @@ namespace Raven.Client.Util
                 var writer = context.GetWriter();
                 using (writer.Operation(methodCallExpression))
                 {
-                    if (hasCounters)
-                    {
-                        writer.Write("includes.counters(");
-                    }
-                    else
-                    {
-                        writer.Write("includes.timeseries(");
-                    }
+                    writer.Write(hasCounters ? "includes.counters(" : "includes.timeseries(");
                     bool addComma = expectedArgsCount > 1;
                     for (var i = 0; i < expectedArgsCount; i++)
                     {
