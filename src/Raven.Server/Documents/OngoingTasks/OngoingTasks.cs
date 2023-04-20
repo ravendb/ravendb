@@ -76,7 +76,7 @@ public class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsState>
 
         var processState = EtlLoader.GetProcessState(config.Transforms, _database, config.Name);
 
-        tag = _database.WhoseTaskIsIt(record.Topology, config, processState);
+        tag = _server.WhoseTaskIsIt(record.Topology, config, processState);
 
         if (tag == _server.NodeTag)
         {
@@ -108,7 +108,7 @@ public class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsState>
         replication.ConnectionString = connection;
 
         var taskStatus = ReplicationLoader.GetExternalReplicationState(_server, _database.Name, replication.TaskId);
-        responsibleNodeTag = _database.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
+        responsibleNodeTag = _server.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
 
         (string Url, OngoingTaskConnectionStatus Status) result = (null, OngoingTaskConnectionStatus.None);
 
@@ -150,7 +150,7 @@ public class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsState>
         out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
     {
         var backupStatus = _database.PeriodicBackupRunner.GetBackupStatus(taskId);
-        responsibleNodeTag = _database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
+        responsibleNodeTag = _server.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
         nextBackup = _database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
         onGoingBackup = _database.PeriodicBackupRunner.OnGoingBackup(taskId);
         isEncrypted = BackupTask.IsBackupEncrypted(_database, backupConfiguration);
