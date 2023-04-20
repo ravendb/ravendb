@@ -41,12 +41,31 @@ interface ChangeVectorInfoProps {
 function ChangeVectorInfo(props: ChangeVectorInfoProps) {
     const { info } = props;
 
-    /* TODO work on UI
-      for non-sharded dbs: we have single change vector for next batch
-      for sharded: we have change vector per each shard!
-     */
-
-    //TODO: can we have both fields filled in?
+    if (
+        info.changeVectorForNextBatchStartingPointPerShard &&
+        Object.keys(info.changeVectorForNextBatchStartingPointPerShard).length > 0
+    ) {
+        return (
+            <div className="p-3 change-vector-popover">
+                <div className="change-vector-grid mb-1">
+                    <strong>Shard</strong>
+                    <strong>Change vector</strong>
+                </div>
+                {Object.keys(info.changeVectorForNextBatchStartingPointPerShard).map((shard) => {
+                    const vector = info.changeVectorForNextBatchStartingPointPerShard[shard];
+                    return (
+                        <div key={shard} className="change-vector-grid">
+                            <div>
+                                <Icon icon="shard" color="shard" className="m-0" />
+                                <strong>#{shard}</strong>
+                            </div>
+                            <div className="change-vector-item">{vector}</div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
 
     if (info.changeVectorForNextBatchStartingPoint) {
         return (
@@ -56,32 +75,9 @@ function ChangeVectorInfo(props: ChangeVectorInfoProps) {
         );
     }
 
-    if (!info.changeVectorForNextBatchStartingPointPerShard) {
-        return (
-            <div className="p-3 change-vector-popover">
-                <div className="change-vector-item">N/A</div>
-            </div>
-        );
-    }
-
     return (
         <div className="p-3 change-vector-popover">
-            <div className="change-vector-grid mb-1">
-                <strong>Shard</strong>
-                <strong>Change vector</strong>
-            </div>
-            {Object.keys(info.changeVectorForNextBatchStartingPointPerShard).map((shard) => {
-                const vector = info.changeVectorForNextBatchStartingPointPerShard[shard];
-                return (
-                    <div key={shard} className="change-vector-grid">
-                        <div>
-                            <Icon icon="shard" color="shard" className="m-0" />
-                            <strong>#{shard}</strong>
-                        </div>
-                        <div className="change-vector-item">{vector}</div>
-                    </div>
-                );
-            })}
+            <div className="change-vector-item">not yet available</div>
         </div>
     );
 }
@@ -142,7 +138,6 @@ function ConnectedClients(props: ConnectedClientsProps) {
         return <Alert color="warning">{connections.LoadError}</Alert>;
     }
 
-    //TODO: do we need proxy for that?
     const disconnectSubscription = async (workerId: string) => {
         try {
             await dropSubscription(workerId);
@@ -150,8 +145,6 @@ function ConnectedClients(props: ConnectedClientsProps) {
             await refreshSubscriptionInfo();
         }
     };
-
-    //TODO: create L&F for connections section!
 
     return (
         <div className="m-3 p-2 connected-clients-section">

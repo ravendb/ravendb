@@ -27,7 +27,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         <div className="top shard">
             {nodeInfo.location.shardNumber != null && (
                 <>
-                    <Icon icon="icon-shard" />
+                    <Icon icon="shard" />
                     {nodeInfo.location.shardNumber}
                 </>
             )}
@@ -40,12 +40,12 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}>
             {sharded && shard}
             <div className={classNames("node", { top: !sharded })}>
-                {!sharded && <i className="icon-node"></i>}
+                {!sharded && <Icon icon="node" />}
 
                 {nodeInfo.location.nodeTag}
             </div>
             <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
-            <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
+            <div>{hasError ? <Icon icon="warning" className="text-danger" /> : "-"}</div>
             <SubscriptionTaskProgress task={task} nodeInfo={nodeInfo} />
         </DistributionItem>
     );
@@ -75,14 +75,14 @@ export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionPr
                     <div className="top"></div>
                     {sharded && (
                         <div className="node">
-                            <i className="icon-node" /> Node
+                            <Icon icon="node" /> Node
                         </div>
                     )}
                     <div>
-                        <Icon icon="icon-connected" /> Status
+                        <Icon icon="connected" /> Status
                     </div>
                     <div>
-                        <Icon icon="icon-warning" /> Error
+                        <Icon icon="warning" /> Error
                     </div>
                     <div>
                         <i />
