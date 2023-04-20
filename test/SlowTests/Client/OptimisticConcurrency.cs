@@ -11,6 +11,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

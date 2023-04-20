@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

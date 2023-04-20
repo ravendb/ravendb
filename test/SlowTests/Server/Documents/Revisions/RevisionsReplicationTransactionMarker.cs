@@ -9,6 +9,7 @@ using FastTests.Server.Replication;
 using Xunit;
 using System.Threading;
 using FastTests.Utils;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Revisions

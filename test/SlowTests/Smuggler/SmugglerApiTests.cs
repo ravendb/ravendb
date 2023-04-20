@@ -23,6 +23,7 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Company = Raven.Tests.Core.Utils.Entities.Company;

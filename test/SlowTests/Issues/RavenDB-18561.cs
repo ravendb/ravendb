@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.ServerWide;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

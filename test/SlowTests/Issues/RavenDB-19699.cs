@@ -4,6 +4,7 @@ using Xunit.Abstractions;
 using System;
 using FastTests.Server.Replication;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {

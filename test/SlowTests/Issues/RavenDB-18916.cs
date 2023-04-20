@@ -29,6 +29,7 @@ using System.Threading;
 using Amazon.Runtime;
 using System.Security.Cryptography;
 using Nito.AsyncEx;
+using Tests.Infrastructure;
 using static Raven.Server.Documents.Replication.ReplicationOperation;
 
 namespace SlowTests.Issues

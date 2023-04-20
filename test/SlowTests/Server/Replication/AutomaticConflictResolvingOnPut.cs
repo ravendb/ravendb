@@ -6,6 +6,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

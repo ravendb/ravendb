@@ -4,6 +4,7 @@ using FastTests.Server.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
