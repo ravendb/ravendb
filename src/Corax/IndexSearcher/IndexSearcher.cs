@@ -139,18 +139,19 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         int size = ZigZagEncoding.Decode<int>(data, out var len);
         return data.Slice(len, size);
     }
-
-    internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, ReadOnlySpan<char> term)
+    
+    internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, ReadOnlySpan<char> term, bool canReturnEmptySlice = false)
     {
         if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
             return Constants.EmptyStringSlice;
 
         if (term.SequenceEqual(Constants.NullValueCharSpan.Span))
             return Constants.NullValueSlice;
-
+        
         using var _ = Allocator.Allocate(Encodings.Utf8.GetByteCount(term), out Span<byte> termBuffer);
         var byteCount = Encodings.Utf8.GetBytes(term, termBuffer);
-        ApplyAnalyzer(binding, termBuffer.Slice(0, byteCount), out var encodedTerm);
+        
+        ApplyAnalyzer(binding, termBuffer.Slice(0, byteCount), out var encodedTerm, canReturnEmptySlice);
         return encodedTerm;
     }
 
@@ -158,7 +159,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     //We cannot dispose them before the whole query is executed because they are an integral part of IQueryMatch.
     //We know that the Slices are automatically disposed when the transaction is closed so we don't need to track them.
     [SkipLocalsInit]
-    internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, string term)
+    internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, string term, bool canReturnEmptySlice = false)
     {
         if (term is null)
             return default;
@@ -169,19 +170,19 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (term == Constants.NullValue)
             return Constants.NullValueSlice;
 
-        ApplyAnalyzer(binding, Encodings.Utf8.GetBytes(term), out var encodedTerm);
+        ApplyAnalyzer(binding, Encodings.Utf8.GetBytes(term), out var encodedTerm, canReturnEmptySlice);
         return encodedTerm;
     }
 
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value)
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(string originalTerm, int fieldId, out Slice value, bool allowToBeEmpty = false)
     {
         using (Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced))
         {
-            return ApplyAnalyzer(originalTermSliced, fieldId, out value);
+            return ApplyAnalyzer(originalTermSliced, fieldId, out value, allowToBeEmpty);
         }
     }
 
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(FieldMetadata binding, ReadOnlySpan<byte> originalTerm, out Slice value)
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(FieldMetadata binding, ReadOnlySpan<byte> originalTerm, out Slice value, bool allowToBeEmpty = false)
     {
         Analyzer analyzer = binding.Analyzer;
         if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
@@ -200,10 +201,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             }
         }
 
-        return AnalyzeTerm(analyzer, originalTerm, out value);
+        return AnalyzeTerm(analyzer, originalTerm, out value, allowToBeEmpty);
     }
 
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value, bool allowToBeEmpty = false)
     {
         Analyzer analyzer = null;
         IndexFieldBinding binding = null;
@@ -227,17 +228,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             ? Analyzer.CreateLowercaseAnalyzer(this.Allocator) // lowercase only when search is used in non-full-text-search match 
             : binding.Analyzer!;
 
-        return AnalyzeTerm(analyzer, originalTerm, out value);
+        return AnalyzeTerm(analyzer, originalTerm, out value, allowToBeEmpty);
     }
 
     [SkipLocalsInit]
-    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value)
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(Slice originalTerm, int fieldId, out Slice value, bool allowToBeEmpty = false)
     {
-        return ApplyAnalyzer(originalTerm.AsSpan(), fieldId, out value);
+        return ApplyAnalyzer(originalTerm.AsSpan(), fieldId, out value, allowToBeEmpty);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
+    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value, bool allowToBeEmpty = false)
     {
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
 
@@ -250,7 +251,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         Span<byte> bufferSpan = buffer.AsSpan();
         Span<Token> tokensSpan = tokens.AsSpan();
         analyzer.Execute(originalTerm, ref bufferSpan, ref tokensSpan);
-        if (tokensSpan.Length != 1)
+        if (allowToBeEmpty == false && tokensSpan.Length != 1) 
             Debug.Assert(tokensSpan.Length == 1, $"{nameof(ApplyAnalyzer)} should create only 1 token as a result.");
         var disposable = Slice.From(Allocator, bufferSpan, ByteStringType.Immutable, out value);
 
@@ -259,7 +260,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         return disposable;
     }
-
+    
     public AllEntriesMatch AllEntries() => new AllEntriesMatch(this, _transaction);
    public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
 
