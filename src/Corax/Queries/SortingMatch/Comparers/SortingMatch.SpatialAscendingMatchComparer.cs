@@ -76,12 +76,6 @@ unsafe partial struct SortingMatch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int CompareById(long idx, long idy)
-        {
-            return _compareFunc(ref this, idx, idy);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareNumerical<T>(T sx, T sy) where T : unmanaged, INumber<T>
         {
             return BasicComparers.CompareAscending(sx, sy);
