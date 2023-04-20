@@ -26,7 +26,6 @@ namespace Corax.Queries
         private readonly delegate*<ref SortingMatch<TInner, TComparer>, Span<long>, int> _fillFunc;
 
         private const int NotStarted = -1;
-        private int _currentIdx;
 
         internal byte* _buffer;
         internal int _bufferSize;
@@ -42,7 +41,6 @@ namespace Corax.Queries
             _take = take;
             _comparer = comparer;
             _bufferUsedCount = NotStarted;
-            _currentIdx = NotStarted;
 
             TotalResults = 0;
 
