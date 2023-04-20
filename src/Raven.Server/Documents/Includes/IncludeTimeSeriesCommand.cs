@@ -16,16 +16,15 @@ namespace Raven.Server.Documents.Includes
         private Dictionary<string, HashSet<AbstractTimeSeriesRange>> _timeSeriesRangesBySourcePath;
         private readonly Dictionary<string, Dictionary<string, (long Count, DateTime Start, DateTime End)>> _timeSeriesStatsPerDocumentId;
 
-        public Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results { get; }
+        public Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results;
 
         public IncludeTimeSeriesCommand(DocumentsOperationContext context, Dictionary<string, HashSet<AbstractTimeSeriesRange>> timeSeriesRangesBySourcePath)
         {
             _context = context;
 
-            _timeSeriesRangesBySourcePath = timeSeriesRangesBySourcePath ?? new Dictionary<string, HashSet<AbstractTimeSeriesRange>>();
+            _timeSeriesRangesBySourcePath = timeSeriesRangesBySourcePath ?? new Dictionary<string, HashSet<AbstractTimeSeriesRange>>(StringComparer.OrdinalIgnoreCase);
 
             _timeSeriesStatsPerDocumentId = new Dictionary<string, Dictionary<string, (long Count, DateTime Start, DateTime End)>>(StringComparer.OrdinalIgnoreCase);
-            Results = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
         }
 
         public void AddRange(HashSet<string> timeSeriesNames)
@@ -72,7 +71,9 @@ namespace Raven.Server.Documents.Includes
                     throw new InvalidOperationException($"Cannot include time series for related document '{kvp.Key}', " +
                                                         $"document {document.Id} doesn't have a field named '{kvp.Key}'. ");
                 }
-
+                if (Results == null)
+                    Results = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
+                
                 if (Results.ContainsKey(docId))
                     continue;
 

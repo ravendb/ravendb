@@ -1008,10 +1008,10 @@ namespace Raven.Client.Util
             }
         }
 
-        public class IncludeSupport : JavascriptConversionExtension
+        public class IncludeDocumentSupport : JavascriptConversionExtension
         {
             public readonly string _alias;
-            public IncludeSupport(string inputAlias)
+            public IncludeDocumentSupport(string inputAlias)
             {
                 _alias = inputAlias;
             }
@@ -1083,7 +1083,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class IncludeTimeSeriesSupport : JavascriptConversionExtension
+        /*public class IncludeTimeSeriesSupport : JavascriptConversionExtension
         {
             public static readonly IncludeTimeSeriesSupport Instance = new IncludeTimeSeriesSupport();
 
@@ -1115,23 +1115,33 @@ namespace Raven.Client.Util
                     writer.Write(")");
                 }
             }
-        }
+        }*/
 
-        public class IncludeCounterSupport : JavascriptConversionExtension
+        public class IncludeCountersAndTimeSeriesSupport : JavascriptConversionExtension
         {
-            public static readonly IncludeCounterSupport Instance = new IncludeCounterSupport();
+            public static readonly IncludeCountersAndTimeSeriesSupport Instance = new IncludeCountersAndTimeSeriesSupport();
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var methodCallExpression = context.Node as MethodCallExpression;
 
-                if (methodCallExpression?.Method.Name != nameof(RavenQuery.IncludeCounter))
+                if (methodCallExpression == null)
                     return;
-
                 if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
                     return;
+                
+                var methodName = methodCallExpression.Method.Name;
+                var hasCounters = methodName == nameof(RavenQuery.IncludeCounter) ||
+                                 methodName == nameof(RavenQuery.IncludeCounters) ||
+                                 methodName == nameof(RavenQuery.IncludeAllCounters);
 
-                if (methodCallExpression.Arguments.Count != 2)
+                var hasTimeSeries = methodName == nameof(RavenQuery.IncludeTimeSeries);
+
+                    if (hasCounters == false && hasTimeSeries == false)
+                    return;
+
+                var expectedArgsCount = methodName == nameof(RavenQuery.IncludeAllCounters) ? 1 : 2;
+                if (methodCallExpression.Arguments.Count != expectedArgsCount)
                     return;
 
                 context.PreventDefault();
@@ -1139,84 +1149,23 @@ namespace Raven.Client.Util
                 var writer = context.GetWriter();
                 using (writer.Operation(methodCallExpression))
                 {
-                    int argNum = methodCallExpression.Arguments.Count;
-                    writer.Write("includes.counters(");
-                    for (var i = 0; i < argNum; i++)
+                    if (hasCounters)
                     {
-                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
-                        if (i < argNum - 1)
-                            writer.Write(",");
+                        writer.Write("includes.counters(");
                     }
-                    writer.Write(")");
-                }
-            }
-        }
-
-        public class IncludeCountersSupport : JavascriptConversionExtension
-        {
-            public static readonly IncludeCountersSupport Instance = new IncludeCountersSupport();
-
-            public override void ConvertToJavascript(JavascriptConversionContext context)
-            {
-                var methodCallExpression = context.Node as MethodCallExpression;
-
-                if (methodCallExpression?.Method.Name != nameof(RavenQuery.IncludeCounters))
-                    return;
-
-                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
-                    return;
-
-                if (methodCallExpression.Arguments.Count != 2)
-                    return;
-
-                    context.PreventDefault();
-
-                var writer = context.GetWriter();
-                using (writer.Operation(methodCallExpression))
-                {
-                    int argNum = methodCallExpression.Arguments.Count;
-                    writer.Write("includes.counters(");
-                    for (var i = 0; i < argNum; i++)
+                    else
                     {
-                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
-                        if (i < argNum - 1)
-                            writer.Write(",");
+                        writer.Write("includes.timeseries(");
                     }
-                    writer.Write(")");
-                }
-            }
-        }
-
-        public class IncludeAllCountersSupport : JavascriptConversionExtension
-        {
-            public static readonly IncludeAllCountersSupport Instance = new IncludeAllCountersSupport();
-
-            public override void ConvertToJavascript(JavascriptConversionContext context)
-            {
-                var methodCallExpression = context.Node as MethodCallExpression;
-
-                if (methodCallExpression?.Method.Name != nameof(RavenQuery.IncludeAllCounters))
-                    return;
-
-                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
-                    return;
-                if (methodCallExpression.Arguments.Count != 1)
-                {
-                    return;
-                }
-
-                context.PreventDefault();
-
-                var writer = context.GetWriter();
-                using (writer.Operation(methodCallExpression))
-                {
-                    int argNum = methodCallExpression.Arguments.Count;
-                    writer.Write("includes.counters(");
-                    for (var i = 0; i < argNum; i++)
+                    bool addComma = expectedArgsCount > 1;
+                    for (var i = 0; i < expectedArgsCount; i++)
                     {
                         context.Visitor.Visit(methodCallExpression.Arguments[i]);
-                        if (i < argNum - 1)
+                        if (addComma)
+                        {
                             writer.Write(",");
+                        }
+                        addComma = false;
                     }
                     writer.Write(")");
                 }

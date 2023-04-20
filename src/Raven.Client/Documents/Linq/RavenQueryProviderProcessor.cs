@@ -3136,40 +3136,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
-            switch (js)
+            if (js.StartsWith("includes."))
             {
-                case string s when s.StartsWith("includes.document("):
-                    HandleInclude(name, s, "let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path)");
-                    break;
-                case string s when s.StartsWith("includes.timeseries("):
-                    HandleInclude(name, s, "let _ = RavenQuery.IncludeTimeSeries(T documentInstance, string timeSeriesName)");
-                    break;
-                case string s when s.StartsWith("includes.counters("):
-                    HandleInclude(name, s, "let _ = RavenQuery.includeCounters(T documentInstance, string CounterName)");
-                    break;
-                default:
-                    _declareBuilder ??= new StringBuilder();
-                    _declareBuilder.Append('\t')
-                    .Append("var ").Append(name)
-                    .Append(" = ").Append(js).Append(';')
-                    .Append(Environment.NewLine);
-                    break;
+                if (IsDiscard.IsMatch(name) == false)
+                {
+                    throw new InvalidOperationException("Wrong syntax, 'RavenQuery.Include()' works only with discard variable.");
+                }
+                HanadleFunctionBOdy(name, js, isInclude: true);
+            }
+            else
+            {
+                HanadleFunctionBOdy(name, js, isInclude: false);
             }
         }
 
-        void HandleInclude(string name, string js, string message)
-        {
-            if (!IsDiscard.IsMatch(name))
-                throw new NotSupportedException($"You can't use the include that way try: {message}");
-            AppendIncludeFunctionBody(js);
-        }
-
-        private void AppendIncludeFunctionBody(string js)
+        void HanadleFunctionBOdy(string name, string js, bool isInclude = false)
         {
             _declareBuilder ??= new StringBuilder();
-            _declareBuilder.Append('\t')
-                .Append(js).Append(';')
-                .Append(Environment.NewLine);
+            _declareBuilder.Append('\t');
+            if (!isInclude)
+                _declareBuilder.Append("var ").Append(name).Append(" = ");
+            _declareBuilder.Append(js).Append(';').Append(Environment.NewLine);
         }
 
         private static void AddPropertyToWrapperObject(string name, string js, StringBuilder wrapper)
@@ -3311,11 +3298,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptConversionExtensions.DictionarySupport(),
                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                 loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
-                new JavascriptConversionExtensions.IncludeSupport(FromAlias),
-                JavascriptConversionExtensions.IncludeTimeSeriesSupport.Instance,
-                JavascriptConversionExtensions.IncludeCounterSupport.Instance,
-                JavascriptConversionExtensions.IncludeCountersSupport.Instance,
-                JavascriptConversionExtensions.IncludeAllCountersSupport.Instance,
+                new JavascriptConversionExtensions.IncludeDocumentSupport(FromAlias),
+                JavascriptConversionExtensions.IncludeCountersAndTimeSeriesSupport.Instance,
                 JavascriptConversionExtensions.MetadataSupport.Instance,
                 JavascriptConversionExtensions.CompareExchangeSupport.Instance,
                 JavascriptConversionExtensions.CounterSupport.Instance,

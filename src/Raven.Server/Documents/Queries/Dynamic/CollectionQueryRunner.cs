@@ -138,8 +138,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var fieldsToFetch = new FieldsToFetch(query, null, IndexType.None);
                 var includeDocumentsCommand  = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
                 var includeRevisionsCommand  = new IncludeRevisionsCommand(Database, context.Documents, query.Metadata.RevisionIncludes);
-                var includeTimeSeriesCommand = new IncludeTimeSeriesCommand(context.Documents, new Dictionary<string, HashSet<AbstractTimeSeriesRange>>());
-                var includeCountersCommand = new IncludeCountersCommand(Database, context.Documents, new Dictionary<string, HashSet<string>>());
+                var includeTimeSeriesCommand = new IncludeTimeSeriesCommand(context.Documents, new Dictionary<string, HashSet<AbstractTimeSeriesRange>>(StringComparer.OrdinalIgnoreCase));
+                var includeCountersCommand = new IncludeCountersCommand(Database, context.Documents, new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase));
 
                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
 
@@ -176,9 +176,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         });
                 }
 
-                    //includeCountersCommand = null;
-                    //includeTimeSeriesCommand = null;
-                
                 if (query.Metadata.RevisionIncludes != null)
                 {
                     includeRevisionsCommand = new IncludeRevisionsCommand(

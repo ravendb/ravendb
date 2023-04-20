@@ -379,7 +379,7 @@ public class RavenDB_14541 : RavenTestBase
                     var start = baseline;
                     var end = baseline.AddHours(5);
 
-                    Assert.Throws<NotSupportedException>(()=>{
+                    Assert.Throws<InvalidOperationException>(()=>{
                         var query = from a in session.Query<User>()
                             let thrower = RavenQuery.IncludeTimeSeries(a, "CurViews2")
                             select new { Name = a.UserName };
@@ -593,7 +593,7 @@ public class RavenDB_14541 : RavenTestBase
                 using (var session = store.OpenSession())
                 {
 
-                    Assert.Throws<NotSupportedException>(() =>
+                    Assert.Throws<InvalidOperationException>(() =>
                     {
                         var query = from a in session.Query<User>()
                             let _ = RavenQuery.IncludeAllCounters(a)

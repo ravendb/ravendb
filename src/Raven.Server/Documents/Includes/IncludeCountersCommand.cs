@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Includes
         private readonly Dictionary<string, string[]> _countersBySourcePath;
 
         public Dictionary<string, string[]> CountersToGetByDocId { get; }
-        public Dictionary<string, List<CounterDetail>> Results { get; }
+        public Dictionary<string, List<CounterDetail>> Results;
 
         private IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context)
         {
@@ -22,7 +22,6 @@ namespace Raven.Server.Documents.Includes
             _context = context;
 
             CountersToGetByDocId = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
-            Results = new Dictionary<string, List<CounterDetail>>(StringComparer.OrdinalIgnoreCase);
         }
 
         public IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context, string[] counters) 
@@ -37,7 +36,7 @@ namespace Raven.Server.Documents.Includes
         public IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context, Dictionary<string, HashSet<string>> countersBySourcePath)
             : this(database, context)
         {
-            _countersBySourcePath = countersBySourcePath?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray())?? new Dictionary<string, string[]>();
+            _countersBySourcePath = countersBySourcePath.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray());
         }
 
         //AddRange
@@ -72,6 +71,9 @@ namespace Raven.Server.Documents.Includes
                     throw new InvalidOperationException($"Cannot include counters for related document '{kvp.Key}', " +
                                                         $"document {document.Id} doesn't have a field named '{kvp.Key}'. ");
                 }
+
+                if (Results == null)
+                    Results = new Dictionary<string, List<CounterDetail>>(StringComparer.OrdinalIgnoreCase);
 
                 if (Results.ContainsKey(docId))
                     continue;
