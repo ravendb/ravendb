@@ -1,19 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using Corax.Mappings;
+using Voron;
 
 namespace Corax.Queries
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct InTermProvider : ITermProvider
+    public struct InTermProvider<TTermsType> : ITermProvider
     {
         private readonly IndexSearcher _searcher;
-        private readonly List<string> _terms;
+        private readonly List<TTermsType> _terms;
         private int _termIndex;
         private readonly FieldMetadata _field;
 
-        public InTermProvider(IndexSearcher searcher, FieldMetadata field, List<string> terms)
+        public InTermProvider(IndexSearcher searcher, FieldMetadata field, List<TTermsType> terms)
         {
             _field = field;
             _searcher = searcher;
@@ -31,13 +33,20 @@ namespace Corax.Queries
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
-            term = _searcher.TermQuery(_field, _terms[_termIndex]);
+            
+            if (typeof(TTermsType) == typeof(string))
+                term = _searcher.TermQuery(_field, (string)(object)_terms[_termIndex]);
+            else if (typeof(TTermsType) == typeof(Slice))
+                term = _searcher.TermQuery(_field, (Slice)(object)_terms[_termIndex]);
+            else
+                term = ThrowInvalidTermType();
+        
             return true;
         }
         
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(InTermProvider)}",
+            return new QueryInspectionNode($"{nameof(InTermProvider<TTermsType>)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _field.ToString() },
@@ -45,6 +54,11 @@ namespace Corax.Queries
                             });
         }
 
+        private static TermMatch ThrowInvalidTermType()
+        {
+            throw new InvalidDataException($"In {nameof(InTermProvider<TTermsType>)} type {nameof(TTermsType)} has to be `string` or `Slice`.");
+        }
+        
         string DebugView => Inspect().ToString();
     }
 }
