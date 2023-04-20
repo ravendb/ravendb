@@ -28,25 +28,6 @@ namespace FastTests.Sharding.Subscriptions
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
         [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
-        public async Task CanCreateSubscription()
-        {
-            using (var store = Sharding.GetDocumentStore())
-            {
-                var id1 = store.Subscriptions.Create<User>();
-                var id2 = store.Subscriptions.Create<User>();
-
-                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
-                Assert.Equal(2, subscriptions.Count);
-
-                store.Subscriptions.Delete(id1);
-                store.Subscriptions.Delete(id2);
-
-                subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
-                Assert.Equal(0, subscriptions.Count);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
         public async Task CanRunSubscription()
         {
             using (var store = Sharding.GetDocumentStore(/*shards: new[] { new DatabaseTopology(), new DatabaseTopology() }*/))
@@ -87,40 +68,6 @@ namespace FastTests.Sharding.Subscriptions
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
                     Assert.Empty(names);
                 }
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
-        public async Task CanUpdateSubscriptionById()
-        {
-            using (var store = Sharding.GetDocumentStore())
-            {
-                store.Subscriptions.Create(new SubscriptionCreationOptions
-                {
-                    Query = "from Users",
-                    Name = "Created"
-                });
-
-                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
-                var state = subscriptions.First();
-                Assert.Equal(1, subscriptions.Count);
-                Assert.Equal("Created", state.SubscriptionName);
-                Assert.Equal("from Users", state.Query);
-
-                var newQuery = "from Users where Age > 18";
-
-                store.Subscriptions.Update(new SubscriptionUpdateOptions
-                {
-                    Query = newQuery,
-                    Id = state.SubscriptionId
-                });
-
-                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
-                var newState = newSubscriptions.First();
-                Assert.Equal(1, newSubscriptions.Count);
-                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
-                Assert.Equal(newQuery, newState.Query);
-                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
             }
         }
 
@@ -170,53 +117,5 @@ namespace FastTests.Sharding.Subscriptions
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "RavenDB-16279");
         }
-
-        //TODO: egor RavenDB-16279
-        //[Fact]
-        //public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad()
-        //{
-        //    using var store = Sharding.GetShardedDocumentStore);
-
-        //    const string someProp = "SomeValue";
-        //    using (var session = store.OpenAsyncSession())
-        //    {
-        //        var b = new SubscriptionsBasic.B { SomeProp = someProp };
-        //        await session.StoreAsync(b, Guid.NewGuid().ToString());
-        //        await session.StoreAsync(new SubscriptionsBasic.A { BId = b.Id }, Guid.NewGuid().ToString());
-        //        await session.SaveChangesAsync();
-        //    }
-
-        //    var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<SubscriptionsBasic.A>
-        //    {
-        //        Name = "Test subscription",
-        //        Projection = x => new { RavenQuery.Load<SubscriptionsBasic.B>(x.BId).SomeProp }
-        //    });
-        //    //   WaitForUserToContinueTheTest(store);
-        //    var sub = store.Subscriptions.GetSubscriptionWorker<SubscriptionsBasic.ProjectionObject>(name);
-
-        //    try
-        //    {
-        //        var mre = new AsyncManualResetEvent();
-        //        var subscriptionTask = sub.Run(batch =>
-        //        {
-        //            Assert.NotEmpty(batch.Items);
-        //            var projectionObject = batch.Items.First().Result;
-        //            Assert.Equal("SomeValue", projectionObject.SomeProp);
-        //            mre.Set();
-        //        });
-        //        var timeout = TimeSpan.FromSeconds(300);
-        //        if (await mre.WaitAsync(timeout) == false)
-        //        {
-        //            if (subscriptionTask.IsFaulted)
-        //                await subscriptionTask;
-
-        //            throw new TimeoutException($"No batch received for {timeout}");
-        //        }
-        //    }
-        //    finally
-        //    {
-        //        sub.Dispose();
-        //    }
-        //}
     }
 }

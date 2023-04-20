@@ -25,14 +25,12 @@ namespace SlowTests.Client.Attachments
         {
         }
 
-        [Fact]
-        public async Task PutAttachments()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void PutAttachments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-                var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
-                await Databases.SetDatabaseId(store, dbId1);
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Fitzchak" }, "users/1");
