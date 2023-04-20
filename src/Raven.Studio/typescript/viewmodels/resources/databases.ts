@@ -82,6 +82,8 @@ class databases extends viewModelBase {
     
     notificationCenter = notificationCenter.instance;
     
+    localNodeTag = ko.observable<string>();
+    
     constructor() {
         super();
 
@@ -155,6 +157,8 @@ class databases extends viewModelBase {
             const selected = this.getSelectedDatabases();
             return selected.filter(x => x.lockMode() === "Unlock");
         });
+
+        this.localNodeTag = this.clusterManager.localNodeTag;
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -670,11 +674,15 @@ class databases extends viewModelBase {
             });
     }
 
-    restartDatabase(db: databaseInfo) {
+    restartDatabase(db: databaseInfo): void {
         eventsCollector.default.reportEvent("databases", "restart-database");
         this.changesContext.disconnectIfCurrent(db.asDatabase(), "DatabaseRestarted");
 
-        this.confirmationMessage("Are you sure?", "Restart database?")
+        this.confirmationMessage("Restart database?",
+            `The database will be restarted on <strong>node ${generalUtils.escapeHtml(this.localNodeTag())}</strong>`, {
+            buttons: ["Cancel", "Restart"],
+            html: true
+        })
             .done(result => {
                 if (result.can) {
                     db.inProgressAction("Restarting the database");
