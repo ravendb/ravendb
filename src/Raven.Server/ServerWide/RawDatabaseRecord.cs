@@ -601,33 +601,33 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<PeriodicBackupConfiguration> _periodicBackupsConfiguration;
+        private List<PeriodicBackupConfiguration> _periodicBackups;
 
-        public List<PeriodicBackupConfiguration> PeriodicBackupsConfiguration
+        public List<PeriodicBackupConfiguration> PeriodicBackups
         {
             get
             {
-                if (_periodicBackupsConfiguration == null)
+                if (_periodicBackups != null) 
+                    return _periodicBackups;
+
+                if (_materializedRecord != null)
                 {
-                    if (_materializedRecord != null)
+                    _periodicBackups = _materializedRecord.PeriodicBackups;
+                }
+                else
+                {
+                    _periodicBackups = new List<PeriodicBackupConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray periodicBackups) && periodicBackups != null)
                     {
-                        _periodicBackupsConfiguration = _materializedRecord.PeriodicBackups;
-                    }
-                    else
-                    {
-                        _periodicBackupsConfiguration = new List<PeriodicBackupConfiguration>();
-                        
-                        if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray bjra) && bjra != null)
+                        foreach (BlittableJsonReaderObject backup in periodicBackups)
                         {
-                            foreach (BlittableJsonReaderObject element in bjra)
-                            {
-                                _periodicBackupsConfiguration.Add(JsonDeserializationCluster.PeriodicBackupConfiguration(element));
-                            }
+                            var backupConfiguration = JsonDeserializationServer.GetPeriodicBackupConfiguration(backup);
+                            _periodicBackups.Add(backupConfiguration);
                         }
                     }
                 }
 
-                return _periodicBackupsConfiguration;
+                return _periodicBackups;
             }
         }
 

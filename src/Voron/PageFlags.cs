@@ -20,8 +20,8 @@ namespace Voron
     public enum ExtendedPageType : byte
     {
         None = 0,
-        SetLeaf = 1,
-        SetBranch = 2,
+        PostingListLeaf = 1,
+        PostingListBranch = 2,
         Container = 3,
         ContainerOverflow = 4,
     }

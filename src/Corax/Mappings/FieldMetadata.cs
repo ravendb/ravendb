@@ -70,6 +70,8 @@ public readonly struct FieldMetadata
         return new FieldMetadata(FieldName, TermLengthSumName, FieldId, Mode, Analyzer, hasBoost);
 
     }
+
+    public bool IsDynamic => FieldId == Constants.IndexWriter.DynamicField;
     
     public override string ToString()
     {

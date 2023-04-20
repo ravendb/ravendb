@@ -391,7 +391,7 @@ namespace Raven.Server.Dashboard
                     continue;
 
                 var state = getTaskStatus((T)task);
-                var taskTag = database.WhoseTaskIsIt(dbRecord.Topology, task, state);
+                var taskTag = BackupUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, task, state, database.NotificationCenter);
                 if (serverStore.NodeTag == taskTag)
                 {
                     taskCountOnNode++;
@@ -406,7 +406,7 @@ namespace Raven.Server.Dashboard
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(database.Name)))
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var taskTag = database.WhoseTaskIsIt(dbRecord.Topology, subscriptionState, subscriptionState);
+                var taskTag = BackupUtils.WhoseTaskIsIt(serverStore, dbRecord.Topology, subscriptionState, subscriptionState, database.NotificationCenter);
                 if (serverStore.NodeTag == taskTag)
                 {
                     taskCountOnNode++;

@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
-using Corax.Utils;
-using Sparrow;
-using Sparrow.Server;
 
 namespace Corax.Queries
 {
@@ -20,9 +18,9 @@ namespace Corax.Queries
             throw new NotSupportedException($"{nameof(CompareById)} is not supported for {nameof(BoostingComparer)}");
         }
         
-        public int CompareNumerical<T>(T sx, T sy) where T : unmanaged
-        { 
-            throw new NotSupportedException($"{nameof(CompareNumerical)} is not supported for {nameof(BoostingComparer)}");
+        public int CompareNumerical<T>(T sx, T sy) where T : unmanaged, INumber<T>
+        {
+            return sy.CompareTo(sx);
         }
 
         public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)

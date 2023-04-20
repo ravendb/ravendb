@@ -45,7 +45,7 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
         {
             var periodicBackups = new List<PeriodicBackup>();
 
-            foreach (var periodicBackupConfiguration in record.PeriodicBackupsConfiguration)
+            foreach (var periodicBackupConfiguration in record.PeriodicBackups)
             {
                 periodicBackups.Add(new PeriodicBackup
                 {

@@ -36,7 +36,6 @@ namespace Corax.Queries
                 var result = MergeHelper.And(matchesPtr, buffer.Length, matchesPtr, matches, baseMatchesPtr, count);
                 return result;
             }
-
         }
         
         [SkipLocalsInit]

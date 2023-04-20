@@ -49,7 +49,7 @@ namespace Corax.Queries
             while (_iterator.MoveNext(out var keyScope, out var _))
             {
                 var key = keyScope.Key.Decoded();
-
+                keyScope.Dispose();
                 int termSize = key.Length;
                 if (key.Length > 1)
                 {

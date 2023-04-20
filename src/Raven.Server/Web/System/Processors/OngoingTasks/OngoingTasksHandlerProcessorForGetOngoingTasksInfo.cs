@@ -249,7 +249,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
 
         var processState = EtlLoader.GetProcessState(config.Transforms, _database, config.Name);
 
-        tag = _database.WhoseTaskIsIt(record.Topology, config, processState);
+        tag = ServerStore.WhoseTaskIsIt(record.Topology, config, processState);
 
         if (tag == _server.NodeTag)
         {
@@ -301,7 +301,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
     {
         foreach (var subscriptionState in RequestHandler.Database.SubscriptionStorage.GetAllSubscriptionsFromServerStore(context))
         {
-            var tag = _database.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
+            var tag = ServerStore.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
             OngoingTaskConnectionStatus connectionStatus;
             if (tag != _server.NodeTag)
             {
@@ -344,7 +344,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
         replication.ConnectionString = connection;
 
         var taskStatus = ReplicationLoader.GetExternalReplicationState(_server, RequestHandler.DatabaseName, replication.TaskId);
-        tag = _database.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
+        tag = ServerStore.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
 
         (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
 
@@ -390,7 +390,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
     protected override ValueTask<OngoingTaskConnectionStatus> GetSubscriptionConnectionStatusAsync(DatabaseRecord record, SubscriptionState subscriptionState, long key,
         out string tag)
     {
-        tag = RequestHandler.Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
+        tag = ServerStore.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
         OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
         if (tag != ServerStore.NodeTag)
         {
@@ -432,7 +432,7 @@ internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : Abs
         out string responsibleNodeTag, out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
     {
         var backupStatus = RequestHandler.Database.PeriodicBackupRunner.GetBackupStatus(taskId);
-        responsibleNodeTag = RequestHandler.Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
+        responsibleNodeTag = ServerStore.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
         nextBackup = RequestHandler.Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
         onGoingBackup = RequestHandler.Database.PeriodicBackupRunner.OnGoingBackup(taskId);
         isEncrypted = BackupTask.IsBackupEncrypted(RequestHandler.Database, backupConfiguration);

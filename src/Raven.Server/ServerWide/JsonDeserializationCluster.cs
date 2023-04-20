@@ -148,8 +148,6 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, OrchestratorConfiguration> OrchestratorConfiguration = GenerateJsonDeserializationRoutine<OrchestratorConfiguration>();
         public static readonly Func<BlittableJsonReaderObject, ShardingConfiguration> ShardingConfiguration = GenerateJsonDeserializationRoutine<ShardingConfiguration>();
 
-        public static readonly Func<BlittableJsonReaderObject, ShardBucketRange> ShardBucketRange = GenerateJsonDeserializationRoutine<ShardBucketRange>();
-        
         public static readonly Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
             [nameof(UnregisterReplicationHubAccessCommand)] = GenerateJsonDeserializationRoutine<UnregisterReplicationHubAccessCommand>(),

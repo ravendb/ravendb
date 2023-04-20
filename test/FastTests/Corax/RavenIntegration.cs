@@ -499,7 +499,7 @@ public class RavenIntegration : RavenTestBase
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanUpdateDynamicFields(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         var user = new User() {Name = "TestDoc", Dict = new Dictionary<string, string>() {{"secret_field", "maciej"}}};
         using (var session = store.OpenSession())
         {
@@ -558,7 +558,9 @@ public class RavenIntegration : RavenTestBase
             await session.SaveChangesAsync();
         }
 
-        Assert.Equal(count, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, count));
+        Indexes.WaitForIndexing(store);
+        long entriesCount = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount;
+        Assert.Equal(count, entriesCount);
 
         using (var session = store.OpenAsyncSession())
         {
@@ -568,9 +570,10 @@ public class RavenIntegration : RavenTestBase
             await session.StoreAsync(doc);
             await session.SaveChangesAsync();
         }
-        
+
         Indexes.WaitForIndexing(store);
-        Assert.Equal(count/2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, count/2));
+        entriesCount = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount;
+        Assert.Equal(count/2, entriesCount);
     }
 
 

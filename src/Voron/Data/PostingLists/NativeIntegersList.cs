@@ -11,13 +11,13 @@ public unsafe struct NativeIntegersList : IDisposable
     private readonly ByteStringContext _ctx;
     public int Count;
     public int Capacity;
-    private long* _items;
+    public long* RawItems;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseItems;
 
     public NativeIntegersList(ByteStringContext ctx)
     {
         _ctx = ctx;
-        _items = null;
+        RawItems = null;
         _releaseItems = default;
         Count = 0;
         Capacity = 0;
@@ -31,7 +31,7 @@ public unsafe struct NativeIntegersList : IDisposable
             Debug.Assert(Count + values.Length <= Capacity);
         }
 
-        values.CopyTo(new Span<long>(_items + Count, Capacity - Count));
+        values.CopyTo(new Span<long>(RawItems + Count, Capacity - Count));
         Count += values.Length;
     }
     public void Add(long l)
@@ -41,26 +41,34 @@ public unsafe struct NativeIntegersList : IDisposable
             GrowListUnlikely(1);
         }
 
-        _items[Count++] = l;
+        RawItems[Count++] = l;
     }
 
-    public Span<long> Items =>  new(_items, Count);
+    public Span<long> Items =>  new(RawItems, Count);
 
     private void GrowListUnlikely(int addition)
     {
         Capacity = Math.Max(16, Bits.PowerOf2(Capacity + addition));
         var scope = _ctx.Allocate(Capacity * sizeof(long), out var mem);
-        if (_items != null)
+        if (RawItems != null)
         {
-            Memory.Copy(mem.Ptr, _items, Count * sizeof(long));
+            Memory.Copy(mem.Ptr, RawItems, Count * sizeof(long));
             _releaseItems.Dispose();
         }
         _releaseItems = scope;
-        _items = (long*)mem.Ptr;
+        RawItems = (long*)mem.Ptr;
     }
 
     public void Dispose()
     {
         _releaseItems.Dispose();
+    }
+
+    public void Sort()
+    {
+        if (Count <= 1)
+            return;
+        
+        Sparrow.Server.Utils.VxSort.Sort.Run(RawItems, Count);
     }
 }

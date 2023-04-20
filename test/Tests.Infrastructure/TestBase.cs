@@ -6,21 +6,16 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Http;
-using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Debug.StackTrace;
 using Raven.Server;
 using Raven.Server.Commercial;
-using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
@@ -37,31 +32,24 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Platform;
-using Sparrow.Threading;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Voron.Exceptions;
-using Voron.Impl;
-using Xunit;
 using Xunit.Abstractions;
 using XunitLogger;
 
 namespace FastTests
 {
-    public abstract class TestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
+    public abstract class TestBase : ParallelTestBase
     {
         private static int _counter;
 
-        private const string XunitConfigurationFile = "xunit.runner.json";
-
         private const string ServerName = "Raven.Tests.Core.Server";
 
-        private static readonly ConcurrentSet<string> GlobalPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentSet<string> GlobalPathsToDelete = new(StringComparer.OrdinalIgnoreCase);
 
-        private static readonly SemaphoreSlim ConcurrentTestsSemaphore;
-        private readonly MultipleUseFlag _concurrentTestsSemaphoreTaken = new MultipleUseFlag();
-
-        private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentSet<string> _localPathsToDelete = new(StringComparer.OrdinalIgnoreCase);
 
         private static RavenServer _globalServer;
 
@@ -77,9 +65,9 @@ namespace FastTests
             return _globalServer == server || _localServer == server;
         }
 
-        protected List<RavenServer> Servers = new List<RavenServer>();
+        protected List<RavenServer> Servers = new();
 
-        private static readonly object ServerLocker = new object();
+        private static readonly object ServerLocker = new();
 
         private bool _doNotReuseServer;
 
@@ -146,31 +134,6 @@ namespace FastTests
             }
 
             RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => true;
-
-            var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
-
-            if (int.TryParse(Environment.GetEnvironmentVariable("RAVEN_MAX_RUNNING_TESTS"), out var maxRunningTests))
-                maxNumberOfConcurrentTests = maxRunningTests;
-            else
-            {
-                var fileInfo = new FileInfo(XunitConfigurationFile);
-                if (fileInfo.Exists)
-                {
-                    using (var file = File.OpenRead(XunitConfigurationFile))
-                    using (var sr = new StreamReader(file))
-                    {
-                        var json = JObject.Parse(sr.ReadToEnd());
-
-                        if (json.TryGetValue("maxRunningTests", out var testsToken))
-                            maxNumberOfConcurrentTests = testsToken.Value<int>();
-                        else if (json.TryGetValue("maxParallelThreads", out var threadsToken))
-                            maxNumberOfConcurrentTests = threadsToken.Value<int>();
-                    }
-                }
-            }
-
-            Console.WriteLine("Max number of concurrent tests is: " + maxNumberOfConcurrentTests);
-            ConcurrentTestsSemaphore = new SemaphoreSlim(maxNumberOfConcurrentTests, maxNumberOfConcurrentTests);
         }
 
         protected TestBase(ITestOutputHelper output) : base(output)
@@ -392,8 +355,8 @@ namespace FastTests
             _localServer = GetNewServer(co, caller);
         }
 
-        private readonly object _getNewServerSync = new object();
-        protected List<RavenServer> ServersForDisposal = new List<RavenServer>();
+        private readonly object _getNewServerSync = new();
+        protected List<RavenServer> ServersForDisposal = new();
 
         public class ServerCreationOptions
         {
@@ -494,13 +457,13 @@ namespace FastTests
                 _frozen = frozen;
             }
 
-            private static readonly Lazy<ServerCreationOptions> _default = new Lazy<ServerCreationOptions>(() => new ServerCreationOptions(frozen: true));
+            private static readonly Lazy<ServerCreationOptions> _default = new(() => new ServerCreationOptions(frozen: true));
             public static ServerCreationOptions Default => _default.Value;
 
             public Action<ServerStore> BeforeDatabasesStartup;
         }
 
-        private static readonly ConcurrentDictionary<RavenServer, string> LeakedServers = new ConcurrentDictionary<RavenServer, string>();
+        private static readonly ConcurrentDictionary<RavenServer, string> LeakedServers = new();
 
         protected virtual RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName] string caller = null)
         {
@@ -646,11 +609,9 @@ namespace FastTests
 
         public override void Dispose()
         {
-            base.Dispose();
             GC.SuppressFinalize(this);
 
-            if (_concurrentTestsSemaphoreTaken.Lower())
-                ConcurrentTestsSemaphore.Release();
+            base.Dispose();
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
@@ -662,7 +623,7 @@ namespace FastTests
                 if (_globalServer?.ServerStore.Observer?.Suspended == true)
                     throw new InvalidOperationException("The observer is suspended for the global server!");
             });
-            
+
             Dispose(exceptionAggregator);
 
             DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _globalServer, exceptionAggregator, Context);
@@ -706,20 +667,9 @@ namespace FastTests
             exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(server, context));
         }
 
-        public Task InitializeAsync()
-        {
-            return ConcurrentTestsSemaphore.WaitAsync()
-                .ContinueWith(x => _concurrentTestsSemaphoreTaken.Raise());
-        }
-
         internal void SetServerDisposeTimeout(int timeout)
         {
             _disposeTimeout = timeout;
-        }
-
-        public Task DisposeAsync()
-        {
-            return Task.CompletedTask;
         }
 
         protected static void DisposeServer(RavenServer server, int timeoutInMs = 60_000)

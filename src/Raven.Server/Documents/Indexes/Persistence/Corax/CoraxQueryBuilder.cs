@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
@@ -108,7 +109,7 @@ internal static class CoraxQueryBuilder
                 coraxQuery = allEntries.Replay();
             }
 
-                sortMetadata = GetSortMetadata(builderParameters);
+            sortMetadata = GetSortMetadata(builderParameters);
 
             if (sortMetadata is not null)
                 coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
@@ -830,13 +831,139 @@ internal static class CoraxQueryBuilder
         }
 
 
-        if (fieldMetadata.Analyzer is not LuceneAnalyzerAdapter)
+        List<string> termMatches = null;
+        List<(string Term, Constants.Search.SearchMatchOptions Match)> othersMatches = null;
+        
+        foreach (var v in GetValues())
         {
-            return indexSearcher.SearchQuery(fieldMetadata, valueAsString, @operator, false, true);
+            var type = GetTermType(v);
+            if (type is Constants.Search.SearchMatchOptions.TermMatch)
+            {
+                termMatches ??= new();
+                termMatches.Add(v);
+                continue;
+            }
+
+            othersMatches ??= new();
+            othersMatches.Add((v, type));
         }
 
-        return indexSearcher.SearchQuery(fieldMetadata, valueAsString, @operator);
+        return indexSearcher.SearchQuery(fieldMetadata, termMatches, othersMatches, @operator);
+
+        Constants.Search.SearchMatchOptions GetTermType(string termValue)
+        {
+            if (string.IsNullOrEmpty(termValue))
+                return Constants.Search.SearchMatchOptions.TermMatch;
+            Constants.Search.SearchMatchOptions mode = default;
+            if (termValue[0] == LuceneQueryHelper.AsteriskChar)
+                mode |= Constants.Search.SearchMatchOptions.EndsWith;
+
+            if (termValue[^1] == LuceneQueryHelper.AsteriskChar)
+            {
+                if (termValue[^2] != '\\')
+                    mode |= Constants.Search.SearchMatchOptions.StartsWith;
+            }
+
+            return mode;
+        }
+
+        /*
+         * Here we need to deal with value that comes from the user, which means that we
+         * have to be careful.
+         *
+         * The rules are that we'll split the terms on whitespace, except if they are quoted
+         * using ", however, you may escape the " using \, and \ using \\.
+         */
+        IEnumerable<string> GetValues()
+        {
+            List<int> escapePositions = null;
+
+            var quoted = false;
+            var lastWordStart = 0;
+            for (var i = 0; i < valueAsString.Length; i++)
+            {
+                switch (valueAsString[i])
+                {
+                    case '\\' when IsEscaped(valueAsString, i):
+                        AddEscapePosition(i);
+                        break;
+                    case '"':
+                        if (IsEscaped(valueAsString, i))
+                        {
+                            AddEscapePosition(i);
+                            continue;
+                        }
+
+                        if (lastWordStart != i)
+                        {
+                            yield return YieldValue(valueAsString, lastWordStart, i - lastWordStart, escapePositions);
+                        }
+
+                        quoted = !quoted;
+                        lastWordStart = i + 1;
+                        break;
+                    case '\t':
+                    case ' ':
+                        if (quoted)
+                            continue;
+
+                        if (lastWordStart != i)
+                        {
+                            yield return YieldValue(valueAsString, lastWordStart, i - lastWordStart, escapePositions);
+                        }
+
+                        lastWordStart = i + 1; // skipping
+                        break;
+                }
+            }
+
+            if (valueAsString.Length - lastWordStart > 0)
+                yield return YieldValue(valueAsString, lastWordStart, valueAsString.Length - lastWordStart, escapePositions);
+
+
+            void AddEscapePosition(int i)
+            {
+                escapePositions ??= new List<int>(16);
+                escapePositions.Add(i - 1);
+            }
+        }
+
+        string YieldValue(string input, int startIndex, int length, List<int> escapePositions)
+        {
+            if (escapePositions == null || escapePositions.Count == 0)
+                return input.Substring(startIndex, length);
+
+            var sb = new StringBuilder(input, startIndex, length, length);
+
+            for (int i = escapePositions.Count - 1; i >= 0; i--)
+            {
+                sb.Remove(escapePositions[i] - startIndex, 1);
+            }
+
+            escapePositions.Clear();
+
+            return sb.ToString();
+        }
+
+        bool IsEscaped(string input, int index)
+        {
+            var count = 0;
+            for (int i = index - 1; i >= 0; i--)
+            {
+                if (input[i] == '\\')
+                {
+                    count++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return (count & 1) == 1;
+        }
     }
+
 
     private static IQueryMatch HandleSpatial(Parameters builderParameters, MethodExpression expression, MethodType spatialMethod)
     {

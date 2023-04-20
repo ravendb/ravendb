@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Esprima;
 using Esprima.Ast;
+using Esprima.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -713,7 +714,9 @@ function execute(doc, args){
             // validate that this is valid JS code
             try
             {
-                Query.SelectFunctionBody.Program = ValidateScript(parameters);
+                (Esprima.Ast.Program program, HashSet<string> referencedParameters) = ValidateScript(parameters);
+                Query.SelectFunctionBody.Program = program;
+                Query.SelectFunctionBody.ReferencedParameters = referencedParameters;
                 CheckIfProjectionHasSpecialMethod(Query.SelectFunctionBody.Program);
             }
             catch (Exception e)
@@ -746,9 +749,13 @@ function execute(doc, args){
             sb.AppendLine("rvnQueryArgs) { ");
             if (parameters != null)
             {
+                HashSet<string> referencedParameters = Query.SelectFunctionBody.ReferencedParameters;
                 foreach (var parameter in parameters.GetPropertyNames())
                 {
-                    sb.Append("var $").Append(parameter).Append(" = rvnQueryArgs.").Append(parameter).AppendLine(";");
+                    if (referencedParameters != null && referencedParameters.Contains('$' + parameter))
+                    {
+                        sb.Append("var $").Append(parameter).Append(" = rvnQueryArgs.").Append(parameter).AppendLine(";");
+                    }
                 }
             }
             sb.Append("    return ");
@@ -2741,69 +2748,105 @@ function execute(doc, args){
             "console", "spatial"
         };
 
-        private Esprima.Ast.Program ValidateScript(BlittableJsonReaderObject parameters)
+        private sealed class ScriptValidator : AstVisitor
         {
-            HashSet<string> maybeUnknowns = null;
-            Identifier currentProp = null;
+            private readonly QueryMetadata _queryMetadata;
+            private readonly BlittableJsonReaderObject _parameters;
+            internal HashSet<string> _referencedParameters;
+            private HashSet<string> _maybeUnknowns;
+            private HashSet<string> _knownIdentifiers;
+            private Identifier _currentProp;
 
-            void VerifyKnownAliases(Node node)
+            public ScriptValidator(QueryMetadata queryMetadata, BlittableJsonReaderObject parameters)
             {
-                switch (node)
+                _queryMetadata = queryMetadata;
+                _parameters = parameters;
+            }
+
+            protected override object VisitIdentifier(Identifier identifier)
+            {
+                if (identifier.Name?.StartsWith('$') == true)
                 {
-                    case Identifier identifier when currentProp == null:
-                        currentProp = identifier;
-                        break;
-
-                    case ArrowFunctionExpression arrowFunction:
-                        RemoveFromUnknowns(arrowFunction.Params);
-                        break;
-
-                    case FunctionExpression functionExpression:
-                        RemoveFromUnknowns(functionExpression.Params);
-                        break;
-
-                    case Property prop when prop.Key == currentProp:
-                        if (maybeUnknowns?.Count > 0)
-                            ThrowUnknownAlias(maybeUnknowns.First(), parameters);
-                        currentProp = null;
-                        break;
-
-                    case StaticMemberExpression sme when sme.Object is Identifier id &&
-                                                         UnknownIdentifier(id.Name):
-                        maybeUnknowns = maybeUnknowns ?? new HashSet<string>();
-                        maybeUnknowns.Add(id.Name);
-                        break;
+                    _referencedParameters ??= new HashSet<string>();
+                    _referencedParameters.Add(identifier.Name);
                 }
+                _currentProp ??= identifier;
+
+                return base.VisitIdentifier(identifier);
             }
 
-            bool UnknownIdentifier(string identifier)
+            protected override object VisitArrowFunctionExpression(ArrowFunctionExpression arrowFunctionExpression)
             {
-                return RootAliasPaths.TryGetValue(identifier, out _) == false &&
+                RemoveFromUnknowns(arrowFunctionExpression.Params);
+                return base.VisitArrowFunctionExpression(arrowFunctionExpression);
+            }
+
+            protected override object VisitFunctionExpression(FunctionExpression expression)
+            {
+                RemoveFromUnknowns(expression.Params);
+                return base.VisitFunctionExpression(expression);
+            }
+
+            protected override object VisitProperty(Property property)
+            {
+                if (property.Key != _currentProp)
+                {
+                    return base.VisitProperty(property);
+                }
+
+                if (_maybeUnknowns?.Count > 0)
+                {
+                    _queryMetadata.ThrowUnknownAlias(_maybeUnknowns.First(), _parameters);
+                }
+
+                _currentProp = null;
+
+                return base.VisitProperty(property);
+            }
+
+            protected override object VisitMemberExpression(MemberExpression memberExpression)
+            {
+                if (memberExpression is StaticMemberExpression { Object: Identifier id } && UnknownIdentifier(id.Name))
+                {
+                    _maybeUnknowns ??= new HashSet<string>();
+                    _maybeUnknowns.Add(id.Name);
+                }
+
+                return base.VisitMemberExpression(memberExpression);
+            }
+
+            private bool UnknownIdentifier(string identifier)
+            {
+                return _queryMetadata.RootAliasPaths.TryGetValue(identifier, out _) == false &&
                        JsBaseObjects.Contains(identifier) == false &&
-                       (parameters == null ||
-                        identifier.StartsWith("$") == false ||
-                        parameters.TryGet(identifier.Substring(1), out object _) == false);
+                       (_parameters == null || identifier.StartsWith('$') == false || _parameters.TryGet(identifier.Substring(1), out object _) == false)
+                       && (_knownIdentifiers == null || _knownIdentifiers.Contains(identifier) == false);
             }
 
-            void RemoveFromUnknowns(NodeList<Node> functionParameters)
+            private void RemoveFromUnknowns(in NodeList<Node> functionParameters)
             {
-                if (maybeUnknowns == null || maybeUnknowns.Count == 0)
-                    return;
-
                 foreach (var p in functionParameters)
                 {
-                    if (!(p is Identifier i))
-                        continue;
-
-                    maybeUnknowns.Remove(i.Name);
+                    if (p is Identifier i)
+                    {
+                        _knownIdentifiers ??= new HashSet<string>();
+                        _knownIdentifiers.Add(i.Name);
+                        _maybeUnknowns?.Remove(i.Name);
+                    }
                 }
             }
+        }
 
-            ParserOptions parserOptions = new()
+        private (Esprima.Ast.Program, HashSet<string>) ValidateScript(BlittableJsonReaderObject parameters)
+        {
+            ScriptValidator validator = new(this, parameters);
+            JavaScriptParser parser = new(new ParserOptions
             {
-                OnNodeCreated = VerifyKnownAliases
-            };
-            return new JavaScriptParser(parserOptions).ParseScript("return " + Query.SelectFunctionBody.FunctionText);
+                OnNodeCreated = n => validator.Visit(n)
+            });
+            Script script = parser.ParseScript("return " + Query.SelectFunctionBody.FunctionText);
+
+            return (script, validator._referencedParameters);
         }
 
         private bool NotInRootAliasPaths(string key)

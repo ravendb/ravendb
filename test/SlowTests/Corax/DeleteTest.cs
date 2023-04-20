@@ -87,7 +87,7 @@ public class DeleteTest : StorageTest
             var fields = indexSearcher.Transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
             var terms = fields?.CompactTreeFor("Content");
             Assert.True(terms!.TryGetValue("9", out var containerId));
-            Assert.NotEqual(0, containerId & (long)TermIdMask.Set);
+            Assert.NotEqual(0, containerId & (long)TermIdMask.PostingList);
             var setId = EntryIdEncodings.DecodeAndDiscardFrequency(containerId);
             var setStateSpan = Container.GetMutable(llt, setId);
             ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);

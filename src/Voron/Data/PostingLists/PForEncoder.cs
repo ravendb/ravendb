@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Sparrow.Binary;
 using Sparrow.Compression;
 
 namespace Voron.Data.PostingLists
@@ -25,23 +23,27 @@ namespace Voron.Data.PostingLists
    *            then 5 bits value (B bits per number)
    * * 0b01   (15 bits) - variable header marker - followed by 8 bits value (number of items) and 5 bits value (B bits per number)
    * * 0b10   (15 bits) - repeated header marker - followed by 8 bits value (number of repetitions) and 5 bits value (B bits per number) 
-   * * 0b11   - reserved
+   * * 0b11   Extended value, need to read another 2 bits to understand
+   * *  - 0b00 - End of entries
+   * *  - 0b01 - Reserved  
+   * *  - 0b10 - Raw value base for future entries - 64 bits
+   * *  - 0b11 - Reserved
    */
     public unsafe ref struct PForEncoder
     {
         public const int BufferLen = 128;
 
-        private readonly Span<byte> _output;
+        private Span<byte> _output;
         private int _bufPos, _bitPos;
         private readonly int _maxNumOfBits;
         private readonly uint* _deltasBuffer;
-        public int Last;
-        public int First;
+        public long Last;
+        public long First;
         public int NumberOfAdditions;
         public int SizeInBytes;
         public int ConsumedBits => _bitPos;
 
-        public List<int> GetDebugOutput()
+        public List<long> GetDebugOutput()
         {
             return PForDecoder.GetDebugOutput(_output);
         }
@@ -52,15 +54,16 @@ namespace Voron.Data.PostingLists
             _output[0] = 0; // do not assume the buffer is clean
             _bufPos = 0;
             _bitPos = 0;
-            _maxNumOfBits = output.Length * 8;
-            Last = 0;
-            First = 0;
+            Debug.Assert(_output.Length > 1);
+            _maxNumOfBits = (output.Length - 1) * 8; 
+            Last = -1;
+            First = -1;
             SizeInBytes = -1;
             NumberOfAdditions = 0;
             _deltasBuffer = scratchBuffer;
         }
 
-        public bool TryAdd(int value)
+        public bool TryAdd(long value)
         {
             if (value < 0)
                 throw new ArgumentOutOfRangeException();
@@ -69,18 +72,26 @@ namespace Voron.Data.PostingLists
             if (Last == value)
                 return true; // duplicate addition
 
-            if (NumberOfAdditions++==0)
+            if (NumberOfAdditions++ == 0)
             {
-                _deltasBuffer[_bufPos++] = (uint)value;
                 Last = value;
                 First = value;
-                return TryFlush();
+
+                return TryPushBits(0b11_10, 4) &&
+                       TryPushBits((ulong)value, 63);
             }
 
             if (_bufPos < BufferLen)
             {
                 var diff = value - Last;
                 Last = value;
+                if (diff >= int.MaxValue)
+                {
+                    return TryFlush() && 
+                           TryPushBits(0b11_10, 4) &&
+                           TryPushBits((ulong)value, 63);
+                }
+
                 _deltasBuffer[_bufPos++] = (uint)diff;
                 return true;
             }
@@ -90,12 +101,8 @@ namespace Voron.Data.PostingLists
             return TryFlush() && TryAdd(value);
         }
 
-        public bool TryClose()
+        private bool TryWriteSegmentSuffix()
         {
-            var result = TryFlush() &&
-                         TryPushBits(0b11, 2) &&
-                         TryPushBits(0, BitsAvailableInCurrentByte); // align to byte boundary
-
             byte* buf = stackalloc byte[10];
             var lenAdditions = VariableSizeEncoding.Write(buf, NumberOfAdditions);
             var lenLen = VariableSizeEncoding.Write(buf + lenAdditions, Last);
@@ -116,14 +123,38 @@ namespace Voron.Data.PostingLists
             
             SizeInBytes = pos;
             _bitPos = int.MaxValue;
+            return true;
+        }
+
+        public bool TryCloseWithSuffix()
+        {
+            return TryCloseInternal() && TryWriteSegmentSuffix();
+        }
+
+        public bool TryClose()
+        {
+            var result = TryCloseInternal();
+            SizeInBytes = _bitPos / 8 + (_bitPos % 8 == 0 ? 0 : 1);
+            _bitPos = int.MaxValue;
             return result;
         }
 
-        private bool TryFlush(Span<uint> buffer)
+        private bool TryCloseInternal()
         {
-            if (buffer.Length == 0)
+            if (TryFlush() == false ||
+                TryPushBits(0b11_00, 4) == false)
+                return false;
+
+            var bitsToAlign = BitsAvailableInCurrentByte;
+            return bitsToAlign == 0 ||
+                TryPushBits(0, BitsAvailableInCurrentByte);// align to byte boundary
+        }
+
+        private bool TryFlush(uint* buffer, int len)
+        {
+            if (len == 0)
                 return true;
-            if (buffer.Length == 1)
+            if (len == 1)
             {
                 var bits = 32 - BitOperations.LeadingZeroCount(buffer[0]);
                 Debug.Assert(bits < 32); // we never encode 0
@@ -131,7 +162,7 @@ namespace Voron.Data.PostingLists
                 return TryPushBits(header, 9) && TryPushBits(buffer[0], bits);
             }
 
-            var (maxBits, identicalPrefix) = Analyze(buffer);
+            var (maxBits, identicalPrefix) = Analyze(buffer, len);
             Debug.Assert(identicalPrefix <= 256);
             if (identicalPrefix > 5) // enough to warrant a repeating header to save space
             {
@@ -139,10 +170,10 @@ namespace Voron.Data.PostingLists
                 if (TryPushBits(header, 15) == false ||
                     TryPushBits(buffer[0], maxBits) == false)
                     return false;
-                return TryFlush(buffer.Slice(identicalPrefix));
+                return TryFlush(buffer + identicalPrefix, len - identicalPrefix);
             }
 
-            ulong fixedSizeMarker = buffer.Length switch
+            ulong fixedSizeMarker = len switch
             {
                 32 => 0b01,
                 64 => 0b10,
@@ -151,46 +182,46 @@ namespace Voron.Data.PostingLists
             };
             if (fixedSizeMarker != 0)
             {
-                if (TryPartialCompression(buffer))
+                if (TryPartialCompression(buffer, len))
                     return true;
 
                 ulong header = 0b00_00_00000ul | fixedSizeMarker << 5 | (uint)maxBits;
                 if (TryPushBits(header, 9) == false)
                     return false;
-                return TryPushValues(buffer, maxBits);
+                return TryPushValues(buffer, len, maxBits);
             }
             else
             {
-                if (TryPartialCompression(buffer))
+                if (TryPartialCompression(buffer, len))
                     return true;
-                ulong header = 0b01_0000_0000_00000ul | (ulong)buffer.Length << 5 | (uint)maxBits;
+                ulong header = 0b01_0000_0000_00000ul | (ulong)len << 5 | (uint)maxBits;
                 if (TryPushBits(header, 15) == false)
                     return false;
-                return TryPushValues(buffer, maxBits);
+                return TryPushValues(buffer, len, maxBits);
             }
         }
 
-        private bool TryPartialCompression(Span<uint> buffer)
+        private bool TryPartialCompression(uint* buffer, int len)
         {
-            var half = buffer.Length / 2;
+            var half = len / 2;
             if (half < 32)
                 return false;
 
             // now need to figure out optimal partitioning scheme
-            int first = MaxBits(buffer.Slice(0, half)), second = MaxBits(buffer.Slice(half));
+            int first = MaxBits(buffer, half), second = MaxBits(buffer + half, len - half);
 
             if (first != second) // better to output them as two segments, then
             {
-                return TryFlush(buffer.Slice(0, half)) &&
-                       TryFlush(buffer.Slice(half));
+                return TryFlush(buffer, half) &&
+                       TryFlush(buffer + half, len - half);
             }
             return false;
         }
 
 
-        private bool TryPushValues(Span<uint> buffer, int maxBits)
+        private bool TryPushValues(uint* buffer, int len, int maxBits)
         {
-            for (int i = 0; i < buffer.Length; i++)
+            for (int i = 0; i < len; i++)
             {
                 if (TryPushBits(buffer[i], maxBits) == false)
                 {
@@ -205,13 +236,13 @@ namespace Voron.Data.PostingLists
         {
             var oldPos = _bufPos;
             _bufPos = 0;
-            return TryFlush(new Span<uint>(_deltasBuffer, oldPos));
+            return TryFlush(_deltasBuffer, oldPos);
         }
 
-        private static int MaxBits(Span<uint> buffer)
+        private static int MaxBits(uint* buffer, int len)
         {
             uint mask = 0;
-            for (int i = 0; i < buffer.Length; i++)
+            for (int i = 0; i < len; i++)
             {
                 mask |= buffer[i];
             }
@@ -221,12 +252,12 @@ namespace Voron.Data.PostingLists
             return maxBits;
         }
 
-        private static (int MaxNumberOfBits, int IdenticalPrefixLegnth) Analyze(Span<uint> buffer)
+        private static (int MaxNumberOfBits, int IdenticalPrefixLegnth) Analyze(uint* buffer, int len)
         {
             uint mask = buffer[0];
             int identicalPrefix = 1;
             bool identical = true;
-            for (int i = 1; i < buffer.Length; i++)
+            for (int i = 1; i < len; i++)
             {
                 mask |= buffer[i];
                 if (identical)
@@ -251,6 +282,8 @@ namespace Voron.Data.PostingLists
         // https://github.com/facebookarchive/beringei/blob/75c3002b179d99c8709323d605e7d4b53484035c/beringei/lib/BitUtil.cpp#L17
         public bool TryPushBits(ulong value, int bitsInValue)
         {
+            Debug.Assert(bitsInValue > 0);
+
             if (_bitPos + bitsInValue > _maxNumOfBits)
             {
                 return false;
@@ -295,7 +328,7 @@ namespace Voron.Data.PostingLists
 
         private int BitsAvailableInCurrentByte
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             get => (_bitPos & 0x7) != 0 ? 8 - (_bitPos & 0x7) : 0;
         }
     }

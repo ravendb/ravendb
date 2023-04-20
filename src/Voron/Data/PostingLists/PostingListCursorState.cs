@@ -11,7 +11,7 @@ namespace Voron.Data.PostingLists
         public PostingListLeafPageHeader* LeafHeader => (PostingListLeafPageHeader*)Page.Pointer;
         public PostingListBranchPageHeader* BranchHeader => (PostingListBranchPageHeader*)Page.Pointer;
 
-        public bool IsLeaf => LeafHeader->SetFlags == ExtendedPageType.SetLeaf;
+        public bool IsLeaf => LeafHeader->PostingListFlags == ExtendedPageType.PostingListLeaf;
 
         public PostingListCursorState(Page page)
         {

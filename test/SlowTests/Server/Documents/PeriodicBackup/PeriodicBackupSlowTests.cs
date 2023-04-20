@@ -3228,6 +3228,54 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact, Trait("Category", "Smuggler")]
+        public async Task NumberOfCurrentlyRunningBackupsShouldBeCorrectAfterBackupTaskDelay()
+        {
+            DoNotReuseServer();
+
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                    await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 1, session);
+
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                Assert.NotNull(database);
+                database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
+
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
+                var taskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, opStatus: OperationStatus.InProgress);
+
+                // The backup task is running, and the next backup should be scheduled for the next minute (based on the backup configuration)
+                var taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                Assert.NotNull(taskBackupInfo);
+                Assert.NotNull(taskBackupInfo.OnGoingBackup);
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    AssertNumberOfConcurrentBackups(expectedNumber: 1);
+                    
+                    // Let's delay the backup task to 1 hour
+                    var delayDuration = TimeSpan.FromHours(1);
+                    await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
+
+                    AssertNumberOfConcurrentBackups(expectedNumber: 0);
+
+                    void AssertNumberOfConcurrentBackups(int expectedNumber)
+                    {
+                        int concurrentBackups = WaitForValue( () => Server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups,
+                            expectedVal: expectedNumber,
+                            timeout: Convert.ToInt32(TimeSpan.FromMinutes(1).TotalMilliseconds),
+                            interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));
+
+                        Assert.Equal(expectedNumber, concurrentBackups);
+                    }
+                }
+            }
+        }
+        
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ShouldRearrangeTheBackupTimer_IfItGot_ActiveByOtherNode_Then_ActiveByCurrentNode_WhileRunning()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

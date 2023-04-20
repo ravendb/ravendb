@@ -11,18 +11,15 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
-using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -30,6 +27,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using BackupUtils = Raven.Server.Utils.BackupUtils;
 using StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -267,7 +265,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         // save the backup status
                         // create a local copy of ref `runningBackupStatus` so that it can be used in the anonymous method.
                         var status = runningBackupStatus;
-                        SaveBackupStatus(status, _database, _logger, _backupResult, _onProgress, TaskCancelToken);
+                        BackupUtils.SaveBackupStatus(status, _database.Name, _database.ServerStore, _logger, _backupResult, _onProgress, TaskCancelToken);
                     }
 
                     _forTestingPurposes?.AfterBackupBatchCompleted?.Invoke();
@@ -858,51 +856,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             // dismiss the previous operation
             var id = $"{NotificationType.OperationChanged}/{_previousBackupStatus.LastOperationId.Value}";
             _database.NotificationCenter.Dismiss(id);
-        }
-
-        public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger,
-            BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
-        {
-            try
-            {
-                var command = new UpdatePeriodicBackupStatusCommand(documentDatabase.Name, RaftIdGenerator.NewId())
-                {
-                    PeriodicBackupStatus = status
-                };
-
-                AsyncHelpers.RunSync(async () =>
-                {
-                    var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
-                        {
-                            var result = await documentDatabase.ServerStore.SendToLeaderAsync(command);
-                            return result.Index;
-                        },
-                        infoMessage: "Saving the backup status in the cluster",
-                        errorMessage: "Failed to save the backup status in the cluster",
-                        backupResult, onProgress, operationCancelToken);
-
-                    await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
-                        {
-                            await documentDatabase.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
-                            return default;
-                        },
-                        infoMessage: "Verifying that the backup status was successfully saved in the cluster",
-                        errorMessage: "Failed to verify that the backup status was successfully saved in the cluster",
-                        backupResult, onProgress, operationCancelToken);
-                });
-
-                if (logger.IsInfoEnabled)
-                    logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
-            }
-            catch (Exception e)
-            {
-                const string message = "Error saving the periodic backup status";
-
-                if (logger.IsOperationsEnabled)
-                    logger.Operations(message, e);
-
-                backupResult?.AddError($"{message}{Environment.NewLine}{e}");
-            }
         }
 
         public static string GetDateTimeFormat(string fileName)

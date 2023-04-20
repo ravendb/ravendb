@@ -334,6 +334,10 @@ namespace Raven.Client.Documents.Session
 
         void AddFromAliasToWhereTokens(string fromAlias);
 
+        void AddFromAliasToFilterTokens(string fromAlias);
+        
+        void AddFromAliasToOrderByTokens(string fromAlias);
+
         string AddAliasToIncludesTokens(string fromAlias);
 
         string ProjectionParameter(object value);
