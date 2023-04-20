@@ -227,26 +227,16 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return null;
         }
 
-        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
+        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration = null)
         {
-            return CreateNew(definition, documentDatabase, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
-        }
-
-        private static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration)
-        {
+            configuration ??= new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
+            
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
             instance.Initialize(documentDatabase,
                 configuration,
                 documentDatabase.Configuration.PerformanceHints);
 
             return instance;
-        }
-
-        public static Index CreateNewForTest(IndexDefinition definition, DocumentDatabase documentDatabase, DocumentsOperationContext context)
-        {
-            var index = CreateNew(definition, documentDatabase, new TestIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
-
-            return index;
         }
 
         public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)

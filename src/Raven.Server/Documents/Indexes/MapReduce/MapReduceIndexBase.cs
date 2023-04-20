@@ -167,10 +167,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                             GetResultsStore(reduceKeyHash, indexContext, create: true).Add(mapEntryId, mapResult.Data);
                         }
-
-                        var sourceCollection = CurrentIndexingScope.Current.SourceCollection;
-
-                        TestRun?.AddMapResult(mapResult.Data, sourceCollection);
+                        
+                        TestRun?.AddMapResult(mapResult.Data, CurrentIndexingScope.Current.SourceCollection);
                     }
                 }
 

@@ -31,6 +31,7 @@ using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Indexes.Test;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -688,87 +689,93 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
 
-                Index index;
-                switch (definition.SourceType)
-                {
-                    case IndexSourceType.Documents:
-                        switch (definition.Type)
-                        {
-                            case IndexType.Map:
-                            case IndexType.JavaScriptMap:
-                                index = MapIndex.CreateNew(definition, _documentDatabase);
-                                break;
-
-                            case IndexType.MapReduce:
-                            case IndexType.JavaScriptMapReduce:
-                                var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceIndex>(definition, _documentDatabase);
-
-                                if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
-                                    mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
-
-                                index = mapReduceIndex;
-                                break;
-
-                            default:
-                                throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
-                        }
-
-                        break;
-
-                    case IndexSourceType.TimeSeries:
-                        switch (definition.Type)
-                        {
-                            case IndexType.Map:
-                            case IndexType.JavaScriptMap:
-                                index = MapTimeSeriesIndex.CreateNew(definition, _documentDatabase);
-                                break;
-
-                            case IndexType.MapReduce:
-                            case IndexType.JavaScriptMapReduce:
-                                var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(definition, _documentDatabase);
-
-                                if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
-                                    mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
-
-                                index = mapReduceIndex;
-                                break;
-
-                            default:
-                                throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
-                        }
-
-                        break;
-
-                    case IndexSourceType.Counters:
-                        switch (definition.Type)
-                        {
-                            case IndexType.Map:
-                            case IndexType.JavaScriptMap:
-                                index = MapCountersIndex.CreateNew(definition, _documentDatabase);
-                                break;
-
-                            case IndexType.MapReduce:
-                            case IndexType.JavaScriptMapReduce:
-                                var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceCountersIndex>(definition, _documentDatabase);
-
-                                if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
-                                    mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
-
-                                index = mapReduceIndex;
-                                break;
-
-                            default:
-                                throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
-                        }
-
-                        break;
-
-                    default:
-                        throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
-                }
-
-                return index;
+                return CreateIndexFromDefinition(definition, _documentDatabase, prefixesOfDocumentsToDelete: prefixesOfDocumentsToDelete);
             }
+        }
+
+        public Index CreateTestIndexFromDefinition(IndexDefinition indexDefinition, DocumentDatabase documentDatabase, DocumentsOperationContext context)
+        {
+            if (indexDefinition.Type == IndexType.JavaScriptMapReduce || indexDefinition.Type == IndexType.MapReduce)
+                indexDefinition.OutputReduceToCollection = null;
+            
+            var testIndexConfiguration = new TestIndexConfiguration(indexDefinition.Configuration, documentDatabase.Configuration);
+
+            var testIndex = CreateIndexFromDefinition(indexDefinition, documentDatabase, testIndexConfiguration);
+
+            testIndex.InitializeTestIndex(context);
+
+            return testIndex;
+        }
+
+        private Index CreateIndexFromDefinition(IndexDefinition indexDefinition, DocumentDatabase documentDatabase, SingleIndexConfiguration optionalIndexConfiguration = null, Dictionary<string, string> prefixesOfDocumentsToDelete = null)
+        {
+            Index index;
+                
+            switch (indexDefinition.SourceType)
+            {
+                case IndexSourceType.Documents:
+                    switch (indexDefinition.Type)
+                    {
+                        case IndexType.Map:
+                        case IndexType.JavaScriptMap:
+                            index = MapIndex.CreateNew(indexDefinition, documentDatabase, optionalIndexConfiguration);
+                            break;
+                        case IndexType.MapReduce:
+                        case IndexType.JavaScriptMapReduce:
+                            var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceIndex>(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
+
+                            if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete?.Count > 0)
+                                mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+
+                            index = mapReduceIndex;
+                            break;
+                        default:
+                            throw new NotSupportedException($"Cannot create {indexDefinition.Type} index from IndexDefinition");
+                    }
+                    break;
+                case IndexSourceType.Counters:
+                    switch (indexDefinition.Type)
+                    {
+                        case IndexType.Map:
+                        case IndexType.JavaScriptMap:
+                            index = MapCountersIndex.CreateNew(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
+                            break;
+                        case IndexType.MapReduce:
+                        case IndexType.JavaScriptMapReduce:
+                            var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceCountersIndex>(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
+                            if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete?.Count > 0)
+                                mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+
+                            index = mapReduceIndex;
+                            break;
+                        default:
+                            throw new NotSupportedException($"Cannot create {indexDefinition.Type} index from IndexDefinition");
+                    }
+                    break;
+                case IndexSourceType.TimeSeries:
+                    switch (indexDefinition.Type)
+                    {
+                        case IndexType.Map:
+                        case IndexType.JavaScriptMap:
+                            index = MapTimeSeriesIndex.CreateNew(indexDefinition, documentDatabase, optionalIndexConfiguration);
+                            break;
+                        case IndexType.MapReduce:
+                        case IndexType.JavaScriptMapReduce:
+                            var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
+                            
+                            if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete?.Count > 0)
+                                mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+
+                            index = mapReduceIndex;
+                            break;
+                        default:
+                            throw new NotSupportedException($"Cannot create {indexDefinition.Type} index from IndexDefinition");
+                    }
+                    break;
+                default:
+                    throw new NotSupportedException($"Not supported source type '{indexDefinition.SourceType}'.");
+            }
+            return index;
         }
 
         private static void CollectPrefixesOfDocumentsToDelete(MapReduceIndex mapReduceIndex, ref Dictionary<string, string> prefixesOfDocumentsToDelete)

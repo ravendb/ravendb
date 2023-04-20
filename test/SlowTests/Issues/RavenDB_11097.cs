@@ -32,8 +32,8 @@ public class RavenDB_11097 : RavenTestBase
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/indexes/test";
-            
+            url = $"{node.Url}/databases/{node.Database}/indexes/test";
+
             var payloadJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_payload, ctx);
 
             return new HttpRequestMessage
@@ -149,11 +149,11 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenFact(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    private void DocumentJsMapWithoutQueryAndIndexName(Options options)
+    private void DocumentJsMapWithoutQueryAndIndexName()
     {
-        using (var store = GetDocumentStore(options))
+        using (var store = GetDocumentStore())
         {
             using (var session = store.OpenSession())
             {
@@ -668,7 +668,7 @@ public class RavenDB_11097 : RavenTestBase
             }
         });
     
-    private void TestMapIndexOnCounters(Options options, Payload payload)
+    private void TestMapIndexOnCounters(Options options, Payload payload, bool isJs = false)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -778,7 +778,7 @@ public class RavenDB_11097 : RavenTestBase
             }
         });
     
-    private void TestMapReduceIndexOnCounters(Options options, Payload payload)
+    private void TestMapReduceIndexOnCounters(Options options, Payload payload, bool isJs = false)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -837,6 +837,54 @@ public class RavenDB_11097 : RavenTestBase
                 
                 Assert.Equal("Likes", reduceResultsObjectList[0].Name);
                 Assert.Equal(59, reduceResultsObjectList[0].Value);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void CheckIfOutputReduceToCollectionDoesNotStoreDocumentsForTestIndex()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto1 = new Dto() { Name = "Name1", Age = 21 };
+                var dto2 = new Dto() { Name = "Name2", Age = 37 };
+                var dto3 = new Dto() { Name = "Name1", Age = 55 };
+
+                session.Store(dto1);
+                session.Store(dto2);
+                session.Store(dto3);
+
+                session.SaveChanges();
+            }
+
+            using (var commands = store.Commands())
+            {
+                var payload = new Payload()
+                {
+                    IndexDefinition = new IndexDefinition()
+                    {
+                        Name = "LinqMapReduceIndexWithOutputToCollection",
+                        Maps = new HashSet<string> { "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age, Count = 1 }" },
+                        Reduce =
+                            "from result in results group result by new { result.Name } into g select new { Name = g.Key.Name, Count = g.Sum(x => x.Count), Age = g.Sum(x => x.Age) }",
+                        OutputReduceToCollection = "OutputCollection"
+                    },
+                    Query = new QueryClass() { Query = "from index 'LinqMapReduceIndexWithOutputToCollection' select Count" }
+                };
+
+                var cmd = new PutTestIndexCommand(payload);
+                commands.Execute(cmd);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<object>("from 'OutputCollection'");
+
+                var res = query.ToList();
+                
+                Assert.Empty(res);
             }
         }
     }
