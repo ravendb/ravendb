@@ -180,20 +180,10 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
+        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration = null)
         {
-            return CreateNew(definition, documentDatabase, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
-        }
-        
-        public static Index CreateNewForTest(IndexDefinition definition, DocumentsOperationContext context)
-        {
-            var index = CreateNew(definition, context.DocumentDatabase, new TestIndexConfiguration(definition.Configuration, context.DocumentDatabase.Configuration));
+            configuration ??= new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
 
-            return index;
-        }
-        
-        private static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration)
-        {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
             
             var staticIndex = instance._compiled;
@@ -206,8 +196,6 @@ namespace Raven.Server.Documents.Indexes.Static
             return instance;
         }
         
-        
-
         public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment, out var version);

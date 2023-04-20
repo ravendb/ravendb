@@ -2482,20 +2482,13 @@ namespace Raven.Server.Documents.Indexes
         
         private Dictionary<string, bool> _collectionTracker;
         
-        public IIndexedItemEnumerator GetMapEnumeratorAndBoxWhenNeeded(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
+        public IIndexedItemEnumerator EnumerateIndexedItems(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type)
         {
             var enumerator = GetMapEnumerator(items, collection, indexContext, stats, type);
             
             if (IsTestRun)
-            {
-                _collectionTracker ??= new();
-                if (_collectionTracker.ContainsKey(collection))
-                    return new EmptyItemEnumerator();
-                
-                _collectionTracker[collection] = true;
-                return new BoxedItemEnumerator(enumerator, Collections.Count);
-            }
+                return TestRun.CreateEnumerator(enumerator, collection, Collections.Count);
 
             return enumerator;
         }

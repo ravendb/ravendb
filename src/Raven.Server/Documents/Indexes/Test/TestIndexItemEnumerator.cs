@@ -3,13 +3,13 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Test;
 
-public class BoxedItemEnumerator : IIndexedItemEnumerator
+public class TestIndexItemEnumerator : IIndexedItemEnumerator
 {
     private IIndexedItemEnumerator _inner;
     private int _count;
     private readonly int _max;
 
-    public BoxedItemEnumerator(IIndexedItemEnumerator inner, int collections)
+    public TestIndexItemEnumerator(IIndexedItemEnumerator inner, int collections)
     {
         _max = 100 / collections;
         _inner = inner;

@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -44,84 +45,40 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (var processor = new AdminIndexHandlerProcessorForJavaScriptPut(this))
                 await processor.ExecuteAsync();
         }
-
-        [RavenAction("/databases/*/admin/indexes/test", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
-        public async Task PutTestIndex()
+        
+        [RavenAction("/databases/*/indexes/test", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
+        public async Task TestIndex()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Input");
 
-                if (input.TryGet("IndexDefinition", out BlittableJsonReaderObject indexDefinitionBlittable) == false)
-                    throw new Exception();
+                var testIndexParameters = JsonDeserializationServer.TestIndexParameters(input);
+                var testIndexDefinition = testIndexParameters.IndexDefinition;
+                var query = testIndexParameters.Query;
                 
-                var indexDefinition = JsonDeserializationServer.IndexDefinition(indexDefinitionBlittable);
-
-                if (indexDefinition.Name is null)
-                    indexDefinition.Name = Guid.NewGuid().ToString().Replace("-", string.Empty);
-
-                Index index;
+                if (testIndexParameters.IndexDefinition is null)
+                    throw new ArgumentException("Index must have an 'IndexDefinition' field");
                 
-                switch (indexDefinition.SourceType)
+                if (testIndexDefinition.Type.IsJavaScript() == false)
                 {
-                    case IndexSourceType.Documents:
-                        switch (indexDefinition.Type)
-                        {
-                            case IndexType.Map:
-                            case IndexType.JavaScriptMap:
-                                index = MapIndex.CreateNewForTest(indexDefinition, context);
-                                break;
-                            case IndexType.MapReduce:
-                            case IndexType.JavaScriptMapReduce:
-                                index = MapReduceIndex.CreateNewForTest<MapReduceIndex>(indexDefinition, context.DocumentDatabase, context);
-                                break;
-                            default:
-                                throw new Exception();
-                        }
-                        break;
-                    case IndexSourceType.Counters:
-                        switch (indexDefinition.Type)
-                        {
-                            case IndexType.Map:
-                            case IndexType.JavaScriptMap:
-                                index = MapCountersIndex.CreateNewForTest(indexDefinition, context);
-                                break;
-                            case IndexType.MapReduce:
-                            case IndexType.JavaScriptMapReduce:
-                                index = MapReduceIndex.CreateNewForTest<MapReduceCountersIndex>(indexDefinition, context.DocumentDatabase, context);
-                                break;
-                            default:
-                                throw new Exception();
-                        }
-                        break;
-                    case IndexSourceType.TimeSeries:
-                        switch (indexDefinition.Type)
-                        {
-                            case IndexType.Map:
-                            case IndexType.JavaScriptMap:
-                                index = MapTimeSeriesIndex.CreateNewForTest(indexDefinition, context.DocumentDatabase, context);
-                                break;
-                            case IndexType.MapReduce:
-                            case IndexType.JavaScriptMapReduce:
-                                index = MapReduceIndex.CreateNewForTest<MapReduceTimeSeriesIndex>(indexDefinition, context.DocumentDatabase, context);
-                                break;
-                            default:
-                                throw new Exception(); 
-                        }
-                        break;
-                    default:
-                        throw new Exception();
+                    // C# index without admin authorization
+                    if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature && feature.CanAccess(Database.Name, requireAdmin: true, requireWrite: true) == false)
+                        throw new UnauthorizedAccessException($"Index {testIndexDefinition.Name} is a C# index but was sent without admin authorization, this is not allowed.");
                 }
-                
-                index.InitializeTestIndex(context);
-                
-                if (input.TryGet("Query", out BlittableJsonReaderObject query) == false || query is null)
+
+                if (testIndexDefinition.Name is null)
+                    testIndexDefinition.Name = Guid.NewGuid().ToString("N");
+
+                if (query is null)
                 {
-                    var queryString = $"from index '{index.Name}'";
+                    var queryString = $"from index '{testIndexDefinition.Name}'";
                     var queryObject = new { Query = queryString };
                     
                     query = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(queryObject, context);
                 }
+                
+                var index = Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context);
 
                 index.Start();
 
@@ -144,6 +101,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     
                     await result.WriteTestIndexResult(ResponseBodyStream(), context);
                 }
+                index.Dispose();
             }
         }
         

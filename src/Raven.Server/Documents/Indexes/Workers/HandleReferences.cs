@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                         var numberOfReferencedItemLoad = 0;
 
-                                        using (var itemsEnumerator = _index.GetMapEnumeratorAndBoxWhenNeeded(items, collection, indexContext, collectionStats, _index.Type))
+                                        using (var itemsEnumerator = _index.EnumerateIndexedItems(items, collection, indexContext, collectionStats, _index.Type))
                                         {
                                             long lastIndexedParentEtag = 0;
                                             while (itemsEnumerator.MoveNext(queryContext.Documents, out IEnumerable mapResults, out var etag))

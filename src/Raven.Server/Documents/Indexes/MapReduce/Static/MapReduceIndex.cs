@@ -293,14 +293,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             return instance;
         }
-
-        public static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false)
-            where TStaticIndex : MapReduceIndex
-        {
-            return CreateNew<TStaticIndex>(definition, documentDatabase, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
-        }
         
-        private static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration, bool isIndexReset = false)
+        public static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false, SingleIndexConfiguration configuration = null)
             where TStaticIndex : MapReduceIndex
         {
             TStaticIndex instance;
@@ -314,18 +308,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 throw new NotSupportedException($"Not supported index type {typeof(TStaticIndex).Name}");
 
             ValidateReduceResultsCollectionNameAsync(
-                definition,
-                instance._compiled,
-                () => documentDatabase.IndexStore.GetIndexes().Select(x => x.ToIndexInformationHolder()),
-                collection =>
-                {
-                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
-                        return ValueTask.FromResult(documentDatabase.DocumentsStorage.GetCollection(collection, context).Count);
-                },
-                checkIfCollectionEmpty: isIndexReset == false)
+                    definition,
+                    instance._compiled,
+                    () => documentDatabase.IndexStore.GetIndexes().Select(x => x.ToIndexInformationHolder()),
+                    collection =>
+                    {
+                        using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                            return ValueTask.FromResult(documentDatabase.DocumentsStorage.GetCollection(collection, context).Count);
+                    },
+                    checkIfCollectionEmpty: isIndexReset == false)
                 .AsTask()
                 .Wait();
+            
+            configuration ??= new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
 
             instance.Initialize(documentDatabase,
                 configuration,
@@ -335,14 +331,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             staticIndex.CheckDepthOfStackInOutputMap(definition, documentDatabase);
             
             return instance;
-        }
-        
-        public static MapReduceIndex CreateNewForTest<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, DocumentsOperationContext context, bool isIndexReset = false)
-            where TStaticIndex : MapReduceIndex
-        {
-            var index = CreateNew<TStaticIndex>(definition, documentDatabase, new TestIndexConfiguration(definition.Configuration, context.DocumentDatabase.Configuration));
-
-            return index;
         }
 
         public static void Update(Index index, IndexDefinition definition, DocumentDatabase documentDatabase)
