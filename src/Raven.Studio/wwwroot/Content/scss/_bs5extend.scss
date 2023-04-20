@@ -114,3 +114,11 @@
         opacity: 0.5;
     }
 }
+
+.absolute-fill {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
