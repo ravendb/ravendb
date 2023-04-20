@@ -72,10 +72,8 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                     //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
                     var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
 
-                    if (returnType == TypeConverter.BlittableSupportedReturnType.Ignored)
-                        continue;
-
-                    storedValue[property.Key] = blittableValue;
+                    if (returnType != TypeConverter.BlittableSupportedReturnType.Ignored)
+                        storedValue[property.Key] = blittableValue;
                 }
             }
 
