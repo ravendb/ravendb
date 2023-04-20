@@ -4,6 +4,7 @@ import { Card } from "reactstrap";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { MultiCheckboxToggle } from "./MultiCheckboxToggle";
 import { MultiRadioToggle } from "./MultiRadioToggle";
+import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "./RadioToggle";
 
 export default {
     title: "Bits/Toggles",
@@ -14,6 +15,26 @@ export function Toggles() {
     const [radioSelectedItem, setRadioSelectedItem] = useState<string>(null);
     const [checkboxWithoutAllSelectedItems, setCheckboxWithoutAllSelectedItems] = useState<string[]>([]);
     const [checkboxWithAllSelectedItems, setCheckboxWithAllSelectedItems] = useState<string[]>([]);
+    const [checkboxWithAllSelectedAndCustomLabelItems, setCheckboxWithAllSelectedAndCustomLabelItems] = useState<
+        string[]
+    >([]);
+    const [checkboxWithAllSelectedAndCustomLabelAndCountItems, setCheckboxWithAllSelectedAndCustomLabelAndCountItems] =
+        useState<string[]>([]);
+
+    const leftRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: "Bug",
+        value: "bug",
+        iconName: "bug",
+    };
+
+    const rightRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: "Feature",
+        value: "feature",
+        iconName: "experimental",
+    };
+
+    const [radioToggleSelectedItem, setRadioToggleSelectedItem] =
+        useState<RadioToggleWithIconInputItem>(leftRadioToggleItem);
 
     const radioList: InputItem[] = [
         { value: "1hour", label: "1 Hour" },
@@ -34,6 +55,15 @@ export function Toggles() {
 
     return (
         <Card>
+            <div className="ps-4 pt-4">
+                <RadioToggleWithIcon
+                    name="some-name"
+                    leftItem={leftRadioToggleItem}
+                    rightItem={rightRadioToggleItem}
+                    selectedItem={radioToggleSelectedItem}
+                    setSelectedItem={(x) => setRadioToggleSelectedItem(x)}
+                />
+            </div>
             <MultiRadioToggle
                 className="p-4"
                 inputItems={radioList}
@@ -60,8 +90,8 @@ export function Toggles() {
                 className="p-4"
                 inputItems={checkboxList}
                 label="Multi Checkbox Toggle with select all + custom label"
-                selectedItems={checkboxWithAllSelectedItems}
-                setSelectedItems={(x) => setCheckboxWithAllSelectedItems(x)}
+                selectedItems={checkboxWithAllSelectedAndCustomLabelItems}
+                setSelectedItems={(x) => setCheckboxWithAllSelectedAndCustomLabelItems(x)}
                 selectAll
                 selectAllLabel="Select All"
             />
@@ -70,8 +100,8 @@ export function Toggles() {
                 className="p-4"
                 inputItems={checkboxList}
                 label="Multi Checkbox Toggle with select all + custom label + count"
-                selectedItems={checkboxWithAllSelectedItems}
-                setSelectedItems={(x) => setCheckboxWithAllSelectedItems(x)}
+                selectedItems={checkboxWithAllSelectedAndCustomLabelAndCountItems}
+                setSelectedItems={(x) => setCheckboxWithAllSelectedAndCustomLabelAndCountItems(x)}
                 selectAll
                 selectAllLabel="Select All Items"
                 selectAllCount={3}
