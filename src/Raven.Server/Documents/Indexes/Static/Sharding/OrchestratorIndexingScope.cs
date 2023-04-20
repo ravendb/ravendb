@@ -12,4 +12,6 @@ public class OrchestratorIndexingScope : CurrentIndexingScope
     }
 
     public override bool SupportsDynamicFieldsCreation => false;
+
+    public override bool SupportsSpatialFieldsCreation => false;
 }
