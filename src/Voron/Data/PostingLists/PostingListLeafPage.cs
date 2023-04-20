@@ -181,6 +181,11 @@ public readonly unsafe struct PostingListLeafPage
                     countOfItems = bufferedMatches.BinarySearch(pruneGreaterThanOptimization);
                     if (countOfItems < 0)
                         countOfItems = ~countOfItems;
+                    if (countOfItems == 0) // *all* the items are larger
+                    {
+                        BufferIndex = BufferLength;
+                        return 0;
+                    }
                 }
                 bufferedMatches[..countOfItems].CopyTo(matches);
                 BufferIndex += countOfItems;
