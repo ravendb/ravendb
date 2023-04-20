@@ -109,9 +109,9 @@ export function FormToggleGeneral<TFieldValues extends FieldValues, TName extend
 
     return (
         <Label className="form-check">
-            {label && (!labelPosition || labelPosition === "left") && <label className="me-2">{label}</label>}
+            {label && (!labelPosition || labelPosition === "left") && <div className="me-2">{label}</div>}
             <FormInputGeneral type={type} canBeChecked {...restProps} />
-            {label && labelPosition === "right" && <label className="ms-2">{label}</label>}
+            {label && labelPosition === "right" && <div className="ms-2">{label}</div>}
         </Label>
     );
 }
@@ -125,4 +125,11 @@ export function FormToggle<TFieldValues extends FieldValues, TName extends Field
 
 export function FormSelectOption<T extends string | number = string>({ value, label }: FormSelectOptionProps<T>) {
     return <option value={value}>{label}</option>;
+}
+
+export function FormCheckbox<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
+    props: FormToggleInputProps<TFieldValues, TName>
+) {
+    const { type, ...restProps } = props;
+    return <FormToggleGeneral type={type} {...restProps} />;
 }

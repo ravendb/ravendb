@@ -2,16 +2,21 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ValidationMessageUtils as Messages } from "components/utils/ValidationMessageUtils";
 
+// TODO: complex validation
 const schema = yup
     .object({
         identityPartsSeparatorEnabled: yup.boolean().optional(),
-        identityPartsSeparatorValue: yup.string().when("identityPartsSeparatorEnabled", {
-            is: true,
-            then: (schema) => schema.required(Messages.required),
-        }),
+        identityPartsSeparatorValue: yup
+            .string()
+            .nullable()
+            .when("identityPartsSeparatorEnabled", {
+                is: true,
+                then: (schema) => schema.required(Messages.required),
+            }),
         maximumNumberOfRequestsEnabled: yup.boolean().optional(),
         maximumNumberOfRequestsValue: yup
             .number()
+            .nullable()
             .typeError(Messages.number)
             .positive(Messages.positiveNumber)
             .integer(Messages.integerNumber)
@@ -23,6 +28,7 @@ const schema = yup
         seedEnabled: yup.boolean().optional(),
         seedValue: yup
             .number()
+            .nullable()
             .typeError(Messages.number)
             .positive(Messages.positiveNumber)
             .integer(Messages.integerNumber)
@@ -34,6 +40,7 @@ const schema = yup
         readBalanceBehaviorValue: yup
             .mixed<Raven.Client.Http.ReadBalanceBehavior>()
             .oneOf(["None", "FastestNode", "RoundRobin"])
+            .nullable()
             .when("readBalanceBehaviorEnabled", {
                 is: true,
                 then: (schema) => schema.required(Messages.required),
