@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import { Form, Col, Button, Card, Row, Spinner } from "reactstrap";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { FormInput, FormSelectOption, FormToggle } from "components/utils/FormUtils";
+import { FormCheckbox, FormInput, FormSelectOption, FormSwitch } from "components/common/Form";
 import { ClientConfigurationFormData, clientConfigurationYupResolver } from "./ClientConfigurationValidation";
 import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
@@ -15,16 +15,26 @@ export default function ClientConfiguration() {
     const { manageServerService } = useServices();
     const { result, loading, error } = useAsync(manageServerService.getGlobalClientConfiguration, []);
 
-    const { handleSubmit, control, resetField, formState, reset } = useForm<ClientConfigurationFormData>({
+    const { handleSubmit, control, resetField, formState, setValue } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
+        mode: "onChange",
     });
 
     useEffect(() => {
-        const resultFormData = getDefaultValues(result);
-        if (resultFormData) {
-            reset(resultFormData);
+        if (!result) {
+            return;
         }
-    }, [reset, result]);
+
+        setValue("identityPartsSeparatorEnabled", !!result.IdentityPartsSeparator);
+        setValue("identityPartsSeparatorValue", result.IdentityPartsSeparator);
+        setValue("maximumNumberOfRequestsEnabled", !!result.MaxNumberOfRequestsPerSession);
+        setValue("maximumNumberOfRequestsValue", result.MaxNumberOfRequestsPerSession);
+        setValue("sessionContextEnabled", result.LoadBalanceBehavior !== "None");
+        setValue("seedEnabled", !!result.LoadBalancerContextSeed);
+        setValue("seedValue", result.LoadBalancerContextSeed);
+        setValue("readBalanceBehaviorEnabled", result.ReadBalanceBehavior !== "None");
+        setValue("readBalanceBehaviorValue", result.ReadBalanceBehavior);
+    }, [setValue, result]);
 
     const {
         identityPartsSeparatorEnabled,
@@ -49,7 +59,6 @@ export default function ClientConfiguration() {
     return (
         <Form onSubmit={handleSubmit(onSave)}>
             <Col md={6} className="p-4">
-                {/* TODO: add spinner on save */}
                 <Button type="submit" color="primary" disabled={formState.isSubmitting}>
                     {formState.isSubmitting ? <Spinner size="sm" /> : <i className="icon-save margin-right-xxs" />}
                     Save
@@ -58,15 +67,16 @@ export default function ClientConfiguration() {
                 <Card className="card flex-row p-2 mt-4">
                     <Row className="flex-grow-1">
                         <Col>
-                            <FormToggle
+                            <FormCheckbox
                                 type="checkbox"
                                 control={control}
                                 name="identityPartsSeparatorEnabled"
-                                label="Identity parts separator"
                                 afterChange={(event) =>
                                     !event.target.checked && resetField("identityPartsSeparatorValue")
                                 }
-                            />
+                            >
+                                Identity parts separator
+                            </FormCheckbox>
                         </Col>
                         <Col md={5}>
                             <FormInput
@@ -83,15 +93,16 @@ export default function ClientConfiguration() {
                 <Card className="flex-row mt-1 p-2">
                     <Row className="flex-grow-1">
                         <Col>
-                            <FormToggle
+                            <FormCheckbox
                                 type="checkbox"
                                 control={control}
                                 name="maximumNumberOfRequestsEnabled"
-                                label="Maximum number of requests per session"
                                 afterChange={(event) =>
                                     !event.target.checked && resetField("maximumNumberOfRequestsValue")
                                 }
-                            />
+                            >
+                                Maximum number of requests per session
+                            </FormCheckbox>
                         </Col>
                         <Col lg={5}>
                             <FormInput
@@ -108,30 +119,33 @@ export default function ClientConfiguration() {
                 <Card className="mt-1">
                     <Row className="p-2">
                         <Col>
-                            <FormToggle
+                            <FormCheckbox
                                 type="checkbox"
                                 control={control}
                                 name="sessionContextEnabled"
-                                label="Use Session Context for Load Balancing"
                                 afterChange={(event) => {
                                     if (!event.target.checked) {
                                         resetField("seedValue");
                                         resetField("seedEnabled");
                                     }
                                 }}
-                            />
+                            >
+                                Use Session Context for Load Balancing
+                            </FormCheckbox>
                         </Col>
                         <Col md={5}>
                             <Row>
                                 <Col>
-                                    <FormToggle
+                                    <FormSwitch
                                         type="switch"
                                         control={control}
                                         name="seedEnabled"
                                         disabled={!sessionContextEnabled}
                                         label="Seed"
                                         afterChange={(event) => !event.target.checked && resetField("seedValue")}
-                                    />
+                                    >
+                                        Seed
+                                    </FormSwitch>
                                 </Col>
                                 <Col>
                                     <FormInput
@@ -148,20 +162,21 @@ export default function ClientConfiguration() {
 
                     <Row className="p-2">
                         <Col>
-                            <FormToggle
+                            <FormCheckbox
                                 type="checkbox"
                                 control={control}
                                 name="readBalanceBehaviorEnabled"
-                                label="Read balance behavior"
                                 afterChange={(event) => !event.target.checked && resetField("readBalanceBehaviorValue")}
-                            />
+                            >
+                                Read balance behavior
+                            </FormCheckbox>
                         </Col>
                         <Col md={5}>
                             <FormInput
+                                type="select"
                                 control={control}
                                 name="readBalanceBehaviorValue"
-                                type="select"
-                                disabled={!readBalanceBehaviorEnabled}
+                                disabled={!readBalanceBehaviorEnabled || sessionContextEnabled}
                             >
                                 <FormSelectOption<ReadBalanceBehavior> label="None" value="None" />
                                 <FormSelectOption<ReadBalanceBehavior> label="Round Robin" value="RoundRobin" />
@@ -173,24 +188,6 @@ export default function ClientConfiguration() {
             </Col>
         </Form>
     );
-}
-
-function getDefaultValues(dto: ClientConfiguration) {
-    if (!dto) {
-        return null;
-    }
-
-    return {
-        identityPartsSeparatorEnabled: !!dto.IdentityPartsSeparator,
-        identityPartsSeparatorValue: dto.IdentityPartsSeparator,
-        maximumNumberOfRequestsEnabled: !!dto.MaxNumberOfRequestsPerSession,
-        maximumNumberOfRequestsValue: dto.MaxNumberOfRequestsPerSession,
-        sessionContextEnabled: dto.LoadBalanceBehavior !== "None",
-        seedEnabled: !!dto.LoadBalancerContextSeed,
-        seedValue: dto.LoadBalancerContextSeed,
-        readBalanceBehaviorEnabled: dto.ReadBalanceBehavior !== "None",
-        readBalanceBehaviorValue: dto.ReadBalanceBehavior,
-    };
 }
 
 function toDto(formData: ClientConfigurationFormData, disabled: boolean): ClientConfiguration {

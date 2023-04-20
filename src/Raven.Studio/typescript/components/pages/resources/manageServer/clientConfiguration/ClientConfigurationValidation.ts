@@ -2,13 +2,14 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ValidationMessageUtils as Messages } from "components/utils/ValidationMessageUtils";
 
-// TODO: complex validation
 const schema = yup
     .object({
         identityPartsSeparatorEnabled: yup.boolean().optional(),
         identityPartsSeparatorValue: yup
             .string()
             .nullable()
+            .length(1, "Enter one character only")
+            .matches(/[^|]/, { message: "Identity parts separator cannot be set to '|'" })
             .when("identityPartsSeparatorEnabled", {
                 is: true,
                 then: (schema) => schema.required(Messages.required),
