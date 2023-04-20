@@ -21,7 +21,7 @@ namespace Corax.Queries
     {
         private readonly IndexSearcher _searcher;
         private IQueryMatch _inner;        
-        private readonly TComparer _comparer;
+        internal readonly TComparer _comparer;
         private readonly int _take;
         private readonly delegate*<ref SortingMatch<TInner, TComparer>, Span<long>, int> _fillFunc;
 
@@ -168,11 +168,6 @@ namespace Corax.Queries
             where TFetcher : struct, IFetcher
             where TOut : struct
         {
-            var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
-
-            ByteStringContext<ByteStringMemoryCache>.InternalScope bufferHandler = default;
-
-            ref var matchesRef = ref MemoryMarshal.GetReference(matches);
 
             // This method should also be re-entrant for the case where we have already pre-sorted everything and 
             // we will just need to acquire via pages the totality of the results. 
@@ -181,17 +176,11 @@ namespace Corax.Queries
                 goto ReturnMatches;
             }
             
+            ByteStringContext<ByteStringMemoryCache>.InternalScope bufferHandler = default;
             Debug.Assert(matches.Length > 1);
             var totalMatches = match._take == -1 ? 
                 Math.Max(128, matches.Length) : // no limit specified, we'll guess on the size and rely on growing as needed 
                 match._take;
-
-            // We will allocate the space for the heap data structure that we are gonna use to fill the results.
-            int heapSize = Unsafe.SizeOf<MatchComparer<TComparer, TOut>.Item>() * totalMatches;
-            if (match._bufferSize < heapSize)
-                match.UnlikelyGrowBuffer(heapSize);
-
-            var items = new Span<MatchComparer<TComparer, TOut>.Item>(match._buffer, totalMatches);
 
             Span<float> scores;
             if (typeof(TComparer) == typeof(BoostingComparer))
@@ -207,7 +196,12 @@ namespace Corax.Queries
 
             // Initialize the important infrastructure for the sorting.
             TFetcher fetcher = default;
-            var index = 0;
+            // We will allocate the space for the heap data structure that we are gonna use to fill the results.
+            int sizeOfElement = Unsafe.SizeOf<MatchComparer<TComparer, TOut>.Item>();
+            int heapSize = sizeOfElement * totalMatches;
+            if (match._bufferSize < heapSize)
+                match.UnlikelyGrowBuffer(heapSize);
+            var heap = new SortingMatchHeap<TComparer, TOut>(match._comparer, match._buffer, totalMatches);
             while (true)
             {
                 var read = match._inner.Fill(matches);
@@ -238,6 +232,7 @@ namespace Corax.Queries
                         {
                             // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
                             ref var scoresRef = ref MemoryMarshal.GetReference(scores);
+                            ref var matchesRef = ref MemoryMarshal.GetReference(matches);
                             for (int idx = 0; idx < totalMatches; idx++)
                             {
                                 var ptr = (float*)tree.ReadPtr(Unsafe.Add(ref matchesRef, idx), out var _);
@@ -251,18 +246,15 @@ namespace Corax.Queries
                 }
 
                 // PERF: We perform this at the end to avoid this check if we are not really adding elements. 
-                if (match._take == -1 && index + read + 16 > items.Length)
+                if (match._take == -1 && heap.CapacityIncreaseNeeded(read))
                 {
                     // we don't have a limit to the number of results returned
                     // so we have to ensure that we keep *all* the results in memory, as such,
                     // we cannot limit the size of the sorting heap and need to grow it
                     match.UnlikelyGrowBuffer(match._bufferSize);
-                    items = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(new Span<byte>(match._buffer, match._bufferSize));
+                    heap.IncreaseCapacity(match._buffer, match._bufferSize / sizeOfElement);
                 }
-
-                ref var itemsRef = ref MemoryMarshal.GetReference(items);
-                ref var itemsLast = ref items[^1];
-
+            
                 MatchComparer<TComparer, TOut>.Item cur = default;
                 for (int i = 0; i < read; i++)
                 {
@@ -277,92 +269,42 @@ namespace Corax.Queries
                         if (fetcher.Get(match._searcher, match._comparer.Field, cur.Key, out cur.Value, match._comparer) == false)
                             cur.Key = -cur.Key;
                     }
-
-                    if (index < items.Length)
-                    {
-                        ref var itemPtr = ref Unsafe.Add(ref itemsRef, index);
-                        itemPtr = cur;
-                        index++;
-                    }
-                    else if (comparer.Compare(items[^1], cur) > 0)
-                    {
-                        itemsLast = cur;
-                    }
-                    else
-                    {
-                        continue;
-                    }
-
-                    HeapUp(ref itemsRef, index - 1);
+                    
+                    heap.Add(cur);
                 }
             }
-            match._bufferUsedCount = index;
-
-            ReturnMatches:
-            items = new Span<MatchComparer<TComparer, TOut>.Item>(match._buffer, match._bufferUsedCount);
-
-            int matchesToReturn = Math.Min(match._bufferUsedCount, matches.Length);
-            ref var itemsStart = ref MemoryMarshal.GetReference(items);
-            for (int i = 0; i < matchesToReturn; i++)
-            {
-                // We are getting the top element because this is a heap and the top element is the one that is
-                // going to be removed. Then the rest of the element will be pushed up to find the new top.
-                ref var matchIdxPtr = ref Unsafe.Add(ref matchesRef, i);
-                
-                //in case when value doesn't exist in entry we set entryId as -entryId in `Item`, let's revert that.
-                matchIdxPtr = itemsStart.Key < 0 
-                    ? -itemsStart.Key 
-                    : itemsStart.Key;
-                HeapDown(ref itemsStart, match._bufferUsedCount - i - 1);
-            }
-            match._bufferUsedCount -= matchesToReturn;
-
             bufferHandler.Dispose();
 
+            if (matches.Length >= heap.Count)
+            {
+                heap.Complete(matches);
+                match._bufferUsedCount = 0;
+                return heap.Count;
+            }
+
+            // Note that we are *reusing* the same buffer that the heap is using, we can do that because the heap
+            // will read from the end to the start, and write from the end as well. And it'll write sizeof(long) while
+            // reading sizeof(Item), which is larger, so we are safe
+            match._bufferUsedCount = heap.Count;
+            Span<long> tempMatchesBuffer = GetTempMatchesBuffer(match._buffer, match._bufferSize, match._bufferUsedCount);
+            heap.Complete(tempMatchesBuffer);
+
+            ReturnMatches:
+
+            if (match._bufferUsedCount == 0)
+                return 0;
+            
+            var persistedMatches =  GetTempMatchesBuffer(match._buffer, match._bufferSize, match._bufferUsedCount);
+            var matchesToReturn = Math.Min(persistedMatches.Length, matches.Length);
+            match._bufferUsedCount -= matchesToReturn;
+            persistedMatches[..matchesToReturn].CopyTo(matches);
             return matchesToReturn;
             
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void HeapUp(ref MatchComparer<TComparer, TOut>.Item itemsStart, int current)
-            {
-                while (current > 0)
-                {
-                    var parent = (current - 1) / 2;
-                    ref var parentItem = ref Unsafe.Add(ref itemsStart, parent);
-                    ref var currentItem = ref Unsafe.Add(ref itemsStart, current);
-                    if (comparer.Compare(ref parentItem, ref currentItem) <= 0)
-                        break;
-                        
-                    (parentItem, currentItem) = (currentItem, parentItem);
-                    current = parent;
-                }
-            }
-            
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void HeapDown(ref MatchComparer<TComparer, TOut>.Item itemsPtr, int heapMaxIndex)
-            {
-                itemsPtr = Unsafe.Add(ref itemsPtr, heapMaxIndex);
-                var current = 0;
-                int childIdx;
-                
-                while ((childIdx = 2 * current + 1) < heapMaxIndex)
-                {
-                    if (childIdx + 1 < heapMaxIndex)
-                    {
-                        if (comparer.Compare(ref Unsafe.Add(ref itemsPtr, childIdx), ref Unsafe.Add(ref itemsPtr, childIdx+1)) > 0)
-                        {
-                            childIdx++;
-                        }
-                    }
-                    
-                    ref var currentPtr = ref Unsafe.Add(ref itemsPtr, current);
-                    ref var childPtr = ref Unsafe.Add(ref itemsPtr, childIdx);
-                    if (comparer.Compare(ref currentPtr, ref childPtr) <= 0)
-                        break;
-                
-                    (currentPtr, childPtr) = (childPtr, currentPtr);
-                    current = childIdx;
-                }
-            }
+        }
+
+        private static Span<long> GetTempMatchesBuffer(byte* buffer, int bufferSize, int bufferUsedCount)
+        {
+            return new Span<long>(buffer + bufferSize - bufferUsedCount * sizeof(long), bufferUsedCount);
         }
 
         public long Count => _inner.Count;
