@@ -14,6 +14,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

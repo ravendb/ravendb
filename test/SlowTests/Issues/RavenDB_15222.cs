@@ -3,6 +3,7 @@ using FastTests.Server.Replication;
 using Raven.Client;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

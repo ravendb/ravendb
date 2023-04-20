@@ -22,6 +22,7 @@ using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Bugs.Indexing;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

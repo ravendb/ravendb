@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {

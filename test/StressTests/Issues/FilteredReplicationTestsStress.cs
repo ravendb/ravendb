@@ -13,6 +13,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

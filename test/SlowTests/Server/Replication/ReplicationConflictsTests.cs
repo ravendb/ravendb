@@ -24,6 +24,7 @@ using Xunit;
 using Constants = Raven.Client.Constants;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication

@@ -5,6 +5,7 @@ using FastTests.Server.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.NotificationCenter.Handlers;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

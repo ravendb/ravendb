@@ -15,6 +15,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
 using Sparrow.Global;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

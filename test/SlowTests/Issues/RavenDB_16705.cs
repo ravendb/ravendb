@@ -6,6 +6,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

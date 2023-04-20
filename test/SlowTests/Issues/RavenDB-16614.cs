@@ -17,6 +17,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

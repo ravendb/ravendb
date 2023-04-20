@@ -5,6 +5,7 @@ using Orders;
 using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

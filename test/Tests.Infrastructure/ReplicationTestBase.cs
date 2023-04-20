@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -26,12 +27,11 @@ using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace FastTests.Server.Replication
+namespace Tests.Infrastructure
 {
     public class ReplicationTestBase : ClusterTestBase
     {

@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

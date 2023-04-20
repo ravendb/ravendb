@@ -14,28 +14,18 @@ namespace FastTests.Server.Replication
         {
         }
 
-        public readonly string DbName = "TestDB" + Guid.NewGuid();
-
         private class User
         {
             public string Name { get; set; }
             public int Age { get; set; }
         }
      
-        [LicenseRequiredFact]
-        public async Task Master_slave_replication_from_etag_zero_should_work()
+        [RavenTheory(RavenTestCategory.Replication, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Master_slave_replication_from_etag_zero_should_work(Options options)
         {
-            var dbName1 = DbName + "-1";
-            var dbName2 = DbName + "-2";
-            
-            using (var store1 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName1
-            }))
-            using (var store2 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName2
-            }))
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store1, store2);
 
@@ -69,19 +59,12 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [LicenseRequiredFact]
-        public async Task Master_slave_replication_with_multiple_PUTS_should_work()
+        [RavenTheory(RavenTestCategory.Replication, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Master_slave_replication_with_multiple_PUTS_should_work(Options options)
         {
-            var dbName1 = DbName + "-1";
-            var dbName2 = DbName + "-2";
-            using (var store1 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName1
-            }))
-            using (var store2 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName2
-            }))
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store1, store2);
 
@@ -143,19 +126,12 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [LicenseRequiredFact]
-        public async Task Master_master_replication_with_multiple_PUTS_should_work()
+        [RavenTheory(RavenTestCategory.Replication, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Master_master_replication_with_multiple_PUTS_should_work(Options options)
         {
-            var dbName1 = DbName + "-1";
-            var dbName2 = DbName + "-2";
-            using (var store1 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName1
-            }))
-            using (var store2 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName2
-            }))
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
@@ -239,19 +215,12 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [LicenseRequiredFact]
-        public async Task Master_slave_replication_with_exceptions_should_work()
+        [RavenTheory(RavenTestCategory.Replication, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Master_slave_replication_with_exceptions_should_work(Options options)
         {
-            var dbName1 = DbName + "-1";
-            var dbName2 = DbName + "-2";
-            using (var store1 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName1
-            }))
-            using (var store2 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName2
-            }))
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 //TODO : configure test code to throw exceptions at server-side during replication
                 //TODO : (find a way to do so)
@@ -288,19 +257,12 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [LicenseRequiredFact]
-        public async Task Can_get_performance_stats()
+        [RavenTheory(RavenTestCategory.Replication, LicenseRequired = true)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_get_performance_stats(Options options)
         {
-            var dbName1 = DbName + "-1";
-            var dbName2 = DbName + "-2";
-            using (var store1 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName1
-            }))
-            using (var store2 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => dbName2
-            }))
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(store1, store2); // master-slave
 
@@ -324,8 +286,17 @@ namespace FastTests.Server.Replication
                 Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/1", 15000));
                 Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/2", 5000));
 
-                var stats1 = store1.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
-                var stats2 = store2.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
+                var op1 = store1.Maintenance;
+                var op2 = store2.Maintenance;
+
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    op1 = op1.ForNode("A").ForShard(0);
+                    op2 = op2.ForNode("A").ForShard(0);
+                }
+
+                var stats1 = op1.Send(new GetReplicationPerformanceStatisticsOperation());
+                var stats2 = op2.Send(new GetReplicationPerformanceStatisticsOperation());
 
                 Assert.NotEmpty(stats1.Outgoing);
                 Assert.Empty(stats1.Incoming);

@@ -16,6 +16,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Raven.Server.Documents.Replication;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
