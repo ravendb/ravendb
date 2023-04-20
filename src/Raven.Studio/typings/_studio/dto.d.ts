@@ -347,7 +347,7 @@ interface replicationConflictListItemDto {
     ConflictsPerDocument: number;
 }
 
-type databaseDisconnectionCause = "Error" | "DatabaseDeleted" | "DatabaseDisabled" | "ChangingDatabase" | "DatabaseIsNotRelevant";
+type databaseDisconnectionCause = "Error" | "DatabaseDeleted" | "DatabaseDisabled" | "ChangingDatabase" | "DatabaseIsNotRelevant" | "DatabaseRestarted";
 
 type querySortType = "Ascending" | "Descending" | "Range Ascending" | "Range Descending";
 
