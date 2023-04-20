@@ -103,6 +103,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public override void InnerDispose()
         {
+            Collection?.Dispose();
         }
     }
 
@@ -222,6 +223,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public override void InnerDispose()
         {
+            Collection?.Dispose();
         }
     }
 }

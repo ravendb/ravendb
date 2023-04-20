@@ -89,6 +89,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public override void InnerDispose()
         {
+            Id?.Dispose();
+            Collection?.Dispose();
         }
     }
 }
