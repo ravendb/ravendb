@@ -419,6 +419,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected IEnumerable<object> CreateField(string name, object value, CreateFieldOptions options)
         {
+            if (CurrentIndexingScope.Current.SupportsDynamicFieldsCreation == false)
+                return null;
+
             var scope = CurrentIndexingScope.Current;
             return scope.Index.SearchEngineType switch
             {
@@ -499,6 +502,8 @@ namespace Raven.Server.Documents.Indexes.Static
         
         protected IEnumerable<object> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
         {
+            if (CurrentIndexingScope.Current.SupportsDynamicFieldsCreation == false)
+                return null;
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
             FieldIndexing? indexing;
@@ -656,8 +661,8 @@ namespace Raven.Server.Documents.Indexes.Static
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
 
-            if (CurrentIndexingScope.Current is OrchestratorIndexingScope)
-                return Enumerable.Empty<object>();
+            if (CurrentIndexingScope.Current.SupportsDynamicFieldsCreation == false)
+                return null;
 
             if (lng == null || double.IsNaN(lng.Value))
                 return Enumerable.Empty<AbstractField>();
@@ -667,7 +672,7 @@ namespace Raven.Server.Documents.Indexes.Static
             IShape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
             return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
                 ? spatialField.LuceneCreateIndexableFields(shape)
-                : Enumerable.Cast<object>(spatialField.CoraxCreateIndexableFields(shape));
+                : spatialField.CoraxCreateIndexableFields(shape);
         }
 
         internal static IEnumerable<object> CreateSpatialField(SpatialField spatialField, object shapeWkt)
@@ -675,19 +680,22 @@ namespace Raven.Server.Documents.Indexes.Static
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
 
-            if (CurrentIndexingScope.Current is OrchestratorIndexingScope)
-                return Enumerable.Empty<object>();
+            if (CurrentIndexingScope.Current.SupportsDynamicFieldsCreation == false)
+                return null;
 
             return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
                 ? spatialField.LuceneCreateIndexableFields(shapeWkt)
-                : Enumerable.Cast<object>(spatialField.CoraxCreateIndexableFields(shapeWkt));
+                : spatialField.CoraxCreateIndexableFields(shapeWkt);
         }
 
         internal static SpatialField GetOrCreateSpatialField(string name)
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
+            if (CurrentIndexingScope.Current.SupportsDynamicFieldsCreation == false)
+                return null;
+
             return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);
         }
 

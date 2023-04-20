@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Corax.Utils;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
@@ -225,6 +226,12 @@ namespace Raven.Server.Utils
                 return BlittableSupportedReturnType.Javascript;
 
             if (value is IEnumerable<IFieldable> || value is IFieldable)
+                return BlittableSupportedReturnType.Ignored;
+
+            if (value is IEnumerable<CoraxDynamicItem> || value is CoraxDynamicItem)
+                return BlittableSupportedReturnType.Ignored;
+
+            if (value is IEnumerable<CoraxSpatialPointEntry> || value is CoraxSpatialPointEntry)
                 return BlittableSupportedReturnType.Ignored;
 
             if (value is IDictionary)

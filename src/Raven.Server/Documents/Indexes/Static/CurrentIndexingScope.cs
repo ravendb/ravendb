@@ -71,6 +71,8 @@ namespace Raven.Server.Documents.Indexes.Static
             _getSpatialField = getSpatialField;
         }
 
+        public virtual bool SupportsDynamicFieldsCreation => true;
+
         public void SetSourceCollection(string collection, IndexingStatsScope stats)
         {
             SourceCollection = collection;
@@ -351,7 +353,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return true;
         }
 
-        public virtual SpatialField GetOrCreateSpatialField(string name)
+        public SpatialField GetOrCreateSpatialField(string name)
         {
             return _getSpatialField(name);
         }

@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using Sparrow;
 
 namespace Corax.Utils;
 
-public readonly struct CoraxSpatialPointEntry
+public class CoraxSpatialPointEntry
 {
     public readonly double Latitude;
 
@@ -16,5 +17,19 @@ public readonly struct CoraxSpatialPointEntry
         Latitude = latitude;
         Longitude = longitude;
         Geohash = geohash;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(this ,obj))
+            return true;
+        if (obj is CoraxSpatialPointEntry csp == false)
+            return false;
+        return Latitude.Equals(csp.Latitude) && Longitude.Equals(csp.Longitude) && Geohash == csp.Geohash;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Latitude, Longitude, Geohash);
     }
 }
