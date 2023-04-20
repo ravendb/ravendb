@@ -22,7 +22,7 @@ namespace SlowTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CanUseExactInAutoIndex(RavenTestParameters config)
         {            
             using (var store = GetDocumentStore(new Options

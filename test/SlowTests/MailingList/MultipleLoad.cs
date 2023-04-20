@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,21 +37,23 @@ namespace SlowTests.MailingList
             public string Id { get; set; }
             public IList<string> data { get; set; }
         }
-        [Fact]
-        public async Task CanSelectValuesWithOnlySingleIdentity()
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanSelectValuesWithOnlySingleIdentity(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new TestableSubDTO
                     {
                         data = new List<string> { "a1", "a2", "a3" }
-                    });
+                    }, "TestableSubDTO/1$sameShard");
                     await session.StoreAsync(new TestableSubDTO
                     {
                         data = new List<string> { "b1", "b2", "b3" }
-                    });
+                    }, "TestableSubDTO/2$sameShard");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenAsyncSession())
@@ -64,13 +67,13 @@ namespace SlowTests.MailingList
                         }
                     };
 
-                    await session.StoreAsync(testable);
+                    await session.StoreAsync(testable, "TestableSubDTO/3$sameShard");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenSession())
                 {
                     var results = from item in session.Query<TestableDTO>()
-                                  let subitem = session.Load<TestableSubDTO>("TestableSubDTOs/1-A")
+                                  let subitem = session.Load<TestableSubDTO>("TestableSubDTO/1$sameShard")
                                   select new
                                   {
                                       Id = item.Id,
@@ -87,21 +90,22 @@ namespace SlowTests.MailingList
                 }
             }
         }
-        [Fact]
-        public async Task CanSelectValuesWithCollection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanSelectValuesWithCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new TestableSubDTO
                     {
                         data = new List<string> { "a1", "a2", "a3" }
-                    });
+                    }, "TestableSubDTO/1$sameShard");
                     await session.StoreAsync(new TestableSubDTO
                     {
                         data = new List<string> { "b1", "b2", "b3" }
-                    });
+                    },"TestableSubDTO/2$sameShard");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenAsyncSession())
@@ -115,7 +119,7 @@ namespace SlowTests.MailingList
                         }
                     };
 
-                    await session.StoreAsync(testable);
+                    await session.StoreAsync(testable, "TestableSubDTO/3$sameShard");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenSession())

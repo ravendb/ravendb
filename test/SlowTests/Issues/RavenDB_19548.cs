@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task RawRavenQueryProjectionWithoutNewKeyword()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RawRavenQueryProjectionWithoutNewKeyword(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -125,7 +127,7 @@ from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 
                     var exception = Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
-                    Assert.StartsWith("System.InvalidOperationException: Query returning a single function call result must return an object",
+                    Assert.Contains("Query returning a single function call result must return an object",
                         exception.Result.Message);
                 }
 
@@ -158,7 +160,7 @@ from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 from 'Users' as result select output(result)", asyncDocumentQuery.ToString());
 
                     var exception = Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () => await asyncDocumentQuery.ToListAsync());
-                    Assert.StartsWith("System.InvalidOperationException: Query returning a single function call result must return an object",
+                    Assert.Contains("Query returning a single function call result must return an object",
                         exception.Result.Message);
                 }
 
