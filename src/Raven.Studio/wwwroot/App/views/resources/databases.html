@@ -275,7 +275,15 @@
                                                 <i class="icon-play"></i> Enable indexing
                                             </a>
                                         </li>
-                                        <li class="divider" data-bind="visible: $root.createIsLocalDatabaseObservable(name) &&  $root.accessManager.canCompactDatabase()"></li>
+                                        <li class="divider" data-bind="visible: $root.createIsLocalDatabaseObservable(name) && ($root.accessManager.canCompactDatabase() || $root.isAdminAccessByDbName(name))"></li>
+                                        <li data-bind="visible: $root.createIsLocalDatabaseObservable(name)() && $root.isAdminAccessByDbName(name)">
+                                            <a data-bind="visible: disabled" title="The database is disabled" class="has-disable-reason disabled" data-placement="top">
+                                                <i class="icon-reset"></i> Restart database
+                                            </a>
+                                            <a href="#" data-bind="click: $root.restartDatabase, visible: !disabled()">
+                                                <i class="icon-reset"></i> Restart database
+                                            </a>
+                                        </li>
                                         <li data-bind="visible: $root.createIsLocalDatabaseObservable(name)() && $root.accessManager.canCompactDatabase()">
                                             <a data-bind="visible: disabled" title="The database is disabled" class="has-disable-reason disabled" data-placement="top">
                                                 <i class="icon-compact"></i> Compact database

@@ -475,6 +475,11 @@ namespace Raven.Client
             }
         }
 
+        internal static class Identities
+        {
+            public const char DefaultSeparator = '/';
+        }
+
         internal class Obsolete
         {
             private Obsolete()

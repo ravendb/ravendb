@@ -1338,8 +1338,9 @@ namespace Raven.Server.Documents
                     _lastTopologyIndex = record.Topology.Stamp.Index;
 
                 ClientConfiguration = record.Client;
-                IdentityPartsSeparator = record.Client?.IdentityPartsSeparator ?? '/';
-
+                IdentityPartsSeparator = record.Client is { Disabled: false }
+                    ? record.Client.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator
+                    : Constants.Identities.DefaultSeparator;
                 StudioConfiguration = record.Studio;
 
                 NotifyFeaturesAboutStateChange(record, index);
