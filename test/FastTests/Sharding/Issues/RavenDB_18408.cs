@@ -11,7 +11,7 @@ public class RavenDB_18408 : RavenTestBase
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.BulkInsert | RavenTestCategory.Sharding)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public async Task Wrong_Json_in_BulkDocs(Options options)
     {
