@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,10 +59,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task streaming_and_projections_with_property_rename_Async()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task streaming_and_projections_with_property_rename_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Customers_ByName();
                 index.Execute(store);

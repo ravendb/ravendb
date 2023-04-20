@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task JsConverterShouldNotStripValueOrKeyFromDictionaryEntity()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task JsConverterShouldNotStripValueOrKeyFromDictionaryEntity(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             using var session = store.OpenAsyncSession();
 
             var u1 = new User
@@ -97,25 +99,31 @@ namespace SlowTests.Issues
             Assert.Equal("from 'Users' as customer select { CustomerName : customer.Name, Phones : Object.map(customer.Phones, (v, k) => ({Label:k,Prefix:v.CountryPrefix,Phone:v.Value})) }", query.ToString());
 
             var res = await query.ToListAsync();
+            
             Assert.Equal(5, res.Count);
-            Assert.Equal(res.First().CustomerName, u1.Name);
-            Assert.Equal(2, res.First().Phones.Count());
-            Assert.Equal(res.First().Phones.First().Label, u1.Phones.First().Key);
-            Assert.Equal(res.First().Phones.First().Phone, u1.Phones.First().Value.Value);
-            Assert.Equal(res.First().Phones.First().Prefix, u1.Phones.First().Value.CountryPrefix);
-            Assert.Equal(res.First().Phones.Last().Label, u1.Phones.Last().Key);
-            Assert.Equal(res.First().Phones.Last().Phone, u1.Phones.Last().Value.Value);
-            Assert.Equal(res.First().Phones.Last().Prefix, u1.Phones.Last().Value.CountryPrefix);
+
+            var first = res.First(x => x.CustomerName == u1.Name);
+
+            Assert.Equal(first.CustomerName, u1.Name);
+            Assert.Equal(2, first.Phones.Count());
+            Assert.Equal(first.Phones.First().Label, u1.Phones.First().Key);
+            Assert.Equal(first.Phones.First().Phone, u1.Phones.First().Value.Value);
+            Assert.Equal(first.Phones.First().Prefix, u1.Phones.First().Value.CountryPrefix);
+            Assert.Equal(first.Phones.Last().Label, u1.Phones.Last().Key);
+            Assert.Equal(first.Phones.Last().Phone, u1.Phones.Last().Value.Value);
+            Assert.Equal(first.Phones.Last().Prefix, u1.Phones.Last().Value.CountryPrefix);
 
 
-            Assert.Equal(res.Last().CustomerName, u5.Name);
-            Assert.Equal(2, res.Last().Phones.Count());
-            Assert.Equal(res.Last().Phones.First().Label, u5.Phones.First().Key);
-            Assert.Equal(res.Last().Phones.First().Phone, u5.Phones.First().Value.Value);
-            Assert.Equal(res.Last().Phones.First().Prefix, u5.Phones.First().Value.CountryPrefix);
-            Assert.Equal(res.Last().Phones.Last().Label, u5.Phones.Last().Key);
-            Assert.Equal(res.Last().Phones.Last().Phone, u5.Phones.Last().Value.Value);
-            Assert.Equal(res.Last().Phones.Last().Prefix, u5.Phones.Last().Value.CountryPrefix);
+            var last = res.Last(x => x.CustomerName == u5.Name);
+
+            Assert.Equal(last.CustomerName, u5.Name);
+            Assert.Equal(2, last.Phones.Count());
+            Assert.Equal(last.Phones.First().Label, u5.Phones.First().Key);
+            Assert.Equal(last.Phones.First().Phone, u5.Phones.First().Value.Value);
+            Assert.Equal(last.Phones.First().Prefix, u5.Phones.First().Value.CountryPrefix);
+            Assert.Equal(last.Phones.Last().Label, u5.Phones.Last().Key);
+            Assert.Equal(last.Phones.Last().Phone, u5.Phones.Last().Value.Value);
+            Assert.Equal(last.Phones.Last().Prefix, u5.Phones.Last().Value.CountryPrefix);
         }
 
         private class User

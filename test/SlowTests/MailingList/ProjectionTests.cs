@@ -12,6 +12,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,10 +39,11 @@ namespace SlowTests.MailingList
         }
 
         //This works as expected
-        [Fact]
-        public void ActuallyGetData()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ActuallyGetData(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 CreateData(session);
@@ -61,10 +63,11 @@ namespace SlowTests.MailingList
         }
 
         //This works as expected
-        [Fact]
-        public void ShouldBeAbleToProjectIdOntoAnotherFieldCalledId()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldBeAbleToProjectIdOntoAnotherFieldCalledId(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 CreateData(session);
@@ -84,10 +87,11 @@ namespace SlowTests.MailingList
         }
 
         //Fails
-        [Fact]
-        public void ShouldBeAbleToProjectIdOntoAnotherName()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldBeAbleToProjectIdOntoAnotherName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 CreateData(session);
@@ -106,10 +110,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void ShouldBeAbleToProjectIdOntoAnotherName_ButIdFieldWillBeFilledAnyway()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldBeAbleToProjectIdOntoAnotherName_ButIdFieldWillBeFilledAnyway(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 CreateData(session);
@@ -130,10 +135,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public async Task Projection_WhenUseMethodNotDefineForProjection_ShouldThrowInformativeException()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Projection_WhenUseMethodNotDefineForProjection_ShouldThrowInformativeException(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             using var session = store.OpenAsyncSession();
             
             _ = await session.Query<User>()

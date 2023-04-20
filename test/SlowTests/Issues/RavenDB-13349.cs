@@ -69,10 +69,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Query_with_nested_JsonPropertyName_inside_select_clause()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Query_with_nested_JsonPropertyName_inside_select_clause(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -100,10 +101,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Query_with_nested_JsonPropertyName_inside_js_projection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Query_with_nested_JsonPropertyName_inside_js_projection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

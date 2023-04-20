@@ -66,10 +66,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_Translate_String_Compare_Using_Static_Compare()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Translate_String_Compare_Using_Static_Compare(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -114,10 +115,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_Translate_String_Compare_Using_Static_Compare_When_String_Constant_Comes_First()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Translate_String_Compare_Using_Static_Compare_When_String_Constant_Comes_First(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -162,10 +164,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_Translate_String_Compare_Using_Static_Compare_When_String_Constant_And_Compare_Constant_Comes_First()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Translate_String_Compare_Using_Static_Compare_When_String_Constant_And_Compare_Constant_Comes_First(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -210,10 +213,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_Translate_String_Compare_When_Constant_Comes_First()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Translate_String_Compare_When_Constant_Comes_First(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -234,10 +238,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_Translate_String_Compare_When_Comparing_Null()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Translate_String_Compare_When_Comparing_Null(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -257,10 +262,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public async Task Can_Translate_String_Compare_Throws_When_Comparison_Is_Not_Zero()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Translate_String_Compare_Throws_When_Comparison_Is_Not_Zero(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -306,10 +312,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public async Task Can_Translate_String_Compare_Throws_When_No_MemberAccess()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Translate_String_Compare_Throws_When_No_MemberAccess(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -354,10 +361,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_Translate_String_Compare_Throws_When_Comparing_To_Non_Constant()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Translate_String_Compare_Throws_When_Comparing_To_Non_Constant(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -388,10 +396,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_Translate_String_Compare_Throws_When_Using_Unsupported_Overload()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Translate_String_Compare_Throws_When_Using_Unsupported_Overload(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
