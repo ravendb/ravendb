@@ -1,15 +1,30 @@
-import React from "react";
-import { Form, FormGroup, Col, Button, Card, Row } from "reactstrap";
+import React, { useEffect, useMemo } from "react";
+import { Form, Col, Button, Card, Row, Spinner } from "reactstrap";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { FormInput, FormSelectOption, FormToggle } from "components/utils/FormUtils";
 import { ClientConfigurationFormData, clientConfigurationYupResolver } from "./ClientConfigurationValidation";
 import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
+import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
+import { useServices } from "components/hooks/useServices";
+import { useAsync } from "react-async-hook";
+import { LoadingView } from "components/common/LoadingView";
+import { LoadError } from "components/common/LoadError";
 
 // TODO: server wide
 export default function ClientConfiguration() {
-    const { handleSubmit, control, resetField } = useForm<ClientConfigurationFormData>({
+    const { manageServerService } = useServices();
+    const { result, loading, error } = useAsync(manageServerService.getGlobalClientConfiguration, []);
+
+    const { handleSubmit, control, resetField, formState, reset } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
     });
+
+    useEffect(() => {
+        const resultFormData = getDefaultValues(result);
+        if (resultFormData) {
+            reset(resultFormData);
+        }
+    }, [reset, result]);
 
     const {
         identityPartsSeparatorEnabled,
@@ -19,17 +34,24 @@ export default function ClientConfiguration() {
         seedEnabled,
     } = useWatch({ control });
 
-    // TODO: logic
-    const onSave: SubmitHandler<ClientConfigurationFormData> = (data) => {
-        console.log(data);
+    const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
+        await manageServerService.saveGlobalClientConfiguration(toDto(formData, result?.Disabled));
     };
+
+    if (loading) {
+        return <LoadingView />;
+    }
+
+    if (error) {
+        return <LoadError />;
+    }
 
     return (
         <Form onSubmit={handleSubmit(onSave)}>
             <Col md={6} className="p-4">
                 {/* TODO: add spinner on save */}
-                <Button type="submit" color="primary">
-                    <i className="icon-save margin-right-xxs" />
+                <Button type="submit" color="primary" disabled={formState.isSubmitting}>
+                    {formState.isSubmitting ? <Spinner size="sm" /> : <i className="icon-save margin-right-xxs" />}
                     Save
                 </Button>
 
@@ -151,4 +173,34 @@ export default function ClientConfiguration() {
             </Col>
         </Form>
     );
+}
+
+function getDefaultValues(dto: ClientConfiguration) {
+    if (!dto) {
+        return null;
+    }
+
+    return {
+        identityPartsSeparatorEnabled: !!dto.IdentityPartsSeparator,
+        identityPartsSeparatorValue: dto.IdentityPartsSeparator,
+        maximumNumberOfRequestsEnabled: !!dto.MaxNumberOfRequestsPerSession,
+        maximumNumberOfRequestsValue: dto.MaxNumberOfRequestsPerSession,
+        sessionContextEnabled: dto.LoadBalanceBehavior !== "None",
+        seedEnabled: !!dto.LoadBalancerContextSeed,
+        seedValue: dto.LoadBalancerContextSeed,
+        readBalanceBehaviorEnabled: dto.ReadBalanceBehavior !== "None",
+        readBalanceBehaviorValue: dto.ReadBalanceBehavior,
+    };
+}
+
+function toDto(formData: ClientConfigurationFormData, disabled: boolean): ClientConfiguration {
+    return {
+        IdentityPartsSeparator: formData.identityPartsSeparatorValue,
+        LoadBalanceBehavior: formData.sessionContextEnabled ? "UseSessionContext" : "None",
+        LoadBalancerContextSeed: formData.seedValue,
+        ReadBalanceBehavior: formData.readBalanceBehaviorValue,
+        MaxNumberOfRequestsPerSession: formData.maximumNumberOfRequestsValue,
+        Disabled: disabled,
+        Etag: undefined,
+    };
 }

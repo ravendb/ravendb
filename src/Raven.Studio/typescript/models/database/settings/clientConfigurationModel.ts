@@ -120,6 +120,7 @@ class clientConfigurationModel {
             required: {
                 onlyIf: () => _.includes(this.isDefined(), "identityPartsSeparator")
             },
+            // TODO kalczur
             validation: [
                 {
                     validator: (val: string) => !_.includes(this.isDefined(), "identityPartsSeparator") || val.length === 1,
