@@ -304,8 +304,20 @@ namespace Raven.Client.Http
             }
         }
 
+        ~RequestExecutor()
+        {
+            if (_disposed)
+                return;
+
+            Console.WriteLine($"RequestExecutor wasn't disposed,{Environment.NewLine}{_stackTrace}");
+        }
+
+        private bool _disposed;
+        private string _stackTrace;
+
         protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls)
         {
+            _stackTrace = Environment.StackTrace;
             _clearContext = new ReturnContext(_requestContexts, dispose: false);
             _doNotClearContext = new ReturnContext(_requestContexts, dispose: true);
 
@@ -313,6 +325,7 @@ namespace Raven.Client.Http
 
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
+                _disposed = true;
                 Cache.Dispose();
                 ContextPool.Dispose();
                 _updateTopologyTimer?.Dispose();
