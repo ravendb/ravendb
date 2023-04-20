@@ -73,6 +73,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual bool SupportsDynamicFieldsCreation => true;
 
+        public virtual bool SupportsSpatialFieldsCreation => true;
+
+
         public void SetSourceCollection(string collection, IndexingStatsScope stats)
         {
             SourceCollection = collection;

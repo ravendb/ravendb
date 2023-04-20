@@ -661,7 +661,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
 
-            if (CurrentIndexingScope.Current.SupportsDynamicFieldsCreation == false)
+            if (CurrentIndexingScope.Current.SupportsSpatialFieldsCreation == false)
                 return null;
 
             if (lng == null || double.IsNaN(lng.Value))
@@ -680,7 +680,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
 
-            if (CurrentIndexingScope.Current.SupportsDynamicFieldsCreation == false)
+            if (CurrentIndexingScope.Current.SupportsSpatialFieldsCreation == false)
                 return null;
 
             return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
@@ -693,7 +693,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
 
-            if (CurrentIndexingScope.Current.SupportsDynamicFieldsCreation == false)
+            if (CurrentIndexingScope.Current.SupportsSpatialFieldsCreation == false)
                 return null;
 
             return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);
