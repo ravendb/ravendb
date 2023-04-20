@@ -111,7 +111,7 @@ namespace SlowTests.Sharding
         }
         
         [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void EnsureTopologyCantContainDuplicates(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -180,7 +180,7 @@ namespace SlowTests.Sharding
                     
                 }
             });
-            Assert.Contains("Can't have multiple replicas of the same shard on the same node", error.Message);
+            Assert.Contains("cannot have multiple replicas reside on the same node", error.Message);
         }
 
         [Fact]
