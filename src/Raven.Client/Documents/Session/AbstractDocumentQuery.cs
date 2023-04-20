@@ -2016,11 +2016,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return "$" + AddQueryParameter(value);
         }
 
-        internal void AddFilterLimit(long filterLimit)
+        internal void AddFilterLimit(int filterLimit)
         {
             if (filterLimit <= 0)
                 throw new InvalidDataException("filter_limit needs to be positive and bigger than 0.");
-            if (filterLimit is not long.MaxValue)
+            if (filterLimit is not int.MaxValue)
                 FilterLimit = filterLimit;
         }
     }

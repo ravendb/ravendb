@@ -492,7 +492,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             long pageSize = query.PageSize;
             
             if (query.Metadata.HasExplanations)
-                throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
+                ThrowExplanationsIsNotImplementedInCorax();
             
             long take = pageSize + query.Start;
             if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct || query.Metadata.OrderBy != null || take > int.MaxValue)
@@ -508,9 +508,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
             }
 
-            if (query.Metadata.HasExplanations)
-                ThrowExplanationsIsNotImplementedInCorax();
-            
             THasProjection hasProjections = default;
             THighlighting highlightings = default;
             highlightings.Initialize(query, queryTimings);
@@ -1371,7 +1368,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         
         private static void ThrowExplanationsIsNotImplementedInCorax()
         {
-            throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
+            throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
         }
     }
 }
