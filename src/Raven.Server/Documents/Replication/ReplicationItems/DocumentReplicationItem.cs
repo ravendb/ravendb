@@ -202,6 +202,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public override void InnerDispose()
         {
             Data?.Dispose();
+            Id?.Dispose();
+            Collection?.Dispose();
         }
     }
 }
