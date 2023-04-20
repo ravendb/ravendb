@@ -3230,6 +3230,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact, Trait("Category", "Smuggler")]
         public async Task NumberOfCurrentlyRunningBackupsShouldBeCorrectAfterBackupTaskDelay()
         {
+            DoNotReuseServer();
+
             var backupPath = NewDataPath(suffix: "BackupFolder");
             
             using (var store = GetDocumentStore())
