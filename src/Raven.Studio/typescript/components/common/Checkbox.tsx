@@ -1,14 +1,14 @@
-﻿import React, { HTMLAttributes, ReactNode, useEffect, useRef } from "react";
-import { Input, Label } from "reactstrap";
+﻿import React, { ChangeEvent, ReactNode, useEffect, useRef } from "react";
+import { Input, InputProps, Label } from "reactstrap";
 import useId from "hooks/useId";
 import classNames from "classnames";
 
 import "./Checkbox.scss";
 
-interface CheckboxProps extends Omit<HTMLAttributes<HTMLDivElement>, "className" | "children"> {
+export interface CheckboxProps extends Omit<InputProps, "className" | "children"> {
     selected: boolean;
     indeterminate?: boolean;
-    toggleSelection: () => void;
+    toggleSelection: (x: ChangeEvent<HTMLInputElement>) => void;
     children?: ReactNode | ReactNode[];
     color?: string;
     size?: string;
@@ -33,20 +33,20 @@ export function Checkbox(props: CheckboxProps) {
         ...rest
     } = props;
 
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const inputId = id ?? useId("checkbox");
+    const defaultId = useId("checkbox");
+    const inputEl = useRef<HTMLInputElement>();
+
+    const inputId = id ?? defaultId;
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
     const colorClass = `form-check-${color ?? "secondary"}`;
     const sizeClass = size ? `form-check-${size}` : undefined;
-
-    const inputEl = useRef<HTMLInputElement>();
 
     useEffect(() => {
         inputEl.current.indeterminate = indeterminate;
     }, [indeterminate]);
 
     return (
-        <div className={classNames(checkboxClass, colorClass, sizeClass, className)} {...rest}>
+        <div className={classNames(checkboxClass, colorClass, sizeClass, className)}>
             <Input
                 type="checkbox"
                 innerRef={inputEl}
@@ -54,6 +54,7 @@ export function Checkbox(props: CheckboxProps) {
                 checked={selected}
                 onChange={toggleSelection}
                 disabled={disabled}
+                {...rest}
             />
             {children && (
                 <Label check htmlFor={inputId}>
@@ -66,16 +67,23 @@ export function Checkbox(props: CheckboxProps) {
 
 export function Switch(props: CheckboxProps) {
     const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const inputId = id ?? useId("checkbox");
+    const defaultId = useId("switch");
 
+    const inputId = id ?? defaultId;
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
     const colorClass = `form-check-${color ?? "secondary"}`;
     const sizeClass = size ? `form-check-${size}` : undefined;
 
     return (
-        <div className={classNames(colorClass, sizeClass, checkboxClass, "form-switch", className)} {...rest}>
-            <Input type="checkbox" id={inputId} checked={selected} onChange={toggleSelection} disabled={disabled} />
+        <div className={classNames(colorClass, sizeClass, checkboxClass, "form-switch", className)}>
+            <Input
+                type="checkbox"
+                id={inputId}
+                checked={selected}
+                onChange={toggleSelection}
+                disabled={disabled}
+                {...rest}
+            />
             {children && (
                 <Label check htmlFor={inputId}>
                     {children}
@@ -87,17 +95,23 @@ export function Switch(props: CheckboxProps) {
 
 export function Radio(props: CheckboxProps) {
     const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
+    const defaultId = useId("radio");
 
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const inputId = id ?? useId("checkbox");
-
+    const inputId = id ?? defaultId;
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
     const colorClass = `form-check-${color ?? "secondary"}`;
     const sizeClass = size ? `form-check-${size}` : undefined;
 
     return (
         <div className={classNames(checkboxClass, colorClass, sizeClass, className)} {...rest}>
-            <Input type="radio" id={inputId} checked={selected} onChange={toggleSelection} disabled={disabled} />
+            <Input
+                type="radio"
+                id={inputId}
+                checked={selected}
+                onChange={toggleSelection}
+                disabled={disabled}
+                {...rest}
+            />
             {children && (
                 <Label check htmlFor={inputId}>
                     {children}
