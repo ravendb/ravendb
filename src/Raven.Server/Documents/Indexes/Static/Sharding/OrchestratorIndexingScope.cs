@@ -11,8 +11,5 @@ public class OrchestratorIndexingScope : CurrentIndexingScope
     {
     }
 
-    public override SpatialField GetOrCreateSpatialField(string name)
-    {
-        return null;
-    }
+    public override bool SupportsDynamicFieldsCreation => false;
 }
