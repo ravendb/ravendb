@@ -1,0 +1,43 @@
+name: Studio conventions
+
+on:
+  push:
+    branches:
+        - v5.2
+
+  pull_request:
+    branches:
+        - v5.2
+jobs:
+  conventions:
+    name: Studio Conventions
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install npm dependencies
+      run: npm install
+      working-directory: ./src/Raven.Studio
+  
+    - name: Restore Studio
+      run: npm run restore
+      working-directory: ./src/Raven.Studio
+
+    - name: Lint Studio
+      if: always()
+      run: npm run lint
+      working-directory: ./src/Raven.Studio
+
+    - name: Prettier Studio
+      if: always()
+      run: |
+        if [[ -n $GITHUB_HEAD_REF ]]; then
+          branch=$GITHUB_HEAD_REF
+        else
+          branch=$GITHUB_REF_NAME
+        fi
+
+        [[ ${branch:1:1} -lt 6 ]] && echo "skipping priettier for versions below 6.0" && exit 0
+
+        npm run prettier
+      working-directory: ./src/Raven.Studio
