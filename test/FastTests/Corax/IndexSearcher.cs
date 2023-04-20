@@ -943,12 +943,14 @@ namespace FastTests.Corax
 
                 Span<long> ids1 = stackalloc long[2];
                 Assert.Equal(2, match.Fill(ids1));
+                Assert.Equal("entry/3", searcher.GetIdentityFor(ids1[0]));
+                Assert.Equal("entry/2", searcher.GetIdentityFor(ids1[1]));
+                
                 Span<long> ids2 = stackalloc long[2];
                 Assert.Equal(1, match.Fill(ids2));
-                Assert.Equal(0, match.Fill(ids2));
-
-                Assert.Equal("entry/3", searcher.GetIdentityFor(ids1[0]));
                 Assert.Equal("entry/1", searcher.GetIdentityFor(ids2[0]));
+
+                Assert.Equal(0, match.Fill(ids2));
             }
         }
 

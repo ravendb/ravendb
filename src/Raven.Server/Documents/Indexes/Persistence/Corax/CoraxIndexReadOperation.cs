@@ -298,6 +298,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             private HashSet<UnmanagedSpan> _alreadySeenDocumentKeysInPreviousPage;
             private HashSet<ulong> _alreadySeenProjections;
+            public int QueryStart;
 
             public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, IndexFieldsMapping fieldsMapping, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever)
             {
@@ -308,7 +309,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _retriever = retriever;
 
                 _alreadySeenDocumentKeysInPreviousPage = new(UnmanagedSpanComparer.Instance);
-
+                QueryStart = _query.Start;
                 _isMap = index.Type.IsMap();
             }
 
@@ -319,12 +320,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 int limit = 0;
 
                 // If query start is effectively bigger than the one we are starting on. 
-                if (_query.Start > currentIdx)
+                if (QueryStart > currentIdx)
                 {
                     // If the query start before the current read ids, then we have to divide the ids in those
                     // that need to be processed for discarding and those that don't. 
-                    if (_query.Start < currentIdx + ids.Length)
-                        limit = _query.Start - currentIdx;
+                    if (QueryStart < currentIdx + ids.Length)
+                        limit = QueryStart - currentIdx;
                     else
                         limit = ids.Length;
                 }
@@ -494,7 +495,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
             
             int take = pageSize + query.Start;
-            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct || query.Metadata.OrderBy != null)
+            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
                 take = CoraxConstants.IndexSearcher.TakeAll;
             
             bool isDistinctCount = query.PageSize == 0 && typeof(TDistinct) == typeof(HasDistinct);
@@ -639,6 +640,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     take += (pageSize - (pageSize - docsToLoad)) * _maxNumberOfOutputsPerDocument;
                     if (take < 0) // handle overflow
                         take = int.MaxValue;
+                    // start *after* all the items we already read and returned to the caller
+                    identityTracker.QueryStart = totalResults.Value;
                 }
             }
 

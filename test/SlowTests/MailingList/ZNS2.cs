@@ -148,6 +148,7 @@ namespace SlowTests.MailingList
                         skip += stats2.SkippedResults;
                         page++;
                         paged.AddRange(r);
+                        Assert.True(r.Count > 0);
                     }
 
                 } while (paged.Count < result.Count);
