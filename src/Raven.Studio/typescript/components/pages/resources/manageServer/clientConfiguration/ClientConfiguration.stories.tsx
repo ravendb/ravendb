@@ -4,7 +4,6 @@ import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import ClientConfiguration from "./ClientConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
 
-// TODO fix storybook error
 export default {
     title: "Pages/ClientConfiguration",
     component: ClientConfiguration,
