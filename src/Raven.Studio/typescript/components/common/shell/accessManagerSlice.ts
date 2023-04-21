@@ -44,8 +44,6 @@ export const accessManagerSlice = createSlice({
     },
 });
 
-export const { onDatabaseAccessLoaded, onSecurityClearanceSet } = accessManagerSlice.actions;
-
 const selectDatabaseAccessLevel = (databaseName: string) => (store: RootState) =>
     databaseAccessSelectors.selectById(store.accessManager.databaseAccess, databaseName)?.level;
 
@@ -66,6 +64,11 @@ const selectEffectiveDatabaseAccessLevel = (databaseName: string) => {
 
         return accessLevel(store);
     };
+};
+
+export const accessManagerActions = {
+    onDatabaseAccessLoaded: accessManagerSlice.actions.onDatabaseAccessLoaded,
+    onSecurityClearanceSet: accessManagerSlice.actions.onSecurityClearanceSet,
 };
 
 export const accessManagerSelectors = {

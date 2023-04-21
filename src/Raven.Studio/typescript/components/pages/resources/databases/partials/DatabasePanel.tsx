@@ -36,7 +36,6 @@ import databasesManager from "common/shell/databasesManager";
 import { AccessIcon } from "components/pages/resources/databases/partials/AccessIcon";
 import { DatabaseTopology } from "components/pages/resources/databases/partials/DatabaseTopology";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import { confirmDeleteDatabases, deleteDatabases } from "components/common/shell/databaseSliceActions";
 import { Icon } from "components/common/Icon";
 import { selectDatabaseState } from "components/pages/resources/databases/store/databasesViewSelectors";
 import {
@@ -52,6 +51,7 @@ import {
     togglePauseIndexing,
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { databaseActions } from "components/common/shell/databaseSliceActions";
 
 interface DatabasePanelProps {
     databaseName: string;
@@ -179,10 +179,10 @@ export function DatabasePanel(props: DatabasePanelProps) {
     };
 
     const onDelete = async () => {
-        const confirmation = await dispatch(confirmDeleteDatabases([db]));
+        const confirmation = await dispatch(databaseActions.confirmDeleteDatabases([db]));
 
         if (confirmation.can) {
-            await dispatch(deleteDatabases(confirmation.databases, confirmation.keepFiles));
+            await dispatch(databaseActions.deleteDatabases(confirmation.databases, confirmation.keepFiles));
         }
     };
     const onCompactDatabase = async () => {

@@ -58,7 +58,7 @@ import shard from "models/resources/shard";
 import moment from "moment";
 import databasesManager from "common/shell/databasesManager";
 import { globalDispatch } from "components/storeCompat";
-import { onDatabaseAccessLoaded, onSecurityClearanceSet } from "components/common/shell/accessManagerSlice";
+import { accessManagerActions } from "components/common/shell/accessManagerSlice";
 
 class shell extends viewModelBase {
 
@@ -287,7 +287,7 @@ class shell extends viewModelBase {
                             databasesAccess[`${key}`] = `Database${access}` as databaseAccessLevel;
                         }
                         accessManager.databasesAccess = databasesAccess;
-                        globalDispatch(onDatabaseAccessLoaded(databasesAccess));
+                        globalDispatch(accessManagerActions.onDatabaseAccessLoaded(databasesAccess));
                         this.accessManager.secureServer(true);
                         
                     } else {
@@ -296,7 +296,7 @@ class shell extends viewModelBase {
                     }
                 }
                 
-                globalDispatch(onSecurityClearanceSet(this.accessManager.securityClearance()));
+                globalDispatch(accessManagerActions.onSecurityClearanceSet(this.accessManager.securityClearance()));
             })
             .then(() => this.onBootstrapFinishedTask.resolve(), () => this.onBootstrapFinishedTask.reject());
 
