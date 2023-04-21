@@ -689,25 +689,36 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
 
-                return CreateIndexFromDefinition(definition, _documentDatabase, prefixesOfDocumentsToDelete: prefixesOfDocumentsToDelete);
+                var index = CreateIndexFromDefinition(definition, _documentDatabase);
+
+                if (index is MapReduceIndex mapReduceIndex)
+                {
+                    if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete?.Count > 0)
+                        mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+
+                    return mapReduceIndex;
+                }
+                
+                return index;
             }
         }
 
         public Index CreateTestIndexFromDefinition(IndexDefinition indexDefinition, DocumentDatabase documentDatabase, DocumentsOperationContext context)
         {
-            if (indexDefinition.Type == IndexType.JavaScriptMapReduce || indexDefinition.Type == IndexType.MapReduce)
+            // We do not want map-reduce test indexes to put documents into database storage
+            if (indexDefinition.Type.IsMapReduce())
                 indexDefinition.OutputReduceToCollection = null;
             
             var testIndexConfiguration = new TestIndexConfiguration(indexDefinition.Configuration, documentDatabase.Configuration);
 
             var testIndex = CreateIndexFromDefinition(indexDefinition, documentDatabase, testIndexConfiguration);
 
-            testIndex.InitializeTestIndex(context);
+            testIndex.InitializeTestRun(context);
 
             return testIndex;
         }
 
-        private Index CreateIndexFromDefinition(IndexDefinition indexDefinition, DocumentDatabase documentDatabase, SingleIndexConfiguration optionalIndexConfiguration = null, Dictionary<string, string> prefixesOfDocumentsToDelete = null)
+        private static Index CreateIndexFromDefinition(IndexDefinition indexDefinition, DocumentDatabase documentDatabase, SingleIndexConfiguration optionalIndexConfiguration = null)
         {
             Index index;
                 
@@ -722,12 +733,7 @@ namespace Raven.Server.Documents.Indexes
                             break;
                         case IndexType.MapReduce:
                         case IndexType.JavaScriptMapReduce:
-                            var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceIndex>(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
-
-                            if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete?.Count > 0)
-                                mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
-
-                            index = mapReduceIndex;
+                            index = MapReduceIndex.CreateNew<MapReduceIndex>(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
                             break;
                         default:
                             throw new NotSupportedException($"Cannot create {indexDefinition.Type} index from IndexDefinition");
@@ -742,11 +748,7 @@ namespace Raven.Server.Documents.Indexes
                             break;
                         case IndexType.MapReduce:
                         case IndexType.JavaScriptMapReduce:
-                            var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceCountersIndex>(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
-                            if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete?.Count > 0)
-                                mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
-
-                            index = mapReduceIndex;
+                            index = MapReduceIndex.CreateNew<MapReduceCountersIndex>(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
                             break;
                         default:
                             throw new NotSupportedException($"Cannot create {indexDefinition.Type} index from IndexDefinition");
@@ -761,12 +763,7 @@ namespace Raven.Server.Documents.Indexes
                             break;
                         case IndexType.MapReduce:
                         case IndexType.JavaScriptMapReduce:
-                            var mapReduceIndex = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
-                            
-                            if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete?.Count > 0)
-                                mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
-
-                            index = mapReduceIndex;
+                            index = MapReduceIndex.CreateNew<MapReduceTimeSeriesIndex>(indexDefinition, documentDatabase, configuration: optionalIndexConfiguration);
                             break;
                         default:
                             throw new NotSupportedException($"Cannot create {indexDefinition.Type} index from IndexDefinition");

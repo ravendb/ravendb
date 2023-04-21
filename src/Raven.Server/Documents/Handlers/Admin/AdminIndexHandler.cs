@@ -77,10 +77,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                     
                     query = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(queryObject, context);
                 }
-                
-                var index = Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context);
 
-                index.Start();
+                using (var index = Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context))
+                {
+                    index.Start();
 
                 using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "Query"))
                 using (var token = CreateTimeLimitedQueryToken())
@@ -97,11 +97,18 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     var hasDynamicFields = index.Definition.HasDynamicFields;
 
-                    var result = new TestIndexResult(){ IndexEntries = entries.Results, QueryResults = queryResults.Results, MapResults = mapResults, HasDynamicFields = hasDynamicFields, ReduceResults = reduceResults };
-                    
-                    await result.WriteTestIndexResult(ResponseBodyStream(), context);
+                        var result = new TestIndexResult()
+                        {
+                            IndexEntries = entries.Results,
+                            QueryResults = queryResults.Results,
+                            MapResults = mapResults,
+                            HasDynamicFields = hasDynamicFields,
+                            ReduceResults = reduceResults
+                        };
+
+                        await result.WriteTestIndexResult(ResponseBodyStream(), context);
+                    }
                 }
-                index.Dispose();
             }
         }
         
