@@ -1,39 +1,30 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Form, Col, Button, Card, Row, Spinner } from "reactstrap";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { FormCheckbox, FormInput, FormSelectOption, FormSwitch } from "components/common/Form";
+import { FormCheckbox, FormInput, FormSelect, FormSelectOption, FormSwitch } from "components/common/Form";
 import { ClientConfigurationFormData, clientConfigurationYupResolver } from "./ClientConfigurationValidation";
 import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 import { useServices } from "components/hooks/useServices";
-import { useAsync } from "react-async-hook";
+import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
+import { LoadError } from "components/common/LoadError";
 
 // TODO: server wide
 export default function ClientConfiguration() {
     const { manageServerService } = useServices();
-    const { result, loading } = useAsync(manageServerService.getGlobalClientConfiguration, []);
+    const {
+        execute: executeGetGlobalClientConfiguration,
+        result: clientConfigurationDto,
+        error: clientConfigurationError,
+        loading: isLoadingClientConfiguration,
+    } = useAsyncCallback(manageServerService.getGlobalClientConfiguration);
 
-    const { handleSubmit, control, resetField, formState, setValue } = useForm<ClientConfigurationFormData>({
+    const { handleSubmit, control, formState, setValue } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
         mode: "onChange",
+        defaultValues: async () => getDefaultFormValues(await executeGetGlobalClientConfiguration()),
     });
-
-    useEffect(() => {
-        if (!result) {
-            return;
-        }
-
-        setValue("identityPartsSeparatorEnabled", !!result.IdentityPartsSeparator);
-        setValue("identityPartsSeparatorValue", result.IdentityPartsSeparator);
-        setValue("maximumNumberOfRequestsEnabled", !!result.MaxNumberOfRequestsPerSession);
-        setValue("maximumNumberOfRequestsValue", result.MaxNumberOfRequestsPerSession);
-        setValue("useSessionContextEnabled", result.LoadBalanceBehavior === "UseSessionContext");
-        setValue("loadBalancerSeedEnabled", !!result.LoadBalancerContextSeed);
-        setValue("loadBalancerSeedValue", result.LoadBalancerContextSeed);
-        setValue("readBalanceBehaviorEnabled", result.ReadBalanceBehavior !== "None");
-        setValue("readBalanceBehaviorValue", result.ReadBalanceBehavior);
-    }, [setValue, result]);
 
     const {
         identityPartsSeparatorEnabled,
@@ -44,14 +35,21 @@ export default function ClientConfiguration() {
     } = useWatch({ control });
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData): Promise<void> => {
-        manageServerService.saveGlobalClientConfiguration(toDto(formData, result?.Disabled)).catch(() => {
-            // empty by design
-        });
+        manageServerService
+            .saveGlobalClientConfiguration(toDto(formData, clientConfigurationDto?.Disabled))
+            .catch(() => {
+                // empty by design
+            });
     };
 
-    if (loading) {
+    if (isLoadingClientConfiguration) {
         return <LoadingView />;
     }
+
+    if (clientConfigurationError) {
+        return <LoadError />;
+    }
+
     // TODO: show modal on exit if is dirty
     return (
         <Form onSubmit={handleSubmit(onSave)}>
@@ -69,7 +67,7 @@ export default function ClientConfiguration() {
                                 control={control}
                                 name="identityPartsSeparatorEnabled"
                                 afterChange={(event) =>
-                                    !event.target.checked && resetField("identityPartsSeparatorValue")
+                                    !event.target.checked && setValue("identityPartsSeparatorValue", null)
                                 }
                             >
                                 Identity parts separator
@@ -95,7 +93,7 @@ export default function ClientConfiguration() {
                                 control={control}
                                 name="maximumNumberOfRequestsEnabled"
                                 afterChange={(event) =>
-                                    !event.target.checked && resetField("maximumNumberOfRequestsValue")
+                                    !event.target.checked && setValue("maximumNumberOfRequestsValue", null)
                                 }
                             >
                                 Maximum number of requests per session
@@ -122,8 +120,8 @@ export default function ClientConfiguration() {
                                 name="useSessionContextEnabled"
                                 afterChange={(event) => {
                                     if (!event.target.checked) {
-                                        resetField("loadBalancerSeedValue");
-                                        resetField("loadBalancerSeedEnabled");
+                                        setValue("loadBalancerSeedValue", null);
+                                        setValue("loadBalancerSeedEnabled", false);
                                     }
                                 }}
                             >
@@ -140,7 +138,7 @@ export default function ClientConfiguration() {
                                         disabled={!useSessionContextEnabled}
                                         label="Seed"
                                         afterChange={(event) =>
-                                            !event.target.checked && resetField("loadBalancerSeedValue")
+                                            !event.target.checked && setValue("loadBalancerSeedValue", null)
                                         }
                                     >
                                         Seed
@@ -165,14 +163,15 @@ export default function ClientConfiguration() {
                                 type="checkbox"
                                 control={control}
                                 name="readBalanceBehaviorEnabled"
-                                afterChange={(event) => !event.target.checked && resetField("readBalanceBehaviorValue")}
+                                afterChange={(event) =>
+                                    !event.target.checked && setValue("readBalanceBehaviorValue", null)
+                                }
                             >
                                 Read balance behavior
                             </FormCheckbox>
                         </Col>
                         <Col md={5}>
-                            <FormInput
-                                type="select"
+                            <FormSelect
                                 control={control}
                                 name="readBalanceBehaviorValue"
                                 disabled={!readBalanceBehaviorEnabled || useSessionContextEnabled}
@@ -180,13 +179,32 @@ export default function ClientConfiguration() {
                                 <FormSelectOption<ReadBalanceBehavior> label="None" value="None" />
                                 <FormSelectOption<ReadBalanceBehavior> label="Round Robin" value="RoundRobin" />
                                 <FormSelectOption<ReadBalanceBehavior> label="Fastest Node" value="FastestNode" />
-                            </FormInput>
+                            </FormSelect>
                         </Col>
                     </Row>
                 </Card>
             </Col>
         </Form>
     );
+}
+
+function getDefaultFormValues(dto: ClientConfiguration) {
+    console.log("getDefaultFormValues");
+    if (!dto) {
+        return null;
+    }
+
+    return {
+        identityPartsSeparatorEnabled: !!dto.IdentityPartsSeparator,
+        identityPartsSeparatorValue: dto.IdentityPartsSeparator,
+        maximumNumberOfRequestsEnabled: !!dto.MaxNumberOfRequestsPerSession,
+        maximumNumberOfRequestsValue: dto.MaxNumberOfRequestsPerSession,
+        useSessionContextEnabled: dto.LoadBalanceBehavior === "UseSessionContext",
+        loadBalancerSeedEnabled: !!dto.LoadBalancerContextSeed,
+        loadBalancerSeedValue: dto.LoadBalancerContextSeed,
+        readBalanceBehaviorEnabled: dto.ReadBalanceBehavior !== "None",
+        readBalanceBehaviorValue: dto.ReadBalanceBehavior,
+    };
 }
 
 function toDto(formData: ClientConfigurationFormData, disabled: boolean): ClientConfiguration {

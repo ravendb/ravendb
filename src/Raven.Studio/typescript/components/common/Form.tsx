@@ -1,9 +1,13 @@
+import React, { ReactNode, useContext } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
-import React from "react";
-import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
+import { Control, ControllerProps, FieldPath, FieldValues, useController, useForm } from "react-hook-form";
 import { Input, InputProps } from "reactstrap";
 import { InputType } from "reactstrap/types/lib/Input";
+import {
+    ClientConfigurationFormData,
+    clientConfigurationYupResolver,
+} from "components/pages/resources/manageServer/clientConfiguration/ClientConfigurationValidation";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -12,8 +16,8 @@ type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<
     control: Control<TFieldValues>;
 };
 
-type FormInputProps = Omit<InputProps, "Type"> & {
-    type: Extract<InputType, "text" | "textarea" | "number" | "password" | "select">;
+type FormInputProps = InputProps & {
+    type: Extract<InputType, "text" | "textarea" | "number" | "password">;
 };
 
 type FormToggleProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = FormElementProps<
@@ -36,6 +40,13 @@ export function FormInput<
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >(props: FormElementProps<TFieldValues, TName> & FormInputProps & ExternalProps) {
     return <FormInputGeneral {...props} />;
+}
+
+export function FormSelect<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+>(props: FormElementProps<TFieldValues, TName> & Omit<InputProps, "type"> & ExternalProps) {
+    return <FormInputGeneral type="select" {...props} />;
 }
 
 export function FormSelectOption<T extends string | number = string>({ value, label }: FormSelectOptionProps<T>) {
@@ -115,7 +126,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
         shouldUnregister,
     });
 
-    let ToggleComponent;
+    let ToggleComponent: (props: CheckboxProps) => JSX.Element;
     switch (type) {
         case "checkbox":
             ToggleComponent = Checkbox;
