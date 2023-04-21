@@ -1,5 +1,4 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
-import database = require("models/resources/database");
 import { DatabaseSharedInfo } from "components/models/databases";
 
 class disableDatabaseToggleConfirm extends confirmViewModelBase<confirmDialogResult> {

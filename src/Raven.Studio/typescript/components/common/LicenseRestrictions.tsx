@@ -32,7 +32,7 @@ export function LicenseRestrictions(props: LicenseRestrictionsProps): JSX.Elemen
                             <>{message}</>
                         ) : (
                             <>
-                                Current license doesn't include {featureName ? featureName : "this feature"}.<br />
+                                Current license doesn&apos;t include {featureName ?? "this feature"}.<br />
                                 <div className="text-center mt-1">
                                     <Button
                                         href="https://ravendb.net/buy"

@@ -22,7 +22,7 @@ import {
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlInfo,
     OngoingTaskSubscriptionInfo,
-} from "../../../../models/tasks";
+} from "components/models/tasks";
 import { RavenEtlPanel } from "../panels/RavenEtlPanel";
 import { SqlEtlPanel } from "../panels/SqlEtlPanel";
 import { OlapEtlPanel } from "../panels/OlapEtlPanel";
@@ -42,10 +42,10 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "../panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "../panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
-import { Badge, Button } from "reactstrap";
-import { FlexGrow } from "../../../../../components/common/FlexGrow";
-import { HrHeader } from "../../../../../components/common/HrHeader";
-import { EmptySet } from "../../../../../components/common/EmptySet";
+import { Button } from "reactstrap";
+import { FlexGrow } from "components/common/FlexGrow";
+import { HrHeader } from "components/common/HrHeader";
+import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 
 interface OngoingTasksPageProps {

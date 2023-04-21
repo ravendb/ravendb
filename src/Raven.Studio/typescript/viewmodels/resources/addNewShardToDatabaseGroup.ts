@@ -1,11 +1,5 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import addShardToDatabaseGroupCommand from "commands/database/dbGroup/addShardToDatabaseGroupCommand";
-
-interface nodeInfo {
-    tag: string;
-    type: databaseGroupNodeType;
-}
 
 class addNewShardToDatabaseGroup extends dialogViewModelBase {
     

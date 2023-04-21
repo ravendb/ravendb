@@ -2,7 +2,6 @@
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import { bridgeToReact } from "common/reactUtils";
 import { StatisticsPage } from "components/pages/database/status/statistics/StatisticsPage";
-import databasesManager from "common/shell/databasesManager";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import shardedDatabase from "models/resources/shardedDatabase";
 import shard from "models/resources/shard";

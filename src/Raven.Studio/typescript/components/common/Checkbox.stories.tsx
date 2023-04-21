@@ -11,7 +11,7 @@ export default {
     component: Checkbox,
 } as ComponentMeta<typeof Checkbox>;
 
-const Template = (args: { withLabel: boolean }) => {
+const Template = () => {
     const { value: selected, toggle } = useBoolean(false);
 
     return (

@@ -455,9 +455,7 @@ export function StepCreateNew(props: StepCreateNewProps) {
     );
 }
 
-interface StepEncryptionProps {}
-
-export function StepEncryption(props: StepEncryptionProps) {
+export function StepEncryption() {
     const encryptionImg = require("Content/img/createDatabase/encryption.svg");
     const qrImg = require("Content/img/createDatabase/qr.jpg");
     return (
@@ -501,7 +499,7 @@ export function StepEncryption(props: StepEncryptionProps) {
                     <img src={qrImg} alt="" />
                     <div className="text-center mt-1">
                         <small id="qrInfo" className="text-info">
-                            <Icon icon="info" margin="m-0" /> what's this?
+                            <Icon icon="info" margin="m-0" /> what&apos;s this?
                         </small>
                     </div>
                     <UncontrolledPopover target="qrInfo" placement="top" trigger="hover" container="PopoverContainer">
@@ -719,7 +717,7 @@ export function StepReplicationAndSharding(props: StepReplicationAndShardingProp
                                 .
                             </>
                         ) : (
-                            <>Data won't be replicated.</>
+                            <>Data won&apos;t be replicated.</>
                         )}
                     </Alert>
                 </Col>
@@ -794,13 +792,13 @@ export function StepNodeSelection(props: StepNodeSelectionProps) {
     const initialNodes: shardReplicas[] = [];
 
     for (let i = 0; i < shardCount; i++) {
-        initialNodes.push(new Array());
+        initialNodes.push([]);
         for (let j = 0; j < replicationFactor; j++) {
             initialNodes[i].push({ id: "s" + i + "r" + j, node: null });
         }
     }
 
-    const [shardNodes, setShardNodes] = useState(initialNodes);
+    const [shardNodes] = useState(initialNodes);
 
     function updateShardNodes(): () => void {
         const nextShardNodes = [...shardNodes];
@@ -883,7 +881,7 @@ interface NodeSelectionDropdownProps {
 }
 
 export function NodeSelectionDropdown(props: NodeSelectionDropdownProps) {
-    const { nodeList, id, destinationNode, handleUpdate } = props;
+    const { nodeList, destinationNode, handleUpdate } = props;
     return (
         <>
             <UncontrolledDropdown>

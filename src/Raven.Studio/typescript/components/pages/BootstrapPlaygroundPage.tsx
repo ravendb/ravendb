@@ -41,7 +41,6 @@ import {
     OffcanvasBody,
     OffcanvasHeader,
 } from "reactstrap";
-import PropTypes from "prop-types";
 
 const items = [
     {
@@ -194,7 +193,7 @@ function Example({ direction, ...args }: any) {
                 <Button id="Popover1" type="button">
                     Launch Popover
                 </Button>
-                <Popover flip target="Popover1" toggle={function noRefCheck() {}} className="bs5">
+                <Popover flip target="Popover1" className="bs5">
                     <PopoverHeader>Popover Title</PopoverHeader>
                     <PopoverBody>
                         Sed posuere consectetur est at lobortis. Aenean eu leo quam. Pellentesque ornare sem lacinia
@@ -204,11 +203,9 @@ function Example({ direction, ...args }: any) {
             </div>
             <div className="margin-bottom">
                 <div>
-                    <Button color="primary" onClick={function noRefCheck() {}}>
-                        Open Offcanvas
-                    </Button>
-                    <Offcanvas toggle={function noRefCheck() {}}>
-                        <OffcanvasHeader toggle={function noRefCheck() {}}>Offcanvas</OffcanvasHeader>
+                    <Button color="primary">Open Offcanvas</Button>
+                    <Offcanvas>
+                        <OffcanvasHeader>Offcanvas</OffcanvasHeader>
                         <OffcanvasBody>
                             <strong>This is the Offcanvas body.</strong>
                         </OffcanvasBody>
@@ -426,8 +423,8 @@ function AlertExample() {
     );
 }
 
-function AccordionExample(props: any) {
-    const [open, setOpen] = useState("1");
+function AccordionExample() {
+    const [open] = useState("1");
 
     return (
         <div>

@@ -1,4 +1,4 @@
-﻿import React, { HTMLAttributes, HTMLProps, ReactNode } from "react";
+﻿import React, { HTMLAttributes, ReactNode } from "react";
 import "./RichPanel.scss";
 import classNames from "classnames";
 import { Badge, Card, CardHeader } from "reactstrap";

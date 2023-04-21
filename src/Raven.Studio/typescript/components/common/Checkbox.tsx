@@ -32,6 +32,8 @@ export function Checkbox(props: CheckboxProps) {
         id,
         ...rest
     } = props;
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const inputId = id ?? useId("checkbox");
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
     const colorClass = `form-check-${color ?? "secondary"}`;
@@ -64,6 +66,7 @@ export function Checkbox(props: CheckboxProps) {
 
 export function Switch(props: CheckboxProps) {
     const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const inputId = id ?? useId("checkbox");
 
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";
@@ -84,6 +87,8 @@ export function Switch(props: CheckboxProps) {
 
 export function Radio(props: CheckboxProps) {
     const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const inputId = id ?? useId("checkbox");
 
     const checkboxClass = reverse ? `form-check-reverse` : "form-check";

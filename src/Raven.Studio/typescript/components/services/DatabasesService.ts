@@ -16,7 +16,6 @@ import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
 import toggleDatabaseCommand from "commands/resources/toggleDatabaseCommand";
 import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState;
 import getDatabasesStateForStudioCommand from "commands/resources/getDatabasesStateForStudioCommand";
-import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 import getDatabaseStateForStudioCommand from "commands/resources/getDatabaseStateForStudioCommand";
 
 export default class DatabasesService {
