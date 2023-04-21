@@ -19,8 +19,9 @@ namespace Corax.Pipeline
         Word = 1,
         Term = 2,
 
-        Numeric = 4,        
-        Alphabetic = 8,
+        Ascii = 4,
+        Numeric = 8,        
+        Alphabetic = 9,
         Alphanumeric = Numeric | Alphabetic,        
         UserDefined = 0x8000_0000,
         Invalid = 0xFFFF_FFFF,

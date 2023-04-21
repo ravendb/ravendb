@@ -11,18 +11,17 @@ namespace Corax.Pipeline
         bool Accept(ReadOnlySpan<char> source, in Token token);
     }
 
-    public struct FilteringTokenFilter<TFilter> : IFilter
+    public readonly struct FilteringTokenFilter<TFilter> : IFilter
         where TFilter : struct, ITokenFilter
-    {        
-
+    {
         private readonly TFilter _filter;
-
-        public bool SupportUtf8 => _filter.SupportUtf8;
 
         public FilteringTokenFilter(TFilter filter)
         {
             _filter = filter;
         }
+        
+        public bool SupportUtf8 => _filter.SupportUtf8;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Filter(ReadOnlySpan<byte> source, ref Span<Token> tokens)

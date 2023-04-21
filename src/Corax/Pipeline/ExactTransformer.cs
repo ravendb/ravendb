@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Corax.Pipeline
 {
-    public struct ExactTransformer : ITransformer
+    public readonly struct ExactTransformer : ITransformer
     {
         public void Dispose() { }
 

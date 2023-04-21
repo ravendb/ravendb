@@ -2,7 +2,7 @@
 
 namespace Corax.Pipeline
 {
-    public struct KeywordTokenizer : ITokenizer
+    public readonly struct KeywordTokenizer : ITokenizer
     {     
         public bool SupportUtf8 => true;
 

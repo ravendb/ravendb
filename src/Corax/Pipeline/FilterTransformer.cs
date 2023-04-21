@@ -3,17 +3,12 @@ using System.Runtime.CompilerServices;
 
 namespace Corax.Pipeline
 {
-    public struct FilterTransformer<TFilter> : ITransformer
+    public readonly struct FilterTransformer<TFilter>(TFilter filter) : ITransformer
         where TFilter : struct, ITokenFilter
     {        
-        private readonly FilteringTokenFilter<TFilter> _filter;
+        private readonly FilteringTokenFilter<TFilter> _filter = new(filter);
 
         public bool SupportUtf8 => _filter.SupportUtf8;
-
-        public FilterTransformer(TFilter filter)
-        {
-            _filter = new FilteringTokenFilter<TFilter>(filter);
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Transform(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
