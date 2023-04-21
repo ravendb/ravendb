@@ -36,13 +36,15 @@ public class RavenDB_11097 : RavenTestBase
 
             var payloadJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_payload, ctx);
 
+            var documentConventions = new DocumentConventions();
+
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(async stream =>
                 {
                     await ctx.WriteAsync(stream, payloadJson);
-                })
+                }, documentConventions)
             };
         }
 

@@ -2320,7 +2320,7 @@ namespace Raven.Server.Documents.Indexes
             return HandleReferencesBase.InMemoryReferencesInfo.Default;
         }
 
-        public void InitializeTestIndex(DocumentsOperationContext context)
+        public void InitializeTestRun(DocumentsOperationContext context)
         {
             TestRun = new TestIndexRun(context);
         }
