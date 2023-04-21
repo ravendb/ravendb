@@ -17,8 +17,8 @@ import addNewShardToDatabaseGroup from "viewmodels/resources/addNewShardToDataba
 import { StickyHeader } from "components/common/StickyHeader";
 import { useAppSelector } from "components/store";
 import { ShardedDatabaseSharedInfo } from "components/models/databases";
-import { selectDatabaseByName } from "components/common/shell/databaseSliceSelectors";
 import { Icon } from "components/common/Icon";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -52,7 +52,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const { isOperatorOrAbove } = useAccessManager();
 
-    const dbSharedInfo = useAppSelector(selectDatabaseByName(db.name));
+    const dbSharedInfo = useAppSelector(databaseSelectors.databaseByName(db.name));
 
     const { value: dynamicDatabaseDistribution, toggle: toggleDynamicDatabaseDistribution } = useBoolean(
         dbSharedInfo.dynamicNodesDistribution

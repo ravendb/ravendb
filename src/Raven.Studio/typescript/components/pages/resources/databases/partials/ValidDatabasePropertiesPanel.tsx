@@ -9,10 +9,13 @@ import { withPreventDefault } from "components/utils/common";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import { selectLocalNodeTag } from "components/common/shell/clusterSlice";
-import { selectDatabaseState, selectTopLevelState } from "components/common/shell/databaseSliceSelectors";
-import { openNotificationCenterForDatabase } from "components/common/shell/databaseSliceActions";
 import { Badge } from "reactstrap";
 import { Icon } from "components/common/Icon";
+import {
+    selectDatabaseState,
+    selectTopLevelState,
+} from "components/pages/resources/databases/store/databasesViewSelectors";
+import { openNotificationCenterForDatabase } from "components/pages/resources/databases/store/databasesViewActions";
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;

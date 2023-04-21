@@ -6,7 +6,8 @@ import { useAppSelector } from "components/store";
 import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 import "./DatabasesFilter.scss";
 import { InputItem } from "components/models/common";
-import { selectAllDatabasesCount, selectFilterByStateOptions } from "components/common/shell/databaseSliceSelectors";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { databasesViewSelectors } from "components/pages/resources/databases/store/databasesViewSelectors";
 
 type FilterByStateOptions = InputItem<DatabaseFilterByStateOption>[];
 
@@ -18,8 +19,8 @@ interface DatabasesFilterProps {
 export function DatabasesFilter(props: DatabasesFilterProps) {
     const { searchCriteria, setFilterCriteria } = props;
 
-    const allDatabasesCount = useAppSelector(selectAllDatabasesCount);
-    const filterByStateOptions: FilterByStateOptions = useAppSelector(selectFilterByStateOptions);
+    const allDatabasesCount = useAppSelector(databaseSelectors.allDatabasesCount);
+    const filterByStateOptions: FilterByStateOptions = useAppSelector(databasesViewSelectors.filterByStateOptions);
 
     const onSearchNameChange = (e: ChangeEvent<HTMLInputElement>) => {
         setFilterCriteria({
