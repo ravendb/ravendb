@@ -23,6 +23,7 @@ typings/
 wwwroot/App
 wwwroot/Content/ace
 wwwroot/Content/img
+wwwroot/Content/css/fonts/icomoon.template.css.hbs
 wwwroot/Content/rbush
 wwwroot/dist
 wwwroot/icons

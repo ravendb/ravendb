@@ -21,9 +21,9 @@ export function SizeOnDisk(props: { info: DatabaseLocalInfo }) {
             {divRef.current && (
                 <UncontrolledTooltip target={divRef.current}>
                     Data: <strong>{genUtils.formatBytesToSize(totalSize)}</strong>
-                    <br/>
+                    <br />
                     Temp: <strong>{genUtils.formatBytesToSize(tempBufferSize)}</strong>
-                    <br/>
+                    <br />
                     Total: <strong>{genUtils.formatBytesToSize(grandTotalSize)}</strong>
                 </UncontrolledTooltip>
             )}
