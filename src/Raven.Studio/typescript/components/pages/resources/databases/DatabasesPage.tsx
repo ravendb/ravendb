@@ -9,14 +9,15 @@ import router from "plugins/router";
 import appUrl from "common/appUrl";
 import { selectClusterNodeTags } from "components/common/shell/clusterSlice";
 import { shallowEqual } from "react-redux";
-import { selectAllDatabases, selectFilteredDatabaseNames } from "components/common/shell/databaseSliceSelectors";
+import { DatabaseFilterCriteria } from "components/models/databases";
 import {
     compactDatabase,
     loadDatabasesDetails,
     openCreateDatabaseFromRestoreDialog,
     syncDatabaseDetails,
-} from "components/common/shell/databaseSliceActions";
-import { DatabaseFilterCriteria } from "components/models/databases";
+} from "components/pages/resources/databases/store/databasesViewActions";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { databasesViewSelectors } from "components/pages/resources/databases/store/databasesViewSelectors";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -30,7 +31,7 @@ interface DatabasesPageProps {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function DatabasesPage(props: DatabasesPageProps) {
-    const databases = useAppSelector(selectAllDatabases);
+    const databases = useAppSelector(databaseSelectors.allDatabases);
 
     const dispatch = useAppDispatch();
 
@@ -43,7 +44,10 @@ export function DatabasesPage(props: DatabasesPageProps) {
         states: [],
     });
 
-    const filteredDatabaseNames = useAppSelector(selectFilteredDatabaseNames(filterCriteria), shallowEqual);
+    const filteredDatabaseNames = useAppSelector(
+        databasesViewSelectors.filteredDatabaseNames(filterCriteria),
+        shallowEqual
+    );
 
     useEffect(() => {
         dispatch(loadDatabasesDetails(nodeTags));

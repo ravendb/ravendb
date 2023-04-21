@@ -16,7 +16,7 @@ import {
 import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/logic/models";
 import { WritableDraft } from "immer/dist/types/types-external";
 import { DatabaseSharedInfo } from "components/models/databases";
-import { selectDatabaseByName } from "components/common/shell/databaseSliceSelectors";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface StatisticsState {
     databaseName: string;
@@ -61,15 +61,17 @@ const sliceName = "statistics";
 
 const databaseNameSelector = (state: RootState) => state.statistics.databaseName;
 
-const databaseSelectors = databaseStatsAdapter.getSelectors<RootState>((state) => state.statistics.databaseDetails);
-export const selectAllDatabaseDetails = databaseSelectors.selectAll;
+const databaseStatsSelectors = databaseStatsAdapter.getSelectors<RootState>(
+    (state) => state.statistics.databaseDetails
+);
+export const selectAllDatabaseDetails = databaseStatsSelectors.selectAll;
 
 export const selectAllIndexesLoadStatus = (state: RootState) => state.statistics.indexDetailsLoadStatus;
 
 const fetchEssentialStats = createAsyncThunk(sliceName + "/fetchEssentialStats", async (_, thunkAPI: AppThunkApi) => {
     const state = thunkAPI.getState();
     const dbName = databaseNameSelector(state);
-    const db = selectDatabaseByName(dbName)(state);
+    const db = databaseSelectors.databaseByName(dbName)(state);
     return services.databasesService.getEssentialStats(db);
 });
 
@@ -109,9 +111,9 @@ const fetchDetailedIndexStats = createAsyncThunk(
 
 const fetchAllDetailedDatabaseStats = () => async (dispatch: AppDispatch, getState: () => RootState) => {
     const state = getState();
-    const locations = databaseSelectors.selectAll(state).map((x) => x.location);
+    const locations = databaseStatsSelectors.selectAll(state).map((x) => x.location);
 
-    const db = selectDatabaseByName(state.statistics.databaseName)(state);
+    const db = databaseSelectors.databaseByName(state.statistics.databaseName)(state);
 
     const tasks = locations.map((location) => dispatch(fetchDetailedDatabaseStats({ db, location })).unwrap());
     await Promise.all(tasks);
@@ -120,9 +122,9 @@ const fetchAllDetailedDatabaseStats = () => async (dispatch: AppDispatch, getSta
 const fetchAllDetailedIndexStats = () => async (dispatch: AppDispatch, getState: () => RootState) => {
     const state = getState();
 
-    const locations = databaseSelectors.selectAll(state).map((x) => x.location);
+    const locations = databaseStatsSelectors.selectAll(state).map((x) => x.location);
 
-    const db = selectDatabaseByName(state.statistics.databaseName)(state);
+    const db = databaseSelectors.databaseByName(state.statistics.databaseName)(state);
 
     const tasks = locations.map((location) => dispatch(fetchDetailedIndexStats({ db, location })).unwrap());
     await Promise.all(tasks);
@@ -317,7 +319,7 @@ export const toggleDetails = () => async (dispatch: AppDispatch, getState: () =>
     }
 };
 
-const needsDetailsRefresh = createSelector(databaseSelectors.selectAll, (items) =>
+const needsDetailsRefresh = createSelector(databaseStatsSelectors.selectAll, (items) =>
     items.every((x) => x.status === "idle")
 );
 

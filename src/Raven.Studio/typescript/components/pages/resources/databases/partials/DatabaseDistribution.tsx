@@ -6,8 +6,8 @@ import { useAppSelector } from "components/store";
 import genUtils from "common/generalUtils";
 import { SizeOnDisk } from "components/pages/resources/databases/partials/SizeOnDisk";
 import { DatabaseLoadError } from "components/pages/resources/databases/partials/DatabaseLoadError";
-import { selectDatabaseState } from "components/common/shell/databaseSliceSelectors";
 import { Icon } from "components/common/Icon";
+import { selectDatabaseState } from "components/pages/resources/databases/store/databasesViewSelectors";
 
 interface DatabaseDistributionProps {
     db: DatabaseSharedInfo;

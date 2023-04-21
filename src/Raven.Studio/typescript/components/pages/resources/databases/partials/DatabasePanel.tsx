@@ -36,26 +36,22 @@ import databasesManager from "common/shell/databasesManager";
 import { AccessIcon } from "components/pages/resources/databases/partials/AccessIcon";
 import { DatabaseTopology } from "components/pages/resources/databases/partials/DatabaseTopology";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import {
-    selectActiveDatabase,
-    selectDatabaseByName,
-    selectDatabaseState,
-} from "components/common/shell/databaseSliceSelectors";
+import { confirmDeleteDatabases, deleteDatabases } from "components/common/shell/databaseSliceActions";
+import { Icon } from "components/common/Icon";
+import { selectDatabaseState } from "components/pages/resources/databases/store/databasesViewSelectors";
 import {
     changeDatabasesLockMode,
     compactDatabase,
-    confirmDeleteDatabases,
     confirmSetLockMode,
     confirmToggleDatabases,
     confirmToggleIndexing,
     confirmTogglePauseIndexing,
-    deleteDatabases,
     reloadDatabaseDetails,
     toggleDatabases,
     toggleIndexing,
     togglePauseIndexing,
-} from "components/common/shell/databaseSliceActions";
-import { Icon } from "components/common/Icon";
+} from "components/pages/resources/databases/store/databasesViewActions";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 interface DatabasePanelProps {
     databaseName: string;
@@ -90,8 +86,8 @@ function badgeText(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<
 
 export function DatabasePanel(props: DatabasePanelProps) {
     const { databaseName, selected, toggleSelection } = props;
-    const db = useAppSelector(selectDatabaseByName(databaseName));
-    const activeDatabase = useAppSelector(selectActiveDatabase);
+    const db = useAppSelector(databaseSelectors.databaseByName(databaseName));
+    const activeDatabase = useAppSelector(databaseSelectors.activeDatabase);
     const dbState = useAppSelector(selectDatabaseState(db.name));
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();

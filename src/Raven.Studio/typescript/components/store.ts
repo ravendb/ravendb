@@ -6,6 +6,7 @@ import { databasesSlice } from "components/common/shell/databasesSlice";
 import { services } from "hooks/useServices";
 import { accessManagerSlice } from "components/common/shell/accessManagerSlice";
 import { clusterSlice } from "components/common/shell/clusterSlice";
+import { databasesViewSlice } from "components/pages/resources/databases/store/databasesViewSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -16,6 +17,7 @@ export function createStoreConfiguration() {
         reducer: {
             statistics: statisticsSlice.reducer,
             databases: databasesSlice.reducer,
+            databasesView: databasesViewSlice.reducer,
             accessManager: accessManagerSlice.reducer,
             cluster: clusterSlice.reducer,
         },

@@ -7,17 +7,16 @@ import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { ButtonGroupWithLabel } from "components/common/ButtonGroupWithLabel";
 import { CheckboxTriple } from "components/common/CheckboxTriple";
+import { confirmDeleteDatabases, deleteDatabases } from "components/common/shell/databaseSliceActions";
+import { Icon } from "components/common/Icon";
 import {
     changeDatabasesLockMode,
-    confirmDeleteDatabases,
     confirmSetLockMode,
     confirmToggleDatabases,
-    deleteDatabases,
     openCreateDatabaseDialog,
     openCreateDatabaseFromRestoreDialog,
     toggleDatabases,
-} from "components/common/shell/databaseSliceActions";
-import { Icon } from "components/common/Icon";
+} from "components/pages/resources/databases/store/databasesViewActions";
 
 interface DatabasesToolbarActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
