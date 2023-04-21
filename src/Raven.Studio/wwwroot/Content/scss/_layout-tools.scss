@@ -32,8 +32,7 @@
     }
 }
 
-
-$directions: ( 'top', 'right', 'bottom', 'left' );
+$directions: ("top", "right", "bottom", "left");
 
 .nomargin {
     margin: 0 !important;
@@ -134,7 +133,8 @@ $directions: ( 'top', 'right', 'bottom', 'left' );
     }
 }
 
-.flex-vertical, .flex-horizontal {
+.flex-vertical,
+.flex-horizontal {
     display: flex;
     flex-direction: row;
 }

@@ -8,7 +8,6 @@ interface DatabaseTopologyProps {
     db: DatabaseSharedInfo;
 }
 
-
 export function DatabaseTopology(props: DatabaseTopologyProps) {
     const { db } = props;
 
@@ -21,7 +20,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                         Orchestrators
                     </NodeSetLabel>
                     {db.nodes.map((node) => (
-                        <DatabaseNodeSetItem key={node.tag} node={node}/>
+                        <DatabaseNodeSetItem key={node.tag} node={node} />
                     ))}
                 </NodeSet>
 
@@ -33,7 +32,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                                     #{DatabaseUtils.shardNumber(shard.name)}
                                 </NodeSetLabel>
                                 {shard.nodes.map((node) => (
-                                    <DatabaseNodeSetItem key={node.tag} node={node}/>
+                                    <DatabaseNodeSetItem key={node.tag} node={node} />
                                 ))}
                                 {shard.deletionInProgress.map((node) => {
                                     return (
@@ -60,7 +59,7 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                 <NodeSet className="m-1">
                     <NodeSetLabel icon="database">Nodes</NodeSetLabel>
                     {db.nodes.map((node) => {
-                        return <DatabaseNodeSetItem key={node.tag} node={node}/>;
+                        return <DatabaseNodeSetItem key={node.tag} node={node} />;
                     })}
                     {db.deletionInProgress.map((node) => {
                         return (
