@@ -1,14 +1,14 @@
 ﻿import { globalDispatch } from "components/storeCompat";
-import { localNodeTagLoaded, nodeTagsLoaded } from "components/common/shell/clusterSlice";
+import { clusterActions } from "components/common/shell/clusterSlice";
 
 export class MockClusterManager {
     with_Cluster() {
-        globalDispatch(nodeTagsLoaded(["A", "B", "C"]));
-        globalDispatch(localNodeTagLoaded("A"));
+        globalDispatch(clusterActions.nodeTagsLoaded(["A", "B", "C"]));
+        globalDispatch(clusterActions.localNodeTagLoaded("A"));
     }
 
     with_Single() {
-        globalDispatch(nodeTagsLoaded(["A"]));
-        globalDispatch(localNodeTagLoaded("A"));
+        globalDispatch(clusterActions.nodeTagsLoaded(["A"]));
+        globalDispatch(clusterActions.localNodeTagLoaded("A"));
     }
 }

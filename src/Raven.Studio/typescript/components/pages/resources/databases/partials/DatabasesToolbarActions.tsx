@@ -7,7 +7,6 @@ import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { ButtonGroupWithLabel } from "components/common/ButtonGroupWithLabel";
 import { CheckboxTriple } from "components/common/CheckboxTriple";
-import { confirmDeleteDatabases, deleteDatabases } from "components/common/shell/databaseSliceActions";
 import { Icon } from "components/common/Icon";
 import {
     changeDatabasesLockMode,
@@ -17,6 +16,7 @@ import {
     openCreateDatabaseFromRestoreDialog,
     toggleDatabases,
 } from "components/pages/resources/databases/store/databasesViewActions";
+import { databaseActions } from "components/common/shell/databaseSliceActions";
 
 interface DatabasesToolbarActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -103,12 +103,12 @@ export function DatabasesToolbarActions({
     };
 
     const onDelete = async () => {
-        const result = await dispatch(confirmDeleteDatabases(selectedDatabases));
+        const result = await dispatch(databaseActions.confirmDeleteDatabases(selectedDatabases));
 
         if (result.can) {
             setDeleteChanges(true);
             try {
-                await dispatch(deleteDatabases(result.databases, result.keepFiles));
+                await dispatch(databaseActions.deleteDatabases(result.databases, result.keepFiles));
             } finally {
                 setDeleteChanges(false);
             }

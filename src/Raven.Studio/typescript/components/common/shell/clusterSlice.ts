@@ -31,7 +31,10 @@ export const clusterSlice = createSlice({
     },
 });
 
-export const { nodeTagsLoaded, localNodeTagLoaded } = clusterSlice.actions;
+export const clusterActions = {
+    nodeTagsLoaded: clusterSlice.actions.nodeTagsLoaded,
+    localNodeTagLoaded: clusterSlice.actions.localNodeTagLoaded,
+};
 
 export const clusterSelectors = {
     clusterNodeTags: selectClusterNodeTags,

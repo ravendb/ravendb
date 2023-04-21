@@ -5,7 +5,7 @@ import app from "durandal/app";
 import { databasesSlice } from "components/common/shell/databasesSlice";
 
 //TODO: report success after database deletion? - what about other actions?
-export const confirmDeleteDatabases =
+const confirmDeleteDatabases =
     (
         toDelete: DatabaseSharedInfo[]
     ): AppAsyncThunk<{ can: boolean; keepFiles?: boolean; databases?: DatabaseSharedInfo[] }> =>
@@ -26,7 +26,7 @@ export const confirmDeleteDatabases =
         };
     };
 
-export const deleteDatabases =
+const deleteDatabases =
     (toDelete: DatabaseSharedInfo[], keepFiles: boolean): AppAsyncThunk<updateDatabaseConfigurationsResult> =>
     async (dispatch, getState, getServices) => {
         const { databasesService } = getServices();
@@ -47,4 +47,9 @@ export const deleteDatabases =
         );
     };
 
-export const { activeDatabaseChanged, databasesLoaded } = databasesSlice.actions;
+export const databaseActions = {
+    activeDatabaseChanged: databasesSlice.actions.activeDatabaseChanged,
+    databasesLoaded: databasesSlice.actions.databasesLoaded,
+    confirmDeleteDatabases,
+    deleteDatabases,
+};
