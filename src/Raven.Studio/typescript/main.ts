@@ -51,7 +51,7 @@ pluginWidget.install({});
 
 const shellSetup = require("components/common/shell/setup");
 
-shellSetup.initRedux();
+shellSetup.canonInit();
 
 app.start().then(() => {
     if ("WebSocket" in window) {
