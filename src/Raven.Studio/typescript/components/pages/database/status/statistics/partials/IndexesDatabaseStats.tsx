@@ -6,21 +6,15 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { Card, Spinner, Table } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
-import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/logic/models";
+import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/store/models";
 import { LoadError } from "components/common/LoadError";
-import {
-    selectGlobalIndexDetailsStatus,
-    selectIndexByName,
-    selectAllIndexesLoadStatus,
-    selectMapIndexNames,
-    selectMapReduceIndexNames,
-} from "components/pages/database/status/statistics/logic/statisticsSlice";
 import { shallowEqual } from "react-redux";
 import appUrl from "common/appUrl";
 import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessReasons";
 import app from "durandal/app";
 import { Icon } from "components/common/Icon";
 import { EmptySet } from "components/common/EmptySet";
+import { statisticsViewSelectors } from "components/pages/database/status/statistics/store/statisticsViewSlice";
 
 interface IndexBlockProps {
     children: (locationData: PerLocationIndexStats, location: databaseLocationSpecifier) => JSX.Element;
@@ -31,7 +25,7 @@ interface IndexBlockProps {
 function IndexStatistics(props: { indexName: string; database: database }) {
     const { indexName, database } = props;
 
-    const index = useAppSelector(selectIndexByName(indexName));
+    const index = useAppSelector(statisticsViewSelectors.indexByName(indexName));
 
     const showErrorCounts = index.details.some((x) => x && x.errorsCount > 0);
     const showMapErrors = index.details.some((x) => x && x.mapErrors > 0);
@@ -213,7 +207,7 @@ function IndexStatistics(props: { indexName: string; database: database }) {
 function DetailsBlock(props: IndexBlockProps): JSX.Element {
     const { children, index, alwaysRenderValue } = props;
 
-    const loadStatuses = useAppSelector(selectAllIndexesLoadStatus);
+    const loadStatuses = useAppSelector(statisticsViewSelectors.allIndexesLoadStatus);
 
     return (
         <>
@@ -272,9 +266,9 @@ function DetailsBlock(props: IndexBlockProps): JSX.Element {
 export function IndexesDatabaseStats(props: { database: database }) {
     const { database } = props;
 
-    const globalIndexDetailsStatus = useAppSelector(selectGlobalIndexDetailsStatus);
-    const mapIndexNames = useAppSelector(selectMapIndexNames, shallowEqual);
-    const mapReduceIndexNames = useAppSelector(selectMapReduceIndexNames, shallowEqual);
+    const globalIndexDetailsStatus = useAppSelector(statisticsViewSelectors.globalIndexDetailsStatus);
+    const mapIndexNames = useAppSelector(statisticsViewSelectors.mapIndexNames, shallowEqual);
+    const mapReduceIndexNames = useAppSelector(statisticsViewSelectors.mapReduceIndexNames, shallowEqual);
 
     if (globalIndexDetailsStatus === "loading") {
         return (

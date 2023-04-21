@@ -1,11 +1,9 @@
 ﻿import { Button, Col, Row, Spinner } from "reactstrap";
 import {
     refresh,
-    selectDetailsVisible,
-    selectRefreshing,
+    statisticsViewSelectors,
     toggleDetails,
-} from "components/pages/database/status/statistics/logic/statisticsSlice";
-import classNames from "classnames";
+} from "components/pages/database/status/statistics/store/statisticsViewSlice";
 import { StickyHeader } from "components/common/StickyHeader";
 import React from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -14,8 +12,8 @@ import { Icon } from "components/common/Icon";
 export function StatsHeader() {
     const dispatch = useAppDispatch();
 
-    const detailsVisible = useAppSelector(selectDetailsVisible);
-    const spinnerRefresh = useAppSelector(selectRefreshing);
+    const detailsVisible = useAppSelector(statisticsViewSelectors.detailsVisible);
+    const spinnerRefresh = useAppSelector(statisticsViewSelectors.refreshing);
 
     return (
         <StickyHeader>

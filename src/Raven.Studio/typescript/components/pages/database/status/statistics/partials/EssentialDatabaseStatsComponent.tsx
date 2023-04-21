@@ -2,7 +2,10 @@
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import { Button, Card, Col, Row, UncontrolledTooltip } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
-import { refresh, selectEssentialStats } from "components/pages/database/status/statistics/logic/statisticsSlice";
+import {
+    refresh,
+    statisticsViewSelectors,
+} from "components/pages/database/status/statistics/store/statisticsViewSlice";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { LoadError } from "components/common/LoadError";
 import { Icon } from "components/common/Icon";
@@ -16,7 +19,7 @@ const defaultLoadingText = "1,234,567";
 export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsComponentProps) {
     const { rawJsonUrl } = props;
 
-    const essentialStats = useAppSelector(selectEssentialStats);
+    const essentialStats = useAppSelector(statisticsViewSelectors.essentialStats);
     const dispatch = useAppDispatch();
 
     const { data: stats } = essentialStats;

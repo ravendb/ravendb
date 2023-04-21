@@ -5,15 +5,15 @@ import changeVectorUtils from "common/changeVectorUtils";
 import { Card, Table, UncontrolledTooltip } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
-import { selectAllDatabaseDetails } from "components/pages/database/status/statistics/logic/statisticsSlice";
 import { Icon } from "components/common/Icon";
+import { statisticsViewSelectors } from "components/pages/database/status/statistics/store/statisticsViewSlice";
 
 interface DetailsBlockProps {
     children: (data: DetailedDatabaseStatistics, location: databaseLocationSpecifier) => JSX.Element;
 }
 
 export function DetailedDatabaseStats() {
-    const perNodeStats = useAppSelector(selectAllDatabaseDetails);
+    const perNodeStats = useAppSelector(statisticsViewSelectors.allDatabaseDetails);
 
     function DetailsBlock(props: DetailsBlockProps): JSX.Element {
         const { children } = props;

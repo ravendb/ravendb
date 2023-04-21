@@ -1,6 +1,6 @@
 ﻿import { configureStore, createListenerMiddleware } from "@reduxjs/toolkit";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
-import { statisticsSlice } from "components/pages/database/status/statistics/store/statisticsSlice";
+import { statisticsViewSlice } from "components/pages/database/status/statistics/store/statisticsViewSlice";
 import { BaseThunkAPI } from "@reduxjs/toolkit/dist/createAsyncThunk";
 import { databasesSlice } from "components/common/shell/databasesSlice";
 import { services } from "hooks/useServices";
@@ -15,7 +15,7 @@ const listenerMiddleware = createListenerMiddleware({
 export function createStoreConfiguration() {
     return configureStore({
         reducer: {
-            statistics: statisticsSlice.reducer,
+            statistics: statisticsViewSlice.reducer,
             databases: databasesSlice.reducer,
             databasesView: databasesViewSlice.reducer,
             accessManager: accessManagerSlice.reducer,

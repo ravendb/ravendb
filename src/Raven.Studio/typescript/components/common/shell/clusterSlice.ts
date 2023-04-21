@@ -14,8 +14,8 @@ const initialState: ClusterState = {
     nodeTags: [],
 };
 
-export const selectClusterNodeTags = (store: RootState) => store.cluster.nodeTags;
-export const selectLocalNodeTag = (store: RootState) => store.cluster.localNodeTag;
+const selectClusterNodeTags = (store: RootState) => store.cluster.nodeTags;
+const selectLocalNodeTag = (store: RootState) => store.cluster.localNodeTag;
 
 export const clusterSlice = createSlice({
     initialState,
@@ -32,3 +32,9 @@ export const clusterSlice = createSlice({
 });
 
 export const { nodeTagsLoaded, localNodeTagLoaded } = clusterSlice.actions;
+
+
+export const clusterSelectors = {
+    clusterNodeTags: selectClusterNodeTags,
+    localNodeTag: selectLocalNodeTag
+}

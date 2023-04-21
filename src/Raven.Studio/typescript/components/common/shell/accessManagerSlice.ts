@@ -46,16 +46,16 @@ export const accessManagerSlice = createSlice({
 
 export const { onDatabaseAccessLoaded, onSecurityClearanceSet } = accessManagerSlice.actions;
 
-export const selectDatabaseAccessLevel = (databaseName: string) => (store: RootState) =>
+const selectDatabaseAccessLevel = (databaseName: string) => (store: RootState) =>
     databaseAccessSelectors.selectById(store.accessManager.databaseAccess, databaseName)?.level;
 
-export const selectOperatorOrAbove = (store: RootState) => {
+const selectOperatorOrAbove = (store: RootState) => {
     const clearance = store.accessManager.securityClearance;
 
     return clearance === "ClusterAdmin" || clearance === "ClusterNode" || clearance === "Operator";
 };
 
-export const selectEffectiveDatabaseAccessLevel = (databaseName: string) => {
+const selectEffectiveDatabaseAccessLevel = (databaseName: string) => {
     const accessLevel = selectDatabaseAccessLevel(databaseName);
 
     return (store: RootState): databaseAccessLevel => {
@@ -66,4 +66,10 @@ export const selectEffectiveDatabaseAccessLevel = (databaseName: string) => {
 
         return accessLevel(store);
     };
+};
+
+export const accessManagerSelectors = {
+    databaseAccessLevel: selectDatabaseAccessLevel,
+    operatorOrAbove: selectOperatorOrAbove,
+    effectiveDatabaseAccessLevel: selectEffectiveDatabaseAccessLevel,
 };
