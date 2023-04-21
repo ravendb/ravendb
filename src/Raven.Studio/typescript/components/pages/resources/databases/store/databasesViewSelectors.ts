@@ -10,7 +10,7 @@ import {
 } from "components/models/databases";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import assertUnreachable from "components/utils/assertUnreachable";
-import { selectLocalNodeTag } from "components/common/shell/clusterSlice";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { databasesViewSliceInternal } from "components/pages/resources/databases/store/databasesViewSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
@@ -60,7 +60,7 @@ const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterB
         }
     });
 
-    const localNodeTag = selectLocalNodeTag(store);
+    const localNodeTag = clusterSelectors.localNodeTag(store);
 
     return [
         { value: "Online", label: "Online", count: online },

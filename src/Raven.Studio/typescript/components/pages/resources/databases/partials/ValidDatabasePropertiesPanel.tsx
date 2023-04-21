@@ -8,7 +8,7 @@ import appUrl from "common/appUrl";
 import { withPreventDefault } from "components/utils/common";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
-import { selectLocalNodeTag } from "components/common/shell/clusterSlice";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { Badge } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import {
@@ -39,7 +39,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const dbState = useAppSelector(selectDatabaseState(db.name));
     const topLevelState = useAppSelector(selectTopLevelState(db.name));
 
-    const localNodeTag = useAppSelector(selectLocalNodeTag);
+    const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
 
     const dispatch = useAppDispatch();
 

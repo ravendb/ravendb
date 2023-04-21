@@ -11,7 +11,7 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 import { UnsubscribeListener } from "@reduxjs/toolkit";
 import { addAppListener } from "components/storeUtils";
 import { databasesSlice } from "components/common/shell/databasesSlice";
-import { selectClusterNodeTags } from "components/common/shell/clusterSlice";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
 import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
 import disableIndexingToggleConfirm from "viewmodels/resources/disableIndexingToggleConfirm";
@@ -115,7 +115,7 @@ export const loadDatabasesDetails = (nodeTags: string[]) => async (dispatch: App
 export const reloadDatabaseDetails =
     (databaseName: string): AppAsyncThunk =>
     async (dispatch: AppDispatch, getState) => {
-        const nodeTags = selectClusterNodeTags(getState());
+        const nodeTags = clusterSelectors.clusterNodeTags(getState());
         const tasks = nodeTags.map((nodeTag) =>
             dispatch(databasesViewSliceInternal.fetchDatabase({ nodeTag, databaseName }))
         );
@@ -130,7 +130,7 @@ export const confirmSetLockMode = (): AppAsyncThunk<boolean> => async () => {
 
 export const reloadDatabasesDetails: AppAsyncThunk = async (dispatch: AppDispatch, getState) => {
     const state = getState();
-    const nodeTags = selectClusterNodeTags(state);
+    const nodeTags = clusterSelectors.clusterNodeTags(state);
 
     const tasks = nodeTags.map((nodeTag) => dispatch(databasesViewSliceInternal.fetchDatabases(nodeTag)));
 

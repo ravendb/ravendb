@@ -7,7 +7,7 @@ import { Row } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
-import { selectClusterNodeTags } from "components/common/shell/clusterSlice";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { shallowEqual } from "react-redux";
 import { DatabaseFilterCriteria } from "components/models/databases";
 import {
@@ -35,7 +35,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const dispatch = useAppDispatch();
 
-    const nodeTags = useAppSelector(selectClusterNodeTags);
+    const nodeTags = useAppSelector(clusterSelectors.clusterNodeTags);
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
 

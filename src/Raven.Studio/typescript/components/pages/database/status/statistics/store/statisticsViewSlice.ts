@@ -64,9 +64,9 @@ const databaseNameSelector = (state: RootState) => state.statistics.databaseName
 const databaseStatsSelectors = databaseStatsAdapter.getSelectors<RootState>(
     (state) => state.statistics.databaseDetails
 );
-export const selectAllDatabaseDetails = databaseStatsSelectors.selectAll;
+const selectAllDatabaseDetails = databaseStatsSelectors.selectAll;
 
-export const selectAllIndexesLoadStatus = (state: RootState) => state.statistics.indexDetailsLoadStatus;
+const selectAllIndexesLoadStatus = (state: RootState) => state.statistics.indexDetailsLoadStatus;
 
 const fetchEssentialStats = createAsyncThunk(sliceName + "/fetchEssentialStats", async (_, thunkAPI: AppThunkApi) => {
     const state = thunkAPI.getState();
@@ -130,7 +130,7 @@ const fetchAllDetailedIndexStats = () => async (dispatch: AppDispatch, getState:
     await Promise.all(tasks);
 };
 
-export const statisticsSlice = createSlice({
+export const statisticsViewSlice = createSlice({
     extraReducers: (builder) => {
         builder.addCase(fetchEssentialStats.pending, (state) => {
             state.essentialStats.status = "loading";
@@ -287,7 +287,7 @@ export const statisticsSlice = createSlice({
     },
 });
 
-const { initForDatabase, refreshStarted, refreshFinished } = statisticsSlice.actions;
+const { initForDatabase, refreshStarted, refreshFinished } = statisticsViewSlice.actions;
 
 export const initView = (db: database) => async (dispatch: AppDispatch, getState: () => RootState) => {
     dispatch(initForDatabase(db.name, db.getLocations()));
@@ -306,9 +306,9 @@ export const toggleDetails = () => async (dispatch: AppDispatch, getState: () =>
     const visible = state.statistics.ui.detailsVisible;
 
     if (visible) {
-        dispatch(statisticsSlice.actions.hideDetails());
+        dispatch(statisticsViewSlice.actions.hideDetails());
     } else {
-        dispatch(statisticsSlice.actions.showDetails());
+        dispatch(statisticsViewSlice.actions.showDetails());
 
         if (needsDetailsRefresh(state)) {
             const dbStatsTask = dispatch(fetchAllDetailedDatabaseStats());
@@ -323,11 +323,11 @@ const needsDetailsRefresh = createSelector(databaseStatsSelectors.selectAll, (it
     items.every((x) => x.status === "idle")
 );
 
-export const selectEssentialStats = (state: RootState) => state.statistics.essentialStats;
-export const selectDetailsVisible = (state: RootState) => state.statistics.ui.detailsVisible;
-export const selectRefreshing = (state: RootState) => state.statistics.ui.refreshing;
+const selectEssentialStats = (state: RootState) => state.statistics.essentialStats;
+const selectDetailsVisible = (state: RootState) => state.statistics.ui.detailsVisible;
+const selectRefreshing = (state: RootState) => state.statistics.ui.refreshing;
 
-export const selectGlobalIndexDetailsStatus = (state: RootState): loadStatus => {
+const selectGlobalIndexDetailsStatus = (state: RootState): loadStatus => {
     const statuses = state.statistics.indexDetailsLoadStatus.map((x) => x.status);
     if (statuses.every((x) => x === "failure")) {
         return "failure";
@@ -340,14 +340,26 @@ export const selectGlobalIndexDetailsStatus = (state: RootState): loadStatus => 
     return "loading";
 };
 
-export const selectIndexByName = (indexName: string) => (state: RootState) =>
+const selectIndexByName = (indexName: string) => (state: RootState) =>
     state.statistics.indexDetails.entities[indexName];
-export const selectMapIndexNames = (state: RootState) => {
+const selectMapIndexNames = (state: RootState) => {
     const indexes = indexSelectors.selectAll(state.statistics.indexDetails);
     return indexes.filter((x) => !x.sharedInfo.isReduceIndex).map((x) => x.sharedInfo.name);
 };
 
-export const selectMapReduceIndexNames = (state: RootState) => {
+const selectMapReduceIndexNames = (state: RootState) => {
     const indexes = indexSelectors.selectAll(state.statistics.indexDetails);
     return indexes.filter((x) => x.sharedInfo.isReduceIndex).map((x) => x.sharedInfo.name);
+};
+
+export const statisticsViewSelectors = {
+    allDatabaseDetails: selectAllDatabaseDetails,
+    allIndexesLoadStatus: selectAllIndexesLoadStatus,
+    essentialStats: selectEssentialStats,
+    detailsVisible: selectDetailsVisible,
+    refreshing: selectRefreshing,
+    globalIndexDetailsStatus: selectGlobalIndexDetailsStatus,
+    indexByName: selectIndexByName,
+    mapIndexNames: selectMapIndexNames,
+    mapReduceIndexNames: selectMapReduceIndexNames,
 };

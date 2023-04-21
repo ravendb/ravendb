@@ -2,13 +2,13 @@
 import { NodeInfo } from "components/models/databases";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppSelector } from "components/store";
-import { selectClusterNodeTags } from "components/common/shell/clusterSlice";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
 
 export function useGroup(nodes: NodeInfo[], initialFixOrder: boolean) {
     const [fixOrder, setFixOrder] = useState(initialFixOrder);
     const [newOrder, setNewOrder] = useState<NodeInfo[]>([]);
     const [sortableMode, setSortableMode] = useState(false);
-    const clusterNodeTags = useAppSelector(selectClusterNodeTags);
+    const clusterNodeTags = useAppSelector(clusterSelectors.clusterNodeTags);
 
     const { isOperatorOrAbove } = useAccessManager();
     const canSort = nodes.length === 1 || !isOperatorOrAbove();

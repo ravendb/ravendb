@@ -3,7 +3,10 @@ import React, { useEffect } from "react";
 import { EssentialDatabaseStatsComponent } from "./partials/EssentialDatabaseStatsComponent";
 import { useAppUrls } from "hooks/useAppUrls";
 import { DetailedDatabaseStats } from "./partials/DetailedDatabaseStats";
-import { initView, selectDetailsVisible } from "components/pages/database/status/statistics/store/statisticsSlice";
+import {
+    initView,
+    statisticsViewSelectors,
+} from "components/pages/database/status/statistics/store/statisticsViewSlice";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { IndexesDatabaseStats } from "components/pages/database/status/statistics/partials/IndexesDatabaseStats";
 import { StatsHeader } from "components/pages/database/status/statistics/partials/StatsHeader";
@@ -16,7 +19,7 @@ export function StatisticsPage(props: StatisticsPageProps) {
     const { database } = props;
 
     const dispatch = useAppDispatch();
-    const detailsVisible = useAppSelector(selectDetailsVisible);
+    const detailsVisible = useAppSelector(statisticsViewSelectors.detailsVisible);
 
     useEffect(() => {
         dispatch(initView(database));
