@@ -558,25 +558,26 @@ public class RavenIntegration : RavenTestBase
             await session.SaveChangesAsync();
         }
 
-        Indexes.WaitForIndexing(store);
-        long entriesCount = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount;
+        await Indexes.WaitForIndexingAsync(store);
+        
+        
+        long entriesCount = await AssertWaitForValueAsync(async () => (int) (await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName))).EntriesCount, count);
         Assert.Equal(count, entriesCount);
 
         using (var session = store.OpenAsyncSession())
         {
             doc = await session.LoadAsync<FanoutDto>(doc.Id);
-            doc.Data = doc.Data.Take(count/2).ToList(); // remove half
+            doc.Data = doc.Data.Take(count / 2).ToList(); // remove half
 
             await session.StoreAsync(doc);
             await session.SaveChangesAsync();
         }
 
-        Indexes.WaitForIndexing(store);
-        entriesCount = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount;
-        Assert.Equal(count/2, entriesCount);
+        await Indexes.WaitForIndexingAsync(store);
+        entriesCount = await AssertWaitForValueAsync(async () => (int) (await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName))).EntriesCount, count / 2);
+        Assert.Equal(count / 2, entriesCount);
     }
-
-
+    
     private class FanoutIndex : AbstractIndexCreationTask<FanoutDto>
     {
         public FanoutIndex()
