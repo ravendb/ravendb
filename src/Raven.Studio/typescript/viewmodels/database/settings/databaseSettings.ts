@@ -573,15 +573,22 @@ class databaseSettings extends viewModelBase {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
-    static readonly howToReloadDatabaseHtml = `<h4>There are two ways to reload the database:</h4>
+    static readonly howToReloadDatabaseHtml = `<h4>There are a few ways to reload the database:</h4>
                                                <ul>
-                                                   <li>
+                                                   <li class="margin-top-sm">
                                                        <small>
-                                                           Disable and then enable the database from the databases view in the Studio.<br>
-                                                           This will reload the database on all the cluster nodes immediately.
+                                                           Restart the database from the databases view in the Studio.<br>
+                                                           This will reload the database instance on the LOCAL node your browser is opened on.<br>
+                                                           Perform this action for each node in the cluster.
                                                        </small>
                                                    </li>
-                                                   <li class="margin-top margin-top-sm">
+                                                   <li class="margin-top-sm">
+                                                       <small>
+                                                           Disable and then enable the database from the databases view in the Studio.<br>
+                                                           This will reload the database on ALL cluster nodes immediately.
+                                                       </small>
+                                                   </li>
+                                                   <li class="margin-top-sm">
                                                        <small>
                                                            Restart RavenDB on all nodes.<br>
                                                            The database settings configuration will become effective per node that is restarted.
