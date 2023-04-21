@@ -13,15 +13,7 @@ import { RichPanelDetailItem, RichPanelName } from "../../../common/RichPanel";
 import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
-import {
-    Button,
-    ButtonGroup,
-    Dropdown,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    UncontrolledDropdown,
-} from "reactstrap";
+import { Button, ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import { Icon } from "components/common/Icon";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
@@ -149,7 +141,7 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
 }
 
 export function OngoingTaskName(props: { task: OngoingTaskInfo; canEdit: boolean; editUrl: string }) {
-    const { task, canEdit, editUrl } = props;
+    const { task, editUrl } = props;
     return (
         <RichPanelName>
             <a href={editUrl} title={"Task name: " + task.shared.taskName}>

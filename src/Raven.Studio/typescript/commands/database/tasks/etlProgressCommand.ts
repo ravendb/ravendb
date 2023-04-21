@@ -8,9 +8,9 @@ class etlProgressCommand extends commandBase {
 
     private location: databaseLocationSpecifier;
 
-    private reportFailure: boolean = true;
+    private reportFailure = true;
 
-    constructor(db: database, location: databaseLocationSpecifier, reportFailure: boolean = true) {
+    constructor(db: database, location: databaseLocationSpecifier, reportFailure = true) {
         super();
         this.reportFailure = reportFailure;
         this.location = location;

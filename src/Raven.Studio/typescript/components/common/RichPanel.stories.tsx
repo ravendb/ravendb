@@ -11,7 +11,7 @@ import {
     RichPanelName,
     RichPanelSelect,
 } from "./RichPanel";
-import React, { useState } from "react";
+import React from "react";
 import { Checkbox } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
 import { Button, Collapse } from "reactstrap";

@@ -5,7 +5,6 @@ import genUtils = require("common/generalUtils");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import accessManager = require("common/shell/accessManager");
 import React from "react";
-import ReactDOM from "react-dom";
 import { createRoot, Root } from "react-dom/client";
 import store from "components/store";
 import { Provider } from "react-redux";

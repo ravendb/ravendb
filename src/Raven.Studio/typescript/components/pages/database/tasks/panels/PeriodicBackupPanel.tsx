@@ -17,8 +17,7 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
-    RichPanelName,
-} from "../../../../common/RichPanel";
+} from "components/common/RichPanel";
 import genUtils from "common/generalUtils";
 import moment = require("moment");
 import assertUnreachable from "../../../../utils/assertUnreachable";

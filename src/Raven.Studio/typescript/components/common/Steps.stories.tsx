@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Button, Card } from "reactstrap";
 import { FlexGrow } from "./FlexGrow";
-import classNames from "classnames";
 import { Icon } from "./Icon";
 
 export default {

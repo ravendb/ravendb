@@ -8,7 +8,7 @@ class getFolderPathOptionsCommand extends commandBase {
 
     private inputPath: string;
 
-    private isBackupFolder: boolean = false;
+    private isBackupFolder = false;
 
     private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType;
 
@@ -17,7 +17,7 @@ class getFolderPathOptionsCommand extends commandBase {
     private constructor(
         db: database, 
         inputPath: string, 
-        isBackupFolder: boolean = false, 
+        isBackupFolder = false, 
         connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
         credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings ) {
         super();

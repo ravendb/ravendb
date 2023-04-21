@@ -2,7 +2,6 @@
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
-import accessManager = require("common/shell/accessManager");
 
 export = getManageServerMenuItem;
 

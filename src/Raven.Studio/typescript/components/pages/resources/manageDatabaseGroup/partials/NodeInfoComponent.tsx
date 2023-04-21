@@ -8,7 +8,6 @@ import {
     UncontrolledTooltip,
 } from "reactstrap";
 import useId from "hooks/useId";
-import classNames from "classnames";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useDraggableItem } from "hooks/useDraggableItem";
 import { NodeInfo } from "components/models/databases";

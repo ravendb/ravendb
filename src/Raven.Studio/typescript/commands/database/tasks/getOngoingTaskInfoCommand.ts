@@ -20,10 +20,10 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
 
     private taskName?: string;
 
-    private reportFailure: boolean = true;
+    private reportFailure = true;
 
     private constructor(db: database, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
-                        taskId: number, taskName?: string, reportFailure: boolean = true) {
+                        taskId: number, taskName?: string, reportFailure = true) {
           super();
         this.reportFailure = reportFailure;
         this.taskName = taskName;

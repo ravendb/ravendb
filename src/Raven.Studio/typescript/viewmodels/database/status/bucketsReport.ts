@@ -1,4 +1,3 @@
-import accessManager = require("common/shell/accessManager");
 import getBucketsCommand = require("commands/database/debug/getBucketsCommand");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import generalUtils = require("common/generalUtils");

@@ -4,11 +4,9 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
 import { mockStore } from "test/mocks/store/MockStore";
-import { mockHooks } from "test/mocks/hooks/MockHooks";
 import { mockServices } from "test/mocks/services/MockServices";
 import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import { globalDispatch } from "components/storeCompat";
 
 export default {
     title: "Pages/Databases",

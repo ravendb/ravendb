@@ -8,9 +8,9 @@ class dismissNotificationCommand extends commandBase {
 
     private notificationId: string;
 
-    private forever: boolean = false;
+    private forever = false;
 
-    constructor(db: database, notificationId: string, forever: boolean = false) {
+    constructor(db: database, notificationId: string, forever = false) {
         super();
         this.forever = forever;
         this.notificationId = notificationId;
