@@ -21,6 +21,14 @@ namespace Raven.Server.Web.Studio
                 await processor.ExecuteAsync();
         }
 
+        [RavenAction("/databases/*/admin/studio-tasks/restart", "POST", AuthorizationStatus.DatabaseAdmin, SkipUsagesCount = true)]
+        public async Task RestartDatabase()
+        {
+            await ServerStore.DatabasesLandlord.RestartDatabase(Database.Name);
+
+            NoContentStatus();
+        }
+
         [RavenAction("/databases/*/studio-tasks/suggest-conflict-resolution", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task SuggestConflictResolution()
         {

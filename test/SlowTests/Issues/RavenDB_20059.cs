@@ -82,8 +82,10 @@ function deleteDocumentsOfContractsBehavior(docId) {
                     session.SaveChanges();
                 }
 
+                var timeout = (int)TimeSpan.FromSeconds(15).TotalMilliseconds;
+
                 EtlErrorInfo error = null;
-                WaitForValue(() => TryGetTransformationError(srcStore.Database, config, out error), true, timeout: TimeSpan.FromSeconds(15).Milliseconds);
+                Assert.True(WaitForValue(() => TryGetTransformationError(srcStore.Database, config, out error), true, timeout: timeout));
 
                 Assert.NotNull(error);
                 Assert.True(error.Error.Contains($"{nameof(JavaScriptParseException)}: Failed to parse:"));
