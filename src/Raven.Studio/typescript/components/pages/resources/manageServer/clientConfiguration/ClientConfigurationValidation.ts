@@ -25,9 +25,9 @@ const schema = yup
                 is: true,
                 then: (schema) => schema.required(Messages.required),
             }),
-        sessionContextEnabled: yup.boolean().optional(),
-        seedEnabled: yup.boolean().optional(),
-        seedValue: yup
+        useSessionContextEnabled: yup.boolean().optional(),
+        loadBalancerSeedEnabled: yup.boolean().optional(),
+        loadBalancerSeedValue: yup
             .number()
             .nullable()
             .typeError(Messages.number)

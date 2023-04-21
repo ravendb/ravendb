@@ -8,12 +8,11 @@ import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.Cli
 import { useServices } from "components/hooks/useServices";
 import { useAsync } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
-import { LoadError } from "components/common/LoadError";
 
 // TODO: server wide
 export default function ClientConfiguration() {
     const { manageServerService } = useServices();
-    const { result, loading, error } = useAsync(manageServerService.getGlobalClientConfiguration, []);
+    const { result, loading } = useAsync(manageServerService.getGlobalClientConfiguration, []);
 
     const { handleSubmit, control, resetField, formState, setValue } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
@@ -29,9 +28,9 @@ export default function ClientConfiguration() {
         setValue("identityPartsSeparatorValue", result.IdentityPartsSeparator);
         setValue("maximumNumberOfRequestsEnabled", !!result.MaxNumberOfRequestsPerSession);
         setValue("maximumNumberOfRequestsValue", result.MaxNumberOfRequestsPerSession);
-        setValue("sessionContextEnabled", result.LoadBalanceBehavior !== "None");
-        setValue("seedEnabled", !!result.LoadBalancerContextSeed);
-        setValue("seedValue", result.LoadBalancerContextSeed);
+        setValue("useSessionContextEnabled", result.LoadBalanceBehavior === "UseSessionContext");
+        setValue("loadBalancerSeedEnabled", !!result.LoadBalancerContextSeed);
+        setValue("loadBalancerSeedValue", result.LoadBalancerContextSeed);
         setValue("readBalanceBehaviorEnabled", result.ReadBalanceBehavior !== "None");
         setValue("readBalanceBehaviorValue", result.ReadBalanceBehavior);
     }, [setValue, result]);
@@ -40,27 +39,25 @@ export default function ClientConfiguration() {
         identityPartsSeparatorEnabled,
         maximumNumberOfRequestsEnabled,
         readBalanceBehaviorEnabled,
-        sessionContextEnabled,
-        seedEnabled,
+        useSessionContextEnabled,
+        loadBalancerSeedEnabled,
     } = useWatch({ control });
 
-    const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
-        await manageServerService.saveGlobalClientConfiguration(toDto(formData, result?.Disabled));
+    const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData): Promise<void> => {
+        manageServerService.saveGlobalClientConfiguration(toDto(formData, result?.Disabled)).catch(() => {
+            // empty by design
+        });
     };
 
     if (loading) {
         return <LoadingView />;
     }
-
-    if (error) {
-        return <LoadError />;
-    }
-
+    // TODO: show modal on exit if is dirty
     return (
         <Form onSubmit={handleSubmit(onSave)}>
             <Col md={6} className="p-4">
-                <Button type="submit" color="primary" disabled={formState.isSubmitting}>
-                    {formState.isSubmitting ? <Spinner size="sm" /> : <i className="icon-save margin-right-xxs" />}
+                <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
+                    {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <i className="icon-save me-1" />}
                     Save
                 </Button>
 
@@ -122,11 +119,11 @@ export default function ClientConfiguration() {
                             <FormCheckbox
                                 type="checkbox"
                                 control={control}
-                                name="sessionContextEnabled"
+                                name="useSessionContextEnabled"
                                 afterChange={(event) => {
                                     if (!event.target.checked) {
-                                        resetField("seedValue");
-                                        resetField("seedEnabled");
+                                        resetField("loadBalancerSeedValue");
+                                        resetField("loadBalancerSeedEnabled");
                                     }
                                 }}
                             >
@@ -139,10 +136,12 @@ export default function ClientConfiguration() {
                                     <FormSwitch
                                         type="switch"
                                         control={control}
-                                        name="seedEnabled"
-                                        disabled={!sessionContextEnabled}
+                                        name="loadBalancerSeedEnabled"
+                                        disabled={!useSessionContextEnabled}
                                         label="Seed"
-                                        afterChange={(event) => !event.target.checked && resetField("seedValue")}
+                                        afterChange={(event) =>
+                                            !event.target.checked && resetField("loadBalancerSeedValue")
+                                        }
                                     >
                                         Seed
                                     </FormSwitch>
@@ -151,9 +150,9 @@ export default function ClientConfiguration() {
                                     <FormInput
                                         type="number"
                                         control={control}
-                                        name="seedValue"
+                                        name="loadBalancerSeedValue"
                                         placeholder="Enter seed number"
-                                        disabled={!seedEnabled}
+                                        disabled={!loadBalancerSeedEnabled}
                                     />
                                 </Col>
                             </Row>
@@ -176,7 +175,7 @@ export default function ClientConfiguration() {
                                 type="select"
                                 control={control}
                                 name="readBalanceBehaviorValue"
-                                disabled={!readBalanceBehaviorEnabled || sessionContextEnabled}
+                                disabled={!readBalanceBehaviorEnabled || useSessionContextEnabled}
                             >
                                 <FormSelectOption<ReadBalanceBehavior> label="None" value="None" />
                                 <FormSelectOption<ReadBalanceBehavior> label="Round Robin" value="RoundRobin" />
@@ -193,10 +192,11 @@ export default function ClientConfiguration() {
 function toDto(formData: ClientConfigurationFormData, disabled: boolean): ClientConfiguration {
     return {
         IdentityPartsSeparator: formData.identityPartsSeparatorValue,
-        LoadBalanceBehavior: formData.sessionContextEnabled ? "UseSessionContext" : "None",
-        LoadBalancerContextSeed: formData.seedValue,
+        LoadBalanceBehavior: formData.useSessionContextEnabled ? "UseSessionContext" : "None",
+        LoadBalancerContextSeed: formData.loadBalancerSeedValue,
         ReadBalanceBehavior: formData.readBalanceBehaviorValue,
         MaxNumberOfRequestsPerSession: formData.maximumNumberOfRequestsValue,
+        // TODO for the database view
         Disabled: disabled,
         Etag: undefined,
     };
