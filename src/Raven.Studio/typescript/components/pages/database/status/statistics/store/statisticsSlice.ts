@@ -13,7 +13,7 @@ import {
     createSuccessState,
     databaseLocationComparator,
 } from "components/utils/common";
-import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/logic/models";
+import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/store/models";
 import { WritableDraft } from "immer/dist/types/types-external";
 import { DatabaseSharedInfo } from "components/models/databases";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";

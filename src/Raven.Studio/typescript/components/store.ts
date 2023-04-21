@@ -1,6 +1,6 @@
-﻿import { addListener, configureStore, createListenerMiddleware, TypedAddListener } from "@reduxjs/toolkit";
+﻿import { configureStore, createListenerMiddleware } from "@reduxjs/toolkit";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
-import { statisticsSlice } from "components/pages/database/status/statistics/logic/statisticsSlice";
+import { statisticsSlice } from "components/pages/database/status/statistics/store/statisticsSlice";
 import { BaseThunkAPI } from "@reduxjs/toolkit/dist/createAsyncThunk";
 import { databasesSlice } from "components/common/shell/databasesSlice";
 import { services } from "hooks/useServices";
