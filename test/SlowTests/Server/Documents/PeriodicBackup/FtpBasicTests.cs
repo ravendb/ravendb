@@ -11,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -25,22 +24,27 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [FtpFact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanUploadFile()
         {
             var services = new ServiceCollection();
             services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
             services.AddFtpServer(builder => builder.UseInMemoryFileSystem().EnableAnonymousAuthentication());
-            services.Configure<FtpServerOptions>(opt => opt.ServerAddress = "127.0.0.1");
+            services.Configure<FtpServerOptions>(opt =>
+            {
+                opt.ServerAddress = "127.0.0.1";
+                opt.Port = 0;
+            });
             await using (var serviceProvider = services.BuildServiceProvider())
             {
                 var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
                 try
                 {
                     await ftpServerHost.StartAsync(CancellationToken.None);
+                    var ftpServer = serviceProvider.GetRequiredService<IFtpServer>();
                     var settings = new FtpSettings
                     {
-                        Url = "ftp://127.0.0.1:21/testing2",
+                        Url = $"ftp://127.0.0.1:{ftpServer.Port}/testing2",
                         UserName = "anonymous",
                         Password = "itay@ravendb.net"
                     };
@@ -59,22 +63,27 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [FtpFact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanUploadBackup()
         {
             var services = new ServiceCollection();
             services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
             services.AddFtpServer(builder => builder.UseInMemoryFileSystem().EnableAnonymousAuthentication());
-            services.Configure<FtpServerOptions>(opt => opt.ServerAddress = "127.0.0.1");
+            services.Configure<FtpServerOptions>(opt =>
+            {
+                opt.ServerAddress = "127.0.0.1";
+                opt.Port = 0;
+            });
             await using (var serviceProvider = services.BuildServiceProvider())
             {
                 var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
                 try
                 {
                     await ftpServerHost.StartAsync(CancellationToken.None);
+                    var ftpServer = serviceProvider.GetRequiredService<IFtpServer>();
                     var settings = new FtpSettings
                     {
-                        Url = "ftp://127.0.0.1:21/internal",
+                        Url = $"ftp://127.0.0.1:{ftpServer.Port}/internal",
                         UserName = "anonymous",
                         Password = "itay@ravendb.net"
                     };
@@ -104,134 +113,159 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [FtpFact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanUploadBackupsWithDeletion()
         {
-            BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
-            var services = new ServiceCollection();
-            services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
-            services.AddFtpServer(builder => builder.UseInMemoryFileSystem().EnableAnonymousAuthentication());
-            services.Configure<FtpServerOptions>(opt => opt.ServerAddress = "127.0.0.1");
-            await using (var serviceProvider = services.BuildServiceProvider())
+            using (await Retention.SkipMinimumBackupAgeToKeepValidationAsync())
             {
-                var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
-                try
+                var services = new ServiceCollection();
+                services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
+                services.AddFtpServer(builder => builder.UseInMemoryFileSystem().EnableAnonymousAuthentication());
+                services.Configure<FtpServerOptions>(opt =>
                 {
-                    await ftpServerHost.StartAsync(CancellationToken.None);
-                    var settings = new FtpSettings { Url = "ftp://127.0.0.1:21/internal", UserName = "anonymous", Password = "itay@ravendb.net" };
-                    using (var client = new RavenFtpClient(settings))
-                    using (var store = GetDocumentStore())
+                    opt.ServerAddress = "127.0.0.1";
+                    opt.Port = 0;
+                });
+                await using (var serviceProvider = services.BuildServiceProvider())
+                {
+                    var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
+                    try
                     {
-                        var config = Backup.CreateBackupConfiguration(ftpSettings: settings, name: "ftpBackupTest",
-                            retentionPolicy: new RetentionPolicy { MinimumBackupAgeToKeep = TimeSpan.FromSeconds(15) });
-                        var backupId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                        for (int i = 0; i < 3; i++)
+                        await ftpServerHost.StartAsync(CancellationToken.None);
+                        var ftpServer = serviceProvider.GetRequiredService<IFtpServer>();
+                        var settings = new FtpSettings
                         {
-                            using (var session = store.OpenSession())
+                            Url = $"ftp://127.0.0.1:{ftpServer.Port}/internal",
+                            UserName = "anonymous",
+                            Password = "itay@ravendb.net"
+                        };
+                        using (var client = new RavenFtpClient(settings))
+                        using (var store = GetDocumentStore())
+                        {
+                            var config = Backup.CreateBackupConfiguration(ftpSettings: settings, name: "ftpBackupTest",
+                                retentionPolicy: new RetentionPolicy { MinimumBackupAgeToKeep = TimeSpan.FromSeconds(15) });
+                            var backupId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                            for (int i = 0; i < 3; i++)
                             {
-                                session.Store(new User { Name = "itay" });
-                                session.SaveChanges();
-                            }
+                                using (var session = store.OpenSession())
+                                {
+                                    session.Store(new User { Name = "itay" });
+                                    session.SaveChanges();
+                                }
 
-                            var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                            await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, expectedEtag: lastEtag, timeout: 120000);
+                                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                                await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, expectedEtag: lastEtag, timeout: 120000);
+                            }
+                            await Task.Delay(TimeSpan.FromSeconds(15) + TimeSpan.FromSeconds(3));
+                            using (var session = store.OpenAsyncSession())
+                            {
+                                await session.StoreAsync(new User { Name = "itay" });
+                                await session.SaveChangesAsync();
+                            }
+                            var etag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                            await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, isFullBackup: true, expectedEtag: etag, timeout: 120000);
+                            var folders = client.GetFolders();
+                            var foundFolders = 0;
+                            for (int i = 0; i < folders.Count; i++)
+                            {
+                                var isExist = folders[i].Contains("CanUploadBackupsWithDeletion");
+                                if (isExist)
+                                    foundFolders++;
+                            }
+                            Assert.Equal(1, foundFolders);
                         }
-                        await Task.Delay(TimeSpan.FromSeconds(15) + TimeSpan.FromSeconds(3));
-                        using (var session = store.OpenAsyncSession())
-                        {
-                            await session.StoreAsync(new User { Name = "itay" });
-                            await session.SaveChangesAsync();
-                        }
-                        var etag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                        await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, isFullBackup: true, expectedEtag: etag, timeout: 120000);
-                        var folders = client.GetFolders();
-                        var foundFolders = 0;
-                        for (int i = 0; i < folders.Count; i++)
-                        {
-                            var isExist = folders[i].Contains("CanUploadBackupsWithDeletion");
-                            if (isExist)
-                                foundFolders++;
-                        }
-                        Assert.Equal(1, foundFolders);
                     }
-                }
-                finally
-                {
-                    BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
-                    await ftpServerHost.StopAsync(CancellationToken.None);
+                    finally
+                    {
+                        await ftpServerHost.StopAsync(CancellationToken.None);
+                    }
                 }
             }
         }
 
-        [FtpFact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanUploadFileOnEncrypted()
         {
-            var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var setupCert = Certificates.SetupServerAuthentication(certificates: generatedCert);
-            var cert = new X509Certificate2(setupCert.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
-            var services = new ServiceCollection();
-            services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
-            services.Configure<AuthTlsOptions>(cfg => cfg.ServerCertificate = cert);
-            services.AddFtpServer(builder => builder.UseInMemoryFileSystem().EnableAnonymousAuthentication());
-            services.Configure<FtpServerOptions>(opt => opt.ServerAddress = "127.0.0.1");
-            await using (var serviceProvider = services.BuildServiceProvider())
+            using (await Retention.SkipMinimumBackupAgeToKeepValidationAsync())
             {
-                var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
-                try
+                var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate();
+                var setupCert = Certificates.SetupServerAuthentication(certificates: generatedCert);
+                var services = new ServiceCollection();
+                services.Configure<AuthTlsOptions>(cfg => cfg.ServerCertificate = generatedCert.ServerCertificate.Value);
+                services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
+                services.AddFtpServer(builder => builder
+                    .UseInMemoryFileSystem()
+                    .EnableAnonymousAuthentication());
+                services.Configure<FtpServerOptions>(opt =>
                 {
-                    await ftpServerHost.StartAsync(CancellationToken.None);
-                    
-                    var settings = new FtpSettings
+                    opt.ServerAddress = "127.0.0.1";
+                    opt.Port = 0;
+                });
+                await using (var serviceProvider = services.BuildServiceProvider())
+                {
+                    var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
+                    try
                     {
-                        Url = "ftps://127.0.0.1:21/internal",
-                        UserName = "anonymous",
-                        Password = "itay@ravendb.net",
-                        CertificateAsBase64 = Convert.ToBase64String(cert.Export(X509ContentType.Cert))
-                    };
-                    using (var client = new RavenFtpClient(settings))
-                    using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("abc")))
-                    {
-                         client.UploadFile("testFolder", "testFile", stream);
-                        var isExist = CheckFile(settings.Url, "testFolder", "testFile", client);
-                        Assert.Equal(true, isExist);
+                        await ftpServerHost.StartAsync(CancellationToken.None);
+                        var ftpServer = serviceProvider.GetRequiredService<IFtpServer>();
+                        var settings = new FtpSettings
+                        {
+                            Url = $"ftps://127.0.0.1:{ftpServer.Port}/internal",
+                            UserName = "anonymous",
+                            Password = "itay@ravendb.net",
+                            CertificateAsBase64 = Convert.ToBase64String(generatedCert.ServerCertificate.Value.Export(X509ContentType.Cert))
+                        };
+                        using (var client = new RavenFtpClient(settings))
+                        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("abc")))
+                        {
+                            client.UploadFile("testFolder", "testFile", stream);
+                            var isExist = CheckFile(settings.Url, "testFolder", "testFile", client);
+                            Assert.Equal(true, isExist);
+                        }
                     }
-                }
-                finally
-                {
-                    await ftpServerHost.StopAsync(CancellationToken.None);
+                    finally
+                    {
+                        await ftpServerHost.StopAsync(CancellationToken.None);
+                    }
                 }
             }
         }
 
-        [FtpFact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanUploadBackupOnEncrypted()
         {
-            var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate();
             var setupCert = Certificates.SetupServerAuthentication(certificates: generatedCert);
-            var cert = new X509Certificate2(setupCert.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             var services = new ServiceCollection();
+            services.Configure<AuthTlsOptions>(cfg => cfg.ServerCertificate = generatedCert.ServerCertificate.Value);
             services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
-            services.Configure<AuthTlsOptions>(cfg => cfg.ServerCertificate = cert);
-            services.AddFtpServer(builder => builder.UseInMemoryFileSystem().EnableAnonymousAuthentication());
-            services.Configure<FtpServerOptions>(opt => opt.ServerAddress = "127.0.0.1");
+            services.AddFtpServer(builder => builder
+                .UseInMemoryFileSystem()
+                .EnableAnonymousAuthentication());
+            services.Configure<FtpServerOptions>(opt =>
+            {
+                opt.ServerAddress = "127.0.0.1";
+                opt.Port = 0;
+            });
             await using (var serviceProvider = services.BuildServiceProvider())
             {
                 var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
                 try
                 {
                     await ftpServerHost.StartAsync(CancellationToken.None);
+                    var ftpServer = serviceProvider.GetRequiredService<IFtpServer>();
                     var settings = new FtpSettings
                     {
-                        Url = "ftps://127.0.0.1",
+                        Url = $"ftps://127.0.0.1:{ftpServer.Port}",
                         UserName = "anonymous",
                         Password = "itay@ravendb.net",
-                        CertificateAsBase64 = Convert.ToBase64String(cert.Export(X509ContentType.Cert))
+                        CertificateAsBase64 = Convert.ToBase64String(generatedCert.ServerCertificate.Value.Export(X509ContentType.Cert))
                     };
                     using (var client = new RavenFtpClient(settings))
                     using (var store = GetDocumentStore(options: new Options
-                           {
-                               ClientCertificate = cert
-                           }))
+                    {
+                        ClientCertificate = generatedCert.ServerCertificate.Value
+                    }))
                     {
                         using (var session = store.OpenSession())
                         {
@@ -256,73 +290,81 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [FtpFact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanUploadBackupsWithDeletionOnEncrypted()
         {
-            var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var setupCert = Certificates.SetupServerAuthentication(certificates: generatedCert);
-            var cert = new X509Certificate2(setupCert.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
-            BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
-            var services = new ServiceCollection();
-            services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
-            services.Configure<AuthTlsOptions>(cfg => cfg.ServerCertificate = cert);
-            services.AddFtpServer(builder => builder.UseInMemoryFileSystem().EnableAnonymousAuthentication());
-            services.Configure<FtpServerOptions>(opt => opt.ServerAddress = "127.0.0.1");
-            await using (var serviceProvider = services.BuildServiceProvider())
+            using (await Retention.SkipMinimumBackupAgeToKeepValidationAsync())
             {
-                var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
-                try
+                var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate();
+                var setupCert = Certificates.SetupServerAuthentication(certificates: generatedCert);
+                var services = new ServiceCollection();
+                services.Configure<AuthTlsOptions>(cfg => cfg.ServerCertificate = generatedCert.ServerCertificate.Value);
+                services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
+                services.AddFtpServer(builder => builder
+                    .UseInMemoryFileSystem()
+                    .EnableAnonymousAuthentication());
+                services.Configure<FtpServerOptions>(opt =>
                 {
-                    await ftpServerHost.StartAsync(CancellationToken.None);
-                    var settings = new FtpSettings { 
-                        Url = "ftps://127.0.0.1:21/internal",
-                        UserName = "anonymous",
-                        Password = "itay@ravendb.net",
-                        CertificateAsBase64 = Convert.ToBase64String(cert.Export(X509ContentType.Cert))
-                    };
-                    using (var client = new RavenFtpClient(settings))
-                    using (var store = GetDocumentStore(options: new Options
-                           {
-                               ClientCertificate = cert
-                           }))
+                    opt.ServerAddress = "127.0.0.1";
+                    opt.Port = 0;
+                });
+                await using (var serviceProvider = services.BuildServiceProvider())
+                {
+                    var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
+                    try
                     {
-                        var config = Backup.CreateBackupConfiguration(ftpSettings: settings, name: "ftpBackupTest",
-                            retentionPolicy: new RetentionPolicy { MinimumBackupAgeToKeep = TimeSpan.FromSeconds(15) });
-                        var backupId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                        for (int i = 0; i < 3; i++)
+                        await ftpServerHost.StartAsync(CancellationToken.None);
+                        var ftpServer = serviceProvider.GetRequiredService<IFtpServer>();
+                        var settings = new FtpSettings
                         {
-                            using (var session = store.OpenSession())
+                            Url = $"ftps://127.0.0.1:{ftpServer.Port}/internal",
+                            UserName = "anonymous",
+                            Password = "itay@ravendb.net",
+                            CertificateAsBase64 = Convert.ToBase64String(generatedCert.ServerCertificate.Value.Export(X509ContentType.Cert))
+                        };
+                        using (var client = new RavenFtpClient(settings))
+                        using (var store = GetDocumentStore(options: new Options
+                        {
+                            ClientCertificate = generatedCert.ServerCertificate.Value
+                        }))
+                        {
+                            var config = Backup.CreateBackupConfiguration(ftpSettings: settings, name: "ftpBackupTest",
+                                retentionPolicy: new RetentionPolicy { MinimumBackupAgeToKeep = TimeSpan.FromSeconds(15) });
+                            var backupId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                            for (int i = 0; i < 3; i++)
                             {
-                                session.Store(new User { Name = "itay" });
-                                session.SaveChanges();
-                            }
+                                using (var session = store.OpenSession())
+                                {
+                                    session.Store(new User { Name = "itay" });
+                                    session.SaveChanges();
+                                }
 
-                            var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                            await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, expectedEtag: lastEtag, timeout: 120000);
+                                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                                await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, expectedEtag: lastEtag, timeout: 120000);
+                            }
+                            await Task.Delay(TimeSpan.FromSeconds(15) + TimeSpan.FromSeconds(3));
+                            using (var session = store.OpenAsyncSession())
+                            {
+                                await session.StoreAsync(new User { Name = "itay" });
+                                await session.SaveChangesAsync();
+                            }
+                            var etag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                            await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, isFullBackup: true, expectedEtag: etag, timeout: 120000);
+                            var folders = client.GetFolders();
+                            var foundFolders = 0;
+                            for (int i = 0; i < folders.Count; i++)
+                            {
+                                var isExist = folders[i].Contains("CanUploadBackupsWithDeletion");
+                                if (isExist)
+                                    foundFolders++;
+                            }
+                            Assert.Equal(1, foundFolders);
                         }
-                        await Task.Delay(TimeSpan.FromSeconds(15) + TimeSpan.FromSeconds(3));
-                        using (var session = store.OpenAsyncSession())
-                        {
-                            await session.StoreAsync(new User { Name = "itay" });
-                            await session.SaveChangesAsync();
-                        }
-                        var etag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                        await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, isFullBackup: true, expectedEtag: etag, timeout: 120000);
-                        var folders = client.GetFolders();
-                        var foundFolders = 0;
-                        for (int i = 0; i < folders.Count; i++)
-                        {
-                            var isExist = folders[i].Contains("CanUploadBackupsWithDeletion");
-                            if (isExist)
-                                foundFolders++;
-                        }
-                        Assert.Equal(1, foundFolders);
                     }
-                }
-                finally
-                {
-                    BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
-                    await ftpServerHost.StopAsync(CancellationToken.None);
+                    finally
+                    {
+                        await ftpServerHost.StopAsync(CancellationToken.None);
+                    }
                 }
             }
         }
