@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useMemo, useState } from "react";
+﻿import React, { useCallback, useState } from "react";
 import { useAccessManager } from "hooks/useAccessManager";
 import {
     Button,
@@ -13,17 +13,16 @@ import { useAppDispatch } from "components/store";
 import { DatabaseSharedInfo } from "components/models/databases";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useEventsCollector } from "hooks/useEventsCollector";
-import {
-    changeDatabasesLockMode,
-    confirmDeleteDatabases,
-    confirmSetLockMode,
-    confirmToggleDatabases,
-    deleteDatabases,
-    toggleDatabases,
-} from "components/common/shell/databaseSliceActions";
 import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
 import { Icon } from "components/common/Icon";
+import {
+    changeDatabasesLockMode,
+    confirmSetLockMode,
+    confirmToggleDatabases,
+    toggleDatabases,
+} from "components/pages/resources/databases/store/databasesViewActions";
+import { databaseActions } from "components/common/shell/databaseSliceActions";
 
 interface DatabasesSelectActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -95,12 +94,12 @@ export function DatabasesSelectActions({
     };
 
     const onDelete = async () => {
-        const result = await dispatch(confirmDeleteDatabases(selectedDatabases));
+        const result = await dispatch(databaseActions.confirmDeleteDatabases(selectedDatabases));
 
         if (result.can) {
             setDeleteChanges(true);
             try {
-                await dispatch(deleteDatabases(result.databases, result.keepFiles));
+                await dispatch(databaseActions.deleteDatabases(result.databases, result.keepFiles));
             } finally {
                 setDeleteChanges(false);
             }
