@@ -356,15 +356,11 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public string Url { get; set; }
 
-        public int? Port { get; set; }
-
         public string UserName { get; set; }
 
         public string Password { get; set; }
 
         public string CertificateAsBase64 { get; set; }
-
-        public string CertificateFileName { get; set; }
 
         public FtpSettings()
         {
@@ -376,11 +372,9 @@ namespace Raven.Client.Documents.Operations.Backups
                 throw new ArgumentNullException(nameof(settings));
 
             Url = settings.Url;
-            Port = settings.Port;
             UserName = settings.UserName;
             Password = settings.Password;
             CertificateAsBase64 = settings.CertificateAsBase64;
-            CertificateFileName = settings.CertificateFileName;
             Disabled = settings.Disabled;
 
             if (settings.GetBackupConfigurationScript != null)
@@ -392,7 +386,7 @@ namespace Raven.Client.Documents.Operations.Backups
             if (base.HasSettings())
                 return true;
 
-            return Port != 0 && string.IsNullOrWhiteSpace(Url) == false;
+            return string.IsNullOrWhiteSpace(Url) == false;
         }
 
         public override DynamicJsonValue ToJson()
@@ -400,11 +394,9 @@ namespace Raven.Client.Documents.Operations.Backups
             var djv = base.ToJson();
 
             djv[nameof(Url)] = Url;
-            djv[nameof(Port)] = Port;
             djv[nameof(UserName)] = UserName;
             djv[nameof(Password)] = Password;
             djv[nameof(CertificateAsBase64)] = CertificateAsBase64;
-            djv[nameof(CertificateFileName)] = CertificateFileName;
 
             return djv;
         }

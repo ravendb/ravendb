@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             if (FtpSettings != null)
             {
                 if (FtpSettings.HasSettings() == false)
-                    errors.Add($"{nameof(FtpSettings)} has no valid setting. '{nameof(FtpSettings.Port)}' is 0  and '{nameof(FtpSettings.Url)}' and '{nameof(GetBackupConfigurationScript)}' are both null");
+                    errors.Add($"{nameof(FtpSettings)} has no valid setting. '{nameof(FtpSettings.Url)}' is null");
             }
             if (LocalSettings != null)
             {

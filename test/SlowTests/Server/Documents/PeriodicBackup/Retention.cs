@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Tests.Core.Utils.Entities;
@@ -29,18 +30,28 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private static readonly SemaphoreSlim Locker = new SemaphoreSlim(1, 1);
 
+        public static async ValueTask<IDisposable> SkipMinimumBackupAgeToKeepValidationAsync()
+        {
+            await Locker.WaitAsync();
+
+            Debug.Assert(BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation == false);
+            BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
+
+            return new DisposableAction(() =>
+            {
+                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
+                Locker.Release();
+            });
+        }
+
         [Theory, Trait("Category", "Smuggler")]
         [InlineData(7, 3, false)]
         [InlineData(10, 3, true)]
         [InlineData(7, 3, false, "/E/G/O/R/../../../..")]
         public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental, string suffix = null)
         {
-            await Locker.WaitAsync();
-
-            try
+            using (await SkipMinimumBackupAgeToKeepValidationAsync())
             {
-                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
-
                 var backupPath = NewDataPath(suffix: "BackupFolder");
 
                 if (suffix != null)
@@ -65,11 +76,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         return Task.FromResult(directories.Count());
                     }, timeout: 15000, checkIncremental);
             }
-            finally
-            {
-                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
-                Locker.Release();
-            }
         }
 
         [AmazonS3Theory]
@@ -77,12 +83,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(10, 3, true)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
-            await Locker.WaitAsync();
-
-            try
+            using (await SkipMinimumBackupAgeToKeepValidationAsync())
             {
                 var settings = GetS3Settings();
-                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
 
                 await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                     (configuration, databaseName) =>
@@ -98,11 +101,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         }
                     }, timeout: 120000, checkIncremental);
             }
-            finally
-            {
-                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
-                Locker.Release();
-            }
         }
 
         [AzureTheory, Trait("Category", "Smuggler")]
@@ -110,14 +108,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(10, 3, true)]
         public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
-            await Locker.WaitAsync();
+            using (await SkipMinimumBackupAgeToKeepValidationAsync())
             using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
-                try
-                {
-                    BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
-
-                    await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
+                await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                         (configuration, databaseName) =>
                         {
                             configuration.AzureSettings = holder.Settings;
@@ -128,12 +122,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             var folders = await holder.Client.ListBlobsAsync($"{holder.Client.RemoteFolderName}/", delimiter: "/", listFolders: true);
                             return folders.List.Count();
                         }, timeout: 120000, checkIncremental);
-                }
-                finally
-                {
-                    BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
-                    Locker.Release();
-                }
             }
         }
 
@@ -244,10 +232,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var sp3 = Stopwatch.StartNew();
                 var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true, expectedEtag: etag, timeout: timeout);
                 sp3.Stop();
-                
+
                 var directoriesCount = await getDirectoriesCount(store.Database);
                 var expectedNumberOfDirectories = checkIncremental ? 2 : 1;
-                Assert.True(expectedNumberOfDirectories == directoriesCount, 
+                Assert.True(expectedNumberOfDirectories == directoriesCount,
                     $"ExpectedNumberOfDirectories: {expectedNumberOfDirectories}, ActualNumberOfDirectories: {directoriesCount}, SaveChanges() duration: {sp1.Elapsed}, GetStatisticsOperation duration: {sp2.Elapsed}, RunBackupAndReturnStatusAsync duration: {sp3.Elapsed}," +
                     $" Backup duration: {status.DurationInMs}, LocalRetentionDurationInMs: {status.LocalRetentionDurationInMs}");
 

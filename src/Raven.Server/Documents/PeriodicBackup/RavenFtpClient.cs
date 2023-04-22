@@ -5,9 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -17,7 +15,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using FluentFTP;
 using FluentFTP.Client.BaseClient;
-using FluentFTP.Exceptions;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 
@@ -30,8 +27,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly string _userName;
         private readonly string _password;
         private readonly string _certificateAsBase64;
-        private readonly string _certificateFileName;
-        private readonly bool _useSsl;
         private const int DefaultFtpPort = 21;
         public static bool ValidateAnyCertificate = false;
 
@@ -39,26 +34,23 @@ namespace Raven.Server.Documents.PeriodicBackup
             : base(progress, cancellationToken)
         {
             _url = ftpSettings.Url;
-            _port = ftpSettings.Port;
             _userName = ftpSettings.UserName;
             _password = ftpSettings.Password;
             _certificateAsBase64 = ftpSettings.CertificateAsBase64;
-            _certificateFileName = ftpSettings.CertificateFileName;
 
             if (_url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase) == false &&
                 _url.StartsWith("ftps://", StringComparison.OrdinalIgnoreCase) == false)
                 _url = "ftp://" + _url;
 
-            if (_url.StartsWith("ftps", StringComparison.OrdinalIgnoreCase))
-            {
-                _useSsl = true;
+            if (_url.StartsWith("ftps://", StringComparison.OrdinalIgnoreCase))
                 _url = _url.Replace("ftps://", "ftp://", StringComparison.OrdinalIgnoreCase);
-            }
 
             if (_url.EndsWith("/") == false)
                 _url += "/";
 
-            Debug.Assert(_url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase));
+            var uri = new Uri(_url);
+            if (uri.IsDefaultPort == false)
+                _port = uri.Port;
         }
 
         /// <summary>
@@ -165,9 +157,9 @@ namespace Raven.Server.Documents.PeriodicBackup
         internal FtpClient CreateFtpClient(string url, bool keepAlive)
         {
             var client = new FtpClient(url);
-            client.Config.ConnectTimeout = 300000; // Wait 5 min when trying to connect
+            client.Config.ConnectTimeout = 0;
             client.Credentials = new NetworkCredential(_userName, _password);
-            if (_useSsl)
+            if (string.IsNullOrEmpty(_certificateAsBase64) == false)
             {
                 var byteArray = Convert.FromBase64String(_certificateAsBase64);
 
@@ -176,14 +168,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var x509Certificate = new X509Certificate2(byteArray);
                     client.Config.EncryptionMode = FtpEncryptionMode.Explicit;
                     client.Config.ClientCertificates.Add(x509Certificate);
-                    if (ValidateAnyCertificate)
-                        client.Config.ValidateAnyCertificate = true;
-                    else
-                        client.ValidateCertificate += new FtpSslValidation(OnValidateCertificate);
+                    client.ValidateCertificate += OnValidateCertificate;
                 }
                 catch (Exception e)
                 {
-                    throw new ArgumentException($"This is not a valid certificate, file name: {_certificateFileName}", e);
+                    throw new ArgumentException("Could not load certificate.", e);
                 }
             }
 
@@ -198,7 +187,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private static void OnValidateCertificate(BaseFtpClient control, FtpSslValidationEventArgs e)
         {
-            if (e.PolicyErrors == SslPolicyErrors.None)
+            if (e.PolicyErrors == SslPolicyErrors.None || ValidateAnyCertificate)
             {
                 e.Accept = true;
             }
@@ -215,8 +204,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         /// <exception cref="AuthenticationException">When giving wrong certificate or url not matched</exception>
         public void TestConnection()
         {
-            if (_useSsl && string.IsNullOrWhiteSpace(_certificateAsBase64))
-                throw new ArgumentException("Certificate must be provided when using ftp with SSL!");
             ExtractUrlAndDirectories(out var url, out var _);
             using (var client = CreateFtpClient(url, keepAlive: false))
             {
@@ -292,7 +279,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         /// <exception cref="ArgumentException">When giving invalid certificate</exception>
         public List<string> GetFiles([NotNull] string folderName)
         {
-            if (string.IsNullOrEmpty(folderName)) throw new ArgumentException("Value cannot be null or empty.", nameof(folderName));
+            if (string.IsNullOrEmpty(folderName))
+                throw new ArgumentException("Value cannot be null or empty.", nameof(folderName));
             ExtractUrlAndDirectories(out var url, out _);
             return GetItemsInternal(url, folderName, FtpObjectType.File);
         }
@@ -304,7 +292,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         /// <exception cref="ArgumentException">When giving invalid certificate</exception>
         public void DeleteFolder([NotNull] string folderName)
         {
-            if (string.IsNullOrEmpty(folderName)) throw new ArgumentException("Value cannot be null or empty.", nameof(folderName));
+            if (string.IsNullOrEmpty(folderName))
+                throw new ArgumentException("Value cannot be null or empty.", nameof(folderName));
             ExtractUrlAndDirectories(out var url, out _);
             using (var client = CreateFtpClient(url, keepAlive: false))
             {
