@@ -44,8 +44,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             {
                 foreach (var counterGroup in Counters)
                 {
-                    counterGroup.Id.Dispose();
-                    counterGroup.Collection.Dispose();
                     counterGroup.Dispose();
                 }
 
