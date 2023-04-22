@@ -1407,7 +1407,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
                     record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
-                
+
             }))
             {
                 var timeSeriesIndex = new MyTsIndex_WithSpace();
@@ -1718,9 +1718,9 @@ namespace SlowTests.Client.Indexing.TimeSeries
             {
                 AddMap<User>(
                     $"TimeSeries",
-                    timeSeriesSegments => 
+                    timeSeriesSegments =>
                         from seriesSegment in timeSeriesSegments
-                        select new { Value = seriesSegment.Entries.Average(e => e.Value) });   
+                        select new { Value = seriesSegment.Entries.Average(e => e.Value) });
             }
         }
 
@@ -1734,20 +1734,20 @@ namespace SlowTests.Client.Indexing.TimeSeries
             public ProgressTestTimeSeriesMapReduceIndex()
             {
                 AddMap($"TimeSeries",
-                    timeSeriesSegments => 
+                    timeSeriesSegments =>
                         from timeSeriesSegment in timeSeriesSegments
                         let max = timeSeriesSegment.Entries.Max(e => e.Value)
                         select new
                         {
                             Max = max,
-                            IsBig = max > 20 
+                            IsBig = max > 20
                         });
 
                 Reduce = results =>
                     from result in results
-                    group result by new {result.IsBig}
+                    group result by new { result.IsBig }
                     into g
-                    select new {IsBig = g.Key, Max = g.Max(r => r.Max)};
+                    select new { IsBig = g.Key, Max = g.Max(r => r.Max) };
             }
         }
 
@@ -1755,17 +1755,17 @@ namespace SlowTests.Client.Indexing.TimeSeries
         public static IEnumerable<object[]> ProgressTestIndexes =>
             new[]
             {
-                new object[] {new ProgressTestTimeSeriesIndex()}, 
+                new object[] {new ProgressTestTimeSeriesIndex()},
                 new object[] {new ProgressTestTimeSeriesMapReduceIndex()},
             };
-        
-        [Theory]
+
+        [MultiplatformTheory(RavenArchitecture.AllX64)]
         [MemberData(nameof(ProgressTestIndexes))]
         public async Task TimeSeriesIndexProgress_WhenMapMultipleSegment_ShouldDisplayNumberOfSegmentToMap(AbstractTimeSeriesIndexCreationTask index)
         {
             const string timeSeries = "TimeSeries";
             const int numberOfTimeSeries = 500 * 1000;
-            
+
             using var store = GetDocumentStore();
 
             await index.ExecuteAsync(store);
@@ -1790,12 +1790,12 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.TimeSeriesFor(user.Id, timeSeries).Append(baseTime.AddMilliseconds(i), 12);
                 }
                 await session.SaveChangesAsync();
-                
+
                 var progress = await GetProgressAsync(store);
                 Assert.True(progress.NumberOfItemsToProcess > 1);
                 Assert.True(progress.TotalNumberOfItems > 1);
             }
-            
+
             await store.Maintenance.SendAsync(new StartIndexingOperation());
             Indexes.WaitForIndexing(store);
             await store.Maintenance.SendAsync(new StopIndexingOperation());
@@ -1804,7 +1804,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 await session.StoreAsync(user);
                 session.TimeSeriesFor(user.Id, timeSeries).Delete(baseTime, baseTime.AddMilliseconds(numberOfTimeSeries));
                 await session.SaveChangesAsync();
-                
+
                 var progress = await GetProgressAsync(store);
                 Assert.True(progress.NumberOfItemsToProcess > 1);
                 Assert.True(progress.TotalNumberOfItems > 1);
