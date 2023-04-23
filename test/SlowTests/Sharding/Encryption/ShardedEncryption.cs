@@ -9,6 +9,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -38,7 +39,6 @@ namespace SlowTests.Sharding.Encryption
                 },
                 ModifyDatabaseName = s => dbName
             };
-
 
             using (var store = Sharding.GetDocumentStore(options))
             {
@@ -210,7 +210,7 @@ namespace SlowTests.Sharding.Encryption
             }
         }
 
-        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
         public async Task ClientCertificateForShardedDatabaseShouldPermitAccessToIndividualShards()
         {
             Encryption.EncryptedServer(out var certificates, out var dbName);
@@ -308,6 +308,184 @@ namespace SlowTests.Sharding.Encryption
                     {
                         var newDoc = await session.LoadAsync<User>(newId);
                         Assert.NotNull(newDoc);
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
+        public async Task DatabaseSecretKeyShouldBeDeletedAfterShardedDatabaseDeletion()
+        {
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
+            Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+
+            var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+            options.ClientCertificate = certificates.ClientCertificate1.Value;
+            options.AdminCertificate = certificates.ServerCertificate.Value;
+            options.ModifyDatabaseName = _ => databaseName;
+            options.ModifyDatabaseRecord += record => record.Encrypted = true;
+            options.RunInMemory = false;
+            options.DeleteDatabaseOnDispose = false;
+
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+                foreach (var server in nodes)
+                {
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var keys = server.ServerStore.GetSecretKeysNames(ctx).ToList();
+                        Assert.Equal(1, keys.Count);
+                        Assert.Equal(store.Database, keys[0]);
+                    }
+                }
+
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true));
+
+                Assert.True(WaitForValue(() =>
+                {
+                    var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+                    return record == null;
+                }, expectedVal: true));
+
+                foreach (var server in nodes)
+                {
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var keys = server.ServerStore.GetSecretKeysNames(ctx).ToList();
+                        Assert.Empty(keys);
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
+        public async Task ShouldNotRemoveSecretKeyFromNodeThatStillHasShards()
+        {
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
+            Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+
+            var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+            options.ClientCertificate = certificates.ClientCertificate1.Value;
+            options.AdminCertificate = certificates.ServerCertificate.Value;
+            options.ModifyDatabaseName = _ => databaseName;
+            options.ModifyDatabaseRecord += record => record.Encrypted = true;
+            options.RunInMemory = false;
+
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                // add shard
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var nodeToAddShardTo = sharding.Shards[0].Members[0];
+
+                var addShardRes = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, new[] { nodeToAddShardTo }));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addShardRes.RaftCommandIndex);
+                var newShardNumber = addShardRes.ShardNumber;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    sharding = await Sharding.GetShardingConfigurationAsync(store);
+                    sharding.Shards.TryGetValue(newShardNumber, out var topology);
+                    return topology?.Members.Count;
+                }, expectedVal: 1);
+
+                Assert.Equal(sharding.Shards[0].Members[0], sharding.Shards[newShardNumber].Members[0]);
+
+                // remove the newly added shard 
+                var res = store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shardNumber: newShardNumber, hardDelete: true, fromNode: nodeToAddShardTo));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    sharding = await Sharding.GetShardingConfigurationAsync(store);
+                    return sharding.Shards.TryGetValue(newShardNumber, out _);
+                }, expectedVal: false);
+
+                // verify that secret key is not deleted from the shard-node that we removed
+                var node = nodes.Single(n => n.ServerStore.NodeTag == nodeToAddShardTo);
+                using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var keys = node.ServerStore.GetSecretKeysNames(ctx).ToList();
+                    Assert.Equal(1, keys.Count);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
+        public async Task CanAddAndRemoveShardFromEncryptedShardedDb()
+        {
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
+            Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
+            options.ClientCertificate = certificates.ClientCertificate1.Value;
+            options.AdminCertificate = certificates.ServerCertificate.Value;
+            options.ModifyDatabaseName = _ => databaseName;
+            options.ModifyDatabaseRecord += record => record.Encrypted = true;
+            options.RunInMemory = false;
+
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+                foreach (var server in nodes)
+                {
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var keys = server.ServerStore.GetSecretKeysNames(ctx).ToList();
+                        Assert.Equal(1, keys.Count);
+                        Assert.Equal(store.Database, keys[0]);
+                    }
+                }
+
+                // add shard
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var shardNodes = sharding.Shards.Select(kvp => kvp.Value.Members[0]);
+                var nodeNotInDbGroup = nodes.SingleOrDefault(n => shardNodes.Contains(n.ServerStore.NodeTag) == false);
+                Assert.NotNull(nodeNotInDbGroup);
+
+                var addShardRes = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, new[] { nodeNotInDbGroup.ServerStore.NodeTag }));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addShardRes.RaftCommandIndex);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    sharding = await Sharding.GetShardingConfigurationAsync(store);
+                    sharding.Shards.TryGetValue(addShardRes.ShardNumber, out var topology);
+                    return topology?.Members.Count;
+                }, expectedVal: 1);
+
+                Assert.Equal(nodeNotInDbGroup.ServerStore.NodeTag, sharding.Shards[addShardRes.ShardNumber].Members[0]);
+
+                // remove the newly added shard 
+                var shardToRemove = addShardRes.ShardNumber;
+                var nodeToRemoveFrom = sharding.Shards[shardToRemove].Members[0];
+
+                var res = store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shardNumber: shardToRemove, hardDelete: true, fromNode: nodeToRemoveFrom));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    sharding = await Sharding.GetShardingConfigurationAsync(store);
+                    return sharding.Shards.TryGetValue(shardToRemove, out _);
+                }, expectedVal: false);
+
+                // verify that secret key is deleted from the shard-node that we removed,
+                // and from that node only
+                foreach (var server in nodes)
+                {
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var keys = server.ServerStore.GetSecretKeysNames(ctx).ToList();
+                        if (server.ServerStore.NodeTag == nodeToRemoveFrom)
+                            Assert.Empty(keys);
+                        else
+                            Assert.Equal(1, keys.Count);
                     }
                 }
             }

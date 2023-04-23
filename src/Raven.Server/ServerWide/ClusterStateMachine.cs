@@ -3578,7 +3578,6 @@ namespace Raven.Server.ServerWide
             return ReadRawDatabaseRecord(context, name, out _);
         }
 
-
         public bool DatabaseExists<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {
