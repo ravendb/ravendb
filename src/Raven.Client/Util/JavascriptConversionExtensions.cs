@@ -1033,16 +1033,16 @@ namespace Raven.Client.Util
                 var writer = context.GetWriter();
 
                 //if not a lambda expression then
-                if (!methodCallExpression.Arguments[0].Type.BaseType.Name.Contains("LambdaExpression"))
+                if (methodCallExpression.Arguments[0].Type.BaseType.Name.Contains("LambdaExpression") == false)
                 {
                     using (writer.Operation(methodCallExpression))
                     {
                         var arg = methodCallExpression.Arguments[0];
 
-                        if (arg is ConstantExpression { Value: string target1})
+                        if (arg is ConstantExpression { Value: string docName})
                         {
                             writer.Write("includes.document(");
-                            writer.Write(target1);
+                            writer.Write(docName);
                             writer.Write(")");
                             return;
                         }
@@ -1082,40 +1082,6 @@ namespace Raven.Client.Util
                 }
             }
         }
-
-        /*public class IncludeTimeSeriesSupport : JavascriptConversionExtension
-        {
-            public static readonly IncludeTimeSeriesSupport Instance = new IncludeTimeSeriesSupport();
-
-            public override void ConvertToJavascript(JavascriptConversionContext context)
-            {
-                var methodCallExpression = context.Node as MethodCallExpression;
-
-                if (methodCallExpression?.Method.Name != nameof(RavenQuery.IncludeTimeSeries))
-                    return;
-
-                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
-                    return;
-                if (methodCallExpression.Arguments.Count != 2)
-                    return;
-
-                context.PreventDefault();
-
-                var writer = context.GetWriter();
-                using (writer.Operation(methodCallExpression))
-                {
-                    int argNum = methodCallExpression.Arguments.Count;
-                    writer.Write("includes.timeseries(");
-                    for (var i = 0; i < argNum; i++)
-                    {
-                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
-                        if (i < argNum - 1)
-                            writer.Write(",");
-                    }
-                    writer.Write(")");
-                }
-            }
-        }*/
 
         public class IncludeCountersAndTimeSeriesSupport : JavascriptConversionExtension
         {

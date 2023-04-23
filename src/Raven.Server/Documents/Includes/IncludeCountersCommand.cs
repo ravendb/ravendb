@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Includes
                 return;
 
             var counterNamesArray = countersNames.ToArray();
-            if (_countersBySourcePath.Count < 1)
+            if (_countersBySourcePath.Count == 0)
             {
                 _countersBySourcePath.Add(string.Empty, counterNamesArray);
             }
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Includes
 
                 var countersToGet = kvp.Value.ToArray();
                 CountersToGetByDocId[docId] = countersToGet;
-                
+
                 var details = CountersHandler.GetInternal(_database, _context, countersToGet, docId, false);
                 Results.Add(docId, details.Counters);
             }

@@ -3140,21 +3140,21 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 if (IsDiscard.IsMatch(name) == false)
                 {
-                    throw new InvalidOperationException("Wrong syntax, 'RavenQuery.Include()' works only with discard variable.");
+                    throw new InvalidOperationException($"Wrong syntax, 'RavenQuery.Include()' works only with discard variable. current variable is called {name}");
                 }
-                HanadleFunctionBOdy(name, js, isInclude: true);
+                HandleFunctionBOdy(name, js, isInclude: true);
             }
             else
             {
-                HanadleFunctionBOdy(name, js, isInclude: false);
+                HandleFunctionBOdy(name, js, isInclude: false);
             }
         }
 
-        void HanadleFunctionBOdy(string name, string js, bool isInclude = false)
+        void HandleFunctionBOdy(string name, string js, bool isInclude = false)
         {
             _declareBuilder ??= new StringBuilder();
             _declareBuilder.Append('\t');
-            if (!isInclude)
+            if (isInclude == false)
                 _declareBuilder.Append("var ").Append(name).Append(" = ");
             _declareBuilder.Append(js).Append(';').Append(Environment.NewLine);
         }

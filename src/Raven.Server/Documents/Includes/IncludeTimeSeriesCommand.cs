@@ -35,9 +35,9 @@ namespace Raven.Server.Documents.Includes
             DateTime Start = DateTime.MinValue;
             DateTime End = DateTime.MaxValue;
 
-           var hs = new HashSet<AbstractTimeSeriesRange>();
+            var hs = new HashSet<AbstractTimeSeriesRange>();
 
-           foreach (var timeSeriesName in timeSeriesNames)
+            foreach (var timeSeriesName in timeSeriesNames)
             {
                 var target = new TimeSeriesRange();
                 target.From = Start;
@@ -46,14 +46,14 @@ namespace Raven.Server.Documents.Includes
                 hs.Add(target);
             }
 
-           if (_timeSeriesRangesBySourcePath.Count < 1)
-           {
-               _timeSeriesRangesBySourcePath.Add(String.Empty, hs);
-           }
-           else
-           {
-               _timeSeriesRangesBySourcePath[String.Empty].Union(hs);
-           }
+            if (_timeSeriesRangesBySourcePath.Count == 0)
+            {
+                _timeSeriesRangesBySourcePath.Add(String.Empty, hs);
+            }
+            else
+            {
+                _timeSeriesRangesBySourcePath[String.Empty].Union(hs);
+            }
         }
 
         public void Fill(Document document)
