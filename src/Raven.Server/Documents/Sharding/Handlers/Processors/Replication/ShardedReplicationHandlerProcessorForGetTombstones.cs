@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,7 +28,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
         {
             _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, start, pageSize);
 
-            var op = new ShardedGetAllTombstonesOperation(RequestHandler, _continuationToken);
+            var op = new ShardedGetAllTombstonesOperation(context, RequestHandler, _continuationToken);
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
             result.ContinuationToken = _continuationToken.ToBase64(context);
 
@@ -38,11 +37,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 
         internal readonly struct ShardedGetAllTombstonesOperation : IShardedOperation<GetTombstonesPreviewResult>
         {
+            private readonly JsonOperationContext _context;
             private readonly ShardedDatabaseRequestHandler _handler;
             private readonly ShardedPagingContinuation _token;
 
-            public ShardedGetAllTombstonesOperation(ShardedDatabaseRequestHandler handler, ShardedPagingContinuation continuationToken)
+            public ShardedGetAllTombstonesOperation(JsonOperationContext context, ShardedDatabaseRequestHandler handler, ShardedPagingContinuation continuationToken)
             {
+                _context = context;
                 _handler = handler;
                 _token = continuationToken;
             }
@@ -50,15 +51,17 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
             public HttpRequest HttpRequest => _handler.HttpContext.Request;
             public GetTombstonesPreviewResult Combine(Dictionary<int, ShardExecutionResult<GetTombstonesPreviewResult>> results)
             {
-                var final = new GetTombstonesPreviewResult();
+                var tombstones = new List<Tombstone>();
+                foreach (var result in _handler.DatabaseContext.Streaming.PagedShardedItem(
+                             results,
+                             selector: r => r.Tombstones,
+                             comparer: TombstonesLastModifiedComparer.Instance,
+                             _token))
+                {
+                    tombstones.Add(result.CloneInternal(_context));
+                }
 
-                final.Tombstones = _handler.DatabaseContext.Streaming.PagedShardedItem(
-                    results,
-                    selector: r => r.Tombstones,
-                    comparer: TombstonesLastModifiedComparer.Instance,
-                    _token).ToList();
-
-                return final;
+                return new GetTombstonesPreviewResult { Tombstones = tombstones };
             }
 
             public RavenCommand<GetTombstonesPreviewResult> CreateCommandForShard(int shardNumber) => new GetReplicationTombstonesCommand(_token.Pages[shardNumber].Start, _token.PageSize);
