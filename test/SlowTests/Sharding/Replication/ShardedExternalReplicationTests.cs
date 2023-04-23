@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -45,6 +46,21 @@ namespace SlowTests.Sharding.Replication
         private const DatabaseItemType AllTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Tombstones |
                                                   DatabaseItemType.Conflicts | DatabaseItemType.Attachments | DatabaseItemType.CounterGroups |
                                                   DatabaseItemType.TimeSeries;
+
+
+        [Fact]
+        public async Task EnsureCantChooseMentorNodeForShardedExternalReplication()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                var error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                {
+                    await SetupReplicationAsync(store1, responsibleNode: "A", new IDocumentStore[] {store2});
+                });
+                Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
+            }
+        }
 
         [Fact]
         public async Task GetReplicationActiveConnectionsShouldWork()

@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -2007,6 +2008,42 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             }
         }
 
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        public void Sharded_Etl_DontAllowMentorNode()
+        {
+            using (var src = Sharding.GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                var error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    SetupRavenEtl(src, dest, "Users", script: null, mentor: "A");
+                });
+
+                Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
+
+                error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    SetupElasticEtl(src, collections: new List<string>(){ "Users" }, script: null, mentor: "A");
+                });
+
+                Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
+
+                error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    SetupLocalOlapEtl(src, script: null, path: "", mentor: "A");
+                });
+
+                Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
+
+                error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    SetupSqlEtl(src, connectionString: "", script: null, mentor: "A");
+                });
+
+                Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
+            }
+        }
+
         private static AddEtlOperationResult SetupRavenEtl(IDocumentStore src, IDocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
         {
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}";
@@ -2037,7 +2074,8 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             );
         }
 
-        private AddEtlOperationResult SetupLocalOlapEtl(IDocumentStore store, string script, string path, string name = "olap-test", string frequency = null, string transformationName = null)
+        private AddEtlOperationResult SetupLocalOlapEtl(IDocumentStore store, string script, string path, string name = "olap-test", string frequency = null,
+            string transformationName = null, string mentor = null)
         {
             var connectionStringName = $"{store.Database} to local";
             var configuration = new OlapEtlConfiguration
@@ -2053,7 +2091,8 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                         Collections = new List<string> {"Orders"},
                         Script = script
                     }
-                }
+                },
+                MentorNode = mentor
             };
 
             var connectionString = new OlapConnectionString
@@ -2095,7 +2134,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             });
         }
 
-        private AddEtlOperationResult SetupSqlEtl(IDocumentStore store, string connectionString, string script, bool insertOnly = false, List<string> collections = null)
+        private AddEtlOperationResult SetupSqlEtl(IDocumentStore store, string connectionString, string script, bool insertOnly = false, List<string> collections = null, string mentor = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to SQL DB";
 
@@ -2116,7 +2155,8 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                         Collections = collections ?? new List<string> {"Orders"},
                         Script = script
                     }
-                }
+                },
+                MentorNode = mentor
             };
 
             return AddEtl(store, configuration, new SqlConnectionString
@@ -2127,7 +2167,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             });
         }
 
-        private static void SetupElasticEtl(IDocumentStore store, string script, IEnumerable<string> collections)
+        private static void SetupElasticEtl(IDocumentStore store, string script, IEnumerable<string> collections, string mentor = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
 
@@ -2154,6 +2194,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                             DocumentIdProperty = "UserId"
                         }
                     },
+                    MentorNode = mentor,
                     Transforms =
                     {
                         new Transformation
