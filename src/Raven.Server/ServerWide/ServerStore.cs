@@ -2983,8 +2983,10 @@ namespace Raven.Server.ServerWide
                 || serverCertificateChanged
                 || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
             {
-                _clusterRequestExecutor?.Dispose();
-                _clusterRequestExecutor = CreateNewClusterRequestExecutor(leaderUrl);
+                var newExecutor = CreateNewClusterRequestExecutor(leaderUrl);
+                var oldExecutor = Interlocked.Exchange(ref _clusterRequestExecutor, newExecutor);
+
+                oldExecutor?.Dispose();
             }
 
             try
