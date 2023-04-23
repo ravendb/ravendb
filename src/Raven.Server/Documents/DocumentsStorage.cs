@@ -1174,7 +1174,7 @@ namespace Raven.Server.Documents
                     break;
 
                 var tombstone = TableValueToTombstone(context, ref result.Reader);
-                tombstones.Add(tombstone);
+                tombstones.Add(tombstone.CloneInternal(context));
             }
 
             return new GetTombstonesPreviewResult

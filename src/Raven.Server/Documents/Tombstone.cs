@@ -85,6 +85,13 @@ namespace Raven.Server.Documents
             return tombstone;
         }
 
+        public Tombstone CloneInternal(JsonOperationContext context)
+        {
+            LowerId = LowerId.Clone(context);
+            Collection = Collection?.Clone(context);
+            return this;
+        }
+
         public void Dispose()
         {
             LowerId?.Dispose();
