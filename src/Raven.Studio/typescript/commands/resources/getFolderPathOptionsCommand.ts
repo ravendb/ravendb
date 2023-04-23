@@ -4,28 +4,32 @@ import database = require("models/resources/database");
 
 class getFolderPathOptionsCommand extends commandBase {
 
-    private db: database;
+    private readonly db: database;
 
-    private inputPath: string;
+    private readonly inputPath: string;
+    
+    private readonly nodeTag: string;
 
-    private isBackupFolder = false;
+    private readonly isBackupFolder: boolean = false;
 
-    private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType;
+    private readonly connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType;
 
-    private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings;
+    private readonly credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings;
 
     private constructor(
         db: database, 
         inputPath: string, 
+        nodeTag: string,
         isBackupFolder = false, 
         connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
-        credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings ) {
+        credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings) {
         super();
-        this.credentials = credentials;
-        this.connectionType = connectionType;
-        this.isBackupFolder = isBackupFolder;
-        this.inputPath = inputPath;
         this.db = db;
+        this.inputPath = inputPath;
+        this.nodeTag = nodeTag;
+        this.isBackupFolder = isBackupFolder;
+        this.connectionType = connectionType;
+        this.credentials = credentials;
     }
 
     private preparePayload() {
@@ -54,12 +58,12 @@ class getFolderPathOptionsCommand extends commandBase {
         return this.post<Raven.Server.Web.Studio.FolderPathOptions>(url, this.preparePayload(), this.db);
     }
     
-    static forServerLocal(inputPath: string, isBackupFolder: boolean, db: database = null) {
-        return new getFolderPathOptionsCommand(db, inputPath, isBackupFolder, "Local");
+    static forServerLocal(inputPath: string, isBackupFolder: boolean, nodeTag: string = null, db: database = null) {
+        return new getFolderPathOptionsCommand(db, inputPath, nodeTag, isBackupFolder, "Local");
     }
 
-    static forCloudBackup(credentials: Raven.Client.Documents.Operations.Backups.BackupSettings,type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType) {
-        return new getFolderPathOptionsCommand(null, null, false, type, credentials);  
+    static forCloudBackup(credentials: Raven.Client.Documents.Operations.Backups.BackupSettings, type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType) {
+        return new getFolderPathOptionsCommand(null, null, null, false, type, credentials);  
     }
 }
 

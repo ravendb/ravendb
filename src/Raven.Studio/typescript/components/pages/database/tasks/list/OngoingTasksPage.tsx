@@ -98,10 +98,9 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     useInterval(reload, 10_000);
 
     useEffect(() => {
-        // noinspection JSIgnoredPromiseFromCall
         reload();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fetchTasks, database]);
+    }, [database]);
 
     const addNewOngoingTask = useCallback(() => {
         const addOngoingTaskView = new createOngoingTask(database);

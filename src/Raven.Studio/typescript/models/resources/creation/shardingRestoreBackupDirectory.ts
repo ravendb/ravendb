@@ -13,6 +13,10 @@
         this.initValidation();
     }
 
+    onCredentialsChange(onChange: () => void) {
+        this.directoryPath.throttle(300).subscribe((onChange));
+    }
+
     initValidation() {
         this.nodeTag.extend({
             required: true

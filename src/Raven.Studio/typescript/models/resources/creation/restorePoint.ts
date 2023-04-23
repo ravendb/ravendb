@@ -7,7 +7,7 @@ interface AvailableShard {
     shardNumber: number;
     folderName: string;
     lastFileNameToRestore: string;
-};
+}
 
 class restorePoint {
     dateTime: string;

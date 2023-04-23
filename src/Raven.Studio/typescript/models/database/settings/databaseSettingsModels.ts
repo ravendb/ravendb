@@ -296,7 +296,7 @@ export class pathEntry extends databaseEntry<string> {
     }
 
     getFolderPathOptions(path?: string) {
-        getFolderPathOptionsCommand.forServerLocal(path, true, activeDatabaseTracker.default.database()) 
+        getFolderPathOptionsCommand.forServerLocal(path, true, null, activeDatabaseTracker.default.database()) 
             .execute()
             .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
                 this.folderPathOptions(result.List);
