@@ -33,6 +33,8 @@ namespace FastTests.Server.Documents.Queries
 
                 using (var commands = store.Commands())
                 {
+                    commands.RequestExecutor.Cache.ForTestingPurposesOnly().DisableFreeSpaceCleanup = true;
+
                     var users = commands.Query(new IndexQuery
                     {
                         Query = "FROM Users WHERE Name = 'Arek'",
