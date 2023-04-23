@@ -10,7 +10,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/admin/studio-tasks/folder-path-options", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetFolderPathOptionsForDatabaseAdmin()
         {
-            using (var processor = new StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin(this))
+            using (var processor = new StudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin(this))
                 await processor.ExecuteAsync();
         }
 
