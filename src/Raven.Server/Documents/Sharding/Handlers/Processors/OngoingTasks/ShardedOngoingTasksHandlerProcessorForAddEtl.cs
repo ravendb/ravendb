@@ -20,6 +20,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
             if(EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration) == EtlType.Queue)
                 throw new NotSupportedInShardingException("Queue ETLs are currently not supported in sharding");
 
+            etlConfiguration.TryGet(nameof(EtlConfiguration<ConnectionString>.Name), out string name);
+
+            if (etlConfiguration.TryGet(nameof(EtlConfiguration<ConnectionString>.MentorNode), out string mentor) && string.IsNullOrEmpty(mentor) == false)
+                throw new InvalidOperationException($"Can't add or update ETL {name}. Choosing a mentor node for an ongoing task is not supported in sharding.");
+
             base.AssertCanAddOrUpdateEtl(ref etlConfiguration);
         }
     }

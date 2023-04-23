@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
@@ -79,12 +80,82 @@ namespace Raven.Server.Smuggler.Documents
                 AddWarning(DatabaseRecordItemType.QueueEtls);
             }
 
+            //warn and remove mentor nodes
+            foreach (var externalReplication in databaseRecord.ExternalReplications)
+            {
+                if (string.IsNullOrEmpty(externalReplication.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.ExternalReplications, externalReplication.Name);
+                    externalReplication.MentorNode = null;
+                }
+            }
+            
+            foreach (var queueEtl in databaseRecord.QueueEtls)
+            {
+                if (string.IsNullOrEmpty(queueEtl.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.QueueEtls, queueEtl.Name);
+                    queueEtl.MentorNode = null;
+                }
+            }
+
+            foreach (var ravenEtl in databaseRecord.RavenEtls)
+            {
+                if (string.IsNullOrEmpty(ravenEtl.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.RavenEtls, ravenEtl.Name);
+                    ravenEtl.MentorNode = null;
+                }
+            }
+
+            foreach (var elasticEtl in databaseRecord.ElasticSearchEtls)
+            {
+                if (string.IsNullOrEmpty(elasticEtl.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.ElasticSearchEtls, elasticEtl.Name);
+                    elasticEtl.MentorNode = null;
+                }
+            }
+
+            foreach (var olapEtl in databaseRecord.OlapEtls)
+            {
+                if (string.IsNullOrEmpty(olapEtl.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.OlapEtls, olapEtl.Name);
+                    olapEtl.MentorNode = null;
+                }
+            }
+
+            foreach (var sqlEtl in databaseRecord.SqlEtls)
+            {
+                if (string.IsNullOrEmpty(sqlEtl.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.SqlEtls, sqlEtl.Name);
+                    sqlEtl.MentorNode = null;
+                }
+            }
+
+            foreach (var backup in databaseRecord.PeriodicBackups)
+            {
+                if (string.IsNullOrEmpty(backup.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.PeriodicBackups, backup.Name);
+                    backup.MentorNode = null;
+                }
+            }
+
             _options.OperateOnDatabaseRecordTypes &= ~DatabaseSmugglerOptions.ShardingNotSupportedDatabaseSmugglerOptions;
 
             void AddWarning(DatabaseRecordItemType type, string name = null)
             {
                 var typeMsg = string.IsNullOrEmpty(name) ? $"{type}" : $"{type} task '{name}'";
                 result.AddWarning($"Skipped {typeMsg} - it is currently not supported in Sharding");
+            }
+
+            void AddMentorNodeWarning(DatabaseRecordItemType type, string name = null)
+            {
+                var typeMsg = string.IsNullOrEmpty(name) ? $"{type}" : $"{type} task '{name}'";
+                result.AddWarning($"Removed mentor node for {typeMsg} - it is currently not supported in Sharding");
             }
         }
 

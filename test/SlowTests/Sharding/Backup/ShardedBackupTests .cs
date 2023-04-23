@@ -9,6 +9,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents;
@@ -362,6 +363,24 @@ namespace SlowTests.Sharding.Backup
 
                     await AssertDocs(store2, idPrefix, options.DatabaseMode);
                 }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task ShardedPeriodicBackup_DontAllowMentorNode(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "_BackupFolder");
+            
+            using (var store = GetDocumentStore(options))
+            {
+                var config = Backup.CreateBackupConfiguration(backupPath, mentorNode: "A");
+
+                var error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                {
+                    var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                });
+                Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
             }
         }
 
