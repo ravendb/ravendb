@@ -503,6 +503,20 @@ namespace Raven.Client.ServerWide
             return $"{node}${shardNumber.Value}";
         }
 
+        internal static string GetKeyForDeletionInProgress(string node, string shardName)
+        {
+            if (string.IsNullOrEmpty(shardName))
+                return node;
+
+
+            var shardNumber = ClientShardHelper.GetShardNumberFromDatabaseName(shardName);
+
+            if (shardNumber.HasValue == false)
+                return node;
+
+            return $"{node}${shardNumber.Value}";
+        }
+
         internal bool IsShardBeingDeletedOnAnyNode(int shardNumber)
         {
             foreach (var deletion in DeletionInProgress)

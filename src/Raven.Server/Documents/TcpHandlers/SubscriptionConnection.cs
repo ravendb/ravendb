@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public string LastSentChangeVectorInThisConnection;
 
         public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy, string database)
-            : base(tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable, database, tcpConnection.DocumentDatabase.DatabaseShutdown)
+            : base(tcpConnection.DocumentDatabase.SubscriptionStorage, tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable, database, tcpConnection.DocumentDatabase.DatabaseShutdown)
         {
             _database = tcpConnection.DocumentDatabase;
             CurrentBatchId = ISubscriptionConnection.NonExistentBatch;
@@ -464,8 +464,6 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             includeDocuments?.GatherIncludesForDocument(document);
         }
-
-        protected override string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState) => _serverStore.WhoseTaskIsIt(topology, subscriptionState, subscriptionState);
 
         protected override StatusMessageDetails GetStatusMessageDetails()
         {

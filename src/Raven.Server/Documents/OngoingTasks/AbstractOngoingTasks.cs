@@ -109,15 +109,15 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateExternalReplicationTaskInfo(clusterTopology, databaseRecord, watcher);
     }
 
-    private IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(ClusterOperationContext context, ClusterTopology clusterTopology)
     {
         foreach (var subscriptionState in _subscriptionStorage.GetAllSubscriptionsFromServerStore(context))
-            yield return CreateSubscriptionTaskInfo(clusterTopology, databaseRecord, subscriptionState);
+            yield return CreateSubscriptionTaskInfo(context, clusterTopology, subscriptionState);
     }
 
     public IEnumerable<OngoingTask> GetAllTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
-        foreach (var task in CollectSubscriptionTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in CollectSubscriptionTasks(context, clusterTopology))
             yield return task;
 
         foreach (var task in GetBackupTasks(clusterTopology, databaseRecord))
@@ -245,7 +245,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                     ? _subscriptionStorage.GetSubscriptionByName(context, taskName)
                     : _subscriptionStorage.GetSubscriptionById(context, taskId.Value);
 
-                return CreateSubscriptionTaskInfo(clusterTopology, databaseRecord, subscriptionState);
+                return CreateSubscriptionTaskInfo(context, clusterTopology, subscriptionState);
             default:
                 return null;
         }
@@ -284,9 +284,9 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         };
     }
 
-    private OngoingTaskSubscription CreateSubscriptionTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, SubscriptionState subscriptionState)
+    private OngoingTaskSubscription CreateSubscriptionTaskInfo(ClusterOperationContext context, ClusterTopology clusterTopology, SubscriptionState subscriptionState)
     {
-        (OngoingTaskConnectionStatus connectionStatus, string responsibleNodeTag) = _subscriptionStorage.GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionState.SubscriptionId, subscriptionState, databaseRecord);
+        (OngoingTaskConnectionStatus connectionStatus, string responsibleNodeTag) = _subscriptionStorage.GetSubscriptionConnectionStatusAndResponsibleNode(context, subscriptionState.SubscriptionId, subscriptionState);
 
         return OngoingTaskSubscription.From(subscriptionState, connectionStatus, clusterTopology, responsibleNodeTag);
     }

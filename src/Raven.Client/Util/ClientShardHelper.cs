@@ -50,6 +50,14 @@ namespace Raven.Client.Util
             return false;
         }
 
+        public static int? GetShardNumberFromDatabaseName(string databaseName)
+        {
+            if (TryGetShardNumberAndDatabaseName(databaseName, out _, out var shardNumber))
+                return shardNumber;
+
+            return null;
+        }
+
         public static bool IsShardName(string shardName)
         {
             return shardName.IndexOf('$') != -1;

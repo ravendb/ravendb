@@ -1,12 +1,10 @@
-﻿using System;
-using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Subscriptions;
+﻿using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -45,26 +43,14 @@ public partial class ShardedDatabaseContext
             }
         }
 
-        protected override string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus)
-        {
-            return _serverStore.WhoseTaskIsIt(databaseRecord.Sharding.Orchestrator.Topology, taskStatus, taskStatus);
-        }
+        protected override string GetNodeFromState(SubscriptionState taskStatus) => taskStatus.NodeTag;
+
+        protected override DatabaseTopology GetTopology(ClusterOperationContext context) => _serverStore.Cluster.ReadShardingConfiguration(context, _databaseName).Orchestrator.Topology;
 
         protected override bool SubscriptionChangeVectorHasChanges(SubscriptionConnectionsStateOrchestrator state, SubscriptionState taskStatus)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "RavenDB-18223 Add ability to set CV by admin in sharded subscription.");
             return false;
-        }
-
-        public override (OngoingTaskConnectionStatus ConnectionStatus, string ResponsibleNodeTag) GetSubscriptionConnectionStatusAndResponsibleNode(
-            long subscriptionId,
-            SubscriptionState state,
-            [NotNull] DatabaseRecord databaseRecord)
-        {
-            if (databaseRecord == null) 
-                throw new ArgumentNullException(nameof(databaseRecord));
-
-            return GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionId, state, databaseRecord.Sharding.Orchestrator.Topology);
         }
 
         public void Update(RawDatabaseRecord databaseRecord)

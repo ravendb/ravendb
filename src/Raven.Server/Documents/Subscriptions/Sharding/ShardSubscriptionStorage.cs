@@ -6,16 +6,19 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Subscriptions.Sharding;
 
 public class ShardSubscriptionStorage : SubscriptionStorage
 {
     private readonly string _shardName;
+    private readonly int _shardNumber;
 
     public ShardSubscriptionStorage(ShardedDocumentDatabase db, ServerStore serverStore, string name) : base(db, serverStore, name)
     {
         _shardName = db.Name;
+        _shardNumber = ShardHelper.GetShardNumberFromDatabaseName(_shardName);
     }
 
     public override void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)
@@ -49,7 +52,7 @@ public class ShardSubscriptionStorage : SubscriptionStorage
                     continue;
                 }
                
-                var whoseTaskIsIt = GetSubscriptionResponsibleNode(databaseRecord, taskState);
+                var whoseTaskIsIt = GetSubscriptionResponsibleNode(context, taskState);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     DropSubscriptionConnections(id,
@@ -58,6 +61,14 @@ public class ShardSubscriptionStorage : SubscriptionStorage
                 }
             }
         }
+    }
+
+    protected override DatabaseTopology GetTopology(ClusterOperationContext context) => _serverStore.Cluster.ReadShardingConfiguration(context, _databaseName).Shards[_shardNumber];
+    
+    protected override string GetNodeFromState(SubscriptionState taskStatus)
+    {
+        taskStatus.ShardingState.NodeTagPerShard.TryGetValue(_shardName, out var tag);
+        return tag;
     }
 
     protected override bool SubscriptionChangeVectorHasChanges(SubscriptionConnectionsState state, SubscriptionState taskStatus)

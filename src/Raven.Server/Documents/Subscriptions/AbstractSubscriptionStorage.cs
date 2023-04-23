@@ -3,10 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
@@ -17,28 +17,45 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Subscriptions;
 
-public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, IDisposable
-    where TState : AbstractSubscriptionConnectionsState
+public abstract class AbstractSubscriptionStorage
 {
-    protected readonly ConcurrentDictionary<long, TState> _subscriptions = new();
-    public ConcurrentDictionary<long, TState> Subscriptions => _subscriptions;
     protected readonly ServerStore _serverStore;
     protected string _databaseName;
     protected readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
     protected Logger _logger;
 
+    protected abstract string GetNodeFromState(SubscriptionState taskStatus);
+    protected abstract DatabaseTopology GetTopology(ClusterOperationContext context);
+    public abstract bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex);
+
     protected AbstractSubscriptionStorage(ServerStore serverStore, int maxNumberOfConcurrentConnections)
     {
         _serverStore = serverStore;
         _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(maxNumberOfConcurrentConnections);
-        LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
     }
 
-    protected abstract void DropSubscriptionConnections(TState state, SubscriptionException ex);
-    protected abstract void SetConnectionException(TState state, SubscriptionException ex);
-    protected abstract string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus);
-    protected abstract bool SubscriptionChangeVectorHasChanges(TState state, SubscriptionState taskStatus);
-    public abstract bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex);
+    public string GetSubscriptionResponsibleNode(ClusterOperationContext context, SubscriptionState taskStatus)
+    {
+        var topology = GetTopology(context);
+        var tag = GetNodeFromState(taskStatus);
+        var lastFunc = GetLastResponsibleNode(_serverStore.LicenseManager.HasHighlyAvailableTasks(), topology, tag);
+        return topology.WhoseTaskIsIt(_serverStore.Engine.CurrentState, taskStatus, lastFunc);
+    }
+
+    public static string GetSubscriptionResponsibleNodeForProgress(RawDatabaseRecord record, string shardName, SubscriptionState taskStatus, bool hasHighlyAvailableTasks)
+    {
+        var topology = string.IsNullOrEmpty(shardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumberFromDatabaseName(shardName)];
+        var tag = string.IsNullOrEmpty(shardName) ? taskStatus.NodeTag : taskStatus.ShardingState.NodeTagPerShard.GetOrDefault(shardName);
+        var lastResponsibleNode = GetLastResponsibleNode(hasHighlyAvailableTasks, topology, tag);
+        return topology.WhoseTaskIsIt(RachisState.Follower, taskStatus, lastResponsibleNode);
+    }
+
+    public static string GetSubscriptionResponsibleNodeForConnection(RawDatabaseRecord record, SubscriptionState taskStatus, bool hasHighlyAvailableTasks)
+    {
+        var topology = record.TopologyForSubscriptions();
+        var lastResponsibleNode = GetLastResponsibleNode(hasHighlyAvailableTasks, topology, taskStatus.NodeTag);
+        return topology.WhoseTaskIsIt(RachisState.Follower, taskStatus, lastResponsibleNode);
+    }
 
     public IEnumerable<SubscriptionState> GetAllSubscriptionsFromServerStore(ClusterOperationContext context, int start = 0, int take = int.MaxValue)
     {
@@ -83,6 +100,66 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
                 .Count();
         }
     }
+ 
+    public string GetSubscriptionNameById(ClusterOperationContext serverStoreContext, long id)
+    {
+        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
+                     SubscriptionState.SubscriptionPrefix(_databaseName)))
+        {
+            if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long _id) == false)
+                continue;
+            if (_id == id)
+            {
+                if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionName), out string name))
+                    return name;
+            }
+        }
+
+        return null;
+    }
+
+    public bool TryEnterSubscriptionsSemaphore()
+    {
+        return _concurrentConnectionsSemiSemaphore.Wait(0);
+    }
+
+    public void ReleaseSubscriptionsSemaphore()
+    {
+        _concurrentConnectionsSemiSemaphore.Release();
+    }
+
+    private static Func<string> GetLastResponsibleNode(
+        bool hasHighlyAvailableTasks,
+        DatabaseTopology topology,
+        string nodeTag)
+    {
+        return () =>
+        {
+            if (hasHighlyAvailableTasks)
+                return null;
+
+            if (topology.Members.Contains(nodeTag) == false)
+                return null;
+
+            return nodeTag;
+        };
+    }
+}
+
+public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscriptionStorage, ILowMemoryHandler, IDisposable
+    where TState : AbstractSubscriptionConnectionsState
+{
+    protected readonly ConcurrentDictionary<long, TState> _subscriptions = new();
+    public ConcurrentDictionary<long, TState> Subscriptions => _subscriptions;
+
+    protected AbstractSubscriptionStorage(ServerStore serverStore, int maxNumberOfConcurrentConnections) : base(serverStore, maxNumberOfConcurrentConnections)
+    {
+        LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+    }
+
+    protected abstract void DropSubscriptionConnections(TState state, SubscriptionException ex);
+    protected abstract void SetConnectionException(TState state, SubscriptionException ex);
+    protected abstract bool SubscriptionChangeVectorHasChanges(TState state, SubscriptionState taskStatus);
 
     public bool DropSubscriptionConnections(long subscriptionId, SubscriptionException ex)
     {
@@ -173,17 +250,20 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
                 //make sure we only drop old connection and not new ones just arriving with the updated query
                 if (subscriptionConnectionsState != null && subscriptionState.Query != subscriptionConnectionsState.Query)
                 {
-                    DropSubscriptionConnections(id, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted", canReconnect: true));
+                    DropSubscriptionConnections(id,
+                        new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted",
+                            canReconnect: true));
                     continue;
                 }
 
                 if (SubscriptionChangeVectorHasChanges(subscriptionConnectionsState, subscriptionState))
                 {
-                    DropSubscriptionConnections(id, new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
+                    DropSubscriptionConnections(id,
+                        new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
                     continue;
                 }
 
-                var whoseTaskIsIt = GetSubscriptionResponsibleNode(databaseRecord, subscriptionState);
+                var whoseTaskIsIt = GetSubscriptionResponsibleNode(context, subscriptionState);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     DropSubscriptionConnections(id,
@@ -193,28 +273,9 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
         }
     }
 
-    public string GetSubscriptionNameById(ClusterOperationContext serverStoreContext, long id)
-    {
-        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
-                     SubscriptionState.SubscriptionPrefix(_databaseName)))
-        {
-            if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long _id) == false)
-                continue;
-            if (_id == id)
-            {
-                if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionName), out string name))
-                    return name;
-            }
-        }
-
-        return null;
-    }
-
     public TState GetSubscriptionConnectionsState(ClusterOperationContext context, string subscriptionName)
     {
-#pragma warning disable CS0618
-        var subscriptionState = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, subscriptionName);
-#pragma warning restore CS0618
+        var subscriptionState = GetSubscriptionByName(context, subscriptionName);
 
         if (_subscriptions.TryGetValue(subscriptionState.SubscriptionId, out TState concurrentSubscription) == false)
             return null;
@@ -222,31 +283,17 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
         return concurrentSubscription;
     }
 
-    public bool TryEnterSubscriptionsSemaphore()
-    {
-        return _concurrentConnectionsSemiSemaphore.Wait(0);
-    }
-
-    public void ReleaseSubscriptionsSemaphore()
-    {
-        _concurrentConnectionsSemiSemaphore.Release();
-    }
-
-    public abstract (OngoingTaskConnectionStatus ConnectionStatus, string ResponsibleNodeTag) GetSubscriptionConnectionStatusAndResponsibleNode(long subscriptionId, SubscriptionState state, DatabaseRecord databaseRecord);
-
-    protected (OngoingTaskConnectionStatus ConnectionStatus, string ResponsibleNodeTag) GetSubscriptionConnectionStatusAndResponsibleNode(
+    public (OngoingTaskConnectionStatus ConnectionStatus, string ResponsibleNodeTag) GetSubscriptionConnectionStatusAndResponsibleNode(
+        ClusterOperationContext context,
         long subscriptionId,
-        [NotNull] SubscriptionState state,
-        [NotNull] DatabaseTopology topology)
+        SubscriptionState state)
     {
         if (state == null)
             throw new ArgumentNullException(nameof(state));
-        if (topology == null)
-            throw new ArgumentNullException(nameof(topology));
         if (subscriptionId <= 0)
             throw new ArgumentOutOfRangeException(nameof(subscriptionId));
 
-        var tag = _serverStore.WhoseTaskIsIt(topology, state, state);
+        var tag = GetSubscriptionResponsibleNode(context, state);
         OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
         if (tag != _serverStore.NodeTag)
         {
@@ -292,7 +339,7 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
             aggregator.Execute(state.Dispose);
             aggregator.Execute(_concurrentConnectionsSemiSemaphore.Dispose);
         }
+
         aggregator.ThrowIfNeeded();
     }
-
 }

@@ -114,13 +114,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(existingValue);
                 
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
+                var appropriateNode = AbstractSubscriptionStorage.GetSubscriptionResponsibleNodeForProgress(record, ShardName, subscriptionState, HasHighlyAvailableTasks);
+                var deletionKey = DatabaseRecord.GetKeyForDeletionInProgress(NodeTag, ShardName);
 
-                var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumberFromDatabaseName(ShardName)];
-                var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
-                var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscriptionState, lastResponsibleNode);
-
-                if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
+                if (appropriateNode == null && record.DeletionInProgress.ContainsKey(deletionKey))
                     throw new DatabaseDoesNotExistException(
                         $"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
 

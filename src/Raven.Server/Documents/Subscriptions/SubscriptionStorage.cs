@@ -8,8 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -20,7 +18,6 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions
@@ -83,19 +80,14 @@ namespace Raven.Server.Documents.Subscriptions
             using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-#pragma warning disable CS0618
-                return _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, name);
-#pragma warning restore CS0618
+                return GetSubscriptionByName(context, name);
             }
         }
 
         public string GetResponsibleNode(ClusterOperationContext context, string name)
         {
-#pragma warning disable CS0618
-            var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, name);
-#pragma warning restore CS0618
-            var topology = _serverStore.Cluster.ReadDatabaseTopology(context, _db.Name);
-            return BackupUtils.WhoseTaskIsIt(_serverStore, topology, subscription, subscription, _db.NotificationCenter);
+            var subscription = GetSubscriptionByName(context, name);
+            return GetSubscriptionResponsibleNode(context, subscription);
         }
 
         public static async Task DeleteSubscriptionInternal(ServerStore serverStore, string databaseName, string name, string raftRequestId, Logger logger)
@@ -118,25 +110,14 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected override string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus)
-        {
-            return _serverStore.WhoseTaskIsIt(databaseRecord.Topology, taskStatus, taskStatus);
-        }
+        protected override string GetNodeFromState(SubscriptionState taskStatus) => taskStatus.NodeTag;
+
+        protected override DatabaseTopology GetTopology(ClusterOperationContext context) => _serverStore.Cluster.ReadDatabaseTopology(context, _db.Name);
 
         protected override bool SubscriptionChangeVectorHasChanges(SubscriptionConnectionsState state, SubscriptionState taskStatus)
         {
             return taskStatus.LastClientConnectionTime == null &&
                    taskStatus.ChangeVectorForNextBatchStartingPoint != state.LastChangeVectorSent;
-        }
-
-        public override (OngoingTaskConnectionStatus ConnectionStatus, string ResponsibleNodeTag) GetSubscriptionConnectionStatusAndResponsibleNode(
-            long subscriptionId, 
-            SubscriptionState state,
-            [NotNull] DatabaseRecord databaseRecord)
-        {
-            if (databaseRecord == null) throw new ArgumentNullException(nameof(databaseRecord));
-
-            return GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionId, state, databaseRecord.Topology);
         }
 
         public override bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex)

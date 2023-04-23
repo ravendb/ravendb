@@ -28,9 +28,10 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         private OrchestratedSubscriptionProcessor _processor;
         private IDisposable _tokenRegisterDisposable;
 
-        public OrchestratedSubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable,
+        public OrchestratedSubscriptionConnection(ServerStore serverStore, ShardedDatabaseContext.ShardedSubscriptionsStorage subscriptions,
+            TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable,
             JsonOperationContext.MemoryBuffer buffer)
-            : base(tcpConnection, serverStore, buffer, tcpConnectionDisposable, tcpConnection.DatabaseContext.DatabaseName,
+            : base(subscriptions, tcpConnection, serverStore, buffer, tcpConnectionDisposable, tcpConnection.DatabaseContext.DatabaseName,
                 tcpConnection.DatabaseContext.DatabaseShutdown)
         {
             _databaseContext = tcpConnection.DatabaseContext;
@@ -80,8 +81,6 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
             return await base.WaitForChangedDocsAsync(state, pendingReply);
         }
-
-        protected override string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState) => _serverStore.WhoseTaskIsIt(topology, subscriptionState, subscriptionState);
 
         private async Task NotifyShardAboutBatchCompletion()
         {
