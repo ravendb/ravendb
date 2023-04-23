@@ -78,9 +78,9 @@ namespace Raven.Client.Documents.Operations.Replication
             return djv;
         }
 
-        public DynamicJsonValue ToAuditJson()
+        public override DynamicJsonValue ToAuditJson()
         {
-            var djv = base.ToJson();
+            var djv = base.ToAuditJson();
 
             djv[nameof(Mode)] = Mode;
             djv[nameof(HubName)] = HubName;

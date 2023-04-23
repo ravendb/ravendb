@@ -79,6 +79,11 @@ namespace Raven.Client.Documents.Operations.Replication
             return json;
         }
 
+        public virtual DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
+
         public override string FromString()
         {
             return $"[{Database} @ {Url}]";

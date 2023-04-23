@@ -36,5 +36,10 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
             return json;
         }
+
+        public override DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
     }
 }

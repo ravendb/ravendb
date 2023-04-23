@@ -55,6 +55,11 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             return json;
         }
 
+        public override DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
+
         internal bool Equals(OlapEtlConfiguration other)
         {
             if (other == null || 

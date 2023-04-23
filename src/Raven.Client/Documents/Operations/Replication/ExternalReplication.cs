@@ -23,6 +23,10 @@ namespace Raven.Client.Documents.Operations.Replication
             return json;
         }
 
+        public override DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
         public override bool IsEqualTo(ReplicationNode other)
         {
             if (other is ExternalReplication externalReplication)

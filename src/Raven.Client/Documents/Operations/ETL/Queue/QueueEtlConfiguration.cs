@@ -71,6 +71,11 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
 
             return json;
         }
+
+        public override DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
     }
 
     public class EtlQueue

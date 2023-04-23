@@ -69,4 +69,9 @@ public class QueueConnectionString : ConnectionString
 
         return json;
     }
+
+    public override DynamicJsonValue ToAuditJson()
+    {
+        return ToJson();
+    }
 }

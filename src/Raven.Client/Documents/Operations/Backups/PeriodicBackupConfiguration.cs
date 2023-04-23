@@ -104,7 +104,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(PinToMentorNode)] = PinToMentorNode;
             json[nameof(FullBackupFrequency)] = FullBackupFrequency;
             json[nameof(IncrementalBackupFrequency)] = IncrementalBackupFrequency;
-            json[nameof(RetentionPolicy)] = RetentionPolicy?.ToJson();
+            json[nameof(RetentionPolicy)] = RetentionPolicy?.ToAuditJson();
             return json;
         }
 

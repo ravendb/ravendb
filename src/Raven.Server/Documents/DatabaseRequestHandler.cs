@@ -176,7 +176,7 @@ namespace Raven.Server.Documents
                     return JsonDeserializationClient.PeriodicBackupConfiguration(configuration).ToAuditJson();
 
                 case OngoingTasksHandler.UpdateExternalReplicationDebugTag:
-                    return JsonDeserializationClient.ExternalReplication(configuration).ToJson();
+                    return JsonDeserializationClient.ExternalReplication(configuration).ToAuditJson();
 
                 case PullReplicationHandler.DefineHubDebugTag:
                     return JsonDeserializationClient.PullReplicationDefinition(configuration).ToAuditJson();
@@ -200,19 +200,19 @@ namespace Raven.Server.Documents
             switch (etlType)
             {
                 case EtlType.Raven:
-                    return JsonDeserializationClient.RavenEtlConfiguration(configuration).ToJson();
+                    return JsonDeserializationClient.RavenEtlConfiguration(configuration).ToAuditJson();
 
                 case EtlType.ElasticSearch:
-                    return JsonDeserializationClient.ElasticSearchEtlConfiguration(configuration).ToJson();
+                    return JsonDeserializationClient.ElasticSearchEtlConfiguration(configuration).ToAuditJson();
 
                 case EtlType.Queue:
-                    return JsonDeserializationClient.QueueEtlConfiguration(configuration).ToJson();
+                    return JsonDeserializationClient.QueueEtlConfiguration(configuration).ToAuditJson();
 
                 case EtlType.Sql:
-                    return JsonDeserializationClient.SqlEtlConfiguration(configuration).ToJson();
+                    return JsonDeserializationClient.SqlEtlConfiguration(configuration).ToAuditJson();
 
                 case EtlType.Olap:
-                    return JsonDeserializationClient.OlapEtlConfiguration(configuration).ToJson();
+                    return JsonDeserializationClient.OlapEtlConfiguration(configuration).ToAuditJson();
             }
 
             return null;
@@ -224,19 +224,19 @@ namespace Raven.Server.Documents
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
-                    return JsonDeserializationClient.RavenConnectionString(configuration).ToJson();
+                    return JsonDeserializationClient.RavenConnectionString(configuration).ToAuditJson();
                 
                 case ConnectionStringType.ElasticSearch:
                     return JsonDeserializationClient.ElasticSearchConnectionString(configuration).ToAuditJson();
 
                 case ConnectionStringType.Queue:
-                    return JsonDeserializationClient.QueueConnectionString(configuration).ToJson();
+                    return JsonDeserializationClient.QueueConnectionString(configuration).ToAuditJson();
 
                 case ConnectionStringType.Sql:
-                    return JsonDeserializationClient.SqlConnectionString(configuration).ToJson();
+                    return JsonDeserializationClient.SqlConnectionString(configuration).ToAuditJson();
 
                 case ConnectionStringType.Olap:
-                    return JsonDeserializationClient.OlapConnectionString(configuration).ToJson();
+                    return JsonDeserializationClient.OlapConnectionString(configuration).ToAuditJson();
             }
 
             return null;
@@ -252,7 +252,7 @@ namespace Raven.Server.Documents
                 var line = $"Task: '{description}' with taskId: '{id}'";
 
                 if (clientCert != null)
-                    line += $" executed by {clientCert.Subject} {clientCert.Thumbprint}";
+                    line += $" executed by '{clientCert.Subject}' '{clientCert.Thumbprint}'";
 
                 if (conf != null)
                 {

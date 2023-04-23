@@ -48,6 +48,11 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 
             return json;
         }
+
+        public override DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
     }
     
     public class ElasticSearchIndex
