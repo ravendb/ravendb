@@ -533,7 +533,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             closeServerTransaction = serverContext.OpenReadTransaction();
                         }
 
-                        var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext, documentsContext: null, query, _index,
+                        var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext, documentsContext, query, _index,
                             query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take);
 
                         using (closeServerTransaction)
