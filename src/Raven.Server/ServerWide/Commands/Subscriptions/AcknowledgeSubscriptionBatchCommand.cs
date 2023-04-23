@@ -55,14 +55,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var currentState = JsonDeserializationCluster.SubscriptionState(existingValue);
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
+            var appropriateNode = AbstractSubscriptionStorage.GetSubscriptionResponsibleNodeForProgress(record, ShardName, currentState, HasHighlyAvailableTasks);
+            var deletionKey = DatabaseRecord.GetKeyForDeletionInProgress(NodeTag, ShardName);
 
-            var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumberFromDatabaseName(ShardName)];
-            var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
-            var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, currentState, lastResponsibleNode);
-            
-            if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
+            if (appropriateNode == null && record.DeletionInProgress.ContainsKey(deletionKey))
                 throw new DatabaseDoesNotExistException($"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
 
             if (appropriateNode != NodeTag)
@@ -190,23 +186,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         }
 
         public static readonly long SwappedNonExistentBatch = Bits.SwapBytes(ISubscriptionConnection.NonExistentBatch);
-
-        public static Func<string> GetLastResponsibleNode(
-            bool hasHighlyAvailableTasks,
-            DatabaseTopology topology,
-            string nodeTag)
-        {
-            return () =>
-            {
-                if (hasHighlyAvailableTasks)
-                    return null;
-
-                if (topology.Members.Contains(nodeTag) == false)
-                    return null;
-
-                return nodeTag;
-            };
-        }
 
         public override void FillJson(DynamicJsonValue json)
         {

@@ -3,11 +3,10 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
@@ -37,13 +36,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
-
-            // for sharded the topology is the orchestrator and the node-tag here is the orchestrator's responsible node
-            var topology = record.TopologyForSubscriptions();
-            var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
-
-            var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
+            var appropriateNode = AbstractSubscriptionStorage.GetSubscriptionResponsibleNodeForConnection(record, subscription, HasHighlyAvailableTasks);
 
             if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
                 throw new DatabaseDoesNotExistException(

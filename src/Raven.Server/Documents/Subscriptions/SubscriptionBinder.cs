@@ -28,7 +28,7 @@ public static class SubscriptionBinder
     {
         if (databaseResult.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
         {
-            var orch = new OrchestratedSubscriptionConnection(server, tcpConnectionOptions, onDispose, buffer);
+            var orch = new OrchestratedSubscriptionConnection(server, databaseResult.DatabaseContext.SubscriptionsStorage, tcpConnectionOptions, onDispose, buffer);
             connection = orch;
             return new SubscriptionBinder<SubscriptionConnectionsStateOrchestrator, OrchestratedSubscriptionConnection, OrchestratorIncludesCommandImpl>(
                 tcpConnectionOptions.DatabaseContext.SubscriptionsStorage,

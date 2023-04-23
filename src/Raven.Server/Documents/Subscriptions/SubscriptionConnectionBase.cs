@@ -43,6 +43,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(1);
 
+        private readonly AbstractSubscriptionStorage _subscriptions;
         protected readonly ServerStore _serverStore;
         private readonly IDisposable _tcpConnectionDisposable;
         internal readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
@@ -89,10 +90,11 @@ namespace Raven.Server.Documents.Subscriptions
             internal AsyncManualResetEvent PauseConnection;
         }
 
-        protected SubscriptionConnectionBase(TcpConnectionOptions tcpConnection, ServerStore serverStore, JsonOperationContext.MemoryBuffer memoryBuffer,
+        protected SubscriptionConnectionBase(AbstractSubscriptionStorage subscriptions, TcpConnectionOptions tcpConnection, ServerStore serverStore, JsonOperationContext.MemoryBuffer memoryBuffer,
             IDisposable tcpConnectionDisposable, string database, CancellationToken token)
         {
             TcpConnection = tcpConnection;
+            _subscriptions = subscriptions;
             _serverStore = serverStore;
             _copiedBuffer = memoryBuffer.Clone(serverStore.ContextPool);
             _tcpConnectionDisposable = tcpConnectionDisposable;
@@ -456,8 +458,6 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected virtual RawDatabaseRecord GetRecord(ClusterOperationContext context) => _serverStore.Cluster.ReadRawDatabaseRecord(context, DatabaseName);
 
-        protected abstract string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState);
-
         private async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, long? registerConnectionDurationInTicks, CancellationToken token)
         {
             await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id, token);
@@ -469,13 +469,8 @@ namespace Raven.Server.Documents.Subscriptions
 #pragma warning disable CS0618
                 var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseName, name);
 #pragma warning restore CS0618
-                var topology = record.TopologyForSubscriptions();
 
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19089 create subscription WhosTaskIsIt");
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19089 Need to handle NodeTag, currently is isn't used for sharded because it is shared");
-
-                var whoseTaskIsIt = WhosTaskIsIt(topology, subscription);
-
+                var whoseTaskIsIt = _subscriptions.GetSubscriptionResponsibleNode(context, subscription);
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(_serverStore.NodeTag))
                     throw new DatabaseDoesNotExistException(
                         $"Stopping subscription '{name}' on node {_serverStore.NodeTag}, because database '{DatabaseName}' is being deleted.");
@@ -498,6 +493,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                     databaseTopologyAvailabilityExplanation["NodeState"] = generalState;
 
+                    var topology = record.TopologyForSubscriptions();
                     FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Rehabs, stateName: "rehab");
                     FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Promotables,
                         stateName: "promotable");

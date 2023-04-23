@@ -126,13 +126,6 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         return state;
     }
 
-    protected override string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState) => 
-        topology.WhoseTaskIsIt(_serverStore.Engine.CurrentState, subscriptionState, () =>
-        {
-            subscriptionState.ShardingState.NodeTagPerShard.TryGetValue(ShardName, out var tag);
-            return tag;
-        });
-
     protected override void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
     {
         includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
