@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException($"{nameof(PageSize)} cannot be negative, but was {indexQuery.PageSize}.", indexQuery.Query, indexQuery.QueryParameters);
         }
 
-        public (List<Slice> Ids, string StartsWith) ExtractIdsFromQuery(ServerStore serverStore, ByteStringContext allocator, string databaseName)
+        public (List<Slice> Ids, string StartsWith) ExtractIdsFromQuery(ServerStore serverStore, ByteStringContext allocator, AbstractCompareExchangeStorage compareExchangeStorage)
         {
             if (Metadata.Query.Where == null)
                 return (null, null);
@@ -392,7 +392,7 @@ namespace Raven.Server.Documents.Queries
 
                 using (closeServerTransaction)
                 {
-                    var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext, serverStore, databaseName, Metadata, allocator);
+                    var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext, compareExchangeStorage, Metadata, allocator);
 
                     idsRetriever.Visit(Metadata.Query.Where, QueryParameters);
 
@@ -409,20 +409,18 @@ namespace Raven.Server.Documents.Queries
         {
             private readonly Query _query;
             private readonly TransactionOperationContext _serverContext;
-            private readonly ServerStore _serverStore;
-            private readonly string _databaseName;
+            private readonly AbstractCompareExchangeStorage _compareExchangeStorage;
             private readonly QueryMetadata _metadata;
             private readonly ByteStringContext _allocator;
             public string StartsWith;
 
             public HashSet<Slice> Ids { get; private set; }
 
-            public RetrieveDocumentIdsVisitor(TransactionOperationContext serverContext, ServerStore serverStore, string databaseName, QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
+            public RetrieveDocumentIdsVisitor(TransactionOperationContext serverContext, AbstractCompareExchangeStorage compareExchangeStorage, QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
             {
                 _query = metadata.Query;
                 _serverContext = serverContext;
-                _serverStore = serverStore;
-                _databaseName = databaseName;
+                _compareExchangeStorage = compareExchangeStorage;
                 _metadata = metadata;
                 _allocator = allocator;
             }
@@ -450,7 +448,7 @@ namespace Raven.Server.Documents.Queries
                             }
                             if (value is MethodExpression right)
                             {
-                                var id = LuceneQueryBuilder.EvaluateMethod(_query, _metadata, _serverContext, _databaseName, _serverStore, right, ref parameters);
+                                var id = LuceneQueryBuilder.EvaluateMethod(_query, _metadata, _serverContext, _compareExchangeStorage, right, ref parameters);
                                 if (id is ValueExpression v)
                                     AddId(v.Token.Value);
                             }

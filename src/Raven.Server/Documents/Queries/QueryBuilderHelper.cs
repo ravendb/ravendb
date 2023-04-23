@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
-using Mono.Unix.Native;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
@@ -16,13 +14,11 @@ using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Spatial4n.Shapes;
-using Voron;
 using Constants = Raven.Client.Constants;
 using Index = Raven.Server.Documents.Indexes.Index;
 
@@ -136,7 +132,7 @@ public static class QueryBuilderHelper
                 return -1;
         }
     }
-    
+
     public static (object Value, ValueTokenType Type) GetValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression,
         bool allowObjectsInParameters = false)
     {
@@ -359,7 +355,7 @@ public static class QueryBuilderHelper
         OperatorType.GreaterThanEqual => UnaryMatchOperation.GreaterThanOrEqual,
         _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
     };
-    
+
     internal static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(
         Query query,
         InExpression expression,
@@ -468,7 +464,7 @@ public static class QueryBuilderHelper
 
         return ExtractIndexFieldName(query, parameters, field, metadata);
     }
-    
+
     internal static QueryFieldName ExtractIndexFieldName(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
     {
         if (field is FieldExpression fe)
@@ -528,17 +524,17 @@ public static class QueryBuilderHelper
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
         FieldMetadata metadata;
-        
+
         //Sometimes index can contians Id property and its different than real document ID. We've to 
-        if ((fieldName.Equals(Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) && indexMapping.ContainsField(fieldName)) == false && 
+        if ((fieldName.Equals(Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) && indexMapping.ContainsField(fieldName)) == false &&
             fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
         {
             metadata = indexMapping.GetByFieldId(0).Metadata;
-            return exact 
+            return exact
                 ? metadata.ChangeAnalyzer(FieldIndexingMode.Exact, null).ChangeScoringMode(hasBoost)
                 : metadata.ChangeScoringMode(hasBoost);
         }
-        
+
         if (isForQuery == false)
         {
             if (fieldName is "score" or "score()")
@@ -551,7 +547,7 @@ public static class QueryBuilderHelper
             if (exact || shouldTurnOffAnalyzersForTime) //When field has exact let's change the analyzer to do nothing
                 metadata = indexFinding.Metadata.ChangeAnalyzer(FieldIndexingMode.Exact);
             else if (indexFinding.FieldIndexingMode is FieldIndexingMode.Search) // in case of search
-                metadata = handleSearch  
+                metadata = handleSearch
                     ? indexFinding.Metadata //when we want mapping for search lets use 'search` analyzer 
                     : indexFinding.Metadata.ChangeAnalyzer(FieldIndexingMode.Normal, indexMapping.DefaultAnalyzer); //but when we do a TermMatch we want to have just default analyzer, even on full-text search field
             else
@@ -564,8 +560,8 @@ public static class QueryBuilderHelper
             if (hasDynamics == false)
                 ThrowNotFoundInIndex();
 
-            var mode = shouldTurnOffAnalyzersForTime || exact 
-                ? FieldIndexingMode.Exact 
+            var mode = shouldTurnOffAnalyzersForTime || exact
+                ? FieldIndexingMode.Exact
                 : FieldIndexingMode.Normal;
             metadata = FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, indexMapping.DefaultAnalyzer, hasBoost: hasBoost);
         }
@@ -578,7 +574,7 @@ public static class QueryBuilderHelper
     {
         return metadata.GetIndexFieldName(new QueryFieldName(field.Token.Value, field.Value == ValueTokenType.String), parameters);
     }
-    
+
     internal static bool IsExact(Index index, bool exact, QueryFieldName fieldName)
     {
         if (exact)
@@ -591,13 +587,11 @@ public static class QueryBuilderHelper
 
         return false;
     }
-    
-    internal static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext,
-        DocumentsOperationContext documentsContext, MethodExpression method, BlittableJsonReaderObject parameters)
+
+    internal static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext, AbstractCompareExchangeStorage compareExchangeStorage, MethodExpression method, BlittableJsonReaderObject parameters)
     {
         var methodType = QueryMethod.GetMethodType(method.Name.Value);
 
-        var server = documentsContext.DocumentDatabase.ServerStore;
         switch (methodType)
         {
             case MethodType.CompareExchange:
@@ -605,9 +599,8 @@ public static class QueryBuilderHelper
                 if (v.Type != ValueTokenType.String)
                     throw new InvalidQueryException("Expected value of type string, but got: " + v.Type, query.QueryText, parameters);
 
-                var prefix = CompareExchangeKey.GetStorageKey(documentsContext.DocumentDatabase.Name, v.Value.ToString());
                 object value = null;
-                server.Cluster.GetCompareExchangeValue(serverContext, prefix).Value?.TryGetMember(Constants.CompareExchange.ObjectFieldName, out value);
+                compareExchangeStorage.GetCompareExchangeValue(serverContext, v.Value.ToString()).Value?.TryGetMember(Constants.CompareExchange.ObjectFieldName, out value);
 
                 if (value == null)
                     return new ValueExpression(string.Empty, ValueTokenType.Null);
@@ -621,7 +614,7 @@ public static class QueryBuilderHelper
     internal static string CoraxGetValueAsString(object value) => value switch
     {
         StringSegment s => s.Value,
-        string {Length: 0} => Constants.Documents.Indexing.Fields.EmptyString,
+        string { Length: 0 } => Constants.Documents.Indexing.Fields.EmptyString,
         string s => s,
         long l => l.ToString(CultureInfo.InvariantCulture),
         double d => d.ToString(CultureInfo.InvariantCulture),
@@ -651,7 +644,7 @@ public static class QueryBuilderHelper
         DescendingSpatial
     }
 
-    internal static IShape HandleWkt(CoraxQueryBuilder.Parameters builderParameters, string fieldName, MethodExpression expression, 
+    internal static IShape HandleWkt(CoraxQueryBuilder.Parameters builderParameters, string fieldName, MethodExpression expression,
         SpatialField spatialField, out SpatialUnits units)
     {
         var wktValue = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)expression.Arguments[0]);
@@ -674,7 +667,7 @@ public static class QueryBuilderHelper
             throw new InvalidQueryException($"Value '{wkt}' is not a valid WKT value.", builderParameters.Metadata.QueryText, builderParameters.QueryParameters, e);
         }
     }
-    
+
     internal static IShape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
         SpatialField spatialField, out SpatialUnits units)
     {
@@ -711,7 +704,7 @@ public static class QueryBuilderHelper
 
         return (SpatialUnits)su;
     }
-    
+
     internal static bool TryUseTime(Index index, string fieldName, object valueFirst, object valueSecond, bool exact, out long ticksFirst, out long ticksSecond)
     {
         ticksFirst = -1;
@@ -738,7 +731,7 @@ public static class QueryBuilderHelper
 
         return false;
     }
-    
+
     internal static MethodExpression FindMoreLikeThisExpression(QueryExpression expression)
     {
         if (expression == null)

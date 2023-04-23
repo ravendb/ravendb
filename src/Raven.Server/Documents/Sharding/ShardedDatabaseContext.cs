@@ -90,6 +90,9 @@ namespace Raven.Server.Documents.Sharding
 
             RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
             Replication = new ShardedReplicationContext(this, serverStore);
+
+            CompareExchangeStorage = new ShardedCompareExchangeStorage(this);
+            CompareExchangeStorage.Initialize(DatabaseName);
         }
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);

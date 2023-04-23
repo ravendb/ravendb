@@ -163,7 +163,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             // * For collection queries that specify ids, we can turn that into a set of loads that 
             //   will hit the known servers
 
-            (List<Slice> ids, string _) = Query.ExtractIdsFromQuery(RequestHandler.ServerStore, Context.Allocator, RequestHandler.DatabaseContext.DatabaseName);
+            (List<Slice> ids, string _) = Query.ExtractIdsFromQuery(RequestHandler.ServerStore, Context.Allocator, RequestHandler.DatabaseContext.CompareExchangeStorage);
 
             if (ids != null)
             {
