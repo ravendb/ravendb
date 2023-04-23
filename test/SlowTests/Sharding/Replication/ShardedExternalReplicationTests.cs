@@ -223,9 +223,6 @@ namespace SlowTests.Sharding.Replication
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store1);
 
-                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
-                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
-
                 for (int i = 0; i < 50; i++)
                 {
                     var id = $"foo/bar/{i}";
@@ -237,6 +234,9 @@ namespace SlowTests.Sharding.Replication
                     var id = $"users/{i}";
                     Assert.True(WaitForDocument<User>(store1, id, predicate: null, timeout: 30_000));
                 }
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
             }
         }
 
@@ -264,11 +264,12 @@ namespace SlowTests.Sharding.Replication
                 await SetupReplicationAsync(store2, store1);
                 await EnsureReplicatingAsync(store2, store1);
 
-                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
-                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
-
                 Assert.True(WaitForDocument<User>(store1, "users/1", predicate: u => u.Name == "Queeni", timeout: 30_000));
                 Assert.True(WaitForDocument<User>(store2, "users/1", predicate: u => u.Name == "Queeni", timeout: 30_000));
+
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
             }
         }
 
