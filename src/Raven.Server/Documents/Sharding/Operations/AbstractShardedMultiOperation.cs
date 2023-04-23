@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -11,14 +12,12 @@ namespace Raven.Server.Documents.Sharding.Operations;
 
 public abstract class AbstractShardedMultiOperation
 {
-    private readonly object _locker = new();
-
     protected readonly long Id;
     protected readonly ShardedDatabaseContext ShardedDatabaseContext;
 
     private readonly Action<IOperationProgress> _onProgress;
 
-    protected readonly Dictionary<ShardedDatabaseIdentifier, Operation> Operations;
+    protected readonly ConcurrentDictionary<ShardedDatabaseIdentifier, Operation> Operations;
 
     private Dictionary<int, IOperationProgress> _progresses;
 
@@ -26,7 +25,7 @@ public abstract class AbstractShardedMultiOperation
     {
         Id = id;
         _onProgress = onProgress;
-        Operations = new Dictionary<ShardedDatabaseIdentifier, Operation>();
+        Operations = new ConcurrentDictionary<ShardedDatabaseIdentifier, Operation>();
         ShardedDatabaseContext = shardedDatabaseContext;
     }
 
@@ -41,12 +40,10 @@ public abstract class AbstractShardedMultiOperation
     {
         Debug.Assert(_progresses == null);
 
-        operation.OnProgressChanged += (_, progress) => OnProgressChanged(key, progress);
+        if (Operations.TryAdd(key, operation) == false)
+            return;
 
-        lock (_locker)
-        {
-            Operations.Add(key, operation);
-        }
+        operation.OnProgressChanged += (_, progress) => OnProgressChanged(key, progress);
 
         void OnProgressChanged(ShardedDatabaseIdentifier k, IOperationProgress progress)
         {
