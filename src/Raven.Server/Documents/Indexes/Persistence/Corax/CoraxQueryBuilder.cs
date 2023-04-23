@@ -236,7 +236,7 @@ internal static class CoraxQueryBuilder
 
                     if (where.Right is MethodExpression rme)
                     {
-                        right = QueryBuilderHelper.EvaluateMethod(metadata.Query, metadata, serverContext, documentsContext, rme, queryParameters);
+                        right = QueryBuilderHelper.EvaluateMethod(metadata.Query, metadata, serverContext, documentsContext.DocumentDatabase.CompareExchangeStorage, rme, queryParameters);
                     }
 
 

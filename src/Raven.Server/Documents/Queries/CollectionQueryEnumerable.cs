@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Queries
 
                 _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
-                (_ids, _startsWith) = query.ExtractIdsFromQuery(database.ServerStore, context.Allocator, database.Name);
+                (_ids, _startsWith) = query.ExtractIdsFromQuery(database.ServerStore, context.Allocator, database.CompareExchangeStorage);
 
                 if (_query.Metadata.FilterScript != null)
                 {
