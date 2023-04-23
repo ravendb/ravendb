@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using Raven.Client.Documents;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;

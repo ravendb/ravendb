@@ -1847,10 +1847,14 @@ namespace Raven.Server.ServerWide
         {
             Debug.Assert(context.Transaction != null);
 
+            name = ShardHelper.ToDatabaseName(name);
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
             {
                 if (CanDeleteSecretKey() == false)
                 {
+                    if (rawRecord.IsSharded)
+                        return;
+
                     throw new InvalidOperationException(
                         $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
                 }
@@ -1862,6 +1866,26 @@ namespace Raven.Server.ServerWide
 
                     if (rawRecord.IsEncrypted == false)
                         return true;
+
+                    if (rawRecord.IsSharded)
+                    {
+                        List<int> shardsOnThisNode = new();
+                        foreach ((int shardNumber, var shardTopology) in rawRecord.Sharding.Shards)
+                        {
+                            if (shardTopology.RelevantFor(NodeTag) == false)
+                                continue;
+                            shardsOnThisNode.Add(shardNumber);
+                        }
+
+                        if (shardsOnThisNode.Count == 0)
+                            return true;
+
+                        if (rawRecord.DeletionInProgress == null)
+                            return false;
+
+                        return shardsOnThisNode.All(shardNumber =>
+                            rawRecord.DeletionInProgress.ContainsKey(DatabaseRecord.GetKeyForDeletionInProgress(NodeTag, shardNumber)));
+                    }
 
                     if (rawRecord.Topology.RelevantFor(NodeTag) == false)
                         return true;

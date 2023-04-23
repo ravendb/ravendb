@@ -10,7 +10,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
