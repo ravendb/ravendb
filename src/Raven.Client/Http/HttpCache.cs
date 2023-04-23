@@ -165,7 +165,7 @@ namespace Raven.Client.Http
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
                 old = oldItem;
-                ForTestingPurposes?.OnHttpCacheSetUpdate?.Invoke();
+                _forTestingPurposes?.OnHttpCacheSetUpdate?.Invoke();
                 return httpCacheItem;
             });
             //We need to check if the cache is been disposed after the item was added otherwise we will run into another race condition
@@ -195,7 +195,7 @@ namespace Raven.Client.Http
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
                 old = oldItem;
-                ForTestingPurposes?.OnHttpCacheNotFoundUpdate?.Invoke();
+                _forTestingPurposes?.OnHttpCacheNotFoundUpdate?.Invoke();
                 return httpCacheItem;
             });
             //We need to check if the cache is been disposed after the item was added otherwise we will run into another race condition
@@ -213,6 +213,9 @@ namespace Raven.Client.Http
 
         internal void FreeSpace()
         {
+            if (_forTestingPurposes?.DisableFreeSpaceCleanup == true)
+                return;
+
             if (_isFreeSpaceRunning.Raise() == false)
                 return;
 
@@ -379,14 +382,14 @@ namespace Raven.Client.Http
         {
         }
 
-        internal TestingStuff ForTestingPurposes;
+        private TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
-            if (ForTestingPurposes != null)
-                return ForTestingPurposes;
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
 
-            return ForTestingPurposes = new TestingStuff();
+            return _forTestingPurposes = new TestingStuff();
         }
 
         internal class TestingStuff
@@ -394,6 +397,8 @@ namespace Raven.Client.Http
             public Action OnHttpCacheSetUpdate;
 
             public Action OnHttpCacheNotFoundUpdate;
+
+            public bool DisableFreeSpaceCleanup;
         }
     }
 }
