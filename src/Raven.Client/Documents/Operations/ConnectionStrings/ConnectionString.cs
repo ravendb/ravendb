@@ -33,6 +33,11 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             };
         }
 
+        public virtual DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
+
         public virtual bool IsEqual(ConnectionString connectionString)
         {
             if (connectionString == null)
@@ -41,7 +46,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             return Name == connectionString.Name && Type == connectionString.Type;
         }
 
-        public static ConnectionStringType GetConnectionStringType(BlittableJsonReaderObject connectionStringConfiguration)
+        internal static ConnectionStringType GetConnectionStringType(BlittableJsonReaderObject connectionStringConfiguration)
         {
             if (connectionStringConfiguration.TryGet("Type", out string type) == false)
                 throw new InvalidOperationException($"ConnectionString configuration must have {nameof(ConnectionStringType)} field");

@@ -149,6 +149,11 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
             return result;
         }
+
+        public override DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
     }
 
     public class SqlEtlTable

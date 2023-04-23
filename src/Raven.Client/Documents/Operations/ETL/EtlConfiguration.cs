@@ -129,6 +129,11 @@ namespace Raven.Client.Documents.Operations.ETL
             return result;
         }
 
+        public virtual DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
+
         internal EtlConfigurationCompareDifferences Compare(EtlConfiguration<T> config, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
         {
             if (config == null)

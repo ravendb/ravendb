@@ -116,7 +116,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return new DynamicJsonValue
             {
                 [nameof(BackupType)] = BackupType,
-                [nameof(SnapshotSettings)] = SnapshotSettings?.ToJson(),
+                [nameof(SnapshotSettings)] = SnapshotSettings?.ToAuditJson(),
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToAuditJson(),
                 [nameof(LocalSettings)] = LocalSettings?.ToAuditJson(),
                 [nameof(S3Settings)] = S3Settings?.ToAuditJson(),
