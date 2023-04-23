@@ -71,6 +71,12 @@
 <script type="text/html" id="create-db-restore">
     <div data-bind="with: databaseModel.restore">
         <h3>Backup Source Configuration</h3>
+
+        <div class="toggle margin-bottom-sm">
+            <input class="styled" type="checkbox" id="restore_sharded_db" data-bind="checked: enableSharding">
+            <label for="restore_sharded_db">Restore sharded database</label>
+        </div>
+        
         <div class="form-group row" data-bind="validationElement: source">
             <div class="col-md-4">
                 <!-- TODO: allow other sources for sharded databases -->
@@ -131,13 +137,14 @@
                     <span class="help-block" data-bind="validationMessage: $data.nodeTag"></span>
                 </div>
                 
-                <div data-bind="validationElement: $data.directoryPath" class="flex-grow">
+                <div data-bind="validationElement: directoryPath" class="flex-grow">
                     <div class="dropdown btn-block">
-                        <input type="text" class="form-control dropdown-toggle"
-                        data-bind="textInput: $data.directoryPath()"
-                        data-toggle="dropdown" placeholder="Enter backup directory path" />
+                        <input type="text" 
+                               class="form-control dropdown-toggle" 
+                               data-bind="textInput: directoryPath(), attr: { id: 'shardBackupDirectoryPath_' + $index() }" 
+                               data-toggle="dropdown" placeholder="Enter backup directory path" />
                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                        <ul class="dropdown-menu" data-bind="foreach: $data.directoryPathOptions">
+                        <ul class="dropdown-menu" data-bind="foreach: directoryPathOptions, autoComplete: '#shardBackupDirectoryPath_' + $index()">
                             <li data-bind="click: $parents[1].setShardingDirectoryPath.bind($parent, $parentContext.$index(), $data)">
                                 <a href="#" data-bind="text: $data"></a>
                             </li>

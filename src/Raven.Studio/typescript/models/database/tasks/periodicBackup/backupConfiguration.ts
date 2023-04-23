@@ -160,7 +160,7 @@ abstract class backupConfiguration {
     }
 
     private updateFolderPathOptions(path: string) {
-        getFolderPathOptionsCommand.forServerLocal(path, true, this.databaseName() ? activeDatabaseTracker.default.database() : null)
+        getFolderPathOptionsCommand.forServerLocal(path, true, null, this.databaseName() ? activeDatabaseTracker.default.database() : null)
             .execute()
             .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
                 if (this.localSettings().folderPath() !== path) {

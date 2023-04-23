@@ -304,23 +304,16 @@ class createDatabase extends dialogViewModelBase {
                 this.spinners.databaseLocationInfoLoading(false);
             }
         });
-
-        this.databaseModel.restore.azureCredentials().onCredentialsChange(() => {
+        
+        const updatePathAndRestorePoints = () => {
             this.updateBackupDirectoryPathOptions();
             this.databaseModel.fetchRestorePoints();
-        });
-        this.databaseModel.restore.amazonS3Credentials().onCredentialsChange(() => {
-            this.updateBackupDirectoryPathOptions();
-            this.databaseModel.fetchRestorePoints();
-        });
-        this.databaseModel.restore.googleCloudCredentials().onCredentialsChange(() => {
-            this.updateBackupDirectoryPathOptions();
-            this.databaseModel.fetchRestorePoints();
-        });
-        this.databaseModel.restore.localServerCredentials().onCredentialsChange(() => {
-            this.updateBackupDirectoryPathOptions();
-            this.databaseModel.fetchRestorePoints();
-        });
+        };
+        
+        this.databaseModel.restore.azureCredentials().onCredentialsChange(updatePathAndRestorePoints);
+        this.databaseModel.restore.amazonS3Credentials().onCredentialsChange(updatePathAndRestorePoints);
+        this.databaseModel.restore.googleCloudCredentials().onCredentialsChange(updatePathAndRestorePoints);
+        this.databaseModel.restore.localServerCredentials().onCredentialsChange(updatePathAndRestorePoints);
         
         this.databaseModel.restoreSourceObject.subscribe(() => {
             this.updateBackupDirectoryPathOptions();
