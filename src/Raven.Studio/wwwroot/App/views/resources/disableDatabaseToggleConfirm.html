@@ -1,25 +1,35 @@
 <div class="modal-dialog" role="document">
     <div class="modal-content">
         <div class="modal-header">
+            <h5 class="modal-title">
+                Toggle database state confirmation
+            </h5>
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
-            <h4 class="modal-title">Toggle database state confirmation</h4>
         </div>
         <div class="modal-body">
             <div data-bind="visible: databases.length === 1">
                 <span data-bind="text: deletionText"></span>
-                <strong data-bind="with: databases[0]">
-                    <span data-bind="text: name"></span>
-                </strong>
+                <ul class="databases-list margin-top-xs">
+                    <li class="force-text-wrap" data-bind="with: databases[0]"><i class="icon-database text-primary"></i>
+                        <small title="This database is encrypted" data-bind="visible: encrypted"><i class="icon-encryption text-success"></i></small>
+                        <small title="This database is not encrypted" data-bind="visible: !encrypted"><i class="icon-unlock text-muted"></i></small>
+                        <strong data-bind="text: name"></strong>
+                    </li>
+                </ul>
             </div>
             <div data-bind="visible: databases.length > 1">
                 <span data-bind="text: deletionText"></span>
                 <strong data-bind="text: databases.length"></strong>
                 databases
                 <br />
-                <ul data-bind="foreach: databases" style="max-height: 100px; overflow-y: auto;">
-                    <li><span data-bind="text: name"></span></li>
+                <ul class="databases-list margin-top-xs" data-bind="foreach: databases">
+                    <li class="force-text-wrap"><i class="icon-database text-primary"></i>
+                        <small title="This database is encrypted" data-bind="visible: encrypted"><i class="icon-encryption text-success"></i></small>
+                        <small title="This database is not encrypted" data-bind="visible: !encrypted"><i class="icon-unlock text-muted"></i></small>
+                        <strong data-bind="text: name"></strong>
+                    </li>
                 </ul>
             </div>
         </div>

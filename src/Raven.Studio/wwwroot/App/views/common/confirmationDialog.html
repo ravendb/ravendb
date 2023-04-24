@@ -1,10 +1,10 @@
 <div class="modal-dialog" role="document" data-bind="css: { 'modal-lg': wideDialog }">
     <div class="modal-content">
         <div class="modal-header">
+            <h5 class="modal-title" data-bind="text: title"></h5>
             <button type="button" class="close" data-bind="click: close, clickBubble: false" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
-            <h4 class="modal-title" data-bind="text: title"></h4>
         </div>
         <div class="modal-body">
             <p class="confirmationMessage" data-bind="html: confirmationMessageAsHtml"></p>

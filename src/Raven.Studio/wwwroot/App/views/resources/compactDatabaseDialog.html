@@ -2,13 +2,13 @@
     <form data-bind="submit: compactDatabase" autocomplete="off" novalidate>
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
-                <h3 class="modal-title">
+                <h5 class="modal-title">
                     <i class="icon-compact"></i><span>Compact Database <strong data-bind="text: database.name"></strong></span>
-                </h3>
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
             </div>
             <div class="modal-body">
-                <div class="margin-left">
+                <div>
                     <div class="toggle">
                         <input id="compactDocuments" type="checkbox" data-bind="checked: compactDocuments" />
                         <label for="compactDocuments">Compact documents</label>
@@ -17,7 +17,7 @@
                         <input id="allIndexes" type="checkbox" data-bind="checked: compactAllIndexes" />
                         <label for="allIndexes">Compact all indexes</label><small data-bind="text: numberOfIndexesFormatted"></small>
                     </div>
-                    <div class="margin-left margin-left-lg">
+                    <div class="margin-left">
                         <div class="toggle" title="Check to skip optimization of Lucene indexes">
                             <input id="skipOptimizeIndexes" type="checkbox" data-bind="checked: skipOptimizeIndexes" />
                             <label for="skipOptimizeIndexes">Skip optimize indexes</label>
@@ -55,12 +55,12 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <div class="text-left margin-left text-warning bg-warning padding padding-sm margin-right margin-top margin-bottom flex-horizontal">
+                <div class="text-left alert alert-warning padding padding-sm margin-top-sm margin-bottom-sm border-radius-xs flex-horizontal">
                     <div class="flex-start"><small><i class="icon-warning"></i></small></div>
                     <div>
-                        <small data-bind="visible: numberOfNodes() > 1">During <strong>compaction</strong> the database will be offline.</small>
-                        <small data-bind="visible: numberOfNodes() === 1, html: 'During <strong>compaction</strong> the database will be offline on this node - ' + currentNodeTag()"></small>
-                        <div><small>Existing documents will be <strong>compressed</strong> only if 'Document Compression' is set for the related collection.</small></div>
+                        <small data-bind="visible: numberOfNodes() > 1">During <strong class="text-warning">compaction</strong> the database will be offline.</small>
+                        <small data-bind="visible: numberOfNodes() === 1, html: 'During compaction the database will be offline on this node - ' + currentNodeTag()"></small>
+                        <div><small>Existing documents will be <strong class="text-warning">compressed</strong> only if 'Document Compression' is set for the related collection.</small></div>
                     </div>
                 </div>
                 <div class="padding text-right">

@@ -47,15 +47,14 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
         <Modal isOpen toggle={toggle} wrapClassName="bs5">
             <ModalHeader toggle={toggle}>{title}</ModalHeader>
             <ModalBody>
-                <div className="mb-2">{subtitle}</div>
-                <ul style={{ maxHeight: "300px", overflowY: "auto" }}>
+                {subtitle}
+                <ul>
                     {indexes.map((index) => (
-                        <li key={index.name}>
-                            <strong>{index.name}</strong>
+                        <li key={index.name} className="padding-xxs">
+                            {index.name}
                         </li>
                     ))}
                 </ul>
-
                 {showContextSelector && (
                     <div>
                         <p>Select context:</p>
