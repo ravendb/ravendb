@@ -902,7 +902,7 @@ namespace Raven.Server.Documents.Patch
             private JsValue IncludeTimeSeriesValue(JsValue self, JsValue[] args)
             {
                 if (args.Length != 2)
-                    throw new InvalidOperationException($"includes.timeseries(doc, name) must be called with two arguments. now called with {args.Length} arguments");
+                    throw new InvalidOperationException($"includes.timeseries(doc, name) must be called with two arguments. Now called with '{args.Length}' arguments.");
 
                 if (args[1].IsNull() || args[1].IsUndefined())
                     return self;

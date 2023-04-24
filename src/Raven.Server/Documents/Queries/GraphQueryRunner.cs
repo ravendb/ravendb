@@ -158,8 +158,8 @@ namespace Raven.Server.Documents.Queries
                             idc,
                             icevc,
                             irc,
-                            includeTimeSeriesCommand:null,
-                            includeCountersCommand:null);
+                            includeTimeSeriesCommand: null,
+                            includeCountersCommand: null);
 
                         HashSet<ulong> alreadySeenProjections = null;
                         if (q.IsDistinct)

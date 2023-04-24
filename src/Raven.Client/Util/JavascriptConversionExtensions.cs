@@ -1039,14 +1039,14 @@ namespace Raven.Client.Util
                     {
                         var arg = methodCallExpression.Arguments[0];
 
-                        if (arg is ConstantExpression { Value: string docName})
+                        if (arg is ConstantExpression { Value: string docName })
                         {
                             writer.Write("includes.document(");
                             writer.Write(docName);
                             writer.Write(")");
                             return;
                         }
-                        throw new NotSupportedException("You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path)");
+                        throw new NotSupportedException($"You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path). Current expression: '{arg.ToString()}'.");
                     }
                 }
 
@@ -1058,8 +1058,8 @@ namespace Raven.Client.Util
                     if (arg is UnaryExpression { Operand: LambdaExpression { Body: BinaryExpression { Left: MethodCallExpression mce } } })
                     {
                         var objReplace = (MemberExpression)mce.Object;
-                        var replaceExprassion = Expression.Parameter(objReplace.Expression.Type, _alias);
-                        var objReplace1 = objReplace.Update(replaceExprassion);
+                        var replaceExpression = Expression.Parameter(objReplace.Expression.Type, _alias);
+                        var objReplace1 = objReplace.Update(replaceExpression);
                         var curmce = mce.Update(objReplace1, mce.Arguments);
                         writer.Write("includes.document(");
                         context.Visitor.Visit(curmce);
@@ -1070,15 +1070,15 @@ namespace Raven.Client.Util
                     if (arg is UnaryExpression { Operand: LambdaExpression arg2 })
                     {
                         var targetExpression = (MemberExpression)arg2.Body;
-                        var replaceExprassion = Expression.Parameter(targetExpression.Expression.Type, _alias);
-                        targetExpression = targetExpression.Update(replaceExprassion);
+                        var replaceExpression = Expression.Parameter(targetExpression.Expression.Type, _alias);
+                        targetExpression = targetExpression.Update(replaceExpression);
 
                         writer.Write("includes.document(");
                         context.Visitor.Visit(targetExpression);
                         writer.Write(")");
                         return;
                     }
-                    throw new NotSupportedException("You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path)");
+                    throw new NotSupportedException($"You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path). Current expression: '{arg.ToString()}'.");
                 }
             }
         }
@@ -1097,16 +1097,17 @@ namespace Raven.Client.Util
                     return;
                 
                 var methodName = methodCallExpression.Method.Name;
+                bool isIncludeAllCounters = methodName == nameof(RavenQuery.IncludeAllCounters);
                 var hasCounters = methodName == nameof(RavenQuery.IncludeCounter) ||
                                  methodName == nameof(RavenQuery.IncludeCounters) ||
-                                 methodName == nameof(RavenQuery.IncludeAllCounters);
+                                 isIncludeAllCounters;
 
                 var hasTimeSeries = methodName == nameof(RavenQuery.IncludeTimeSeries);
 
-                    if (hasCounters == false && hasTimeSeries == false)
+                if (hasCounters == false && hasTimeSeries == false)
                     return;
 
-                var expectedArgsCount = methodName == nameof(RavenQuery.IncludeAllCounters) ? 1 : 2;
+                var expectedArgsCount = isIncludeAllCounters ? 1 : 2;
                 if (methodCallExpression.Arguments.Count != expectedArgsCount)
                     return;
 
