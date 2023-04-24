@@ -41,7 +41,7 @@ unsafe partial struct SortingMatch
         }
     }
 
-    internal readonly struct MatchComparer<T, TW> : IComparer<MatchComparer<T, TW>.Item>
+    public readonly struct MatchComparer<T, TW> : IComparer<MatchComparer<T, TW>.Item>
         where T : IMatchComparer
         where TW : struct
     {
@@ -52,7 +52,7 @@ unsafe partial struct SortingMatch
 
             public override string ToString()
             {
-                return $"{nameof(Key)}: {Key}, {nameof(Value)}: {Value}";
+                return $"{nameof(Key)}: {Key} {nameof(Value)}: {Value}";
             }
         }
 

@@ -304,7 +304,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
             var baseline = DateTime.UtcNow;
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new []{ "Users" }, script : null);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new[] { "Users" }, script: null);
 
             var etlDone = WaitForEtl(src, (s, statistics) => statistics.LastProcessedEtag > 21);
 
@@ -326,7 +326,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     await session.SaveChangesAsync();
                 }
             }
-            
+
 
             Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
@@ -344,7 +344,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
             var baseline = DateTime.UtcNow;
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new []{ "Users" }, script : null);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new[] { "Users" }, script: null);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1683,7 +1683,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }, interval: _waitInterval);
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries, RavenArchitecture.AllX64)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         [ClassData(typeof(TestDataForDocChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndMultipleSegmentOfTimeSeriesInSameSession_ShouldDestBeAsSrc(

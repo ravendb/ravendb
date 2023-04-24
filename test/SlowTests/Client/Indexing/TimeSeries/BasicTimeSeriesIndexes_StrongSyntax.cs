@@ -1759,7 +1759,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 new object[] {new ProgressTestTimeSeriesMapReduceIndex()},
             };
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
         [MemberData(nameof(ProgressTestIndexes))]
         public async Task TimeSeriesIndexProgress_WhenMapMultipleSegment_ShouldDisplayNumberOfSegmentToMap(AbstractTimeSeriesIndexCreationTask index)
         {

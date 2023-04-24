@@ -853,14 +853,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<DocumentReplicationItem> GetDocumentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<DocumentReplicationItem> GetDocumentsFrom(DocumentsOperationContext context, long etag, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, 0))
             {
-                yield return DocumentReplicationItem.From(TableValueToDocument(context, ref result.Reader));
+                yield return DocumentReplicationItem.From(TableValueToDocument(context, ref result.Reader, fields));
             }
         }
 
