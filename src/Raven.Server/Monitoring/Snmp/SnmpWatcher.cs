@@ -502,6 +502,7 @@ namespace Raven.Server.Monitoring.Snmp
                 store.Add(new ServerGcPromoted(server.MetricCacher, gcKind));
                 store.Add(new ServerGcTotalAvailableMemory(server.MetricCacher, gcKind));
                 store.Add(new ServerGcTotalCommitted(server.MetricCacher, gcKind));
+                store.Add(new ServerGcLohSize(server.MetricCacher, gcKind));
             }
         }
 
