@@ -76,7 +76,7 @@ namespace Voron
             }
         }
 
-        public Slice Clone(ByteStringContext context, ByteStringType type = ByteStringType.Mutable)
+        public readonly Slice Clone(ByteStringContext context, ByteStringType type = ByteStringType.Mutable)
         {
             return new Slice(context.Clone(this.Content, type));
         }

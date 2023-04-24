@@ -850,7 +850,7 @@ namespace SlowTests.Sharding.Backup
             Assert.Equal(10, result.Documents.ReadCount);
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding | RavenTestCategory.Attachments)]
         public async Task CanImportUniqueAttachments()
         {
             await using var stream = typeof(ShardedSmugglerTests).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_19723.RavenDB_19723.ravendbdump");

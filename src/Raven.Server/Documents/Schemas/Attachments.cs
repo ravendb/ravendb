@@ -1,5 +1,4 @@
-﻿using Raven.Server.Documents.Sharding;
-using Sparrow.Server;
+﻿using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -16,6 +15,7 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly Slice AttachmentsHashSlice;
         internal static readonly Slice AttachmentsTombstonesSlice;
         internal static readonly Slice AttachmentsBucketAndEtagSlice;
+        internal static readonly Slice AttachmentsBucketAndHashSlice;
         internal static readonly string AttachmentsTombstones = "Attachments.Tombstones";
 
         internal enum AttachmentsTable
@@ -41,6 +41,7 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "AttachmentsEtag", ByteStringType.Immutable, out AttachmentsEtagSlice);
                 Slice.From(ctx, "AttachmentsHash", ByteStringType.Immutable, out AttachmentsHashSlice);
                 Slice.From(ctx, "AttachmentsBucketAndEtag", ByteStringType.Immutable, out AttachmentsBucketAndEtagSlice);
+                Slice.From(ctx, "AttachmentsBucketAndHash", ByteStringType.Immutable, out AttachmentsBucketAndHashSlice);
                 Slice.From(ctx, AttachmentsTombstones, ByteStringType.Immutable, out AttachmentsTombstonesSlice);
             }
 
@@ -70,6 +71,17 @@ namespace Raven.Server.Documents.Schemas
             void DefineIndexesForShardingAttachmentsSchema()
             {
                 DefineIndexesForAttachmentsSchema(ShardingAttachmentsSchemaBase);
+                
+                // the order here is important,
+                // in the index 'AttachmentsBucketAndEtagSlice' we rely on the fact that we see the changes that were done during 'AttachmentsBucketAndHashSlice'
+
+                ShardingAttachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = AttachmentsStorage.GenerateBucketAndHashForAttachments,
+                    IsGlobal = true,
+                    Name = AttachmentsBucketAndHashSlice,
+                    SupportDuplicateKeys =  true
+                });
 
                 ShardingAttachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {

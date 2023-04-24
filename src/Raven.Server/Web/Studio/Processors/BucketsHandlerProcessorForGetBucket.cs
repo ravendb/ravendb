@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Senders;
@@ -17,7 +18,7 @@ namespace Raven.Server.Web.Studio.Processors
         
         protected override ValueTask<BucketInfo> GetBucketInfo(DocumentsOperationContext context, int bucket)
         {
-            using (context.OpenReadTransaction())
+            using (var tx = context.OpenReadTransaction())
             {
                 var shardedDocumentDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(RequestHandler.Database);
                 var stats = new ReplicationDocumentSenderBase.ReplicationStats();
@@ -32,6 +33,11 @@ namespace Raven.Server.Web.Studio.Processors
 
                 var bucketStats = ShardedDocumentsStorage.GetBucketStatisticsFor(context, bucket);
 
+                var streamInfo = shardedDocumentDatabase.ShardedDocumentsStorage.AttachmentsStorage.GetStreamInfoForBucket(tx.InnerTransaction, bucket);
+                if (streamInfo.UniqueAttachmets > 0)
+                {
+                    items.Add($"Has {streamInfo.UniqueAttachmets} unique stream with total size of {new Size(streamInfo.TotalSize).HumaneSize}");
+                }
                 if (bucketStats == null)
                 {
                     return ValueTask.FromResult(new BucketInfo()
