@@ -2984,9 +2984,7 @@ namespace Raven.Server.ServerWide
                 || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
             {
                 var newExecutor = CreateNewClusterRequestExecutor(leaderUrl);
-                var oldExecutor = Interlocked.Exchange(ref _clusterRequestExecutor, newExecutor);
-
-                oldExecutor?.Dispose();
+                Interlocked.Exchange(ref _clusterRequestExecutor, newExecutor);
             }
 
             try
