@@ -176,8 +176,8 @@ public class RawShardingConfiguration
                         Shards = new List<int>()
                     };
 
-                    foreach (int shardNumber in shards)
-                        setting.Shards.Add(shardNumber);
+                    foreach (long shardNumber in shards)
+                        setting.Shards.Add((int)shardNumber);
 
                     _prefixed.Add(setting);
                 }

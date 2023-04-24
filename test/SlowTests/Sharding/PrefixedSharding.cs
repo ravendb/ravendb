@@ -790,6 +790,57 @@ public class PrefixedSharding : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Sharding)]
+    public void RavenDb_19737()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                {
+                    new PrefixedShardingSetting
+                    {
+                        // range for 'eu/' is : 
+                        // shard 0 : [1M, 2M]
+                        Prefix = "eu/",
+                        Shards = new List<int> { 0 }
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        // range for 'asia/' is :
+                        // shard 1 : [2M, 2.5M]
+                        // shard 2 : [2.5M, 3M]
+                        Prefix = "asia/",
+                        Shards = new List<int> { 1, 2 }
+                    }
+                };
+            }
+        });
+
+        using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        using (var raw = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, store.Database))
+        {
+            var rawPrefixed = raw.Sharding.Prefixed;
+
+            Assert.Equal(2, rawPrefixed.Count);
+
+            var euSetting = rawPrefixed[0];
+            var asiaSetting = rawPrefixed[1];
+
+            Assert.Equal("eu/", euSetting.Prefix);
+            Assert.Equal(1, euSetting.Shards.Count);
+            Assert.Equal(0, euSetting.Shards[0]);
+
+            Assert.Equal("asia/", asiaSetting.Prefix);
+            Assert.Equal(2, asiaSetting.Shards.Count);
+            Assert.Equal(1, asiaSetting.Shards[0]);
+            Assert.Equal(2, asiaSetting.Shards[1]);
+        }
+    }
+
     private class Item
     {
 #pragma warning disable CS0649
