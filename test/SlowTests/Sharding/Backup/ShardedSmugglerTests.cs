@@ -819,7 +819,9 @@ namespace SlowTests.Sharding.Backup
             using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
+#pragma warning disable CS0618
                 var compareExchangeTombs = Server.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(context, store.Database).ToList();
+#pragma warning restore CS0618
                 Assert.Equal(1, compareExchangeTombs.Count);
                 Assert.Equal("rvn-atomic/users/ayende", compareExchangeTombs[0].Key.Key);
             }

@@ -307,7 +307,9 @@ namespace SlowTests.Client
                 using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
+#pragma warning disable CS0618
                     var result = Server.ServerStore.Cluster.GetCompareExchangeFromPrefix(ctx, dbName, 0, int.MaxValue);
+#pragma warning restore CS0618
                     foreach (var item in result)
                         resultItems++;
                 }
@@ -355,7 +357,9 @@ namespace SlowTests.Client
                 using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
+#pragma warning disable CS0618
                     var result = Server.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(ctx, dbName);
+#pragma warning restore CS0618
                     foreach (var item in result)
                         resultItems++;
                 }

@@ -693,7 +693,9 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Check if we're getting the proper compare exchange for shard databases");
+#pragma warning disable CS0618
             var leaderLastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(context, dbName);
+#pragma warning restore CS0618
             var promotableLastCompareExchangeIndex = promotableDbStats.LastCompareExchangeIndex;
             if (leaderLastCompareExchangeIndex > promotableLastCompareExchangeIndex)
             {

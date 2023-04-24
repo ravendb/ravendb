@@ -199,9 +199,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     numberOfCompareExchange = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, dbName2);
                     Assert.Equal(expectedCompareExchange, numberOfCompareExchange);
 
+#pragma warning disable CS0618
                     numberOfCompareExchange = server.ServerStore.Cluster.GetCompareExchangeFromPrefix(context, dbName1, 0, int.MaxValue).Count();
+#pragma warning restore CS0618
                     Assert.Equal(expectedCompareExchange, numberOfCompareExchange);
+#pragma warning disable CS0618
                     numberOfCompareExchange = server.ServerStore.Cluster.GetCompareExchangeFromPrefix(context, dbName2, 0, int.MaxValue).Count();
+#pragma warning restore CS0618
                     Assert.Equal(expectedCompareExchange, numberOfCompareExchange);
                 }
             }

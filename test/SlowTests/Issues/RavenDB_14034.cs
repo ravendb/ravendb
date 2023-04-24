@@ -549,8 +549,10 @@ namespace SlowTests.Issues
                         using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext transactionContext))
                         using (transactionContext.OpenReadTransaction())
                         {
+#pragma warning disable CS0618
                             var lastCmpXchgIndex = documentDatabase.ServerStore.Cluster
                                 .GetLastCompareExchangeIndexForDatabase(transactionContext, store.Database);
+#pragma warning restore CS0618
 
                             Assert.Equal(expectedIndex, lastCmpXchgIndex);
                         }
