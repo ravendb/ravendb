@@ -3142,6 +3142,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {
                     throw new InvalidOperationException($"Wrong syntax, 'RavenQuery.Include()' works only with discard variable. Current variable is called '{name}'.");
                 }
+
                 HandleFunctionBody(name, js, isInclude: true);
             }
             else

@@ -1011,6 +1011,7 @@ namespace Raven.Client.Util
         public class IncludeDocumentSupport : JavascriptConversionExtension
         {
             public readonly string _alias;
+
             public IncludeDocumentSupport(string inputAlias)
             {
                 _alias = inputAlias;
@@ -1046,7 +1047,9 @@ namespace Raven.Client.Util
                             writer.Write(")");
                             return;
                         }
-                        throw new NotSupportedException($"You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path). Current expression: '{arg.ToString()}'.");
+
+                        throw new NotSupportedException(
+                            $"You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path). Current expression: '{arg.ToString()}'.");
                     }
                 }
 
@@ -1078,7 +1081,9 @@ namespace Raven.Client.Util
                         writer.Write(")");
                         return;
                     }
-                    throw new NotSupportedException($"You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path). Current expression: '{arg.ToString()}'.");
+
+                    throw new NotSupportedException(
+                        $"You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path). Current expression: '{arg.ToString()}'.");
                 }
             }
         }
@@ -1095,12 +1100,12 @@ namespace Raven.Client.Util
                     return;
                 if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
                     return;
-                
+
                 var methodName = methodCallExpression.Method.Name;
                 bool isIncludeAllCounters = methodName == nameof(RavenQuery.IncludeAllCounters);
                 var hasCounters = methodName == nameof(RavenQuery.IncludeCounter) ||
-                                 methodName == nameof(RavenQuery.IncludeCounters) ||
-                                 isIncludeAllCounters;
+                                  methodName == nameof(RavenQuery.IncludeCounters) ||
+                                  isIncludeAllCounters;
 
                 var hasTimeSeries = methodName == nameof(RavenQuery.IncludeTimeSeries);
 
@@ -1125,8 +1130,10 @@ namespace Raven.Client.Util
                         {
                             writer.Write(",");
                         }
+
                         addComma = false;
                     }
+
                     writer.Write(")");
                 }
             }
