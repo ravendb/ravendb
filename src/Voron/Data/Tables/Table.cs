@@ -613,9 +613,19 @@ namespace Voron.Data.Tables
                 using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
                 {
                     dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldValue: ref value, newValue: ref TableValueReaderUtils.EmptyReader);
-
                     var tree = GetTree(dynamicKeyIndexDef);
-                    tree.Delete(val);
+
+                    if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
+                    {
+                        tree.Delete(val);
+                        continue;
+                    }
+
+                    var fst = GetFixedSizeTree(tree, val.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
+                    if (fst.Delete(id).NumberOfEntriesDeleted == 0)
+                    {
+                        ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
+                    }
                 }
             }
 
@@ -982,10 +992,18 @@ namespace Voron.Data.Tables
                         dynamicKeyIndexDef.OnIndexEntryChanged(_tx, dynamicKey, oldValue: ref TableValueReaderUtils.EmptyReader, newValue: ref value);
                         
                         var dynamicIndex = GetTree(dynamicKeyIndexDef);
-                        using (dynamicIndex.DirectAdd(dynamicKey, sizeof(long), TreeNodeFlags.Data | TreeNodeFlags.NewOnly, out var ptr))
+                        if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
                         {
-                            *(long*)ptr = id;
+                            using (dynamicIndex.DirectAdd(dynamicKey, sizeof(long), TreeNodeFlags.Data | TreeNodeFlags.NewOnly, out var ptr))
+                            {
+                                *(long*)ptr = id;
+                            }
+
+                            continue;
                         }
+
+                        var index = GetFixedSizeTree(dynamicIndex, dynamicKey, 0, dynamicKeyIndexDef.IsGlobal);
+                        index.Add(id);
                     }
                 }
 

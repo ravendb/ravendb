@@ -209,6 +209,8 @@ namespace Voron.Data.Tables
 
             public IndexEntryKeyGenerator GenerateKey;
 
+            public bool SupportDuplicateKeys = false;
+
             public ByteStringContext.Scope GetValue(Transaction tx, ref TableValueReader value,
                 out Slice slice)
             {

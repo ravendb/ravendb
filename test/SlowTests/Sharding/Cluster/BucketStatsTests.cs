@@ -451,6 +451,87 @@ namespace SlowTests.Sharding.Cluster
         }
 
         [RavenFact(RavenTestCategory.Sharding)]
+        public async Task BucketStatsShouldAccountAttachmentStreamSizePerBucket()
+        {
+            // different buckets, same shard
+            const string id = "users/1";
+            const string id2 = "users/5";
+            var attachment = new byte[10];
+
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var config = await Sharding.GetShardingConfigurationAsync(store);
+                var bucket1 = Sharding.GetBucket(config, id);
+                var bucket2 = Sharding.GetBucket(config, id2);
+
+                var shard = ShardHelper.GetShardNumberFor(config, bucket1);
+                var shardDatabase = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shard));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "a" }, id);
+                    await session.StoreAsync(new User { Name = "b" }, id2);
+                    await using (var fileStream = new MemoryStream(attachment))
+                    await using (var fileStream2 = new MemoryStream(attachment))
+                    {
+                        session.Advanced.Attachments.Store(id, "attachment", fileStream);
+                        session.Advanced.Attachments.Store(id2, "attachment", fileStream2);
+                        await session.SaveChangesAsync();
+                    }
+                }
+                AssertCorrectStats(1, 10);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "a" }, $"foo${id}");
+                    await using (var fileStream = new MemoryStream(attachment))
+                    {
+                        session.Advanced.Attachments.Store($"foo${id}", "attachment", fileStream);
+                        await session.SaveChangesAsync();
+                    }
+                }
+                AssertCorrectStats(1, 10);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+                AssertCorrectStats(1, 10);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete($"foo${id}");
+                    await session.SaveChangesAsync();
+                }
+                AssertCorrectStats(0, 0);
+
+                using (shardDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (var tx = ctx.OpenReadTransaction())
+                {
+                    var res = shardDatabase.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx);
+                    Assert.Equal(1, res.AttachmentCount);
+                    Assert.Equal(1, res.StreamsCount);
+
+                    var stats = shardDatabase.ShardedDocumentsStorage.AttachmentsStorage.GetStreamInfoForBucket(tx.InnerTransaction, bucket2);
+                    Assert.Equal(1, stats.UniqueAttachmets);
+                    Assert.Equal(10, stats.TotalSize);
+                }
+
+                void AssertCorrectStats(int count, long size)
+                {
+                    using (shardDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (var tx = ctx.OpenReadTransaction())
+                    {
+                        var stats = shardDatabase.ShardedDocumentsStorage.AttachmentsStorage.GetStreamInfoForBucket(tx.InnerTransaction, bucket1);
+                        Assert.Equal(count, stats.UniqueAttachmets);
+                        Assert.Equal(size, stats.TotalSize);
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task BucketStatsShouldTakeIntoAccountAttachmentStreamSize()
         {
             const string id = "users/1";

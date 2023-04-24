@@ -11,6 +11,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Schemas;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -20,6 +21,7 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -230,17 +232,17 @@ namespace Raven.Server.Documents
                         {
                             ThrowConcurrentExceptionOnMissingAttachment(documentId, name, expectedChangeVector);
                         }
+                        
+                        if (putStream)
+                        {
+                            PutAttachmentStream(context, keySlice, base64Hash, stream);
+                        }
 
                         using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                         using (table.Allocate(out TableValueBuilder tvb))
                         {
                             SetTableValue(tvb, changeVectorSlice);
                             table.Insert(tvb);
-                        }
-
-                        if (putStream)
-                        {
-                            PutAttachmentStream(context, keySlice, base64Hash, stream);
                         }
                     }
 
@@ -474,8 +476,8 @@ namespace Raven.Server.Documents
             if (existingStream == null)
             {
                 tree.AddStream(base64Hash, stream, tag: key);
-                UpdateBucketStatsOnPutOrDeleteStream(context, key, stream.Length);
             }
+
             _documentDatabase.Metrics.Attachments.BytesPutsPerSec.MarkSingleThreaded(stream.Length);
         }
 
@@ -489,9 +491,7 @@ namespace Raven.Server.Documents
                     if (keySlice.HasValue == false)
                         return; // stream doesn't exists
 
-                    var deleteResult = tree.DeleteStream(hash);
-                    var size = deleteResult.Size;
-                    UpdateBucketStatsOnPutOrDeleteStream(context, keySlice, -size);
+                    tree.DeleteStream(hash);
                 }
             }
         }
@@ -1334,14 +1334,22 @@ namespace Raven.Server.Documents
             return (doc, name);
         }
 
-        private static void ExtractDocIdAndAttachmentNameFromTombstone(byte* p, int size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName)
+        
+        public static int GetSizeOfDocId(ReadOnlySpan<byte> key)
         {
-            sizeOfDocId = 0;
-            for (; sizeOfDocId < size; sizeOfDocId++)
+            int sizeOfDocId = 0;
+            for (; sizeOfDocId < key.Length; sizeOfDocId++)
             {
-                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
+                if (key[sizeOfDocId] == SpecialChars.RecordSeparator)
                     break;
             }
+
+            return sizeOfDocId;
+        }
+
+        private static void ExtractDocIdAndAttachmentNameFromTombstone(byte* p, int size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName)
+        {
+            sizeOfDocId = GetSizeOfDocId(new ReadOnlySpan<byte>(p, size));
 
             attachmentNameIndex = sizeOfDocId +
                                   1 + // separator
