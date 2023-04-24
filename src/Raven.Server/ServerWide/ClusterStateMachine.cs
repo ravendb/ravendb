@@ -3113,14 +3113,6 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
-        public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string key) where TRavenTransaction : RavenTransaction
-        {
-            using (Slice.From(context.Allocator, key, out Slice keySlice))
-                return GetCompareExchangeValue(context, keySlice);
-        }
-
-        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, Slice key) where TRavenTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
@@ -3128,7 +3120,6 @@ namespace Raven.Server.ServerWide
             return GetCompareExchangeValue(context, key, items);
         }
 
-        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public static (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue<TTransaction>(TransactionOperationContext<TTransaction> context, Slice key, Table items)
             where TTransaction : RavenTransaction
         {
@@ -3142,27 +3133,6 @@ namespace Raven.Server.ServerWide
             return (-1, null);
         }
 
-        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
-        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(ClusterOperationContext context,
-            string dbName, string prefix, long start = 0, long pageSize = 1024)
-        {
-            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-            using (Slice.From(context.Allocator, prefix, out Slice keySlice))
-            {
-                foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, start))
-                {
-                    pageSize--;
-                    var key = ReadCompareExchangeKey(context, item.Value.Reader, dbName);
-                    var index = ReadCompareExchangeOrTombstoneIndex(item.Value.Reader);
-                    var value = ReadCompareExchangeValue(context, item.Value.Reader);
-                    yield return (key, index, value);
-
-                    if (pageSize == 0)
-                        yield break;
-                }
-            }
-        }
-        
         [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeFromPrefix(ClusterOperationContext context, string dbName, long fromIndex, long take)
         {
@@ -3207,25 +3177,6 @@ namespace Raven.Server.ServerWide
         }
 
         [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
-        public long GetLastCompareExchangeTombstoneIndexForDatabase(ClusterOperationContext context, string databaseName)
-        {
-            CompareExchangeCommandBase.GetDbPrefixAndLastSlices(context.Allocator, databaseName, out var prefix, out var last);
-
-            using (prefix.Scope)
-            using (last.Scope)
-            {
-                var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
-
-                var tvh = table.SeekOneBackwardFrom(CompareExchangeTombstoneSchema.Indexes[CompareExchangeTombstoneIndex], prefix.Slice, last.Slice);
-
-                if (tvh == null)
-                    return 0;
-
-                return ReadCompareExchangeOrTombstoneIndex(tvh.Reader);
-            }
-        }
-
-        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesByKey(ClusterOperationContext context,
             string databaseName, long fromIndex = 0, long take = long.MaxValue)
         {
@@ -3247,33 +3198,6 @@ namespace Raven.Server.ServerWide
                     }
                 }
             }
-        }
-
-        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
-        internal bool HasCompareExchangeTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(ClusterOperationContext context, string databaseName, long start, long end)
-        {
-            if (start >= end)
-                return false;
-
-            var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
-            if (table == null)
-                return false;
-
-            using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, databaseName, start + 1, out var buffer)) // start + 1 => we want greater than
-            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
-            {
-                foreach (var tvr in table.SeekForwardFromPrefix(CompareExchangeTombstoneSchema.Indexes[CompareExchangeTombstoneIndex], keySlice, prefix, 0))
-                {
-                    var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
-                    if (index <= end)
-                        return true;
-
-                    return false;
-                }
-            }
-
-            return false;
         }
 
         private bool DeleteExpiredCompareExchange(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
@@ -3329,7 +3253,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe CompareExchangeKey ReadCompareExchangeKey(ClusterOperationContext context, TableValueReader reader, string dbPrefix)
+        internal static unsafe CompareExchangeKey ReadCompareExchangeKey(ClusterOperationContext context, TableValueReader reader, string dbPrefix)
         {
             var ptr = reader.Read((int)CompareExchangeTable.Key, out var size);
 
@@ -3337,7 +3261,7 @@ namespace Raven.Server.ServerWide
             return new CompareExchangeKey(storageKey, dbPrefix.Length + 1);
         }
 
-        private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue<TTransaction>(TransactionOperationContext<TTransaction> context, TableValueReader reader)
+        internal static unsafe BlittableJsonReaderObject ReadCompareExchangeValue<TTransaction>(TransactionOperationContext<TTransaction> context, TableValueReader reader)
             where TTransaction : RavenTransaction
         {
             BlittableJsonReaderObject compareExchangeValue = new BlittableJsonReaderObject(reader.Read((int)CompareExchangeTable.Value, out var size), size, context);

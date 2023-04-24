@@ -252,7 +252,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         var dbInstance = dbTask.Result;
                         var currentHash = dbInstance.GetEnvironmentsHash();
                         report.EnvironmentsHash = currentHash;
-                        report.LastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(ctx, dbName);
+                        report.LastCompareExchangeIndex = dbInstance.CompareExchangeStorage.GetLastCompareExchangeIndex(ctx);
 
                         var documentsStorage = dbInstance.DocumentsStorage;
                         var indexStorage = dbInstance.IndexStore;
