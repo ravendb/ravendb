@@ -183,7 +183,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport)]
+        [RavenMultiplatformFact(RavenTestCategory.BackupExportImport, RavenPlatform.Windows)]
         public async Task CanUploadFileOnEncrypted()
         {
             using (await Retention.SkipMinimumBackupAgeToKeepValidationAsync())
@@ -231,7 +231,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport)]
+        [RavenMultiplatformFact(RavenTestCategory.BackupExportImport, RavenPlatform.Windows)]
         public async Task CanUploadBackupOnEncrypted()
         {
             var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate();
@@ -290,7 +290,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport)]
+        [RavenMultiplatformFact(RavenTestCategory.BackupExportImport, RavenPlatform.Windows)]
         public async Task CanUploadBackupsWithDeletionOnEncrypted()
         {
             using (await Retention.SkipMinimumBackupAgeToKeepValidationAsync())
