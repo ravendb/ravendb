@@ -26,7 +26,6 @@ import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { FlexGrow } from "components/common/FlexGrow";
 import { SubscriptionConnectionsDetailsWithId } from "components/pages/database/tasks/list/OngoingTasksReducer";
 import { Icon } from "components/common/Icon";
-import { EmptySet } from "components/common/EmptySet";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
@@ -148,9 +147,15 @@ function ConnectedClients(props: ConnectedClientsProps) {
 
     return (
         <div className="m-3 p-2 connected-clients-section">
-            <h4>Connected clients - Subscription Mode: {connections.SubscriptionMode}</h4>
+            <h3>Connected clients</h3>
+            {connections.Results.length > 0 && (
+                <div className="mb-2">
+                    <div className="small-label">Subscription Mode</div>
+                    <div>{connections.SubscriptionMode}</div>
+                </div>
+            )}
             <div className="connected-clients-items">
-                {connections.Results.length === 0 && <EmptySet>No clients connected</EmptySet>}
+                {connections.Results.length === 0 && <div>No clients connected</div>}
                 {connections.Results.map((connection) => (
                     <div className="text-center py-2 connected-client">
                         <div className="pb-1">
