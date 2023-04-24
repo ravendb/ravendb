@@ -68,7 +68,7 @@ namespace Sparrow.LowMemory
                                            $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo)}");
                     }
 #if NET7_0_OR_GREATER
-                    if (isLowMemory && now - _lastLohCompaction > _lohCompactionInterval)
+                    if (now - _lastLohCompaction > _lohCompactionInterval)
                     {
                         var info = GC.GetGCMemoryInfo(GCKind.Any);
 
