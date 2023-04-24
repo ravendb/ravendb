@@ -138,10 +138,19 @@ public abstract class AbstractCompareExchangeStorage
         return string.Equals(_databaseName, change.Database, StringComparison.OrdinalIgnoreCase);
     }
 
-    public string GetCompareExchangeStorageKey(string key) => CompareExchangeKey.GetStorageKey(_databaseName, key);
+    public string GetCompareExchangeStorageKey(string key)
+    {
+        AssertInitialized();
+
+        return CompareExchangeKey.GetStorageKey(_databaseName, key);
+    }
 
     public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(ClusterOperationContext context, string prefix, long start = 0, long pageSize = 1024)
     {
+        AssertInitialized();
+
+        prefix = CompareExchangeKey.GetStorageKey(_databaseName, prefix);
+
         var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.CompareExchangeSchema, ClusterStateMachine.CompareExchange);
         using (Slice.From(context.Allocator, prefix, out Slice keySlice))
         {
