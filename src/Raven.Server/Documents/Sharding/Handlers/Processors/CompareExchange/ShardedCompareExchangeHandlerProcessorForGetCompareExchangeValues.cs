@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.CompareExchange;
 internal class ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues : AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] ShardedDatabaseRequestHandler requestHandler) 
-        : base(requestHandler)
+        : base(requestHandler, requestHandler.DatabaseContext.CompareExchangeStorage)
     {
     }
 }

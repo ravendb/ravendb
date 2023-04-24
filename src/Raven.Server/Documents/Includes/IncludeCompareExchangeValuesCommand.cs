@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -15,7 +14,7 @@ namespace Raven.Server.Documents.Includes
     public class IncludeCompareExchangeValuesCommand : ICompareExchangeValueIncludes, IDisposable
     {
         private readonly ServerStore _serverStore;
-        private readonly string _databaseName;
+        private readonly AbstractCompareExchangeStorage _compareExchangeStorage;
         private readonly char _identityPartsSeparator;
 
         private readonly string[] _includes;
@@ -28,15 +27,15 @@ namespace Raven.Server.Documents.Includes
         public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> Results { get; set; }
 
         private IncludeCompareExchangeValuesCommand([NotNull] DocumentDatabase database, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
-            : this(database.Name, database.ServerStore, database.IdentityPartsSeparator, serverContext, throwWhenServerContextIsAllocated, compareExchangeValues)
+            : this(database.ServerStore, database.CompareExchangeStorage, database.IdentityPartsSeparator, serverContext, throwWhenServerContextIsAllocated, compareExchangeValues)
         {
         }
 
-        protected IncludeCompareExchangeValuesCommand(string databaseName, ServerStore serverStore, char identityPartsSeparator, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
+        private IncludeCompareExchangeValuesCommand(ServerStore serverStore, AbstractCompareExchangeStorage compareExchangeStorage, char identityPartsSeparator, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
         {
-            _databaseName = databaseName;
             _identityPartsSeparator = identityPartsSeparator;
             _serverStore = serverStore;
+            _compareExchangeStorage = compareExchangeStorage;
 
             _serverContext = serverContext;
             _throwWhenServerContextIsAllocated = throwWhenServerContextIsAllocated;
@@ -101,7 +100,7 @@ namespace Raven.Server.Documents.Includes
                 if (string.IsNullOrEmpty(includedKey))
                     continue;
 
-                var value = _serverStore.Cluster.GetCompareExchangeValue(_serverContext, CompareExchangeKey.GetStorageKey(_databaseName, includedKey));
+                var value = _compareExchangeStorage.GetCompareExchangeValue(_serverContext, includedKey);
 
                 Results ??= new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Utils;
 using Voron;
@@ -40,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
 
         protected override IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
-            return _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeFromPrefix(queryContext.Server, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize)
+            return _documentsStorage.DocumentDatabase.CompareExchangeStorage.GetCompareExchangeFromPrefix(queryContext.Server, lastEtag + 1, pageSize)
                 .Select(x =>
                 {
                     _reference.Key = x.Key.StorageKey;
@@ -52,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
 
         protected override IEnumerable<Reference> GetTombstoneReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
-            return _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(queryContext.Server, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize)
+            return _documentsStorage.DocumentDatabase.CompareExchangeStorage.GetCompareExchangeTombstonesByKey(queryContext.Server, lastEtag + 1, pageSize)
                 .Select(x =>
                 {
                     _reference.Key = x.Key.StorageKey;

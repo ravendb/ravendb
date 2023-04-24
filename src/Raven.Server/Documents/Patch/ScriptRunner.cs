@@ -355,7 +355,7 @@ namespace Raven.Server.Documents.Patch
                     catch (Exception e)
                     {
                         if (ignoreValidationErrors == false)
-                        throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
+                            throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
                     }
                 }
 
@@ -1250,7 +1250,7 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 1 && args.Length != 2 || args[0].IsString() == false)
                     throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
 
-                return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString()));
+                return CmpXchangeInternal(args[0].AsString());
             }
 
             private JsValue LoadDocument(JsValue self, JsValue[] args)
@@ -1930,7 +1930,7 @@ namespace Raven.Server.Documents.Patch
                 using (_database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    var value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, key).Value;
+                    var value = _database.CompareExchangeStorage.GetCompareExchangeValue(ctx, key).Value;
                     if (value == null)
                         return JsValue.Null;
 
@@ -1983,7 +1983,7 @@ namespace Raven.Server.Documents.Patch
                 try
                 {
                     JavaScriptUtils.CurrentlyProcessedObject = _args[0];
-                    var call = (FunctionInstance) ScriptEngine.GetValue(method);
+                    var call = (FunctionInstance)ScriptEngine.GetValue(method);
                     var result = call.Call(JsValue.Undefined, _args);
 
                     return new ScriptRunnerResult(this, result);

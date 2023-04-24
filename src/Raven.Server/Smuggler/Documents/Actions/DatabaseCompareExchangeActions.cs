@@ -5,7 +5,6 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -47,7 +46,7 @@ internal class DatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeA
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var result = _serverStore.Cluster.GetCompareExchangeValue(context, CompareExchangeKey.GetStorageKey(_databaseName, key));
+                    var result = _database.CompareExchangeStorage.GetCompareExchangeValue(context, key);
                     if (result.Value != null)
                         return true;
                 }

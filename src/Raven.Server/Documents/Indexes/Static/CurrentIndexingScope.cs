@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Static
             public readonly LazyStringValue Key;
             public readonly LazyStringValue Collection;
 
-            public MetadataFieldCache(LazyStringValue id, LazyStringValue key, LazyStringValue collection )
+            public MetadataFieldCache(LazyStringValue id, LazyStringValue key, LazyStringValue collection)
             {
                 Id = id;
                 Key = key;
@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private MetadataFieldCache _metadataFields;
-        
+
         public MetadataFieldCache MetadataFields
         {
             get
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false)
                     {
                         MismatchedReferencesWarningHandler ??= new MismatchedReferencesWarningHandler();
-                        
+
                         if (MismatchedReferencesWarningHandler.IsFull == false)
                         {
                             MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection);
@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (keyLazy.Length == 0)
                     return false;
 
-                var key = CompareExchangeKey.GetStorageKey(_documentsStorage.DocumentDatabase.Name, keyLazy);
+                var key = _documentsStorage.DocumentDatabase.CompareExchangeStorage.GetCompareExchangeStorageKey(keyLazy);
 
                 // we intentionally don't dispose of the scope here, this is being tracked by the references
                 // and will be disposed there.
@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (keyString.Length == 0)
                     return false;
 
-                var key = CompareExchangeKey.GetStorageKey(_documentsStorage.DocumentDatabase.Name, keyString);
+                var key = _documentsStorage.DocumentDatabase.CompareExchangeStorage.GetCompareExchangeStorageKey(keyString);
 
                 // we intentionally don't dispose of the scope here, this is being tracked by the references
                 // and will be disposed there.

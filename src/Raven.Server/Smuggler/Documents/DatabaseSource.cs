@@ -34,7 +34,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentDatabase _database;
         private DocumentsOperationContext _context;
         private ClusterOperationContext _serverContext;
-        
+
         private readonly long _startDocumentEtag;
         private readonly long _startRaftIndex;
         private readonly Logger _logger;
@@ -445,14 +445,14 @@ namespace Raven.Server.Smuggler.Documents
         public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync()
         {
             Debug.Assert(_serverContext != null);
-            return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, ShardHelper.ToDatabaseName(_database.Name), _startRaftIndex, long.MaxValue).ToAsyncEnumerable();
+            return _database.CompareExchangeStorage.GetCompareExchangeFromPrefix(_serverContext, _startRaftIndex, long.MaxValue).ToAsyncEnumerable();
         }
 
         public IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync()
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(_serverContext, ShardHelper.ToDatabaseName(_database.Name)).ToAsyncEnumerable();
+            return _database.CompareExchangeStorage.GetCompareExchangeTombstonesByKey(_serverContext).ToAsyncEnumerable();
         }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
