@@ -118,7 +118,7 @@ public abstract class CGroup
     protected abstract string FindCGroupPathForMemory();
     
     //51 34 0:46 / /sys/fs/cgroup/hugetlb rw,nosuid,nodev,noexec,relatime shared:27 - cgroup cgroup rw,hugetlb
-    private static readonly Regex FindHierarchyMountReg = new Regex(@"^(?:\S+\s+){3}(?<mountroot>\S+)\s+(?<mountpath>\S+).* - (?<filesystemType>\S+)\s+\S+\s+(?:(?<options>[^,]+),?)+$");
+    private static readonly Regex FindHierarchyMountReg = new Regex(@"^(?:\S+\s+){3}(?<mountroot>\S+)\s+(?<mountpath>\S+).* - (?<filesystemType>\S+)\s+\S+\s+(?:(?<options>[^,]+),?)+$", RegexOptions.Compiled);
     protected static IEnumerable<Match> FindHierarchyMount()
     {
         foreach (var line in File.ReadLines(PROC_MOUNTINFO_FILENAME))
@@ -191,7 +191,7 @@ public class CGroupV1 : CGroup
     
     // 8:memory:/user.slice/user-1000.slice/user@1000.service
     // 7:cpu,cpuacct:/user.slice
-    private static readonly Regex FindCGroupPathForSubsystemReg = new Regex(@"^\d+:(?:(?<subsystem_list>[^,:]+),?)+:(?<path>.*)$");
+    private static readonly Regex FindCGroupPathForSubsystemReg = new Regex(@"^\d+:(?:(?<subsystem_list>[^,:]+),?)+:(?<path>.*)$", RegexOptions.Compiled);
     private static string FindCGroupPathForSubsystem(Predicate<IEnumerable<string>> isSubSystem)
     {
         foreach (var line in File.ReadLines(PROC_CGROUP_FILENAME))
@@ -238,7 +238,7 @@ public class CGroupV2 : CGroup
     }
     
     // 0::/user.slice/user-1000.slice/user@1000.service/apps.slice/apps-org.gnome.Terminal.slice/vte-spawn-d7794050-ce4a-451b-92c2-a2433019409e.scope
-    private static readonly Regex FindCGroupPathForSubsystemReg = new Regex(@"^\d+::(?<path>.*)$");
+    private static readonly Regex FindCGroupPathForSubsystemReg = new Regex(@"^\d+::(?<path>.*)$", RegexOptions.Compiled);
     private static string FindCGroupPathForSubsystem()
     {
         foreach (var line in File.ReadLines(PROC_CGROUP_FILENAME))
