@@ -483,61 +483,6 @@ loadToPeople({Name: this.Name + ' ' + this.LastName });
             }
         }
 
-        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
-        public async Task RavenEtl_SetMentorToEtlAndFailover()
-        {
-            using (var src = Sharding.GetDocumentStore())
-            using (var dest = GetDocumentStore())
-            {
-                SetupRavenEtl(src, dest, "Users", script: null, mentor: "C");
-
-                var dbTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(src.Database).First();
-                var database = await dbTask;
-
-                Assert.Equal("C", database.EtlLoader.RavenDestinations[0].MentorNode);
-
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
-
-                using (var session = src.OpenSession())
-                {
-                    session.Store(new User()
-                    {
-                        Name = "Joe Doe2"
-                    }, "users/1");
-
-                    session.SaveChanges();
-                }
-
-                etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                using (var session = dest.OpenSession())
-                {
-                    var user = session.Load<User>("users/1");
-
-                    Assert.NotNull(user);
-                    Assert.Equal("Joe Doe2", user.Name);
-                }
-
-                etlDone.Reset();
-
-                using (var session = src.OpenSession())
-                {
-                    session.Delete("users/1");
-
-                    session.SaveChanges();
-                }
-
-                etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                using (var session = dest.OpenSession())
-                {
-                    var user = session.Load<User>("users/1");
-
-                    Assert.Null(user);
-                }
-            }
-        }
-
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Counters | RavenTestCategory.Sharding)]
         public void RavenEtl_Should_handle_counters()
         {

@@ -675,10 +675,7 @@ namespace SlowTests.Sharding.Replication
                 }
 
                 // add watcher with invalid url to test the failOver on database topology discovery
-                var watcher = new ExternalReplication(dstDB, "connection")
-                {
-                    MentorNode = "B"
-                };
+                var watcher = new ExternalReplication(dstDB, "connection");
                 await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
 
                 using (var dstStore = new DocumentStore
@@ -790,10 +787,7 @@ namespace SlowTests.Sharding.Replication
                 }
 
                 // add watcher with invalid url to test the failOver on database topology discovery
-                var watcher = new ExternalReplication(dstDB, "connection")
-                {
-                    MentorNode = "B"
-                };
+                var watcher = new ExternalReplication(dstDB, "connection");
                 await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
 
                 using (var dstStore = new DocumentStore
@@ -867,10 +861,7 @@ namespace SlowTests.Sharding.Replication
                 }
 
                 // add watcher with invalid url to test the failover on database topology discovery
-                var watcher = new ExternalReplication(dstDB, "connection")
-                {
-                    MentorNode = "B"
-                };
+                var watcher = new ExternalReplication(dstDB, "connection");
                 await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
 
                 using (var dstStore = new DocumentStore

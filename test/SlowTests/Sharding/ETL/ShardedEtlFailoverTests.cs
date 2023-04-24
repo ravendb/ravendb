@@ -80,8 +80,7 @@ namespace SlowTests.Sharding.ETL
                             Disabled = false
                         }
                     },
-                    LoadRequestTimeoutInSec = 30,
-                    MentorNode = node
+                    LoadRequestTimeoutInSec = 30
                 };
                 var connectionString = new RavenConnectionString
                 {
@@ -189,8 +188,7 @@ namespace SlowTests.Sharding.ETL
                             Disabled = false
                         }
                     },
-                    LoadRequestTimeoutInSec = 30,
-                    MentorNode = node
+                    LoadRequestTimeoutInSec = 30
                 };
                 var connectionString = new RavenConnectionString
                 {
@@ -284,7 +282,6 @@ namespace SlowTests.Sharding.ETL
                 Database = dstDb,
             }.Initialize())
             {
-                var myTag = srcCluster.Leader.ServerStore.NodeTag;
                 var connectionStringName = "EtlFailover";
                 var urls = new[] { "http://google.com", "http://localhost:1232", destNode.Servers[0].WebUrl };
                 var conflig = new RavenEtlConfiguration()
@@ -302,8 +299,7 @@ namespace SlowTests.Sharding.ETL
                             Disabled = false
                         }
                     },
-                    LoadRequestTimeoutInSec = 10,
-                    MentorNode = myTag
+                    LoadRequestTimeoutInSec = 10
                 };
                 var connectionString = new RavenConnectionString
                 {
@@ -316,13 +312,12 @@ namespace SlowTests.Sharding.ETL
                 Assert.NotNull(result.RaftCommandIndex);
 
                 var etlResult = src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(conflig));
-                var databases = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == myTag)
-                    .ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(srcDb);
+
+                var databases = Sharding.GetShardsDocumentDatabaseInstancesFor(srcDb, srcNodes.Servers);
 
                 var etlDone = new ManualResetEventSlim();
-                foreach (var task in databases)
+                await foreach (var db in databases)
                 {
-                    var db = await task;
                     db.EtlLoader.BatchCompleted += x =>
                     {
                         if (x.Statistics.LoadSuccesses > 0)
@@ -576,8 +571,7 @@ namespace SlowTests.Sharding.ETL
                             Disabled = false
                         }
                     },
-                    LoadRequestTimeoutInSec = 30,
-                    MentorNode = "A"
+                    LoadRequestTimeoutInSec = 30
                 };
                 var connectionString = new RavenConnectionString
                 {
@@ -735,8 +729,7 @@ loadToOrders(partitionBy(key),
                         Collections = new List<string> {"Orders"},
                         Script = script
                     }
-                },
-                MentorNode = server.ServerStore.NodeTag
+                }
             };
 
             var result = store.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(new OlapConnectionString
