@@ -351,6 +351,8 @@ namespace Raven.Server.Documents
 
                 Configuration.CheckDirectoryPermissions();
 
+                InitializeCompareExchangeStorage();
+
                 _addToInitLog("Initializing NotificationCenter");
                 NotificationCenter.Initialize();
 
@@ -379,7 +381,6 @@ namespace Raven.Server.Documents
                     DatabaseDoesNotExistException.Throw(Name);
 
                 OnDatabaseRecordChanged(record);
-                InitializeCompareExchangeStorage();
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
