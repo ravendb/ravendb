@@ -603,7 +603,7 @@ namespace Raven.Server.Documents
 
             if (batchCollector.Count == 0)
             {
-                var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
+                var index = CompareExchangeStorage.GetLastCompareExchangeIndex(context);
 
                 if (RachisLogIndexNotifications.LastModifiedIndex != index)
                     RachisLogIndexNotifications.NotifyListenersAbout(index, null);

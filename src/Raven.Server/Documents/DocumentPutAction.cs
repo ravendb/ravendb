@@ -80,8 +80,7 @@ namespace Raven.Server.Documents
                 using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
                 using (clusterContext.OpenReadTransaction())
                 {
-                    var guardId = CompareExchangeKey.GetStorageKey(_parent._documentDatabase.Name, ClusterTransactionCommand.GetAtomicGuardKey(id));
-                    var (indexFromCluster, val) = _serverStore.Cluster.GetCompareExchangeValue(clusterContext, guardId);
+                    var (indexFromCluster, val) = _parent._documentDatabase.CompareExchangeStorage.GetCompareExchangeValue(clusterContext, ClusterTransactionCommand.GetAtomicGuardKey(id));
                     if (indexFromChangeVector != indexFromCluster)
                     {
                         throw new ConcurrencyException(

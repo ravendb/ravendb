@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
@@ -14,12 +15,14 @@ using Sparrow.Json.Parsing;
 namespace Raven.Server.Web.System.Processors.CompareExchange;
 
 internal abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext> 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
-    
-    protected AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    private readonly AbstractCompareExchangeStorage _compareExchangeStorage;
+
+    protected AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] TRequestHandler requestHandler, [NotNull] AbstractCompareExchangeStorage compareExchangeStorage) : base(requestHandler)
     {
+        _compareExchangeStorage = compareExchangeStorage ?? throw new ArgumentNullException(nameof(compareExchangeStorage));
     }
 
     public override async ValueTask ExecuteAsync()
@@ -44,7 +47,7 @@ internal abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExch
         var pageSize = RequestHandler.GetPageSize();
 
         var startsWithKey = RequestHandler.GetStringQueryString("startsWith", false);
-        var items = RequestHandler.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, RequestHandler.DatabaseName, CompareExchangeKey.GetStorageKey(RequestHandler.DatabaseName, startsWithKey), start, pageSize);
+        var items = _compareExchangeStorage.GetCompareExchangeValuesStartsWith(context, startsWithKey, start, pageSize);
 
         var numberOfResults = 0;
         long totalDocumentsSizeInBytes = 0;
@@ -68,7 +71,7 @@ internal abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExch
             writer.WriteEndObject();
         }
 
-        RequestHandler.AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(ClusterStateMachine.GetCompareExchangeValuesStartsWith),
+        RequestHandler.AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(AbstractCompareExchangeStorage.GetCompareExchangeValuesStartsWith),
             HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
     }
 
@@ -79,7 +82,7 @@ internal abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExch
         var items = new List<(string Key, long Index, BlittableJsonReaderObject Value)>(keys.Count);
         foreach (var key in keys)
         {
-            var item = RequestHandler.ServerStore.Cluster.GetCompareExchangeValue(context, CompareExchangeKey.GetStorageKey(RequestHandler.DatabaseName, key));
+            var item = _compareExchangeStorage.GetCompareExchangeValue(context, key);
             if (item.Value == null && keys.Count == 1)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

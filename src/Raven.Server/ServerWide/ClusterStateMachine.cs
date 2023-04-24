@@ -3113,12 +3113,14 @@ namespace Raven.Server.ServerWide
             };
         }
 
+        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string key) where TRavenTransaction : RavenTransaction
         {
             using (Slice.From(context.Allocator, key, out Slice keySlice))
                 return GetCompareExchangeValue(context, keySlice);
         }
 
+        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, Slice key) where TRavenTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
@@ -3126,6 +3128,7 @@ namespace Raven.Server.ServerWide
             return GetCompareExchangeValue(context, key, items);
         }
 
+        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public static (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue<TTransaction>(TransactionOperationContext<TTransaction> context, Slice key, Table items)
             where TTransaction : RavenTransaction
         {
@@ -3139,6 +3142,7 @@ namespace Raven.Server.ServerWide
             return (-1, null);
         }
 
+        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(ClusterOperationContext context,
             string dbName, string prefix, long start = 0, long pageSize = 1024)
         {
@@ -3158,7 +3162,8 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-
+        
+        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeFromPrefix(ClusterOperationContext context, string dbName, long fromIndex, long take)
         {
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
@@ -3182,6 +3187,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public long GetLastCompareExchangeIndexForDatabase(ClusterOperationContext context, string databaseName)
         {
             CompareExchangeCommandBase.GetDbPrefixAndLastSlices(context.Allocator, databaseName, out var prefix, out var last);
@@ -3200,6 +3206,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public long GetLastCompareExchangeTombstoneIndexForDatabase(ClusterOperationContext context, string databaseName)
         {
             CompareExchangeCommandBase.GetDbPrefixAndLastSlices(context.Allocator, databaseName, out var prefix, out var last);
@@ -3218,6 +3225,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesByKey(ClusterOperationContext context,
             string databaseName, long fromIndex = 0, long take = long.MaxValue)
         {
@@ -3241,6 +3249,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractCompareExchangeStorage)}'.")]
         internal bool HasCompareExchangeTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(ClusterOperationContext context, string databaseName, long start, long end)
         {
             if (start >= end)

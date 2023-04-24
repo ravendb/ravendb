@@ -92,6 +92,13 @@ public abstract class AbstractCompareExchangeStorage
         return string.Equals(_databaseName, change.Database, StringComparison.OrdinalIgnoreCase);
     }
 
+    public string GetCompareExchangeStorageKey(string key) => CompareExchangeKey.GetStorageKey(_databaseName, key);
+
+    public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(ClusterOperationContext context, string prefix, long start = 0, long pageSize = 1024)
+    {
+        return _serverStore.Cluster.GetCompareExchangeValuesStartsWith(context, _databaseName, prefix, start, pageSize);
+    }
+
     [Conditional("DEBUG")]
     private void AssertInitialized()
     {
