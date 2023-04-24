@@ -56,6 +56,8 @@ dialog.addContext('bootstrapModal', {
 
             $('#bootstrapModal').modal(options);
             
+            $(".modal-content").addClass("neo-modal");
+            
             $(".modal-backdrop").addClass("bs3");
             
             if ($("body").hasClass("fullscreen")) {

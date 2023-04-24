@@ -356,7 +356,7 @@ $h1-font-size: $heading-size-base * math.pow($gutter-ratio, 3) !default;
 $h2-font-size: $heading-size-base * math.pow($gutter-ratio, 2.33) !default;
 $h3-font-size: $heading-size-base * math.pow($gutter-ratio, 1.66) !default;
 $h4-font-size: $heading-size-base * math.pow($gutter-ratio, 1) !default;
-$h5-font-size: $heading-size-base * math.pow($gutter-ratio, 0.33) !default;
+$h5-font-size: $heading-size-base * math.pow($gutter-ratio, 1) !default;
 $h6-font-size: $heading-size-base !default;
 // scss-docs-end font-variables
 

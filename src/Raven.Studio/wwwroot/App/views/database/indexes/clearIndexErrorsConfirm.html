@@ -1,10 +1,10 @@
 <div class="modal-dialog" role="document">
     <div class="modal-content">
         <div class="modal-header">
+            <h5 class="modal-title" data-bind="text: title"></h5>
             <button type="button" class="close" data-bind="click: close" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
-            <h4 class="modal-title" data-bind="text: title"></h4>
         </div>
         <div class="modal-body">
             <p data-bind="html: subTitleHtml"></p>
@@ -25,7 +25,7 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="button" class="btn btn-danger" data-bind="click: clearIndexes, css: { 'btn-spinner': spinners.clear }">
+            <button type="button" class="btn btn-primary" data-bind="click: clearIndexes, css: { 'btn-spinner': spinners.clear }">
                 <i class="icon-trash"></i>
                 <span>Clear Index Errors</span>
             </button>
