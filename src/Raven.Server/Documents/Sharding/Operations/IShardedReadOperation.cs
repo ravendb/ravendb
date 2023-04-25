@@ -10,7 +10,7 @@ public interface IShardedReadOperation<TResult> : IShardedReadOperation<TResult,
 
 }
 
-public interface IShardedReadOperation<TResult, TCombinedResult> : IShardedOperation<TResult, ShardedReadResult<TCombinedResult>> 
+public interface IShardedReadOperation<TResult, TCombinedResult> : IShardedOperation<TResult, ShardedReadResult<TCombinedResult>>
 {
     string ExpectedEtag { get; }
 
@@ -30,23 +30,10 @@ public interface IShardedReadOperation<TResult, TCombinedResult> : IShardedOpera
 
         if (ExpectedEtag == result.CombinedEtag)
         {
-            var allNotModified = true;
-            foreach (var (shardNumber, res) in results)
-            {
-                if (res.Command.StatusCode == HttpStatusCode.NotModified) 
-                    continue;
-                
-                allNotModified = false;
-                break;
-            }
-
-            if (allNotModified)
-            {
-                result.StatusCode = (int)HttpStatusCode.NotModified;
-                return result;
-            }
+            result.StatusCode = (int)HttpStatusCode.NotModified;
+            return result;
         }
-        
+
         result.Result = CombineResults(results);
         return result;
     }

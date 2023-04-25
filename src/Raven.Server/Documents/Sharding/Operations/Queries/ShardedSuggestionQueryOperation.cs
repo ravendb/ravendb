@@ -7,6 +7,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
@@ -22,9 +23,9 @@ public class ShardedSuggestionQueryOperation : AbstractShardedQueryOperation<Sug
     private readonly Dictionary<string, SuggestionField> _fieldsWithOptions;
     private readonly BlittableJsonReaderObject _queryParameters;
 
-    public ShardedSuggestionQueryOperation(Dictionary<string, SuggestionField> fieldsWithOptions, BlittableJsonReaderObject queryParameters,
+    public ShardedSuggestionQueryOperation(IndexQueryServerSide query, Dictionary<string, SuggestionField> fieldsWithOptions, BlittableJsonReaderObject queryParameters,
         TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
-        : base(queryCommands, context, requestHandler, expectedEtag)
+        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag)
     {
         _fieldsWithOptions = fieldsWithOptions;
         _queryParameters = queryParameters;

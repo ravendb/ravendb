@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Server.Documents.Queries.Sharding;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -23,12 +24,20 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
     protected readonly TransactionOperationContext Context;
     protected long CombinedResultEtag;
 
-    protected AbstractShardedQueryOperation(Dictionary<int, ShardedQueryCommand> queryCommands, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, string expectedEtag)
+    protected AbstractShardedQueryOperation(
+        [NotNull] QueryMetadata metadata,
+        [NotNull] Dictionary<int, ShardedQueryCommand> queryCommands,
+        [NotNull] TransactionOperationContext context,
+        [NotNull] ShardedDatabaseRequestHandler requestHandler,
+        string expectedEtag)
     {
-        QueryCommands = queryCommands;
-        Context = context;
-        _requestHandler = requestHandler;
-        ExpectedEtag = expectedEtag;
+        if (metadata == null)
+            throw new ArgumentNullException(nameof(metadata));
+
+        QueryCommands = queryCommands ?? throw new ArgumentNullException(nameof(queryCommands));
+        Context = context ?? throw new ArgumentNullException(nameof(context));
+        _requestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
+        ExpectedEtag = metadata.HasOrderByRandom == false ? expectedEtag : null;
     }
 
     public HttpRequest HttpRequest { get => _requestHandler.HttpContext.Request; }

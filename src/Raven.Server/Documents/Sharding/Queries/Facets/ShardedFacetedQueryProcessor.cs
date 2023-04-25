@@ -111,7 +111,7 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
             {
                 var commands = GetOperationCommands(executeScope);
 
-                operation = new ShardedFacetedQueryOperation(_optionsByFacet, Context, RequestHandler, commands, ExistingResultEtag?.ToString());
+                operation = new ShardedFacetedQueryOperation(Query, _optionsByFacet, Context, RequestHandler, commands, ExistingResultEtag?.ToString());
 
                 var shards = GetShardNumbers(commands);
 
