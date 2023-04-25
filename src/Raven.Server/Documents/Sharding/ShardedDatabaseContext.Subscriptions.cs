@@ -71,5 +71,12 @@ public partial class ShardedDatabaseContext
         {
             HandleDatabaseRecordChange(databaseRecord);
         }
+
+        public override bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "RavenDB-18568: need to handle workerId for concurrent subscription");
+            // for sharded database there is no concurrent subscription
+            return DropSubscriptionConnections(subscriptionId, ex);
+        }
     }
 }

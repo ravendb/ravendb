@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Subscriptions
             return GetSubscriptionConnectionStatusAndResponsibleNode(subscriptionId, state, databaseRecord.Topology);
         }
 
-        public bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex)
+        public override bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex)
         {
             if (_subscriptions.TryGetValue(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
                 return false;

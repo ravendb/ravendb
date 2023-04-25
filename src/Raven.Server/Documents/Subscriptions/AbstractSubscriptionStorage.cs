@@ -38,6 +38,7 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
     protected abstract void SetConnectionException(TState state, SubscriptionException ex);
     protected abstract string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus);
     protected abstract bool SubscriptionChangeVectorHasChanges(TState state, SubscriptionState taskStatus);
+    public abstract bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex);
 
     public IEnumerable<SubscriptionState> GetAllSubscriptionsFromServerStore(ClusterOperationContext context, int start = 0, int take = int.MaxValue)
     {
@@ -109,6 +110,32 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
             _logger.Info($"Subscription with id '{subscriptionId}' and name '{state.SubscriptionName}' was deleted and connections were dropped.", ex);
 
         return true;
+    }
+
+    public SubscriptionState GetActiveSubscription(ClusterOperationContext context, long? id, string name)
+    {
+        SubscriptionState subscription;
+        if (string.IsNullOrEmpty(name) == false)
+        {
+            subscription = GetSubscriptionByName(context, name);
+        }
+        else if (id.HasValue)
+        {
+            name = GetSubscriptionNameById(context, id.Value);
+            subscription = GetSubscriptionByName(context, name);
+        }
+        else
+        {
+            throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
+        }
+
+        if (_subscriptions.TryGetValue(subscription.SubscriptionId, out TState subscriptionConnectionsState) == false)
+            return null;
+
+        if (subscriptionConnectionsState.IsSubscriptionActive() == false)
+            return null;
+
+        return subscription;
     }
 
     public virtual void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)
