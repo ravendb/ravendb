@@ -4,10 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -19,11 +17,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        public AbstractSubscriptionsHandlerProcessorForGetSubscription([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractSubscriptionsHandlerProcessorForGetSubscription([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        protected abstract IEnumerable<SubscriptionState> GetSubscriptions(TransactionOperationContext context, int start, int pageSize, bool history, bool running, long? id, string name);
+        protected abstract IEnumerable<SubscriptionState> GetSubscriptions(ClusterOperationContext context, int start, int pageSize, bool history, bool running, long? id, string name);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -34,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             var id = RequestHandler.GetLongQueryString("id", required: false);
             var name = RequestHandler.GetStringQueryString("name", required: false);
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscriptions = GetSubscriptions(context, start, pageSize, history, running, id, name);
@@ -48,7 +46,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             }
         }
 
-        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriter writer, IEnumerable<SubscriptionState> subscriptions, TransactionOperationContext context)
+        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriter writer, IEnumerable<SubscriptionState> subscriptions, ClusterOperationContext context)
         {
             writer.WriteStartObject();
             writer.WriteArray(context, "Results", subscriptions.Select(SubscriptionStateAsJson), (w, c, subscription) => c.Write(w, subscription));

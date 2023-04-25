@@ -143,7 +143,7 @@ namespace SlowTests.Client.Subscriptions
                 }, Guid.NewGuid().ToString(), subscriptionState.SubscriptionId);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
-                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     var query = WaitForValue(() =>
@@ -184,7 +184,7 @@ namespace SlowTests.Client.Subscriptions
 
         private string GetSubscriptionChangeVector(DocumentDatabase currentDatabase)
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscriptionData = currentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(context, "Subs1");

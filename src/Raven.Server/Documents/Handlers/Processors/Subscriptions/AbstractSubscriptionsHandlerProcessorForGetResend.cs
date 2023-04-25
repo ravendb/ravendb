@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -11,12 +12,16 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal abstract class AbstractSubscriptionsHandlerProcessorForGetResend<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractSubscriptionsHandlerProcessorForGetResend<TRequestHandler, TOperationContext, TSubscriptionState> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+        where TSubscriptionState : AbstractSubscriptionConnectionsState
     {
-        protected AbstractSubscriptionsHandlerProcessorForGetResend([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected readonly AbstractSubscriptionStorage<TSubscriptionState> SubscriptionStorage;
+
+        protected AbstractSubscriptionsHandlerProcessorForGetResend([NotNull] TRequestHandler requestHandler, [NotNull] AbstractSubscriptionStorage<TSubscriptionState> subscriptionStorage) : base(requestHandler)
         {
+            SubscriptionStorage = subscriptionStorage ?? throw new ArgumentNullException(nameof(subscriptionStorage));
         }
 
         protected abstract HashSet<long> GetActiveBatches(ClusterOperationContext context, SubscriptionState subscriptionState);
@@ -34,8 +39,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                     SubscriptionState subscriptionState;
                     try
                     {
-                        subscriptionState =
-                            RequestHandler.ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, RequestHandler.DatabaseName, subscriptionName);
+                        subscriptionState = SubscriptionStorage.GetSubscriptionByName(context, subscriptionName);
                     }
                     catch (SubscriptionDoesNotExistException)
                     {

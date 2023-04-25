@@ -39,15 +39,15 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
     protected abstract string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus);
     protected abstract bool SubscriptionChangeVectorHasChanges(TState state, SubscriptionState taskStatus);
 
-    public IEnumerable<SubscriptionState> GetAllSubscriptionsFromServerStore(TransactionOperationContext context)
+    public IEnumerable<SubscriptionState> GetAllSubscriptionsFromServerStore(ClusterOperationContext context)
     {
         foreach (var state in SubscriptionsClusterStorage.GetAllSubscriptionsWithoutState(context, _databaseName, 0, int.MaxValue))
             yield return state;
     }
 
-    public SubscriptionState GetSubscriptionById(TransactionOperationContext context, long taskId) => _serverStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, _databaseName, taskId);
+    public SubscriptionState GetSubscriptionById(ClusterOperationContext context, long taskId) => _serverStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, _databaseName, taskId);
 
-    public SubscriptionState GetSubscriptionByName(TransactionOperationContext context, string taskName) => _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, taskName);
+    public SubscriptionState GetSubscriptionByName(ClusterOperationContext context, string taskName) => _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, taskName);
 
     public long GetAllSubscriptionsCount()
     {
@@ -89,7 +89,7 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
 
     public virtual void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)
     {
-        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
             //checks which subscriptions should be dropped because of the database record change
@@ -140,7 +140,7 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
         }
     }
     
-    public string GetSubscriptionNameById(TransactionOperationContext serverStoreContext, long id)
+    public string GetSubscriptionNameById(ClusterOperationContext serverStoreContext, long id)
     {
         foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
                      SubscriptionState.SubscriptionPrefix(_databaseName)))
@@ -157,7 +157,7 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
         return null;
     }
 
-    public TState GetSubscriptionConnectionsState<T>(TransactionOperationContext<T> context, string subscriptionName) where T : RavenTransaction
+    public TState GetSubscriptionConnectionsState(ClusterOperationContext context, string subscriptionName)
     {
         var subscriptionState = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, subscriptionName);
 

@@ -5,10 +5,8 @@ using System.Net;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
-using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
@@ -18,7 +16,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
         {
         }
 
-        protected override IEnumerable<SubscriptionState> GetSubscriptions(TransactionOperationContext context, int start, int pageSize, bool history, bool running, long? id, string name)
+        protected override IEnumerable<SubscriptionState> GetSubscriptions(ClusterOperationContext context, int start, int pageSize, bool history, bool running, long? id, string name)
         {
             if (history)
                 throw new ArgumentException(nameof(history) + " not supported");

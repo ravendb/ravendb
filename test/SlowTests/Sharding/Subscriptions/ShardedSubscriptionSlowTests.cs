@@ -188,7 +188,7 @@ namespace SlowTests.Sharding.Subscriptions
             {
                 var query = WaitForValue(() =>
                 {
-                    using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
                         var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
@@ -208,7 +208,7 @@ namespace SlowTests.Sharding.Subscriptions
                 var newCv = cvs[db.Name];
                 var cv = WaitForValue(() =>
                 {
-                    using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
                         var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
@@ -601,7 +601,7 @@ namespace SlowTests.Sharding.Subscriptions
                     Assert.NotNull(result.DatabaseContext);
 
                     SubscriptionState subscriptionState;
-                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         subscriptionState = Server.ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, store.Database, subscriptionId);

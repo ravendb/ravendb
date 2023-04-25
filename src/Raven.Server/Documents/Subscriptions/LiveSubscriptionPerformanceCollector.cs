@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             var results = new List<SubscriptionTaskPerformanceStats>();
             
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscriptions = Database.SubscriptionStorage.GetAllSubscriptions(context, false, 0, int.MaxValue);
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Subscriptions
         // Get periodic info for ws
         protected override List<SubscriptionTaskPerformanceStats> PreparePerformanceStats()
         {
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 var preparedStats = new List<SubscriptionTaskPerformanceStats>();
 
@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (_perSubscriptionConnectionStats.ContainsKey(subscriptionName))
                 return;
 
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscription = Database.SubscriptionStorage.GetSubscription(context, null, subscriptionName, true);

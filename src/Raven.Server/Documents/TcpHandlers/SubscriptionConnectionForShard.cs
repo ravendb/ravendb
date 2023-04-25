@@ -49,7 +49,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         return base.AcceptMessage();
     }
 
-    protected override RawDatabaseRecord GetRecord(TransactionOperationContext context) => _serverStore.Cluster.ReadRawDatabaseRecord(context, ShardName);
+    protected override RawDatabaseRecord GetRecord(ClusterOperationContext context) => _serverStore.Cluster.ReadRawDatabaseRecord(context, ShardName);
 
     protected override string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument)
     {

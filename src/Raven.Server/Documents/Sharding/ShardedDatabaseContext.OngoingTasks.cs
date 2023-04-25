@@ -8,7 +8,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.OngoingTasks;
 using Raven.Server.Documents.Sharding.Subscriptions;
-using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding;
 
@@ -32,7 +32,7 @@ public partial class ShardedDatabaseContext
 
         protected override string GetDestinationUrlForRavenEtl(string name) => null;
 
-        protected override IEnumerable<OngoingTaskPullReplicationAsHub> GetPullReplicationAsHubTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+        protected override IEnumerable<OngoingTaskPullReplicationAsHub> GetPullReplicationAsHubTasks(JsonOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
         {
             yield break;
         }

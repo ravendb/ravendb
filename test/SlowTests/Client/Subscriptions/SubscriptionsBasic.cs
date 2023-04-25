@@ -379,7 +379,7 @@ namespace SlowTests.Client.Subscriptions
                     Assert.True(await ackFirstCV.WaitAsync(_reasonableWaitTime));
 
                     SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
-                    using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         subscriptionState = database.SubscriptionStorage.GetSubscriptionFromServerStore(context, subscriptionId);
@@ -551,7 +551,7 @@ namespace SlowTests.Client.Subscriptions
                     Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
 
                     var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
-                    using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
                         var query = WaitForValue(() =>
@@ -635,7 +635,7 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
-                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     var query = WaitForValue(() =>
@@ -726,7 +726,7 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
-                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     var query = WaitForValue(() =>
@@ -1309,7 +1309,7 @@ namespace SlowTests.Client.Subscriptions
                     Assert.True(await WaitForValueAsync(async () =>
                     {
                         var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
-                        using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
                             var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, subscriptionName);
@@ -1572,7 +1572,7 @@ namespace SlowTests.Client.Subscriptions
         private async Task AssertRunningSubscriptionAndDrop(DocumentStore store)
         {
             DocumentDatabase db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var name = $"Subscription0";

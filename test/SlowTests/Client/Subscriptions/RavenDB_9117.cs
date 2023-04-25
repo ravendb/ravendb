@@ -67,7 +67,7 @@ namespace SlowTests.Client.Subscriptions
                 var database = await GetDatabase(store.Database);
 
                 SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
-                using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     subscriptionState = database.SubscriptionStorage.GetSubscriptionFromServerStore(context, sn);

@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Handlers
 
             var name = options.Name ?? subscriptionId.ToString();
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext))
             using (serverContext.OpenReadTransaction())
             {
                 // need to wait on the relevant remote node

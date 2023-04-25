@@ -196,7 +196,7 @@ namespace StressTests.Rachis
 
             for (var k = 0; k < SubscriptionsCount; k++)
             {
-                using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (curNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var subscription = db
@@ -467,7 +467,7 @@ namespace StressTests.Rachis
 
                 for (var k = 0; k < SubscriptionsCount; k++)
                 {
-                    using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (curNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         var name = $"Subscription{k}";
@@ -504,7 +504,7 @@ namespace StressTests.Rachis
                     continue;
                 }
 
-                using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (curNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     SubscriptionStorage.SubscriptionGeneralDataAndStats subscription = null;

@@ -75,7 +75,7 @@ namespace SlowTests.Client.Subscriptions
 
                 subscriptionTasks[0].SubscriptionObject.Dispose();
 
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var sp = Stopwatch.StartNew();

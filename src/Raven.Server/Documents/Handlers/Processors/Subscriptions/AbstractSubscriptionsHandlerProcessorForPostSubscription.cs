@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -10,12 +11,16 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal abstract class AbstractSubscriptionsHandlerProcessorForPostSubscription<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractSubscriptionsHandlerProcessorForPostSubscription<TRequestHandler, TOperationContext, TSubscriptionState> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+        where TSubscriptionState : AbstractSubscriptionConnectionsState
     {
-        public AbstractSubscriptionsHandlerProcessorForPostSubscription([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected readonly AbstractSubscriptionStorage<TSubscriptionState> SubscriptionStorage;
+
+        protected AbstractSubscriptionsHandlerProcessorForPostSubscription([NotNull] TRequestHandler requestHandler, AbstractSubscriptionStorage<TSubscriptionState> subscriptionStorage) : base(requestHandler)
         {
+            SubscriptionStorage = subscriptionStorage;
         }
 
         public virtual SubscriptionConnection.ParsedSubscription ParseSubscriptionQuery(string query)
@@ -23,11 +28,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             return SubscriptionConnection.ParseSubscriptionQuery(query);
         }
 
-        protected abstract ValueTask CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, TransactionOperationContext context);
+        protected abstract ValueTask CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, ClusterOperationContext context);
 
         public override async ValueTask ExecuteAsync()
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), null);
@@ -35,18 +40,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 var id = options.Id;
 
                 SubscriptionState state;
-                
+
                 try
                 {
                     if (id == null)
                     {
-                        state = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, RequestHandler.DatabaseName, options.Name);
+                        state = SubscriptionStorage.GetSubscriptionByName(context, options.Name);
                         id = state.SubscriptionId;
                     }
                     else
                     {
-                        state = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, RequestHandler.DatabaseName, id.Value);
-                        
+                        state = SubscriptionStorage.GetSubscriptionById(context, id.Value);
+
                         // keep the old subscription name
                         if (options.Name == null)
                             options.Name = state.SubscriptionName;
@@ -90,14 +95,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                     }
                 }
 
-                if (options.ChangeVector == null)
-                    options.ChangeVector = state.ChangeVectorForNextBatchStartingPoint;
-
-                if (options.MentorNode == null)
-                    options.MentorNode = state.MentorNode;
-
-                if (options.Query == null)
-                    options.Query = state.Query;
+                options.ChangeVector ??= state.ChangeVectorForNextBatchStartingPoint;
+                options.MentorNode ??= state.MentorNode;
+                options.Query ??= state.Query;
 
                 if (SubscriptionsHandler.SubscriptionHasChanges(options, state) == false)
                 {

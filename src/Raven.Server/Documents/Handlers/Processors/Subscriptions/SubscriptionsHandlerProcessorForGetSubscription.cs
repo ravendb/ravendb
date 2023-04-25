@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
         {
         }
 
-        protected override IEnumerable<SubscriptionState> GetSubscriptions(TransactionOperationContext context, int start, int pageSize, bool history, bool running, long? id, string name)
+        protected override IEnumerable<SubscriptionState> GetSubscriptions(ClusterOperationContext context, int start, int pageSize, bool history, bool running, long? id, string name)
         {
             IEnumerable<SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
             if (string.IsNullOrEmpty(name) && id == null)
