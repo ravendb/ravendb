@@ -273,7 +273,8 @@ namespace SlowTests.Sharding.Subscriptions
                 TimeSpan fromMilliseconds = TimeSpan.FromMilliseconds(16);
                 using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName)
                 {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16), MaxDocsPerBatch = 1
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16),
+                    MaxDocsPerBatch = 1
                 });
 
                 var t = subscription.Run(async x =>
@@ -604,7 +605,7 @@ namespace SlowTests.Sharding.Subscriptions
                     using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        subscriptionState = Server.ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, store.Database, subscriptionId);
+                        subscriptionState = result.DatabaseContext.SubscriptionsStorage.GetSubscriptionByName(context, subscriptionId);
                     }
 
                     await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(store))

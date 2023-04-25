@@ -30,7 +30,9 @@ public class ShardSubscriptionStorage : SubscriptionStorage
                 if (subscriptionName == null)
                     continue;
 
+#pragma warning disable CS0618
                 using var taskStateRaw = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateRaw(context, _databaseName, subscriptionName);
+#pragma warning restore CS0618
                 if (taskStateRaw == null)
                 {
                     // the subscription is deleted

@@ -83,13 +83,17 @@ namespace Raven.Server.Documents.Subscriptions
             using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
+#pragma warning disable CS0618
                 return _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, name);
+#pragma warning restore CS0618
             }
         }
 
         public string GetResponsibleNode(ClusterOperationContext context, string name)
         {
+#pragma warning disable CS0618
             var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, name);
+#pragma warning restore CS0618
             var topology = _serverStore.Cluster.ReadDatabaseTopology(context, _db.Name);
             return BackupUtils.WhoseTaskIsIt(_serverStore, topology, subscription, subscription, _db.NotificationCenter);
         }

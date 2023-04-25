@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -30,16 +29,6 @@ public class SubscriptionsClusterStorage
     }
 
     [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractSubscriptionStorage<AbstractSubscriptionConnectionsState>)}'.")]
-    public SubscriptionState ReadSubscriptionStateById(ClusterOperationContext context, string databaseName, long id)
-    {
-        var name = GetSubscriptionNameById(context, databaseName, id);
-        if (string.IsNullOrEmpty(name))
-            throw new SubscriptionDoesNotExistException($"Subscription with id '{id}' was not found in server store");
-
-        return ReadSubscriptionStateByName(context, databaseName, name);
-    }
-
-    [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractSubscriptionStorage<AbstractSubscriptionConnectionsState>)}'.")]
     public string GetSubscriptionNameById(ClusterOperationContext context, string databaseName, long id)
     {
         foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseName)))
@@ -61,24 +50,5 @@ public class SubscriptionsClusterStorage
     {
         var subscriptionBlittable = _cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseName, name));
         return subscriptionBlittable;
-    }
-
-    [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractSubscriptionStorage<AbstractSubscriptionConnectionsState>)}'.")]
-    public static IEnumerable<SubscriptionState> GetAllSubscriptionsWithoutState(ClusterOperationContext context, string database, int start, int take)
-    {
-        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(database)))
-        {
-            if (start > 0)
-            {
-                start--;
-                continue;
-            }
-
-            if (take-- <= 0)
-                yield break;
-
-            var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-            yield return subscriptionState;
-        }
     }
 }
