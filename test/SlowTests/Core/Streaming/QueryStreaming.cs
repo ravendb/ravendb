@@ -33,7 +33,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanStreamQueryResults(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -85,7 +85,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanStreamQueryResultsWithQueryStatistics(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -139,7 +139,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanStreamQueryResultsWithQueryStatisticsAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -333,7 +333,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryStreamingGetIds(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -371,7 +371,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryStreamingLoadIds(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -410,7 +410,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Streaming_Results_Should_Sort_Properly(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -458,7 +458,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Streaming_Query_Sort_By_Name(Options options)
         {
             using (var documentStore = GetDocumentStore(options))

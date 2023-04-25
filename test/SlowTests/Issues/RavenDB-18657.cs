@@ -11,6 +11,8 @@ using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Server.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,10 +24,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Can_Get_Fields_With_Different_Casing()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_Get_Fields_With_Different_Casing(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             var user = new User
             {

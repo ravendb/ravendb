@@ -61,7 +61,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQuerySpatialData(Options options)
         {
             using (var store = GetDocumentStore(options))

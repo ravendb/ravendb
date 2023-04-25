@@ -311,7 +311,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -472,7 +472,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task BasicMapIndexWithLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -633,7 +633,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -815,7 +815,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task BasicMapReduceIndexWithLoad(Options options)
         {
             {
@@ -965,7 +965,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanMapAllTimeSeriesFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1112,7 +1112,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanMapAllTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1304,7 +1304,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task BasicMultiMapIndex(Options options)
         {
             var now = DateTime.UtcNow.Date;
@@ -1518,7 +1518,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void TimeSeriesNamesFor(Options options)
         {
             var now = DateTime.UtcNow.Date;
@@ -1576,7 +1576,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanCalculateNumberOfReferencesCorrectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1674,7 +1674,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void ShouldUseOriginalTimeSeriesName(Options options)
         {
             using (var store = GetDocumentStore(options))

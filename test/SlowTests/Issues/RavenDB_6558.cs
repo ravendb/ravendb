@@ -16,7 +16,8 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All, Skip = "RavenDB-20378")]
         public void CanUseDifferentPreAndPostTagsPerField(Options options)
         {
             using (var store = GetDocumentStore(options))

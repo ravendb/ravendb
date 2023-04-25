@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,13 +29,14 @@ namespace SlowTests.MailingList
             public string Type { get; set; }
         }
 
-        [Fact]
-        public void Can_search_with_filters()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        public void Can_search_with_filters(Options options)
         {
             Property property = new Property { Id = Guid.NewGuid().ToString(), Name = "Property Name", BedroomCount = 3 };
             Catalog catalog = new Catalog() { Id = Guid.NewGuid().ToString(), Type = "Waterfront", PropertyId = property.Id };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
 

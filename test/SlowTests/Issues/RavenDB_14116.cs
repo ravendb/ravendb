@@ -3,6 +3,8 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using System.Linq;
+using Raven.Server.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,13 +30,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void ShouldIndexAllDocuments()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldIndexAllDocuments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Companies_ByPhone().Execute(store);
-
                 using (var commands = store.Commands())
                 {
                     commands.Put(
@@ -72,6 +74,7 @@ namespace SlowTests.Issues
                         .Not
                         .WhereExists(x => x.Phone)
                         .ToList();
+                    WaitForUserToContinueTheTest(store);
 
                     Assert.Equal(1, companies.Count);
                     Assert.Equal("CF", companies[0].Name);

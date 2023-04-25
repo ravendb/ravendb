@@ -1,6 +1,8 @@
 ﻿using FastTests;
 using Orders;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Server.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void FacetQueryShouldEscapeFieldNameAndDisplayFieldNameProperlyIfNeeded()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void FacetQueryShouldEscapeFieldNameAndDisplayFieldNameProperlyIfNeeded(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

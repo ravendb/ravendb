@@ -55,7 +55,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetResultsUsingTermVectors(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -79,7 +79,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetResultsUsingTermVectorsWithDocumentQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -113,7 +113,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetResultsUsingTermVectorsAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -137,7 +137,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetResultsUsingStorage(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -161,7 +161,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetResultsUsingTermVectorsAndStorage(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -185,7 +185,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanCompareDocumentsWithIntegerIdentifiers(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -223,7 +223,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetResultsWhenIndexHasSlashInIt(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -245,7 +245,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Query_On_Document_That_Does_Not_Have_High_Enough_Word_Frequency(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -283,7 +283,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Test_With_Lots_Of_Random_Data(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -308,7 +308,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Do_Not_Pass_FieldNames(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -340,7 +340,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Each_Field_Should_Use_Correct_Analyzer(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -400,7 +400,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Use_Min_Doc_Freq_Param(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -486,7 +486,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Use_Stop_Words(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -536,7 +536,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanMakeDynamicDocumentQueries(Options options)
         {
             using (var store = GetDocumentStore(options))

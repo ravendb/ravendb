@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,10 +24,11 @@ namespace SlowTests.Issues
             public string ChangeVector { get; set; }
         }
 
-        [Fact]
-        public void CanUseConditionalLoadLazily()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseConditionalLoadLazily(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -108,10 +111,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanUseConditionalAsyncLoadLazily()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanUseConditionalAsyncLoadLazily(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {

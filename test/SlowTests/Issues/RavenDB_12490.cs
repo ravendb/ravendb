@@ -2,6 +2,8 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Raven.Server.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,10 +22,11 @@ namespace SlowTests.Issues
             public string[] Strings;
         }
 
-        [Fact]
-        public void ContainsAllWorks()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ContainsAllWorks(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

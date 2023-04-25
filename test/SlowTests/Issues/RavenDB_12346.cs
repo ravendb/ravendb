@@ -2,7 +2,9 @@
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Raven.Server.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanConvertFromQueryToDocumentQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanConvertFromQueryToDocumentQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

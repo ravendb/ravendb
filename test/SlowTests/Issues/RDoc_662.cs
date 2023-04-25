@@ -41,10 +41,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task OfTypeShouldWorkInDocumentQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task OfTypeShouldWorkInDocumentQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

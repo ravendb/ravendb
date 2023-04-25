@@ -16,8 +16,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19402")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void ShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -97,11 +96,11 @@ namespace SlowTests.Issues
                         .WhereEquals(x => x.SiteId, siteId)
                         .AddOrder(portfolioKey, false, OrderingType.Long);
 
-                    WaitForUserToContinueTheTest(store);
 
                     var orderedIdsList = query.ToList().Select(x => x.Id).ToList();
                     var portfoliosOrder = session.Load<Portfolio>(portfolioId1);
                     Assert.Equal(portfoliosOrder.Projects.Count, orderedIdsList.Count);
+                    WaitForUserToContinueTheTest(store);
 
                     var index = 0;
                     foreach (var id in orderedIdsList)
