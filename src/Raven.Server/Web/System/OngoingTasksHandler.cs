@@ -1447,7 +1447,8 @@ namespace Raven.Server.Web.System
             }
 
             var description = (disable) ? "disable" : "enable";
-            LogTaskToAudit(description + $"-{typeStr}Task", key, configuration: null);
+            description += $"-{typeStr}-Task {(String.IsNullOrEmpty(taskName) ? String.Empty : $" with task name: '{taskName}'")}";
+            LogTaskToAudit(description, key, configuration: null);
 
         }
 
@@ -1539,8 +1540,10 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
-            
-            LogTaskToAudit($"delete-{typeStr}", id, configuration: null);
+
+            var description = $"delete-{typeStr}";
+            description += $"{(String.IsNullOrEmpty(taskName) ? String.Empty : $" with task name: '{taskName}'")}";
+            LogTaskToAudit(description, id, configuration: null);
         }
 
         private static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString
