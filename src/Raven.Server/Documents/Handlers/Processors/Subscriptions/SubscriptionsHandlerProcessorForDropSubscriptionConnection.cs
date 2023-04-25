@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 
         protected override async ValueTask DropSubscriptionAsync(long? subscriptionId, string subscriptionName, string workerId)
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscription = RequestHandler.Database

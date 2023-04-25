@@ -68,7 +68,7 @@ namespace SlowTests.Client.Subscriptions
                     }, subsId), context);
                 }
 
-                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (db.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var s = db.SubscriptionStorage.GetSubscription(context, null, subsId, false);

@@ -179,7 +179,7 @@ namespace RachisTests
             var sp = Stopwatch.StartNew();
             while (previousResponsibleNode == currentResponsibleNode || string.IsNullOrEmpty(currentResponsibleNode))
             {
-                using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     currentResponsibleNode = documentDatabase.SubscriptionStorage.GetResponsibleNode(context, subsId);
@@ -315,7 +315,7 @@ namespace RachisTests
                     continue;
                 }
 
-                using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (curNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     SubscriptionStorage.SubscriptionGeneralDataAndStats subscription = null;

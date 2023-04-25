@@ -48,7 +48,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
     {
         var server = RequestHandler.ServerStore;
         var ongoingTasksResult = new OngoingTasksResult();
-        using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
             var databaseRecord = server.Cluster.ReadDatabase(context, RequestHandler.DatabaseName);

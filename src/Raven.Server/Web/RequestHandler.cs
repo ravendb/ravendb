@@ -207,7 +207,7 @@ namespace Raven.Server.Web
             HttpContext.Items["TrafficWatch"] = (str, type);
         }
 
-        protected async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, ClusterTopology clusterTopology, string node, long index)
+        protected async Task WaitForExecutionOnSpecificNode(JsonOperationContext context, ClusterTopology clusterTopology, string node, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
 

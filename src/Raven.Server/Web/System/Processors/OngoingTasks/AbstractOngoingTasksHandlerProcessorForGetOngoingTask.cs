@@ -50,7 +50,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTask<TR
         var taskName = GetTaskName(taskId);
         var taskType = GetTaskType();
 
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
             var clusterTopology = ServerStore.GetClusterTopology(context);

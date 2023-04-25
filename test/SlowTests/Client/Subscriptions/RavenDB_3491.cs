@@ -255,7 +255,7 @@ namespace SlowTests.Client.Subscriptions
 
                         var subscriptionState = await AssertWaitForNotNullAsync(() =>
                         {
-                            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                             using (ctx.OpenReadTransaction())
                             {
                                 return Task.FromResult(db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, subscriptionName));

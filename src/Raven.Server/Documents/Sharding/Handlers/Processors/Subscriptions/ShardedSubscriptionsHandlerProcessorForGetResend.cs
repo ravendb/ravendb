@@ -2,14 +2,16 @@
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
+using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal class ShardedSubscriptionsHandlerProcessorForGetResend : AbstractSubscriptionsHandlerProcessorForGetResend<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal class ShardedSubscriptionsHandlerProcessorForGetResend : AbstractSubscriptionsHandlerProcessorForGetResend<ShardedDatabaseRequestHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
     {
-        public ShardedSubscriptionsHandlerProcessorForGetResend([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+        public ShardedSubscriptionsHandlerProcessorForGetResend([NotNull] ShardedDatabaseRequestHandler requestHandler) 
+            : base(requestHandler, requestHandler.DatabaseContext.SubscriptionsStorage)
         {
         }
 

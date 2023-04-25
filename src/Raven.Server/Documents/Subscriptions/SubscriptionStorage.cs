@@ -80,17 +80,17 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionState GetSubscriptionFromServerStore(string name)
         {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 return _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, name);
             }
         }
 
-        public string GetResponsibleNode(TransactionOperationContext serverContext, string name)
+        public string GetResponsibleNode(ClusterOperationContext context, string name)
         {
-            var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(serverContext, _databaseName, name);
-            var topology = _serverStore.Cluster.ReadDatabaseTopology(serverContext, _db.Name);
+            var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, name);
+            var topology = _serverStore.Cluster.ReadDatabaseTopology(context, _db.Name);
             return BackupUtils.WhoseTaskIsIt(_serverStore, topology, subscription, subscription, _db.NotificationCenter);
         }
 
@@ -152,9 +152,9 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
-        public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> serverStoreContext, bool history, int start, int take) where TRavenTransaction : RavenTransaction
+        public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(ClusterOperationContext context, bool history, int start, int take)
         {
-            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(_databaseName)))
+            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(_databaseName)))
             {
                 if (start > 0)
                 {
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Subscriptions
                     yield break;
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var subscriptionConnectionsState = GetSubscriptionConnectionsState(serverStoreContext, subscriptionState.SubscriptionName);
+                var subscriptionConnectionsState = GetSubscriptionConnectionsState(context, subscriptionState.SubscriptionName);
 
                 var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(subscriptionState)
                 {
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionConnectionsState GetSubscriptionStateById(long id) => _subscriptions[id];
 
-        public IEnumerable<SubscriptionGeneralDataAndStats> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
+        public IEnumerable<SubscriptionGeneralDataAndStats> GetAllRunningSubscriptions(ClusterOperationContext context, bool history, int start, int take)
         {
             foreach (var kvp in _subscriptions)
             {
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Subscriptions
             return c;
         }
 
-        public SubscriptionGeneralDataAndStats GetSubscription(TransactionOperationContext context, long? id, string name, bool history)
+        public SubscriptionGeneralDataAndStats GetSubscription(ClusterOperationContext context, long? id, string name, bool history)
         {
             SubscriptionGeneralDataAndStats subscription;
 
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscription;
         }
 
-        public SubscriptionGeneralDataAndStats GetSubscriptionFromServerStore(TransactionOperationContext context, string name)
+        public SubscriptionGeneralDataAndStats GetSubscriptionFromServerStore(ClusterOperationContext context, string name)
         {
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_databaseName, name));
 
@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionJsonValue;
         }
 
-        public SubscriptionGeneralDataAndStats GetRunningSubscription(TransactionOperationContext context, long? id, string name, bool history)
+        public SubscriptionGeneralDataAndStats GetRunningSubscription(ClusterOperationContext context, long? id, string name, bool history)
         {
             SubscriptionGeneralDataAndStats subscription;
             if (string.IsNullOrEmpty(name) == false)

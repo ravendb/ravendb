@@ -3,15 +3,17 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
+using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal class ShardedSubscriptionsHandlerProcessorForPostSubscription : AbstractSubscriptionsHandlerProcessorForPostSubscription<ShardedSubscriptionsHandler, TransactionOperationContext>
+    internal class ShardedSubscriptionsHandlerProcessorForPostSubscription : AbstractSubscriptionsHandlerProcessorForPostSubscription<ShardedSubscriptionsHandler, TransactionOperationContext, SubscriptionConnectionsStateOrchestrator>
     {
-        public ShardedSubscriptionsHandlerProcessorForPostSubscription([NotNull] ShardedSubscriptionsHandler requestHandler) : base(requestHandler)
+        public ShardedSubscriptionsHandlerProcessorForPostSubscription([NotNull] ShardedSubscriptionsHandler requestHandler)
+            : base(requestHandler, requestHandler.DatabaseContext.SubscriptionsStorage)
         {
         }
 
@@ -27,7 +29,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
             return parsed;
         }
 
-        protected override async ValueTask CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, TransactionOperationContext context)
+        protected override async ValueTask CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, ClusterOperationContext context)
         {
             var sub = ParseSubscriptionQuery(options.Query);
             await RequestHandler.CreateSubscriptionInternalAsync(bjro, id, disabled, options, context, sub);

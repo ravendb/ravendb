@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
@@ -14,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
         {
         }
 
-        protected override SubscriptionConnectionsDetails GetConnectionDetails(TransactionOperationContext context, string subscriptionName)
+        protected override SubscriptionConnectionsDetails GetConnectionDetails(ClusterOperationContext context, string subscriptionName)
         {
             var state = RequestHandler.Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
             return state?.GetSubscriptionConnectionsDetails();

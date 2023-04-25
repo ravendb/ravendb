@@ -20,7 +20,7 @@ public class ShardSubscriptionStorage : SubscriptionStorage
 
     public override void HandleDatabaseRecordChange(DatabaseRecord databaseRecord)
     {
-        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
             //checks which subscriptions should be dropped because of the database record change

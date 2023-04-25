@@ -21,6 +21,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.OngoingTasks;
 
@@ -100,21 +101,21 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreatePullReplicationAsSinkTaskInfo(clusterTopology, databaseRecord, sinkReplication);
     }
 
-    protected abstract IEnumerable<OngoingTaskPullReplicationAsHub> GetPullReplicationAsHubTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
+    protected abstract IEnumerable<OngoingTaskPullReplicationAsHub> GetPullReplicationAsHubTasks(JsonOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
 
-    private IEnumerable<OngoingTaskReplication> CollectExternalReplicationTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskReplication> CollectExternalReplicationTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         foreach (var watcher in databaseRecord.ExternalReplications)
             yield return CreateExternalReplicationTaskInfo(clusterTopology, databaseRecord, watcher);
     }
 
-    private IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskSubscription> CollectSubscriptionTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         foreach (var subscriptionState in _subscriptionStorage.GetAllSubscriptionsFromServerStore(context))
             yield return CreateSubscriptionTaskInfo(clusterTopology, databaseRecord, subscriptionState);
     }
 
-    public IEnumerable<OngoingTask> GetAllTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    public IEnumerable<OngoingTask> GetAllTasks(ClusterOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         foreach (var task in CollectSubscriptionTasks(context, clusterTopology, databaseRecord))
             yield return task;
@@ -143,11 +144,11 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         foreach (var task in GetPullReplicationAsHubTasks(context, clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in CollectExternalReplicationTasks(context, clusterTopology, databaseRecord))
+        foreach (var task in CollectExternalReplicationTasks(clusterTopology, databaseRecord))
             yield return task;
     }
 
-    public OngoingTask GetTask(TransactionOperationContext context, long? taskId, string taskName, OngoingTaskType taskType, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    public OngoingTask GetTask(ClusterOperationContext context, long? taskId, string taskName, OngoingTaskType taskType, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         switch (taskType)
         {

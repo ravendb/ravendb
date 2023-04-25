@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -14,8 +16,9 @@ public class SubscriptionsClusterStorage
     {
         _cluster = cluster;
     }
-    
-    public SubscriptionState ReadSubscriptionStateByName<T>(TransactionOperationContext<T> context, string databaseName, string name) where T : RavenTransaction
+
+    [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractSubscriptionStorage<AbstractSubscriptionConnectionsState>)}'.")]
+    public SubscriptionState ReadSubscriptionStateByName(ClusterOperationContext context, string databaseName, string name)
     {
         var subscriptionBlittable = ReadSubscriptionStateRaw(context, databaseName, name);
 
@@ -25,8 +28,9 @@ public class SubscriptionsClusterStorage
         var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
         return subscriptionState;
     }
-    
-    public SubscriptionState ReadSubscriptionStateById(TransactionOperationContext context, string databaseName, long id)
+
+    [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractSubscriptionStorage<AbstractSubscriptionConnectionsState>)}'.")]
+    public SubscriptionState ReadSubscriptionStateById(ClusterOperationContext context, string databaseName, long id)
     {
         var name = GetSubscriptionNameById(context, databaseName, id);
         if (string.IsNullOrEmpty(name))
@@ -35,7 +39,8 @@ public class SubscriptionsClusterStorage
         return ReadSubscriptionStateByName(context, databaseName, name);
     }
 
-    public string GetSubscriptionNameById<TTransaction>(TransactionOperationContext<TTransaction> context, string databaseName, long id) where TTransaction : RavenTransaction
+    [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractSubscriptionStorage<AbstractSubscriptionConnectionsState>)}'.")]
+    public string GetSubscriptionNameById(ClusterOperationContext context, string databaseName, long id)
     {
         foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseName)))
         {
@@ -51,15 +56,17 @@ public class SubscriptionsClusterStorage
         return null;
     }
 
-    public BlittableJsonReaderObject ReadSubscriptionStateRaw<T>(TransactionOperationContext<T> context, string databaseName, string name) where T : RavenTransaction
+    [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractSubscriptionStorage<AbstractSubscriptionConnectionsState>)}'.")]
+    public BlittableJsonReaderObject ReadSubscriptionStateRaw(ClusterOperationContext context, string databaseName, string name)
     {
         var subscriptionBlittable = _cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseName, name));
         return subscriptionBlittable;
     }
 
-    public static IEnumerable<SubscriptionState> GetAllSubscriptionsWithoutState(TransactionOperationContext serverStoreContext, string database, int start, int take)
+    [Obsolete($"This method should not be used directly. Use the one from '{nameof(AbstractSubscriptionStorage<AbstractSubscriptionConnectionsState>)}'.")]
+    public static IEnumerable<SubscriptionState> GetAllSubscriptionsWithoutState(ClusterOperationContext context, string database, int start, int take)
     {
-        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(database)))
+        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(database)))
         {
             if (start > 0)
             {

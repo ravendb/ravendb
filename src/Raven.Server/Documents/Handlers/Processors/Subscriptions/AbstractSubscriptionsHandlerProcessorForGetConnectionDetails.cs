@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
@@ -21,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 
         protected override bool SupportsCurrentNode => true;
 
-        protected abstract SubscriptionConnectionsDetails GetConnectionDetails(TransactionOperationContext context, string subscriptionName);
+        protected abstract SubscriptionConnectionsDetails GetConnectionDetails(ClusterOperationContext context, string subscriptionName);
 
         protected string GetName() => RequestHandler.GetStringQueryString("name");
 
@@ -35,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
         {
             var subscriptionName = GetName();
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var details = GetConnectionDetails(context, subscriptionName) ?? new SubscriptionConnectionsDetails()

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Sharding.Operations;
-using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Utils;
 
@@ -23,7 +21,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 
             if (subscriptionId.HasValue == false)
             {
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     subscriptionId = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, RequestHandler.DatabaseName, subscriptionName)
@@ -33,7 +31,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 
             if (string.IsNullOrEmpty(subscriptionName))
             {
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     subscriptionName = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, RequestHandler.DatabaseName, subscriptionId.Value).SubscriptionName;

@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         private async Task GetResponsibleNodesAndWaitForExecution(string name, long index)
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscription = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseContext.DatabaseName, name);

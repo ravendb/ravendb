@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
         {
         }
 
-        protected override SubscriptionConnectionsDetails GetConnectionDetails(TransactionOperationContext context, string subscriptionName)
+        protected override SubscriptionConnectionsDetails GetConnectionDetails(ClusterOperationContext context, string subscriptionName)
         {
             var state = RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionConnectionsState(context, subscriptionName);
             return state?.GetSubscriptionConnectionsDetails();

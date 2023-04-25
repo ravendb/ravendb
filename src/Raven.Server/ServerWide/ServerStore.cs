@@ -1977,7 +1977,7 @@ namespace Raven.Server.ServerWide
                     {
                         if (_server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out _) == false)
                             throw new DatabaseDoesNotExistException($"Can't get subscription name because The database {dbName} does not exists");
-                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
                             taskName = Cluster.Subscriptions.GetSubscriptionNameById(ctx, dbName, taskId);
