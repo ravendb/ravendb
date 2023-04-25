@@ -2,28 +2,28 @@ import React from "react";
 import { Form, Col, Button, Card, Row, Spinner } from "reactstrap";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { FormCheckbox, FormInput, FormSelect, FormSelectOption, FormSwitch } from "components/common/Form";
-import { ClientConfigurationFormData, clientConfigurationYupResolver } from "./ClientConfigurationValidation";
+import {
+    ClientConfigurationFormData,
+    clientConfigurationYupResolver,
+} from "../../../../common/clientConfiguration/ClientConfigurationValidation";
 import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
-import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
+import genUtils = require("common/generalUtils");
+import ClientConfigurationUtils from "components/common/clientConfiguration/ClientConfigurationUtils";
 
-// TODO: server wide
-export default function ClientConfiguration() {
+// TODO: show modal on exit intent if is dirty
+export default function ClientGlobalConfiguration() {
     const { manageServerService } = useServices();
-    const {
-        execute: executeGetGlobalClientConfiguration,
-        result: clientConfigurationDto,
-        error: clientConfigurationError,
-        loading: isLoadingClientConfiguration,
-    } = useAsyncCallback(manageServerService.getGlobalClientConfiguration);
+    const getGlobalClientConfigurationCallback = useAsyncCallback(manageServerService.getGlobalClientConfiguration);
 
-    const { handleSubmit, control, formState, setValue } = useForm<ClientConfigurationFormData>({
+    const { handleSubmit, control, formState, setValue, reset } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
         mode: "onChange",
-        defaultValues: async () => getDefaultFormValues(await executeGetGlobalClientConfiguration()),
+        defaultValues: async () =>
+            ClientConfigurationUtils.mapToFormData(await getGlobalClientConfigurationCallback.execute()),
     });
 
     const {
@@ -34,23 +34,21 @@ export default function ClientConfiguration() {
         loadBalancerSeedEnabled,
     } = useWatch({ control });
 
-    const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData): Promise<void> => {
-        manageServerService
-            .saveGlobalClientConfiguration(toDto(formData, clientConfigurationDto?.Disabled))
-            .catch(() => {
-                // empty by design
-            });
+    const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
+        return genUtils.tryHandleSubmit(async () => {
+            await manageServerService.saveGlobalClientConfiguration(ClientConfigurationUtils.mapToDto(formData));
+            reset(formData);
+        });
     };
 
-    if (isLoadingClientConfiguration) {
+    if (getGlobalClientConfigurationCallback.loading) {
         return <LoadingView />;
     }
 
-    if (clientConfigurationError) {
-        return <LoadError />;
+    if (getGlobalClientConfigurationCallback.error) {
+        return <LoadError error="Unable to load client global configuration" />;
     }
 
-    // TODO: show modal on exit if is dirty
     return (
         <Form onSubmit={handleSubmit(onSave)}>
             <Col md={6} className="p-4">
@@ -63,7 +61,6 @@ export default function ClientConfiguration() {
                     <Row className="flex-grow-1">
                         <Col>
                             <FormCheckbox
-                                type="checkbox"
                                 control={control}
                                 name="identityPartsSeparatorEnabled"
                                 afterChange={(event) =>
@@ -89,7 +86,6 @@ export default function ClientConfiguration() {
                     <Row className="flex-grow-1">
                         <Col>
                             <FormCheckbox
-                                type="checkbox"
                                 control={control}
                                 name="maximumNumberOfRequestsEnabled"
                                 afterChange={(event) =>
@@ -115,7 +111,6 @@ export default function ClientConfiguration() {
                     <Row className="p-2">
                         <Col>
                             <FormCheckbox
-                                type="checkbox"
                                 control={control}
                                 name="useSessionContextEnabled"
                                 afterChange={(event) => {
@@ -132,9 +127,9 @@ export default function ClientConfiguration() {
                             <Row>
                                 <Col>
                                     <FormSwitch
-                                        type="switch"
                                         control={control}
                                         name="loadBalancerSeedEnabled"
+                                        color="primary"
                                         disabled={!useSessionContextEnabled}
                                         label="Seed"
                                         afterChange={(event) =>
@@ -160,11 +155,10 @@ export default function ClientConfiguration() {
                     <Row className="p-2">
                         <Col>
                             <FormCheckbox
-                                type="checkbox"
                                 control={control}
                                 name="readBalanceBehaviorEnabled"
                                 afterChange={(event) =>
-                                    !event.target.checked && setValue("readBalanceBehaviorValue", null)
+                                    !event.target.checked && setValue("readBalanceBehaviorValue", "None")
                                 }
                             >
                                 Read balance behavior
@@ -174,7 +168,7 @@ export default function ClientConfiguration() {
                             <FormSelect
                                 control={control}
                                 name="readBalanceBehaviorValue"
-                                disabled={!readBalanceBehaviorEnabled || useSessionContextEnabled}
+                                disabled={!readBalanceBehaviorEnabled}
                             >
                                 <FormSelectOption<ReadBalanceBehavior> label="None" value="None" />
                                 <FormSelectOption<ReadBalanceBehavior> label="Round Robin" value="RoundRobin" />
@@ -186,36 +180,4 @@ export default function ClientConfiguration() {
             </Col>
         </Form>
     );
-}
-
-function getDefaultFormValues(dto: ClientConfiguration) {
-    console.log("getDefaultFormValues");
-    if (!dto) {
-        return null;
-    }
-
-    return {
-        identityPartsSeparatorEnabled: !!dto.IdentityPartsSeparator,
-        identityPartsSeparatorValue: dto.IdentityPartsSeparator,
-        maximumNumberOfRequestsEnabled: !!dto.MaxNumberOfRequestsPerSession,
-        maximumNumberOfRequestsValue: dto.MaxNumberOfRequestsPerSession,
-        useSessionContextEnabled: dto.LoadBalanceBehavior === "UseSessionContext",
-        loadBalancerSeedEnabled: !!dto.LoadBalancerContextSeed,
-        loadBalancerSeedValue: dto.LoadBalancerContextSeed,
-        readBalanceBehaviorEnabled: dto.ReadBalanceBehavior !== "None",
-        readBalanceBehaviorValue: dto.ReadBalanceBehavior,
-    };
-}
-
-function toDto(formData: ClientConfigurationFormData, disabled: boolean): ClientConfiguration {
-    return {
-        IdentityPartsSeparator: formData.identityPartsSeparatorValue,
-        LoadBalanceBehavior: formData.useSessionContextEnabled ? "UseSessionContext" : "None",
-        LoadBalancerContextSeed: formData.loadBalancerSeedValue,
-        ReadBalanceBehavior: formData.readBalanceBehaviorValue,
-        MaxNumberOfRequestsPerSession: formData.maximumNumberOfRequestsValue,
-        // TODO for the database view
-        Disabled: disabled,
-        Etag: undefined,
-    };
 }

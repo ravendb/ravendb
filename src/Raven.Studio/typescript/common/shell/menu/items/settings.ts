@@ -3,6 +3,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import { bridgeToReact } from "common/reactUtils";
 import { ManageDatabaseGroupPage } from "components/pages/resources/manageDatabaseGroup/ManageDatabaseGroupPage";
+import ClientDatabaseConfiguration from "components/pages/database/settings/clientConfiguration/ClientDatabaseConfiguration";
 
 export = getSettingsMenuItem;
 
@@ -39,7 +40,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/clientConfiguration',
-            moduleId: require('viewmodels/database/settings/clientConfiguration'),
+            moduleId: bridgeToReact(ClientDatabaseConfiguration, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Client Configuration',
             nav: true,
