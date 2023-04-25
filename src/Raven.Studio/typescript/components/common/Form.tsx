@@ -1,13 +1,9 @@
-import React, { ReactNode, useContext } from "react";
+import React from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
-import { Control, ControllerProps, FieldPath, FieldValues, useController, useForm } from "react-hook-form";
+import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
 import { Input, InputProps } from "reactstrap";
 import { InputType } from "reactstrap/types/lib/Input";
-import {
-    ClientConfigurationFormData,
-    clientConfigurationYupResolver,
-} from "components/pages/resources/manageServer/clientConfiguration/ClientConfigurationValidation";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -25,7 +21,7 @@ type FormToggleProps<TFieldValues extends FieldValues, TName extends FieldPath<T
     TName
 > &
     Omit<CheckboxProps, "selected" | "toggleSelection"> &
-    ExternalProps & { type: Extract<InputType, "checkbox" | "switch" | "radio"> };
+    ExternalProps;
 
 interface FormSelectOptionProps<T extends string | number = string> {
     value: T;
@@ -111,7 +107,7 @@ function FormInputGeneral<
 }
 
 function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
-    props: FormToggleProps<TFieldValues, TName>
+    props: FormToggleProps<TFieldValues, TName> & { type: Extract<InputType, "checkbox" | "switch" | "radio"> }
 ) {
     const { name, control, rules, defaultValue, type, shouldUnregister, afterChange, ...rest } = props;
 

@@ -1,19 +1,19 @@
 import React from "react";
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { ComponentMeta } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import ClientConfiguration from "./ClientConfiguration";
+import ClientGlobalConfiguration from "./ClientGlobalConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
-    title: "Pages/ClientConfiguration",
-    component: ClientConfiguration,
+    title: "Pages/ManageServer/ClientConfiguration",
+    component: ClientGlobalConfiguration,
     decorators: [withStorybookContexts, withBootstrap5],
-} as ComponentMeta<typeof ClientConfiguration>;
+} as ComponentMeta<typeof ClientGlobalConfiguration>;
 
-export const Primary: ComponentStory<typeof ClientConfiguration> = () => {
+export function ClientConfiguration() {
     const { manageServerService } = mockServices;
 
     manageServerService.withGetGlobalClientConfiguration();
 
-    return <ClientConfiguration />;
-};
+    return <ClientGlobalConfiguration />;
+}

@@ -740,6 +740,14 @@ class genUtils {
         
         return Array.from(result.values());
     }
+
+    static async tryHandleSubmit<T>(promise: () => Promise<T>) {
+        try {
+            return await promise();
+        } catch (_) {
+            // empty by design
+        }
+    }
 } 
 
 export = genUtils;

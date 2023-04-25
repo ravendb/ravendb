@@ -6,6 +6,16 @@ export class ManageServerStubs {
             Disabled: false,
             Etag: 103,
             IdentityPartsSeparator: ".",
+            MaxNumberOfRequestsPerSession: 32,
+        };
+    }
+
+    static getSampleClientDatabaseConfiguration(): ClientConfiguration {
+        return {
+            Disabled: false,
+            Etag: 132,
+            IdentityPartsSeparator: ";",
+            LoadBalanceBehavior: "UseSessionContext",
             ReadBalanceBehavior: "RoundRobin",
         };
     }

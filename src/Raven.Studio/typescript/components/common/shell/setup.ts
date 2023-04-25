@@ -68,8 +68,8 @@ function initYup() {
         string: {
             email: "Please enter valid e-mail",
             length: ({ length }) => `Please enter exactly ${length} character${length > 1 ? "s" : ""}`,
-            min: ({ min }) => `The provided text should not exceed ${min} characters.`,
-            max: ({ max }) => `Please provide at least ${max} characters.`,
+            min: ({ min }) => `The provided text should not exceed ${min} characters`,
+            max: ({ max }) => `Please provide at least ${max} characters`,
         },
         number: {
             integer: "Please enter integer number",

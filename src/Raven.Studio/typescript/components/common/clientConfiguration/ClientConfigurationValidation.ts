@@ -3,6 +3,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 
 const schema = yup
     .object({
+        overrideConfig: yup.boolean().optional(),
         identityPartsSeparatorEnabled: yup.boolean().optional(),
         identityPartsSeparatorValue: yup
             .string()
