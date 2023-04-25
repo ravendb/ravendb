@@ -1,17 +1,35 @@
 ﻿using System;
+using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Changes;
 
 internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseConnectionState>, IShardedDatabaseChanges
 {
-    public ShardedDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag, bool throttleConnection)
+    private readonly ServerStore _server;
+
+    public ShardedDatabaseChanges(ServerStore server, RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag,
+        bool throttleConnection)
         : base(requestExecutor, databaseName, onDispose, nodeTag, throttleConnection)
     {
+        _server = server;
+    }
+
+    protected override ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
+    {
+        var clientWebSocket = new ClientWebSocket();
+        if (requestExecutor.Certificate != null)
+        {
+            clientWebSocket.Options.ClientCertificates.Add(requestExecutor.Certificate);
+            clientWebSocket.Options.RemoteCertificateValidationCallback = _server.Sharding.ShardingCustomValidationCallback;
+        }
+
+        return clientWebSocket;
     }
 
     public async Task<IShardedDatabaseChanges> EnsureConnectedNow()
