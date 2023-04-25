@@ -28,7 +28,7 @@ public class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOperation<S
         Dictionary<int, ShardedQueryCommand> queryCommands,
         [NotNull] IComparer<BlittableJsonReaderObject> sortingComparer,
         string expectedEtag)
-        : base(queryCommands, context, requestHandler, expectedEtag)
+        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag)
     {
         _query = query ?? throw new ArgumentNullException(nameof(query));
         _sortingComparer = sortingComparer ?? throw new ArgumentNullException(nameof(sortingComparer));

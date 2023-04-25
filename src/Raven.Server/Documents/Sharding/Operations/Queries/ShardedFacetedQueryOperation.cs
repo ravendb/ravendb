@@ -5,6 +5,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
@@ -18,9 +19,9 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
 {
     private readonly Dictionary<string, FacetOptions> _facetOptions;
 
-    public ShardedFacetedQueryOperation(Dictionary<string, FacetOptions> facetOptions, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler,
+    public ShardedFacetedQueryOperation(IndexQueryServerSide query, Dictionary<string, FacetOptions> facetOptions, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler,
         Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
-        : base(queryCommands, context, requestHandler, expectedEtag)
+        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag)
     {
         _facetOptions = facetOptions;
     }
@@ -79,7 +80,7 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
     {
         private readonly FacetOptions _options;
         private FacetResult _combined;
-        
+
         private readonly Dictionary<string, IndexFacetReadOperationBase.FacetValues> _values = new();
 
         public CombinedFacet(FacetOptions options)
@@ -184,7 +185,7 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
 
             static void UpdateAverageValue(FacetValue value)
             {
-                if (value.Average.HasValue == false) 
+                if (value.Average.HasValue == false)
                     return;
 
                 if (value.Count == 0)
