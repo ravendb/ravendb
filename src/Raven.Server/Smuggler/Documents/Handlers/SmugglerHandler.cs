@@ -151,7 +151,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     HttpContext.Abort();
                 }
                 
-                LogTaskToAudit("exprot-data", operationId, configuration: null);
+                LogTaskToAudit(Operations.OperationType.DatabaseExport.ToString(), operationId, configuration: null);
             }
         }
 
@@ -736,7 +736,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 await WriteImportResultAsync(context, result, ResponseBodyStream());
                 
-                LogTaskToAudit("import-data", operationId, configuration: null);
+                LogTaskToAudit(Operations.OperationType.DatabaseImport.ToString(), operationId, configuration: null);
             }
         }
 

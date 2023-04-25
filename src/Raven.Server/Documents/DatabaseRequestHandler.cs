@@ -193,7 +193,7 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        internal DynamicJsonValue GetEtlConfigurationAuditJson(BlittableJsonReaderObject configuration)
+        private DynamicJsonValue GetEtlConfigurationAuditJson(BlittableJsonReaderObject configuration)
         {
             var etlType = EtlConfiguration<ConnectionString>.GetEtlType(configuration);
 
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        internal DynamicJsonValue GetConnectionStringConfigurationAuditJson(BlittableJsonReaderObject configuration)
+        private DynamicJsonValue GetConnectionStringConfigurationAuditJson(BlittableJsonReaderObject configuration)
         {
             var connectionStringType = ConnectionString.GetConnectionStringType(configuration);
             switch (connectionStringType)
