@@ -1889,7 +1889,6 @@ namespace Raven.Client.Http
             if (_disposeOnceRunner.Disposed)
                 return;
 
-            GC.SuppressFinalize(this);
             _disposeOnceRunner.Dispose();
         }
 
