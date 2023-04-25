@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected readonly Index _index;
         protected readonly Dictionary<string, IndexField> _fields;
         protected readonly bool _indexImplicitNull;
-        protected readonly bool _indexEmptyEntries;
+        internal readonly bool _indexEmptyEntries;
         protected readonly string _keyFieldName;
         protected readonly bool _storeValue;
         protected readonly string _storeValueFieldName;

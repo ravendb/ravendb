@@ -24,7 +24,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
     private readonly bool _isMultiMap;
     private IPropertyAccessor _propertyAccessor;
 
-    public AnonymousCoraxDocumentConverterBase(Index index, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, bool canContainSourceDocumentId = false) : base(index, storeValue, index.Configuration.IndexEmptyEntries, true, 1, keyFieldName, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, canContainSourceDocumentId)
+    public AnonymousCoraxDocumentConverterBase(Index index, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, bool canContainSourceDocumentId = false) : base(index, storeValue, indexImplicitNull: index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, 1, keyFieldName, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, canContainSourceDocumentId)
     {
         _isMultiMap = index.IsMultiMap;
     }
@@ -32,7 +32,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
     public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
-        out ByteString output, out float? documentBoost)
+        out ByteString output, out float? documentBoost, out int fields)
     {
         var boostedValue = doc as BoostedValue;
         var documentToProcess = boostedValue == null ? doc : boostedValue.Value;
@@ -58,6 +58,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             if (boostedValue != null)
                 documentBoost = boostedValue.Boost;
 
+            bool shouldSkip = _indexEmptyEntries == false;
             foreach (var property in accessor.GetProperties(documentToProcess))
             {
                 var value = property.Value;
@@ -66,8 +67,11 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                     throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
 
                 
-                InsertRegularField(field, value, indexContext, ref entryWriter, scope, out var shouldSkip);
-                if (storedValue is not null && shouldSkip == false)
+                InsertRegularField(field, value, indexContext, ref entryWriter, scope, out var innerShouldSkip);
+                shouldSkip &= innerShouldSkip;
+                
+                
+                if (storedValue is not null && innerShouldSkip == false)
                 {
                     //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
                     var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
@@ -77,24 +81,26 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                 }
             }
 
+            if (shouldSkip && entryWriter.IsEmpty() && _indexEmptyEntries == false)
+            {
+                fields = 0;
+                output = default;
+                return default;
+            }
+            
             if (storedValue is not null)
             {
                 var bjo = indexContext.ReadObject(storedValue, "corax field as json");
                 scope.Write(string.Empty, knownFields.Count - 1, bjo, ref entryWriter);
             }
-
-            if (entryWriter.IsEmpty() == true)
-            {
-                output = default;
-                return default;
-            }
-
+            
             id = key ?? throw new InvalidParameterException("Cannot find any identifier of the document.");
             if (sourceDocumentId != null && knownFields.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var documentSourceField))
                 scope.Write(string.Empty, documentSourceField.FieldId, sourceDocumentId.AsSpan(), ref entryWriter);
             
             scope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
-            return entryWriter.Finish(out output);
+            fields = entryWriter.CurrentFieldCount();
+            return entryWriter.Finish(out output, _indexImplicitNull);
         }
         catch
         {

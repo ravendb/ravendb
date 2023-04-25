@@ -44,9 +44,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     private readonly Lazy<IndexFieldsMapping> _knownFieldsForReaders;
     protected IndexFieldsMapping KnownFieldsForWriter;
     protected readonly ByteStringContext Allocator;
-
+    
     private const int InitialSizeOfEnumerableBuffer = 128;
-
+    
     private bool EnumerableDataStructExist =>
         StringsListForEnumerableScope is not null && LongsListForEnumerableScope is not null && DoublesListForEnumerableScope is not null;
 
@@ -59,11 +59,28 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     private IndexEntryWriter _indexEntryWriter;
     private bool _indexEntryWriterInitialized;
-
+    
     public abstract ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
-        out ByteString output, out float? documentBoost);
+        out ByteString output, out float? documentBoost, out int fields);
+
+    public ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocument(
+        LazyStringValue key, LazyStringValue sourceDocumentId,
+        object doc, JsonOperationContext indexContext, out LazyStringValue id,
+        out ByteString output, out float? documentBoost, out bool shouldSkip)
+    {
+        var scope = SetDocumentFields(key, sourceDocumentId, doc, indexContext, out id, out output, out documentBoost, out var fields);
+        if (_fields.Count > 0)
+        {
+            shouldSkip = _indexEmptyEntries == false && fields <= _numberOfBaseFields; // there is always a key field, but we want to filter-out empty documents, some indexes (e.g. TS indexes contain more than 1 field by default)
+        }
+        else
+        {
+            shouldSkip = fields <= 0; // if we have no entries, we might have an index on the id only, so retain it
+        }
+        return scope;
+    }
     
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName, string storeValueFieldName, bool canContainSourceDocumentId, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
         keyFieldName, storeValueFieldName, fields)

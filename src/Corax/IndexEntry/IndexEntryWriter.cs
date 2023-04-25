@@ -43,6 +43,20 @@ public unsafe struct IndexEntryWriter : IDisposable
 
     private int KnownFieldMetadataSize => _knownFields.Count * sizeof(uint);
 
+    public int CurrentFieldCount()
+    {
+        var fieldCount = 0;
+
+        var knownFieldsLocations = KnownFieldsLocations;
+        foreach (ref var location in knownFieldsLocations)
+        {
+            if (location != Invalid)
+                fieldCount++;
+        }
+
+        return fieldCount + (_dynamicFieldsLocations?.Count ?? 0);
+    }
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsEmpty() => Unsafe.SizeOf<IndexEntryHeader>() == _dataIndex;
 
@@ -737,8 +751,18 @@ public unsafe struct IndexEntryWriter : IDisposable
         return dataLocation;
     }
 
-    public ByteStringContext<ByteStringMemoryCache>.InternalScope Finish(out ByteString output)
+    public ByteStringContext<ByteStringMemoryCache>.InternalScope Finish(out ByteString output, bool indexMissingKnownFieldsAsNull = false)
     {
+        if (indexMissingKnownFieldsAsNull)
+        {
+            var knownFieldTable = KnownFieldsLocations;
+            for (int id = 0; id < knownFieldTable.Length; ++id)
+            {
+                if (knownFieldTable[id] == Invalid)
+                    WriteNull(id);
+            }
+        }
+        
         // Since we are at the end of the process, as long as we have 2 longs of space we can
         // finish the preprocessing to write the data into the new allocated buffer. We also
         // need to figure out how many dynamic entries we need
