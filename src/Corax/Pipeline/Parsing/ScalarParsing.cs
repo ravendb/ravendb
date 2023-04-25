@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Corax.Pipeline.Parsing
 {
@@ -41,6 +37,35 @@ namespace Corax.Pipeline.Parsing
             // PERF: This is a hack to avoid the JIT from polluting the code with multiple exits. Should be fixed in .Net 8.0
             RETURN_FALSE:
             return false;
+        }
+
+        public static int CountCodePointsFromUtf8(ReadOnlySpan<byte> buffer)
+        {
+            // PERF: Using foreach to avoid the bounds check on the indexer.
+            int counter = 0;
+            foreach (sbyte character in buffer)
+            {
+                // -65 is 0b10111111, anything larger in two's complement should start a new code point.
+                if (character > -65)
+                    counter++;
+            }
+
+            return counter;
+        }
+
+        public static int Utf16LengthFromUtf8(ReadOnlySpan<byte> buffer)
+        {
+            // PERF: Using foreach to avoid the bounds check on the indexer.
+            int counter = 0;
+            foreach (byte character in buffer)
+            {
+                // -65 is 0b10111111, anything larger in two's complement should start a new code point.
+                if ((sbyte)character > -65)
+                    counter++;
+                if (character >= 240)
+                    counter++;
+            }
+            return counter;
         }
     }
 }

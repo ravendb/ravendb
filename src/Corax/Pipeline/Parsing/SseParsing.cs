@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -79,6 +80,46 @@ namespace Corax.Pipeline.Parsing
             // PERF: This is a hack to avoid the JIT from polluting the code with multiple exits. Should be fixed in .Net 8.0
             RETURN_FALSE:
             return false;
+        }
+
+
+        public static int CountCodePointsFromUtf8(ReadOnlySpan<byte> buffer)
+        {
+            nint pos;
+            nint count = 0;
+            nint N = Vector128<byte>.Count;
+            
+            Vector128<sbyte> minus65 = Vector128.Create((sbyte)-65);
+            for (pos = 0; pos + N <= buffer.Length; pos += N)
+            {
+                var input = Vector128.LoadUnsafe(ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference(buffer), pos));
+                var utf8ContinuationMask = Vector128.GreaterThan(input.AsSByte(), minus65);
+                count += BitOperations.PopCount((uint)Sse2.MoveMask(utf8ContinuationMask));
+            }
+
+            return (int)count + ScalarParsing.CountCodePointsFromUtf8(buffer.Slice((int)pos));
+        }
+
+        public static int Utf16LengthFromUtf8(ReadOnlySpan<byte> buffer)
+        {
+            nint pos = 0;
+            int count = 0;
+            int N = Vector128<byte>.Count;
+
+            var minus65 = Vector128.Create((sbyte)-65);
+            var u240 = Vector128.Create((byte)240);
+
+            for (; pos + N <= buffer.Length; pos += N)
+            {
+                var input = Vector128.LoadUnsafe(ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference(buffer), pos));
+                var utf8ContinuationMask = Vector128.GreaterThan(input.AsSByte(), minus65);
+                count += BitOperations.PopCount((uint)Sse2.MoveMask(utf8ContinuationMask));
+
+                var utf8FourByte = Vector128.GreaterThanOrEqual(input, u240);
+                count += BitOperations.PopCount((uint)Sse2.MoveMask(utf8FourByte));
+            }
+
+            return count + ScalarParsing.Utf16LengthFromUtf8(buffer.Slice((int)pos));
         }
     }
 }
