@@ -56,10 +56,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var testIndexParameters = JsonDeserializationServer.TestIndexParameters(input);
                 var testIndexDefinition = testIndexParameters.IndexDefinition;
                 var query = testIndexParameters.Query;
+                var maxDocumentsPerIndex = testIndexParameters.MaxDocumentsToProcess;
                 
                 if (testIndexParameters.IndexDefinition is null)
                     throw new ArgumentException("Index must have an 'IndexDefinition' field");
-                
+
+                if (testIndexParameters.MaxDocumentsToProcess == 0)
+                    maxDocumentsPerIndex = 100;
+
                 if (testIndexDefinition.Type.IsJavaScript() == false)
                 {
                     // C# index without admin authorization
@@ -67,35 +71,29 @@ namespace Raven.Server.Documents.Handlers.Admin
                         throw new UnauthorizedAccessException($"Index {testIndexDefinition.Name} is a C# index but was sent without admin authorization, this is not allowed.");
                 }
 
-                if (testIndexDefinition.Name is null)
-                    testIndexDefinition.Name = Guid.NewGuid().ToString("N");
+                testIndexDefinition.Name ??= Guid.NewGuid().ToString("N");
 
-                if (query is null)
-                {
-                    var queryString = $"from index '{testIndexDefinition.Name}'";
-                    var queryObject = new { Query = queryString };
-                    
-                    query = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(queryObject, context);
-                }
-
-                using (var index = Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context))
+                query ??= $"from index '{testIndexDefinition.Name}'";
+                var queryAsBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(new { Query = query }, context);
+                
+                using (var index = Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context, maxDocumentsPerIndex))
                 {
                     index.Start();
 
-                using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "Query"))
-                using (var token = CreateTimeLimitedQueryToken())
-                using (var queryContext = QueryOperationContext.Allocate(Database))
-                {
-                    var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, query, Database.QueryMetadataCache, tracker);
+                    using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database.NotificationCenter, Database.Configuration, "Query"))
+                    using (var token = CreateTimeLimitedQueryToken())
+                    using (var queryContext = QueryOperationContext.Allocate(Database))
+                    {
+                        var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, queryAsBlittable, Database.QueryMetadataCache, tracker);
 
-                    indexQueryServerSide.WaitForNonStaleResults = true;
-                    
-                    var entries = await index.IndexEntries(indexQueryServerSide, queryContext, true, token);
-                    var queryResults = await index.Query(indexQueryServerSide, queryContext, token);
-                    var mapResults = index.TestRun.MapResults;
-                    var reduceResults = index.TestRun.ReduceResults;
+                        indexQueryServerSide.WaitForNonStaleResults = true;
 
-                    var hasDynamicFields = index.Definition.HasDynamicFields;
+                        var entries = await index.IndexEntries(indexQueryServerSide, queryContext, ignoreLimit: false, token);
+                        var queryResults = await index.Query(indexQueryServerSide, queryContext, token);
+                        var mapResults = index.TestRun.MapResults;
+                        var reduceResults = index.TestRun.ReduceResults;
+
+                        var hasDynamicFields = index.Definition.HasDynamicFields;
 
                         var result = new TestIndexResult()
                         {
@@ -103,7 +101,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                             QueryResults = queryResults.Results,
                             MapResults = mapResults,
                             HasDynamicFields = hasDynamicFields,
-                            ReduceResults = reduceResults
+                            ReduceResults = reduceResults,
+                            IsStale = queryResults.IsStale
                         };
 
                         await result.WriteTestIndexResult(ResponseBodyStream(), context);

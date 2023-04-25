@@ -24,8 +24,8 @@ public class RavenDB_11097 : RavenTestBase
     
     private class PutTestIndexCommand : RavenCommand<object>
     {
-        private readonly Payload _payload;
-        public PutTestIndexCommand(Payload payload)
+        private readonly TestIndexParameters _payload;
+        public PutTestIndexCommand(TestIndexParameters payload)
         {
             _payload = payload;
         }
@@ -61,27 +61,24 @@ public class RavenDB_11097 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void DocumentLinqMap(Options options) => TestMapIndexOnDocuments(options, 
-        new Payload()
+    public void DocumentLinqMap(Options options) => TestMapIndexOnDocuments(options,
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
-            { 
+            {
                 Name = "CoolLinqMapIndex", 
                 Maps = new HashSet<string>
                 {
                     "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age }"
                 }
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolLinqMapIndex' select Age"
-            }
+            Query = "from index 'CoolLinqMapIndex' select Age"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void DocumentJsMap(Options options) => TestMapIndexOnDocuments(options, 
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -91,13 +88,10 @@ public class RavenDB_11097 : RavenTestBase
                     "map('Dtos', (dto) => { return { Name: dto.Name, Age: dto.Age }; })"
                 }
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolJsMapIndex' select Age"
-            }
+            Query = "from index 'CoolJsMapIndex' select Age"
         });
     
-    private void TestMapIndexOnDocuments(Options options, Payload payload)
+    private void TestMapIndexOnDocuments(Options options, TestIndexParameters payload)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -150,7 +144,7 @@ public class RavenDB_11097 : RavenTestBase
             }
         }
     }
-    
+
     [RavenFact(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     private void DocumentJsMapWithoutQueryAndIndexName()
@@ -170,7 +164,7 @@ public class RavenDB_11097 : RavenTestBase
             
             using (var commands = store.Commands())
             {
-                var payload = new Payload()
+                var payload = new TestIndexParameters()
                 {
                     IndexDefinition = new IndexDefinition()
                     {
@@ -218,7 +212,7 @@ public class RavenDB_11097 : RavenTestBase
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void DocumentJsMapReduce(Options options) => TestMapReduceIndexOnDocuments(options, 
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -229,16 +223,13 @@ public class RavenDB_11097 : RavenTestBase
                 },
                 Reduce = "groupBy(x => ({ Name: x.Name })).aggregate(g => { return { Name: g.key.Name, Count: g.values.reduce((count, val) => val.Count + count, 0), Age: g.values.reduce((age, val) => val.Age + age, 0) }; })"
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolJsMapReduceIndex' select Count"
-            }
+            Query = "from index 'CoolJsMapReduceIndex' select Count"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void DocumentLinqMapReduce(Options options) => TestMapReduceIndexOnDocuments(options, 
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -249,13 +240,10 @@ public class RavenDB_11097 : RavenTestBase
                 },
                 Reduce = "from result in results group result by new { result.Name } into g select new { Name = g.Key.Name, Count = g.Sum(x => x.Count), Age = g.Sum(x => x.Age) }"
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolLinqMapReduceIndex' select Count"
-            }
+            Query = "from index 'CoolLinqMapReduceIndex' select Count"
         });
     
-    private void TestMapReduceIndexOnDocuments(Options options, Payload payload)
+    private void TestMapReduceIndexOnDocuments(Options options, TestIndexParameters payload)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -344,7 +332,7 @@ public class RavenDB_11097 : RavenTestBase
             
             using (var commands = store.Commands())
             {
-                var payload = new Payload()
+                var payload = new TestIndexParameters()
                 {
                     IndexDefinition = new IndexDefinition()
                     {
@@ -357,7 +345,7 @@ public class RavenDB_11097 : RavenTestBase
                         Reduce =
                             "from result in results group result by new { result.Name } into g select new { Name = g.Key.Name, Count = g.Sum(x => x.Count), Age = g.Sum(x => x.Age) }"
                     },
-                    Query = new QueryClass() { Query = "from index 'CoolLinqMapReduceIndex' select Count" }
+                    Query = "from index 'CoolLinqMapReduceIndex' select Count"
                 };
                 
                 var cmd = new PutTestIndexCommand(payload);
@@ -417,7 +405,7 @@ public class RavenDB_11097 : RavenTestBase
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     private void TimeSeriesLinqMap(Options options) => TestMapIndexOnTimeSeries(options,
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -427,16 +415,13 @@ public class RavenDB_11097 : RavenTestBase
                     "from ts in timeSeries.Dtos.HeartRates from entry in ts.Entries select new { Tag = entry.Tag, FirstValue = entry.Values[0] }"
                 }
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolLinqMapIndex' select Tag"
-            }
+            Query = "from index 'CoolLinqMapIndex' select Tag"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     private void TimeSeriesJsMap(Options options) => TestMapIndexOnTimeSeries(options,
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -446,13 +431,10 @@ public class RavenDB_11097 : RavenTestBase
                     "timeSeries.map('Dtos', function (ts) { return ts.Entries.map(entry => ({ Tag: entry.Tag, FirstValue: entry.Values[0] })); })"
                 }
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolJsMapIndex' select Tag"
-            }
+            Query = "from index 'CoolJsMapIndex' select Tag"
         });
     
-    private void TestMapIndexOnTimeSeries(Options options, Payload payload)
+    private void TestMapIndexOnTimeSeries(Options options, TestIndexParameters payload)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -524,7 +506,7 @@ public class RavenDB_11097 : RavenTestBase
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     private void TimeSeriesLinqMapReduce(Options options) => TestMapReduceIndexOnTimeSeries(options,
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -535,16 +517,13 @@ public class RavenDB_11097 : RavenTestBase
                 },
                 Reduce = "from result in results group result by new { result.Tag } into g select new { Tag = g.Key.Tag, FirstValue = g.Sum(x => x.FirstValue) }"
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolLinqMapReduceIndex'"
-            }
+            Query = "from index 'CoolLinqMapReduceIndex'"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     private void TimeSeriesJsMapReduce(Options options) => TestMapReduceIndexOnTimeSeries(options,
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -555,13 +534,10 @@ public class RavenDB_11097 : RavenTestBase
                 },
                 Reduce = "groupBy(x => ({ Tag: x.Tag })).aggregate(g => { return { Tag: g.key.Tag, FirstValue: g.values.reduce((count, val) => val.FirstValue + count, 0) } })"
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolJsMapReduceIndex'"
-            }
+            Query = "from index 'CoolJsMapReduceIndex'"
         });
     
-    private void TestMapReduceIndexOnTimeSeries(Options options, Payload payload)
+    private void TestMapReduceIndexOnTimeSeries(Options options, TestIndexParameters payload)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -635,7 +611,7 @@ public class RavenDB_11097 : RavenTestBase
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     private void CountersLinqMap(Options options) => TestMapIndexOnCounters(options,
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -645,16 +621,13 @@ public class RavenDB_11097 : RavenTestBase
                     "from counter in counters.Dtos.Likes select new { Value = counter.Value }"
                 }
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolLinqMapIndex'"
-            }
+            Query = "from index 'CoolLinqMapIndex'"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     private void CountersJsMap(Options options) => TestMapIndexOnCounters(options,
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -664,13 +637,10 @@ public class RavenDB_11097 : RavenTestBase
                     "counters.map('Dtos', 'Likes', function (counter) { return { Value: counter.Value } })"
                 }
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolJsMapIndex'"
-            }
+            Query = "from index 'CoolJsMapIndex'"
         });
     
-    private void TestMapIndexOnCounters(Options options, Payload payload, bool isJs = false)
+    private void TestMapIndexOnCounters(Options options, TestIndexParameters payload)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -743,7 +713,7 @@ public class RavenDB_11097 : RavenTestBase
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     private void CountersLinqMapReduce(Options options) => TestMapReduceIndexOnCounters(options,
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -754,16 +724,13 @@ public class RavenDB_11097 : RavenTestBase
                 },
                 Reduce = "from result in results group result by new { result.Name } into g select new { Name = g.Key.Name, Value = g.Sum(x => x.Value) }"
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolLinqMapReduceIndex' select Value"
-            }
+            Query = "from index 'CoolLinqMapReduceIndex' select Value"
         });
     
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     private void CountersJsMapReduce(Options options) => TestMapReduceIndexOnCounters(options,
-        new Payload()
+        new TestIndexParameters()
         {
             IndexDefinition = new IndexDefinition()
             {
@@ -774,13 +741,10 @@ public class RavenDB_11097 : RavenTestBase
                 },
                 Reduce = "groupBy(x => ({ Name: x.Name })).aggregate(g => { return { Name: g.key.Name, Value: g.values.reduce((count, val) => val.Value + count, 0) } })"
             },
-            Query = new QueryClass()
-            {
-                Query = "from index 'CoolJsMapReduceIndex' select Value"
-            }
+            Query = "from index 'CoolJsMapReduceIndex' select Value"
         });
     
-    private void TestMapReduceIndexOnCounters(Options options, Payload payload, bool isJs = false)
+    private void TestMapReduceIndexOnCounters(Options options, TestIndexParameters payload)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -863,7 +827,7 @@ public class RavenDB_11097 : RavenTestBase
 
             using (var commands = store.Commands())
             {
-                var payload = new Payload()
+                var payload = new TestIndexParameters()
                 {
                     IndexDefinition = new IndexDefinition()
                     {
@@ -872,8 +836,7 @@ public class RavenDB_11097 : RavenTestBase
                         Reduce =
                             "from result in results group result by new { result.Name } into g select new { Name = g.Key.Name, Count = g.Sum(x => x.Count), Age = g.Sum(x => x.Age) }",
                         OutputReduceToCollection = "OutputCollection"
-                    },
-                    Query = new QueryClass() { Query = "from index 'LinqMapReduceIndexWithOutputToCollection' select Count" }
+                    }
                 };
 
                 var cmd = new PutTestIndexCommand(payload);
@@ -887,6 +850,64 @@ public class RavenDB_11097 : RavenTestBase
                 var res = query.ToList();
                 
                 Assert.Empty(res);
+            }
+        }
+    }
+
+    [Fact]
+    public void Temp()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto1 = new Dto() { Name = "Name1", Age = 21 };
+                var dto2 = new Dto() { Name = "Name2", Age = 37 };
+                var dto3 = new Dto() { Name = "Name1", Age = 55 };
+
+                session.Store(dto1);
+                session.Store(dto2);
+                session.Store(dto3);
+
+                var cat1 = new Cat() { Name = "Cat1", Age = 5 };
+                var cat2 = new Cat() { Name = "Cat2", Age = 6 };
+                var cat3 = new Cat() { Name = "Cat3", Age = 7 };
+                
+                session.Store(cat1);
+                session.Store(cat2);
+                session.Store(cat3);
+                
+                session.SaveChanges();
+
+                using (var commands = store.Commands())
+                {
+                    var payload = new TestIndexParameters()
+                    {
+                        IndexDefinition = new IndexDefinition()
+                        {
+                            Name = "Temp2137",
+                            Maps = new HashSet<string> { "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age }", "from cat in docs.Cats select new { Name = cat.Name, Age = cat.Age }", "from dto in docs.Dtos select new { Name = dto.Name, Age = 2137 }" }
+                        },
+                        MaxDocumentsToProcess = 4
+                    };
+
+                    var cmd = new PutTestIndexCommand(payload);
+                    commands.Execute(cmd);
+                    
+                    var res = cmd.Result as BlittableJsonReaderObject;
+                    
+                    Assert.NotNull(res);
+                    
+                    res.TryGet(nameof(TestIndexResult.IndexEntries), out BlittableJsonReaderArray indexEntries);
+                    res.TryGet(nameof(TestIndexResult.QueryResults), out BlittableJsonReaderArray queryResults);
+                    res.TryGet(nameof(TestIndexResult.MapResults), out BlittableJsonReaderArray mapResults);
+                    res.TryGet(nameof(TestIndexResult.ReduceResults), out BlittableJsonReaderArray reduceResults);
+                
+                    var indexEntriesObjectList = JsonConvert.DeserializeObject<List<Dto>>(indexEntries.ToString());
+                    var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
+                    var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
+                    var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                }
             }
         }
     }
@@ -914,22 +935,7 @@ public class RavenDB_11097 : RavenTestBase
 
     private class Cat
     {
-        public string Id { get; set; }
-        
         public string Name { get; set; }
         public double Age { get; set; }
-    }
-    
-    private class Payload
-    {
-        public IndexDefinition IndexDefinition { get; set; }
-#nullable enable
-        public QueryClass? Query { get; set; }
-#nullable disable
-    }
-    
-    private class QueryClass
-    {
-        public string Query { get; set; }
     }
 }

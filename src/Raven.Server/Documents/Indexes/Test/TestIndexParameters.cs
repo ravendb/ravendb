@@ -7,5 +7,7 @@ public class TestIndexParameters
 {
     public IndexDefinition IndexDefinition { get; set; }
 
-    public BlittableJsonReaderObject Query { get; set; }
+    public string Query { get; set; }
+    
+    public int MaxDocumentsToProcess { get; set; }
 }

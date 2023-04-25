@@ -2320,9 +2320,9 @@ namespace Raven.Server.Documents.Indexes
             return HandleReferencesBase.InMemoryReferencesInfo.Default;
         }
 
-        public void InitializeTestRun(DocumentsOperationContext context)
+        public void InitializeTestRun(DocumentsOperationContext context, int maxDocumentsPerIndex)
         {
-            TestRun = new TestIndexRun(context);
+            TestRun = new TestIndexRun(context, maxDocumentsPerIndex);
         }
 
         public bool DoIndexingWork(IndexingStatsScope stats, CancellationToken cancellationToken)
@@ -2480,15 +2480,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
         
-        private Dictionary<string, bool> _collectionTracker;
-        
         public IIndexedItemEnumerator EnumerateIndexedItems(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type)
         {
             var enumerator = GetMapEnumerator(items, collection, indexContext, stats, type);
             
             if (IsTestRun)
-                return TestRun.CreateEnumerator(enumerator, collection, Collections.Count);
+                return TestRun.CreateEnumeratorWrapper(enumerator, collection, Collections.Count);
 
             return enumerator;
         }

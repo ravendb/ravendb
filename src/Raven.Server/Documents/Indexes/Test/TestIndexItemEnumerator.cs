@@ -5,13 +5,13 @@ namespace Raven.Server.Documents.Indexes.Test;
 
 public class TestIndexItemEnumerator : IIndexedItemEnumerator
 {
-    private IIndexedItemEnumerator _inner;
+    private readonly IIndexedItemEnumerator _inner;
     private int _count;
     private readonly int _max;
 
-    public TestIndexItemEnumerator(IIndexedItemEnumerator inner, int collections)
+    public TestIndexItemEnumerator(IIndexedItemEnumerator inner, int collections, int maxDocumentsPerIndex)
     {
-        _max = 100 / collections;
+        _max = maxDocumentsPerIndex / collections;
         _inner = inner;
         _count = 0;
     }

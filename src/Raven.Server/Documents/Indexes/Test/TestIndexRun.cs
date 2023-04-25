@@ -13,12 +13,14 @@ public class TestIndexRun
     public List<BlittableJsonReaderObject> MapResults;
     public List<BlittableJsonReaderObject> ReduceResults;
     private Dictionary<string, bool> _collectionTracker;
+    private readonly int _maxDocumentsPerIndex;
 
-    public TestIndexRun(JsonOperationContext context)
+    public TestIndexRun(JsonOperationContext context, int maxDocumentsPerIndex)
     {
         _context = context;
         MapResults = new List<BlittableJsonReaderObject>();
         ReduceResults = new List<BlittableJsonReaderObject>();
+        _maxDocumentsPerIndex = maxDocumentsPerIndex;
     }
 
     public TestIndexWriteOperation CreateIndexWriteOperationWrapper(IndexWriteOperationBase writer, Index index)
@@ -26,14 +28,14 @@ public class TestIndexRun
         return new TestIndexWriteOperation(writer, index);
     }
 
-    public IIndexedItemEnumerator CreateEnumerator(IIndexedItemEnumerator enumerator, string collection, int collectionsCount)
+    public IIndexedItemEnumerator CreateEnumeratorWrapper(IIndexedItemEnumerator enumerator, string collection, int collectionsCount)
     {
-        _collectionTracker ??= new();
+        _collectionTracker ??= new Dictionary<string, bool>();
         if (_collectionTracker.ContainsKey(collection))
             return new EmptyItemEnumerator();
                 
         _collectionTracker[collection] = true;
-        return new TestIndexItemEnumerator(enumerator, collectionsCount);
+        return new TestIndexItemEnumerator(enumerator, collectionsCount, _maxDocumentsPerIndex);
     }
 
     public void AddMapResult(object result)
