@@ -17,6 +17,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 {
     public abstract class ReplicationBatchItem : IDisposable
     {
+        private bool _isDisposed;
+
         public long Etag;
         public short TransactionMarker;
         public ReplicationItemType Type;
@@ -173,19 +175,22 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             _garbage.Add(obj);
         }
 
-        public abstract void InnerDispose();
+        protected abstract void InnerDispose();
 
         public void Dispose()
         {
-            InnerDispose();
-
-            if (_garbage == null)
+            if (_isDisposed)
                 return;
 
-            foreach (var disposable in _garbage)
+            InnerDispose();
+
+            if (_garbage is { Count: > 0 })
             {
-                disposable.Dispose();
+                foreach (var disposable in _garbage)
+                    disposable.Dispose();
             }
+
+            _isDisposed = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

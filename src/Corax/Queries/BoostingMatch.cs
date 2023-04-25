@@ -13,11 +13,6 @@ namespace Corax.Queries
 
         public FieldMetadata Field => throw new NotSupportedException($"{nameof(Field)} is not supported for {nameof(BoostingComparer)}");
 
-        public int CompareById(long idx, long idy)
-        {
-            throw new NotSupportedException($"{nameof(CompareById)} is not supported for {nameof(BoostingComparer)}");
-        }
-        
         public int CompareNumerical<T>(T sx, T sy) where T : unmanaged, INumber<T>
         {
             return sy.CompareTo(sx);

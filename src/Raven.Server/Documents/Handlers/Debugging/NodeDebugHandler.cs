@@ -231,12 +231,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             try
             {
-                var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
-                var command = new SetupAliveCommand();
-
+                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
+                    var command = new SetupAliveCommand();
                     await requestExecutor.ExecuteAsync(command, context, token: cts.Token);
                     result.SetupAlive.Time = sp.ElapsedMilliseconds;
                 }

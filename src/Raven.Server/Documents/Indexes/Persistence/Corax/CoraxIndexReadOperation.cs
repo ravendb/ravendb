@@ -299,6 +299,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             private GrowableHashSet<UnmanagedSpan> _alreadySeenDocumentKeysInPreviousPage;
             private GrowableHashSet<ulong> _alreadySeenProjections;
+            public long QueryStart;
 
             public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, IndexFieldsMapping fieldsMapping, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever)
             {
@@ -309,7 +310,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _retriever = retriever;
 
                 _alreadySeenDocumentKeysInPreviousPage = new(UnmanagedSpanComparer.Instance);
-
+                QueryStart = _query.Start;
                 _isMap = index.Type.IsMap();
             }
 
@@ -320,12 +321,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 long limit;
 
                 // If query start is effectively bigger than the one we are starting on. 
-                if (_query.Start > currentIdx)
+                if (QueryStart > currentIdx)
                 {
                     // If the query start before the current read ids, then we have to divide the ids in those
                     // that need to be processed for discarding and those that don't. 
-                    if (_query.Start < currentIdx + ids.Length)
-                        limit = _query.Start - currentIdx;
+                    if (QueryStart < currentIdx + ids.Length)
+                        limit = QueryStart - currentIdx;
                     else
                         limit = ids.Length;
                 }
@@ -490,20 +491,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             identityTracker.Initialize(_index, query, _indexSearcher, _fieldMappings, fieldsToFetch, retriever);
 
             long pageSize = query.PageSize;
-            
+
             if (query.Metadata.HasExplanations)
                 ThrowExplanationsIsNotImplementedInCorax();
-            
+
             long take = pageSize + query.Start;
-            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct || query.Metadata.OrderBy != null || take > int.MaxValue)
+            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
                 take = CoraxConstants.IndexSearcher.TakeAll;
-            
+
             bool isDistinctCount = query.PageSize == 0 && typeof(TDistinct) == typeof(HasDistinct);
             if (isDistinctCount)
             {
                 if (pageSize > int.MaxValue)
                     ThrowDistinctOnBiggerCollectionThanInt32();
-                
+
                 pageSize = int.MaxValue;
                 take = CoraxConstants.IndexSearcher.TakeAll;
             }
@@ -575,9 +576,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                     {
                         token.ThrowIfCancellationRequested();
-                        
+
                         long indexEntryId = ids[i];
-                        
+
                         // If we are going to include no matter what, lets skip everything else.
                         if (willAlwaysIncludeInResults)
                             goto Include;
@@ -593,9 +594,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             continue;
                         }
 
-                        // Now we know this is a new candidate document to be return therefore, we are going to be getting the
-                        // actual data and apply the rest of the filters. 
-                        Include:
+                    // Now we know this is a new candidate document to be return therefore, we are going to be getting the
+                    // actual data and apply the rest of the filters. 
+                    Include:
                         var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key,
                             _index.IndexFieldsPersistence);
 
@@ -668,6 +669,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     take += (pageSize - (pageSize - docsToLoad)) * _maxNumberOfOutputsPerDocument;
                     if (take < 0) // handle overflow
                         take = int.MaxValue;
+                    // start *after* all the items we already read and returned to the caller
+                    identityTracker.QueryStart = totalResults.Value;
                 }
             }
 
@@ -688,11 +691,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     throw new UnsupportedOperationException($"The type {typeof(TQueryFilter)} is not supported.");
             }
         }
-        
+
         protected virtual QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, long indexEntryId, OrderMetadata[] orderByFields, ref THighlighting highlightings,
             Reference<long> skippedResults,
-            ref THasProjection hasProjections, ref bool markedAsSkipped) 
+            ref THasProjection hasProjections, ref bool markedAsSkipped)
             where TDistinct : struct, IHasDistinct
             where THasProjection : struct, IHasProjection
             where THighlighting : struct, ISupportsHighlighting

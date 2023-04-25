@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return item;
         }
 
-        public override void InnerDispose()
+        protected override void InnerDispose()
         {
         }
     }

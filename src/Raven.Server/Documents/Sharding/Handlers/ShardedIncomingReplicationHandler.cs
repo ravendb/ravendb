@@ -325,13 +325,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public class ReplicationBatches : IDisposable
         {
-            private readonly ShardedIncomingReplicationHandler _parent;
             public Dictionary<int, ReplicationBatch> Batches;
 
             public ReplicationBatches(ShardedIncomingReplicationHandler parent)
             {
-                _parent = parent;
-
                 Batches = new Dictionary<int, ReplicationBatch>();
                 foreach (var shardNumber in parent._parent.Context.ShardsTopology.Keys)
                     Batches[shardNumber] = new ReplicationBatch();
