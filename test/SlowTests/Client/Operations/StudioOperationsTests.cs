@@ -10,7 +10,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Studio;
@@ -36,11 +35,11 @@ namespace SlowTests.Client.Operations
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.TimeSeries | DatabaseItemType.RevisionDocuments | DatabaseItemType.Documents));
 
-                var op = await store.Operations.SendAsync(new DeleteStudioCollectionOperation(null, "Orders", new List<string>(){ "Orders/1-A" }));
+                var op = await store.Operations.SendAsync(new DeleteStudioCollectionOperation(null, "Orders", new List<string>() { "Orders/1-A" }));
                 var operationResult = (BulkOperationResult)await op.WaitForCompletionAsync();
 
                 var stats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
-                
+
                 Assert.NotNull(stats);
                 Assert.Equal(1, stats.Collections["Orders"]);
             }
@@ -66,7 +65,7 @@ namespace SlowTests.Client.Operations
                     await session.StoreAsync(new User(), "user/B-2");
                     await session.StoreAsync(new User(), "user/E-3");
                     await session.SaveChangesAsync();
-                    
+
                     var user1 = await session.LoadAsync<User>("user/A-1");
                     var user2 = await session.LoadAsync<User>("user/B-2");
                     var user3 = await session.LoadAsync<User>("user/E-3");
@@ -192,11 +191,11 @@ namespace SlowTests.Client.Operations
             {
                 using (var session = store.OpenSession())
                 {
-                    var o1 = new MultipleFieldsClass1() {Name1 = "SomeName1", Name2 = "SomeName2"};
+                    var o1 = new MultipleFieldsClass1() { Name1 = "SomeName1", Name2 = "SomeName2" };
                     session.Store(o1, "user/A-1");
                     session.Advanced.GetMetadataFor(o1)[Constants.Documents.Metadata.Collection] = "User";
 
-                    var o2 = new MultipleFieldsClass2() {Name3 = "SomeName3", Name4 = "SomeName4"};
+                    var o2 = new MultipleFieldsClass2() { Name3 = "SomeName3", Name4 = "SomeName4" };
                     session.Store(o2, "user/B-2");
                     session.Advanced.GetMetadataFor(o2)[Constants.Documents.Metadata.Collection] = "User";
 
@@ -236,7 +235,7 @@ namespace SlowTests.Client.Operations
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "SomeDoc"});
+                    session.Store(new User { Name = "SomeDoc" });
                     session.SaveChanges();
                 }
 
