@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedSubscriptionsHandlerProcessorForPostSubscription(this))
                 await processor.ExecuteAsync();
         }
-        
+
         public async Task CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, JsonOperationContext context, SubscriptionConnection.ParsedSubscription sub)
         {
             if (TrafficWatchManager.HasRegisteredClients)
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var subscription = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseContext.DatabaseName, name);
+                var subscription = DatabaseContext.SubscriptionsStorage.GetSubscriptionByName(context, name);
 
                 foreach (var topology in DatabaseContext.ShardsTopology.Values)
                 {

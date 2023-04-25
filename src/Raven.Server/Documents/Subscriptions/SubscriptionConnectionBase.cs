@@ -466,7 +466,9 @@ namespace Raven.Server.Documents.Subscriptions
             using (context.OpenReadTransaction())
             using (var record = GetRecord(context))
             {
+#pragma warning disable CS0618
                 var subscription = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseName, name);
+#pragma warning restore CS0618
                 var topology = record.TopologyForSubscriptions();
 
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19089 create subscription WhosTaskIsIt");

@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                         try
                         {
                             // check the name
-                            state = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, RequestHandler.DatabaseName, options.Name);
+                            state = SubscriptionStorage.GetSubscriptionByName(context, options.Name);
                             id = state.SubscriptionId;
                         }
                         catch (SubscriptionDoesNotExistException)

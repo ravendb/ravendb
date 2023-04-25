@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
             var subscriptions = new List<SubscriptionState>();
             if (string.IsNullOrEmpty(name) && id == null)
             {
-                var allSubs = SubscriptionsClusterStorage.GetAllSubscriptionsWithoutState(context, RequestHandler.DatabaseName, start, pageSize);
+                var allSubs = RequestHandler.DatabaseContext.SubscriptionsStorage.GetAllSubscriptionsFromServerStore(context, start, pageSize);
                 if (allSubs == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -50,8 +50,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
             else
             {
                 var subscription = id == null
-                    ? ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, RequestHandler.DatabaseName, name)
-                    : ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, RequestHandler.DatabaseName, id.Value);
+                    ? RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionByName(context, name)
+                    : RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionById(context, id.Value);
 
                 if (subscription == null)
                 {

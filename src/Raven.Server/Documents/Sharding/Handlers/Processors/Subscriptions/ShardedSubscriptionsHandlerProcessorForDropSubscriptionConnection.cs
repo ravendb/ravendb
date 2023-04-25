@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
                 using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    subscriptionId = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, RequestHandler.DatabaseName, subscriptionName)
+                    subscriptionId = RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionByName(context, subscriptionName)
                         .SubscriptionId;
                 }
             }
@@ -34,13 +34,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
                 using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    subscriptionName = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, RequestHandler.DatabaseName, subscriptionId.Value).SubscriptionName;
+                    subscriptionName = RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionById(context, subscriptionId.Value).SubscriptionName;
                 }
             }
 
             var op = new ShardedDropSubscriptionConnectionOperation(HttpContext, subscriptionName);
             await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-            
+
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-19079 Make this identical to the normal EP");
             if (RequestHandler.DatabaseContext.SubscriptionsStorage.Subscriptions.TryRemove(subscriptionId.Value, out var state))
             {

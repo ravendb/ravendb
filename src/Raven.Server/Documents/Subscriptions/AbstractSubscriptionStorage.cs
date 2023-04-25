@@ -39,15 +39,39 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
     protected abstract string GetSubscriptionResponsibleNode(DatabaseRecord databaseRecord, SubscriptionState taskStatus);
     protected abstract bool SubscriptionChangeVectorHasChanges(TState state, SubscriptionState taskStatus);
 
-    public IEnumerable<SubscriptionState> GetAllSubscriptionsFromServerStore(ClusterOperationContext context)
+    public IEnumerable<SubscriptionState> GetAllSubscriptionsFromServerStore(ClusterOperationContext context, int start = 0, int take = int.MaxValue)
     {
-        foreach (var state in SubscriptionsClusterStorage.GetAllSubscriptionsWithoutState(context, _databaseName, 0, int.MaxValue))
-            yield return state;
+        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(_databaseName)))
+        {
+            if (start > 0)
+            {
+                start--;
+                continue;
+            }
+
+            if (take-- <= 0)
+                yield break;
+
+            var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
+            yield return subscriptionState;
+        }
     }
 
-    public SubscriptionState GetSubscriptionById(ClusterOperationContext context, long taskId) => _serverStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, _databaseName, taskId);
+    public SubscriptionState GetSubscriptionById(ClusterOperationContext context, long subscriptionId)
+    {
+        var name = GetSubscriptionNameById(context, subscriptionId);
+        if (string.IsNullOrEmpty(name))
+            throw new SubscriptionDoesNotExistException($"Subscription with id '{subscriptionId}' was not found in server store");
 
-    public SubscriptionState GetSubscriptionByName(ClusterOperationContext context, string taskName) => _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, taskName);
+        return GetSubscriptionByName(context, name);
+    }
+
+    public SubscriptionState GetSubscriptionByName(ClusterOperationContext context, string taskName)
+    {
+#pragma warning disable CS0618
+        return _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, taskName);
+#pragma warning restore CS0618
+    }
 
     public long GetAllSubscriptionsCount()
     {
@@ -102,7 +126,9 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
                 var id = subscriptionStateKvp.Key;
                 var subscriptionConnectionsState = subscriptionStateKvp.Value;
 
+#pragma warning disable CS0618
                 using var subscriptionStateRaw = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateRaw(context, _databaseName, subscriptionName);
+#pragma warning restore CS0618
                 if (subscriptionStateRaw == null)
                 {
                     DeleteAndSetException(id, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
@@ -139,7 +165,7 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
             }
         }
     }
-    
+
     public string GetSubscriptionNameById(ClusterOperationContext serverStoreContext, long id)
     {
         foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
@@ -159,7 +185,9 @@ public abstract class AbstractSubscriptionStorage<TState> : ILowMemoryHandler, I
 
     public TState GetSubscriptionConnectionsState(ClusterOperationContext context, string subscriptionName)
     {
+#pragma warning disable CS0618
         var subscriptionState = _serverStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, _databaseName, subscriptionName);
+#pragma warning restore CS0618
 
         if (_subscriptions.TryGetValue(subscriptionState.SubscriptionId, out TState concurrentSubscription) == false)
             return null;
