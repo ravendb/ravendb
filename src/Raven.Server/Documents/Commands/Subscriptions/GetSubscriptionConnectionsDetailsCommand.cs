@@ -21,7 +21,7 @@ public class GetSubscriptionConnectionsDetailsCommand : RavenCommand<Subscriptio
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        url = $"{node.Url}/databases/*/subscriptions/connection-details";
+        url = $"{node.Url}/databases/{node.Database}/subscriptions/connection-details";
 
         if (string.IsNullOrEmpty(_subscriptionName) == false)
             url += $"?name={Uri.EscapeDataString(_subscriptionName)}";
