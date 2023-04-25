@@ -50,7 +50,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_SortAndPageMultipleDates(Options options)
         {
             using (var store = GetDocumentStore(options))

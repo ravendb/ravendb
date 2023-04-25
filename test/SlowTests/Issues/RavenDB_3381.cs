@@ -53,7 +53,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All, Skip = "RavenDB-20378")]
         public void WorkWithPostfixWildcard(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -58,7 +58,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformDynamicQueryUsingClientLuceneQuery(Options options)
         {
             using (var documentStore = GetDocumentStore(options))

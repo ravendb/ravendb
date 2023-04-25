@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Index mixes value in dynamic array. This is not supported in Corax")]
         public void DocumentQueryWithWhereAndRangeFacetOnTheSamePropertyTest(Options options)
         {
@@ -39,7 +39,6 @@ namespace SlowTests.Issues
                 }
 
                 Indexes.WaitForIndexing(store);
-WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var documentQuery = session.Advanced.DocumentQuery<Color, Color_ForSearch>()

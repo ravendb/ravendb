@@ -33,10 +33,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void SimpleFuzzy()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void SimpleFuzzy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -85,7 +86,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void SimpleProximity(Options options)
         {
             using (var store = GetDocumentStore(options))

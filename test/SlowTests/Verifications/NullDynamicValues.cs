@@ -3,6 +3,9 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Documents.Operations;
+using SlowTests.MailingList;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,10 +23,11 @@ namespace SlowTests.Verifications
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void TransformerOperationWithNullDynamicValues()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TransformerOperationWithNullDynamicValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 PerformTestWithNullDynamicValues(store);
             }

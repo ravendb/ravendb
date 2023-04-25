@@ -24,7 +24,7 @@ namespace SlowTests.Tests.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformIntersectionQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -34,7 +34,7 @@ namespace SlowTests.Tests.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformIntersectionQuery_Linq(Options options)
         {
             using (var store = GetDocumentStore(options))

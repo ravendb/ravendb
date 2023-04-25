@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanAggregateByMinAndMaxOnSameField(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -18,8 +18,8 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
-        public void SpatialOnAutoIndex(RavenTestParameters config)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void SpatialOnAutoIndex(Options options)
         {
             var databaseName = $"{nameof(SpatialOnAutoIndex)}-{Guid.NewGuid()}";
             var path = NewDataPath();
@@ -28,11 +28,7 @@ namespace SlowTests.Issues
                 Path = path,
                 ModifyDatabaseName = s => databaseName,
                 DeleteDatabaseOnDispose = false,
-                ModifyDatabaseRecord = d =>
-                {
-                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                }
+                ModifyDatabaseRecord = d => options.ModifyDatabaseRecord(d)
             }))
             {
                 using (var session = store.OpenSession())
@@ -89,11 +85,7 @@ namespace SlowTests.Issues
                 Path = path,
                 ModifyDatabaseName = s => databaseName,
                 CreateDatabase = false,
-                ModifyDatabaseRecord = d =>
-                {
-                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                }
+                ModifyDatabaseRecord = d => options.ModifyDatabaseRecord(d)
             }))
             {
                 var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)); // checking it index survived restart
