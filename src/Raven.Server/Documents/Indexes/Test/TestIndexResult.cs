@@ -13,6 +13,7 @@ public class TestIndexResult
     public List<BlittableJsonReaderObject> MapResults;
     public List<BlittableJsonReaderObject> ReduceResults;
     public bool HasDynamicFields;
+    public bool IsStale;
     
     public async Task WriteTestIndexResult(Stream responseBodyStream, DocumentsOperationContext context)
     {
@@ -50,6 +51,11 @@ public class TestIndexResult
             
             writer.WritePropertyName(nameof(HasDynamicFields));
             writer.WriteBool(HasDynamicFields);
+            
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(IsStale));
+            writer.WriteBool(IsStale);
 
             writer.WriteEndObject();
         }

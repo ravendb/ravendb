@@ -294,7 +294,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return instance;
         }
         
-        public static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false, SingleIndexConfiguration configuration = null)
+        public static MapReduceIndex CreateNew<TStaticIndex>(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false, SingleIndexConfiguration forcedConfiguration = null)
             where TStaticIndex : MapReduceIndex
         {
             TStaticIndex instance;
@@ -321,10 +321,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 .AsTask()
                 .Wait();
             
-            configuration ??= new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
+            forcedConfiguration ??= new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
 
             instance.Initialize(documentDatabase,
-                configuration,
+                forcedConfiguration,
                 documentDatabase.Configuration.PerformanceHints);
 
             var staticIndex = instance._compiled;
