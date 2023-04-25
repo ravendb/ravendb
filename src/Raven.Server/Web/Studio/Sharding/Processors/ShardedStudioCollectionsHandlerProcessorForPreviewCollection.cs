@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -51,7 +52,8 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         var op = new ShardedCollectionPreviewOperation(RequestHandler, Collection, expectedEtag, _continuationToken);
         var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-        _combinedReadState = await result.Result.InitializeAsync(_requestHandler.DatabaseContext, _requestHandler.AbortRequestToken);
+        if (result.StatusCode != (int)HttpStatusCode.NotModified)
+            _combinedReadState = await result.Result.InitializeAsync(_requestHandler.DatabaseContext, _requestHandler.AbortRequestToken);
         _combinedEtag = result.CombinedEtag;
     }
 
