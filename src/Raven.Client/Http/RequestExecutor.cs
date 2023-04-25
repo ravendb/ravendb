@@ -313,6 +313,7 @@ namespace Raven.Client.Http
 
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
+                GC.SuppressFinalize(this);
                 Cache.Dispose();
                 ContextPool.Dispose();
                 _updateTopologyTimer?.Dispose();
@@ -355,7 +356,8 @@ namespace Raven.Client.Http
             {
 #if DEBUG
                 Console.WriteLine($"Finalizer of {GetType()} got an exception:{Environment.NewLine}{e}");
-#endif          // nothing we can do here
+#endif          
+                // nothing we can do here
             }
         }
 
