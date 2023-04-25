@@ -56,6 +56,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var testIndexParameters = JsonDeserializationServer.TestIndexParameters(input);
                 var testIndexDefinition = testIndexParameters.IndexDefinition;
                 var query = testIndexParameters.Query;
+                var queryParameters = testIndexParameters.QueryParameters;
                 var maxDocumentsPerIndex = testIndexParameters.MaxDocumentsToProcess;
                 
                 if (testIndexParameters.IndexDefinition is null)
@@ -74,7 +75,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                 testIndexDefinition.Name ??= Guid.NewGuid().ToString("N");
 
                 query ??= $"from index '{testIndexDefinition.Name}'";
-                var queryAsBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(new { Query = query }, context);
+
+                var djv = new DynamicJsonValue() { [nameof(IndexQueryServerSide.Query)] = query, [nameof(IndexQueryServerSide.QueryParameters)] = queryParameters };
+
+                var queryAsBlittable = context.ReadObject(djv, "test-index-query");
                 
                 using (var index = Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context, maxDocumentsPerIndex))
                 {
