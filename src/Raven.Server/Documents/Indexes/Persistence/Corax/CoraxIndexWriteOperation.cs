@@ -88,9 +88,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
             ByteString data;
             float? documentBoost = null;
+            bool shouldSkip;
             using (Stats.ConvertStats.Start())
             {
-                scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost);
+                scope = _converter.SetDocument(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost, out shouldSkip);
             }
             
             if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
@@ -101,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using(scope)
             using (Stats.AddStats.Start())
             {
-                if (data.Length == 0)
+                if (data.Length == 0 || shouldSkip)
                 {
                     DeleteByField(keyFieldName, key, stats);
                     return;
@@ -122,14 +123,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             ByteString data;
             ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
             float? documentBoost;
+            bool shouldSkip;
             using (Stats.ConvertStats.Start())
             {
-                scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost);
+                scope = _converter.SetDocument(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost, out shouldSkip);
             }
             
             using (scope)
             {
-                if (data.Length == 0)
+                if (data.Length == 0 || shouldSkip)
                     return;
 
                 using (Stats.AddStats.Start())

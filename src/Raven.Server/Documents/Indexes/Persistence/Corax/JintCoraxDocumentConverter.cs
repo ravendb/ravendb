@@ -43,7 +43,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
     }
 
-    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, out LazyStringValue id, out ByteString output, out float? documentBoost)
+    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, out LazyStringValue id, out ByteString output, out float? documentBoost, out int fields)
     {
         documentBoost = null;
         // We prepare for the next entry.
@@ -56,7 +56,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             {
                 //nothing to index, finish the job
                 id = null;
-                entryWriter.Finish(out output);
+                entryWriter.Finish(out output, _indexEmptyEntries);
+                fields = 0;
                 return default;
             }
 
@@ -115,7 +116,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 StoreValue(indexContext, ref entryWriter, singleEntryWriterScope, documentToProcess);
             }
 
-            return entryWriter.Finish(out output);
+            fields = entryWriter.CurrentFieldCount();
+            return entryWriter.Finish(out output, _indexEmptyEntries);
         }
         catch
         {
