@@ -854,8 +854,8 @@ public class RavenDB_11097 : RavenTestBase
         }
     }
 
-    [Fact]
-    public void Temp()
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void TestMaxDocumentsToProcessParameter()
     {
         using (var store = GetDocumentStore())
         {
@@ -907,6 +907,111 @@ public class RavenDB_11097 : RavenTestBase
                     var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
                     var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
                     var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                    
+                    Assert.Equal(6, indexEntriesObjectList.Count);
+                    Assert.Equal(4, queryResultsObjectList.Count);
+                    Assert.Equal(6, mapResultsObjectList.Count);
+                    Assert.Empty(reduceResultsObjectList);
+                }
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void TestQueryParametersParameter()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto1 = new Dto() { Name = "Name1", Age = 21 };
+                var dto2 = new Dto() { Name = "Name2", Age = 37 };
+                var dto3 = new Dto() { Name = "Name1", Age = 55 };
+
+                session.Store(dto1);
+                session.Store(dto2);
+                session.Store(dto3);
+
+                session.SaveChanges();
+                
+                using (var commands = store.Commands())
+                {
+                    var payload = new TestIndexParameters()
+                    {
+                        IndexDefinition = new IndexDefinition()
+                        {
+                            Name = "Temp2137",
+                            Maps = new HashSet<string> { "from dto in docs.Dtos select new { Name = dto.Name, Age = dto.Age }" }
+                        },
+                        Query = "from Dtos where Age = $p0",
+                        QueryParameters = new { p0 = 37 }
+                    };
+
+                    var cmd = new PutTestIndexCommand(payload);
+                    commands.Execute(cmd);
+                    
+                    var res = cmd.Result as BlittableJsonReaderObject;
+                    
+                    Assert.NotNull(res);
+                    
+                    res.TryGet(nameof(TestIndexResult.IndexEntries), out BlittableJsonReaderArray indexEntries);
+                    res.TryGet(nameof(TestIndexResult.QueryResults), out BlittableJsonReaderArray queryResults);
+                    res.TryGet(nameof(TestIndexResult.MapResults), out BlittableJsonReaderArray mapResults);
+                    res.TryGet(nameof(TestIndexResult.ReduceResults), out BlittableJsonReaderArray reduceResults);
+                
+                    var indexEntriesObjectList = JsonConvert.DeserializeObject<List<Dto>>(indexEntries.ToString());
+                    var queryResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(queryResults.ToString());
+                    var mapResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(mapResults.ToString());
+                    var reduceResultsObjectList = JsonConvert.DeserializeObject<List<Dto>>(reduceResults.ToString());
+                    
+                    Assert.Equal(1, indexEntriesObjectList.Count);
+                    Assert.Equal(1, queryResultsObjectList.Count);
+                    Assert.Equal(3, mapResultsObjectList.Count);
+                    Assert.Empty(reduceResultsObjectList);
+                }
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Indexes)]
+    public void TestDocumentsWithNestedProperty()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto1 = new Dto() { Name = "Name1", Age = 21 };
+
+                var ndto1 = new NestedDto() { Name = "UpperName1", NestedObject = dto1 };
+
+                session.Store(ndto1);
+
+                session.SaveChanges();
+                
+                using (var commands = store.Commands())
+                {
+                    var payload = new TestIndexParameters()
+                    {
+                        IndexDefinition = new IndexDefinition()
+                        {
+                            Name = "Temp2137",
+                            Maps = new HashSet<string> { "from nestedDto in docs.NestedDtos select new { UpperName = nestedDto.Name, LowerName = nestedDto.NestedObject.Name }" }
+                        }
+                    };
+
+                    var cmd = new PutTestIndexCommand(payload);
+                    commands.Execute(cmd);
+                    
+                    var res = cmd.Result as BlittableJsonReaderObject;
+                    
+                    Assert.NotNull(res);
+                    
+                    res.TryGet(nameof(TestIndexResult.MapResults), out BlittableJsonReaderArray mapResults);
+                
+                    var mapResultsObjectList = JsonConvert.DeserializeObject<List<NestedDtoQueryResult>>(mapResults.ToString());
+
+                    Assert.Equal("UpperName1", mapResultsObjectList[0].UpperName);
+                    Assert.Equal("Name1", mapResultsObjectList[0].LowerName);
                 }
             }
         }
@@ -937,5 +1042,17 @@ public class RavenDB_11097 : RavenTestBase
     {
         public string Name { get; set; }
         public double Age { get; set; }
+    }
+
+    private class NestedDto
+    {
+        public string Name { get; set; }
+        public Dto NestedObject { get; set; }
+    }
+
+    private class NestedDtoQueryResult
+    {
+        public string UpperName { get; set; }
+        public string LowerName { get; set; }
     }
 }

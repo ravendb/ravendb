@@ -9,5 +9,7 @@ public class TestIndexParameters
 
     public string Query { get; set; }
     
+    public object QueryParameters { get; set; }
+    
     public int MaxDocumentsToProcess { get; set; }
 }
