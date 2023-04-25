@@ -77,7 +77,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 
     protected abstract TDatabaseConnectionState CreateDatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect);
 
-    private static ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
+    protected virtual ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
     {
         var clientWebSocket = new ClientWebSocket();
         if (requestExecutor.Certificate != null)

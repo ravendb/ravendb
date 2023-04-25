@@ -118,16 +118,18 @@ namespace Raven.Server.ServerWide
 
         public DocumentConventions DocumentConventionsForOrchestrator => DocumentConventionsForShard;
 
-        private bool ShardingCustomValidationCallback(HttpRequestMessage message, X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors)
+        public bool ShardingCustomValidationCallback(object message, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
         {
             // We only care about the certificate that the orchestrator going to use and the shard is going to respond
             // In most cases is simply going to be the same certificate
 
-            if (cert.Thumbprint == _serverStore.Server.Certificate.Certificate.Thumbprint)
+            var cert2 = cert as X509Certificate2;
+
+            if (cert2!.Thumbprint == _serverStore.Server.Certificate.Certificate.Thumbprint)
                 return true;
 
             // Here we handle the case of the server certificate replacement 
-            if (cert.GetPublicKeyPinningHash() == _serverStore.Server.Certificate.Certificate.GetPublicKeyPinningHash())
+            if (cert2.GetPublicKeyPinningHash() == _serverStore.Server.Certificate.Certificate.GetPublicKeyPinningHash())
                 return true;
 
             return RequestExecutor.OnServerCertificateCustomValidationCallback(message, cert, chain, errors);
