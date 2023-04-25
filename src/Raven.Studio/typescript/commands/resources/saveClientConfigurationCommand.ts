@@ -1,11 +1,16 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import database = require("models/resources/database");
+import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 
 class saveClientConfigurationCommand extends commandBase {
-    
-    constructor(private dto: Raven.Client.Documents.Operations.Configuration.ClientConfiguration, private db: database) {
+    private dto: ClientConfiguration;
+    private db: database;
+
+    constructor(dto: ClientConfiguration,  db: database) {
         super();
+        this.dto = dto;
+        this.db = db;
     }
     
     execute(): JQueryPromise<void> {

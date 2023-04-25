@@ -15,4 +15,12 @@ export default class MockManageServerService extends AutoMockService<ManageServe
             ManageServerStubs.getSampleClientGlobalConfiguration()
         );
     }
+
+    withGetDatabaseClientConfiguration(dto?: MockedValue<ClientConfiguration>) {
+        return this.mockResolvedValue(
+            this.mocks.getClientConfiguration,
+            dto,
+            ManageServerStubs.getSampleClientDatabaseConfiguration()
+        );
+    }
 }

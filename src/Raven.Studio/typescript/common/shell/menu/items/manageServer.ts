@@ -3,7 +3,7 @@ import { bridgeToReact } from "common/reactUtils";
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
-import ClientConfiguration from "components/pages/resources/manageServer/clientConfiguration/ClientConfiguration";
+import ClientGlobalConfiguration from "components/pages/resources/manageServer/clientConfiguration/ClientGlobalConfiguration";
 
 export = getManageServerMenuItem;
 
@@ -27,7 +27,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/clientConfiguration',
-            moduleId: bridgeToReact(ClientConfiguration, "nonShardedView"),
+            moduleId: bridgeToReact(ClientGlobalConfiguration, "nonShardedView"),
             title: 'Client Configuration',
             nav: true,
             css: 'icon-client-configuration',
