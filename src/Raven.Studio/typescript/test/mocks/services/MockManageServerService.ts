@@ -16,6 +16,10 @@ export default class MockManageServerService extends AutoMockService<ManageServe
         );
     }
 
+    withThrowingGetGlobalClientConfiguration() {
+        this.mocks.getGlobalClientConfiguration.mockRejectedValue(new Error());
+    }
+
     withGetDatabaseClientConfiguration(dto?: MockedValue<ClientConfiguration>) {
         return this.mockResolvedValue(
             this.mocks.getClientConfiguration,

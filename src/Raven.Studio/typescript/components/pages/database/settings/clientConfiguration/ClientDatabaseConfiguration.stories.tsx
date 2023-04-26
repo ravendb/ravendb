@@ -1,5 +1,5 @@
 import React from "react";
-import { ComponentMeta } from "@storybook/react";
+import { ComponentMeta, ComponentStory } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import ClientDatabaseConfiguration from "./ClientDatabaseConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
@@ -11,11 +11,20 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof ClientDatabaseConfiguration>;
 
-export function ClientConfiguration() {
+export const WithGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
     const { manageServerService } = mockServices;
 
     manageServerService.withGetGlobalClientConfiguration();
     manageServerService.withGetDatabaseClientConfiguration();
 
     return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
-}
+};
+
+export const WithoutGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
+    const { manageServerService } = mockServices;
+
+    manageServerService.withThrowingGetGlobalClientConfiguration();
+    manageServerService.withGetDatabaseClientConfiguration();
+
+    return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
+};

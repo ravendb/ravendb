@@ -80,7 +80,7 @@ function initYup() {
     });
 }
 
-export function canonInit() {
+export function commonInit() {
     initRedux();
     initYup();
 }
