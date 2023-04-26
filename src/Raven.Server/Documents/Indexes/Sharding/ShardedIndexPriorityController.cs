@@ -14,17 +14,17 @@ public class ShardedIndexPriorityController : AbstractIndexPriorityController
 
     public ShardedIndexPriorityController([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         : base(serverStore)
-    {
+    {   
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
+
+    protected override string GetDatabaseName() => _context.DatabaseName;
 
     protected override void ValidateIndex(string name, IndexPriority priority)
     {
         if (_context.Indexes.GetIndex(name) == null)
             IndexDoesNotExistException.ThrowFor(name);
     }
-
-    protected override string GetDatabaseName() => _context.DatabaseName;
 
     protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodesAsync(index);
 }

@@ -17,6 +17,8 @@ public class DatabaseIndexStateController : AbstractIndexStateController
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
+    protected override string GetDatabaseName() => _database.Name;
+
     protected override void ValidateIndex(string name, IndexState state)
     {
         var index = _database.IndexStore.GetIndex(name);
@@ -25,11 +27,6 @@ public class DatabaseIndexStateController : AbstractIndexStateController
 
         if (index is FaultyInMemoryIndex faultyInMemoryIndex)
             faultyInMemoryIndex.SetState(state); // this will throw proper exception
-    }
-
-    protected override string GetDatabaseName()
-    {
-        return _database.Name;
     }
 
     protected override async ValueTask WaitForIndexNotificationAsync(long index)

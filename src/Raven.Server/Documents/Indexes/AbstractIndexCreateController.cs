@@ -17,7 +17,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
-using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes;
 
@@ -150,9 +149,7 @@ public abstract class AbstractIndexCreateController
 
         ValidateAutoIndex(definition);
 
-        var name = ShardHelper.ToDatabaseName(GetDatabaseName());
-
-        var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBaseServerSide)definition, name, raftRequestId, configuration.Indexing.AutoIndexDeploymentMode);
+        var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBaseServerSide)definition, GetDatabaseName(), raftRequestId, configuration.Indexing.AutoIndexDeploymentMode);
 
         long index = 0;
         try
