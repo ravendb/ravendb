@@ -1,0 +1,62 @@
+.cluster-overview-widget {
+    .nodes-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+
+        .node-item {
+            background-color: $panel-bg-1-var;
+            border-radius: $border-radius-md;
+
+            .node-item-header {
+                display: flex;
+                align-items: flex-end;
+
+                .node-tag {
+                    flex-grow: 1;
+                    font-size: $font-size-lg;
+                    color: $text-emphasis-var;
+                    font-weight: 800;
+                    display: flex;
+                    align-items: center;
+
+                    i {
+                        margin-right: $gutter-xs;
+                    }
+                }
+                .node-type,
+                .node-os,
+                .node-url {
+                    text-align: center;
+                }
+
+                .node-url {
+                    display: block;
+                }
+                i {
+                    font-size: 1.75em;
+                }
+                border-bottom: solid $border-width $panel-bg-1-var;
+                .small-label {
+                    margin-top: $gutter-xxs;
+                }
+            }
+
+            .node-item-details {
+                .detail-item {
+                    font-size: $font-size-xs;
+                    display: flex;
+
+                    .detail-label {
+                        font-weight: bold;
+                        color: $text-emphasis-var;
+                        width: 70px;
+                    }
+
+                    .detail-value {
+                        flex-grow: 1;
+                    }
+                }
+            }
+        }
+    }
+}

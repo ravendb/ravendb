@@ -1,49 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 123 123">
-  <defs>
-    <style>
-      .a {
-        fill: #262a30;
-      }
-
-      .b {
-        fill: #cf1f5d;
-      }
-
-      .c {
-        fill: #f0ae5e;
-      }
-
-      .d {
-        fill: #2f9ef3;
-      }
-
-      .e {
-        fill: #ba50a1;
-      }
-
-      .f {
-        fill: #333d48;
-      }
-    </style>
-  </defs>
-  <title>Artboard 6</title>
-  <rect class="a" x="-0.5" width="124" height="123"/>
-  <g>
-    <rect class="b" x="41.366" y="29.338" width="19.78" height="5.468"/>
-    <rect class="c" x="67.26" y="29.338" width="19.78" height="5.468"/>
-    <rect class="d" x="11.166" y="36.88" width="19.8" height="19.8" rx="9.9"/>
-    <rect class="e" x="11.166" y="85.247" width="19.8" height="19.8" rx="9.9"/>
-    <g>
-      <path class="f" d="M108.934,45.683v6.355H43.366V45.683h65.568m2-2H41.366V54.038h69.568V43.683Z"/>
-      <rect class="c" x="41.366" y="43.683" width="35.784" height="10.355"/>
-      <rect class="b" x="43.577" y="45.748" width="10.144" height="6.224" transform="translate(97.299 97.721) rotate(180)"/>
-    </g>
-    <g>
-      <path class="f" d="M108.934,93.938v6.355H43.366V93.938h65.568m2-2H41.366v10.355h69.568V91.938Z"/>
-      <rect class="c" x="41.366" y="91.938" width="51.613" height="10.355"/>
-      <rect class="b" x="43.577" y="94.004" width="10.144" height="6.224" transform="translate(97.299 194.232) rotate(180)"/>
-    </g>
-    <rect class="b" x="41.366" y="77.706" width="19.78" height="5.468"/>
-    <rect class="c" x="67.26" y="77.706" width="19.78" height="5.468"/>
-  </g>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 27.4.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 123 123" style="enable-background:new 0 0 123 123;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#181826;}
+	.st1{fill:#CF1F5D;}
+	.st2{fill:#F0AE5E;}
+	.st3{fill:#2F9EF3;}
+	.st4{fill:#BA50A1;}
+	.st5{fill:#333D48;}
+</style>
+<rect x="-0.5" class="st0" width="124" height="123"/>
+<g>
+	<rect x="41.4" y="29.3" class="st1" width="19.8" height="5.5"/>
+	<rect x="67.3" y="29.3" class="st2" width="19.8" height="5.5"/>
+	<path class="st3" d="M21.1,36.9L21.1,36.9c5.5,0,9.9,4.4,9.9,9.9l0,0c0,5.5-4.4,9.9-9.9,9.9l0,0c-5.5,0-9.9-4.4-9.9-9.9l0,0
+		C11.2,41.3,15.6,36.9,21.1,36.9z"/>
+	<path class="st4" d="M21.1,85.2L21.1,85.2c5.5,0,9.9,4.4,9.9,9.9v0c0,5.5-4.4,9.9-9.9,9.9l0,0c-5.5,0-9.9-4.4-9.9-9.9v0
+		C11.2,89.7,15.6,85.2,21.1,85.2z"/>
+	<g>
+		<path class="st5" d="M108.9,45.7V52H43.4v-6.4H108.9 M110.9,43.7H41.4V54h69.6V43.7z"/>
+		<rect x="41.4" y="43.7" class="st2" width="35.8" height="10.4"/>
+		<rect x="43.6" y="45.7" class="st1" width="10.1" height="6.2"/>
+	</g>
+	<g>
+		<path class="st5" d="M108.9,93.9v6.4H43.4v-6.4H108.9 M110.9,91.9H41.4v10.4h69.6V91.9z"/>
+		<rect x="41.4" y="91.9" class="st2" width="51.6" height="10.4"/>
+		<rect x="43.6" y="94" class="st1" width="10.1" height="6.2"/>
+	</g>
+	<rect x="41.4" y="77.7" class="st1" width="19.8" height="5.5"/>
+	<rect x="67.3" y="77.7" class="st2" width="19.8" height="5.5"/>
+</g>
 </svg>
