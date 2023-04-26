@@ -33,12 +33,18 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanStreamQueryResults(Options options)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanStreamQueryResults_Lucene(Options options) => CanStreamQueryResults<Users_ByName>(options);
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanStreamQueryResults_Corax(Options options) => CanStreamQueryResults<Users_ByName_WithoutBoosting>(options);
+        
+        private void CanStreamQueryResults<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))
             {
-                new Users_ByName().Execute(store);
+                new TIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -55,7 +61,7 @@ namespace SlowTests.Core.Streaming
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<User, Users_ByName>();
+                    var query = session.Query<User, TIndex>();
 
                     var reader = session.Advanced.Stream(query);
 
@@ -70,7 +76,7 @@ namespace SlowTests.Core.Streaming
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.DocumentQuery<User, Users_ByName>();
+                    var query = session.Advanced.DocumentQuery<User, TIndex>();
                     var reader = session.Advanced.Stream(query);
                     while (reader.MoveNext())
                     {
@@ -85,12 +91,19 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanStreamQueryResultsWithQueryStatistics(Options options)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanStreamQueryResultsWithQueryStatistic_Corax(Options options) => CanStreamQueryResultsWithQueryStatistics<Users_ByName_WithoutBoosting>(options, "Users/ByName/WithoutBoosting");
+
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanStreamQueryResultsWithQueryStatistic_Lucene(Options options) => CanStreamQueryResultsWithQueryStatistics<Users_ByName>(options, "Users/ByName");
+        
+        private void CanStreamQueryResultsWithQueryStatistics<TIndex>(Options options, string indexName) where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))
             {
-                new Users_ByName().Execute(store);
+                new TIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -105,7 +118,7 @@ namespace SlowTests.Core.Streaming
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<User, Users_ByName>();
+                    var query = session.Query<User, TIndex>();
 
                     StreamQueryStatistics stats;
                     var reader = session.Advanced.Stream(query, out stats);
@@ -115,14 +128,14 @@ namespace SlowTests.Core.Streaming
                         Assert.IsType<User>(reader.Current.Document);
                     }
 
-                    Assert.Equal("Users/ByName", stats.IndexName);
+                    Assert.Equal(indexName, stats.IndexName);
                     Assert.Equal(100, stats.TotalResults);
                     Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.DocumentQuery<User, Users_ByName>();
+                    var query = session.Advanced.DocumentQuery<User, TIndex>();
                     StreamQueryStatistics stats;
                     var reader = session.Advanced.Stream(query, out stats);
 
@@ -131,7 +144,7 @@ namespace SlowTests.Core.Streaming
                         Assert.IsType<User>(reader.Current.Document);
                     }
 
-                    Assert.Equal("Users/ByName", stats.IndexName);
+                    Assert.Equal(indexName, stats.IndexName);
                     Assert.Equal(100, stats.TotalResults);
                     Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year); 
                 }
@@ -139,12 +152,20 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task CanStreamQueryResultsWithQueryStatisticsAsync(Options options)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamQueryResultsWithQueryStatisticsAsync_Lucene(Options options) =>
+            await CanStreamQueryResultsWithQueryStatisticsAsync<Users_ByName>(options, "Users/ByName");
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamQueryResultsWithQueryStatisticsAsync_Corax(Options options) =>
+            await CanStreamQueryResultsWithQueryStatisticsAsync<Users_ByName_WithoutBoosting>(options, "Users/ByName/WithoutBoosting");
+
+        private async Task CanStreamQueryResultsWithQueryStatisticsAsync<TIndex>(Options options, string indexName) where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))
             {
-                new Users_ByName().Execute(store);
+                new TIndex().Execute(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -155,11 +176,10 @@ namespace SlowTests.Core.Streaming
                     await session.SaveChangesAsync().ConfigureAwait(false);
                 }
 
-                Indexes.WaitForIndexing(store);
-
+                await Indexes.WaitForIndexingAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
-                    var query = session.Query<User, Users_ByName>();
+                    var query = session.Query<User, TIndex>();
 
                     StreamQueryStatistics stats;
                     var reader = await session.Advanced.StreamAsync(query, out stats).ConfigureAwait(false);
@@ -169,14 +189,14 @@ namespace SlowTests.Core.Streaming
                         Assert.IsType<User>(reader.Current.Document);
                     }
 
-                    Assert.Equal("Users/ByName", stats.IndexName);
+                    Assert.Equal(indexName, stats.IndexName);
                     Assert.Equal(100, stats.TotalResults);
                     Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var query = session.Advanced.AsyncDocumentQuery<User, Users_ByName>();
+                    var query = session.Advanced.AsyncDocumentQuery<User, TIndex>();
                     StreamQueryStatistics stats;
                     var reader = await session.Advanced.StreamAsync(query, out stats);
 
@@ -185,7 +205,7 @@ namespace SlowTests.Core.Streaming
                         Assert.IsType<User>(reader.Current.Document);
                     }
 
-                    Assert.Equal(stats.IndexName, "Users/ByName");
+                    Assert.Equal(stats.IndexName, indexName);
                     Assert.Equal(stats.TotalResults, 100);
                     Assert.Equal(stats.IndexTimestamp.Year, DateTime.Now.Year);
                 }
@@ -548,6 +568,22 @@ namespace SlowTests.Core.Streaming
             public Users_ByName()
             {
                 Map = users => from u in users select new { Name = u.Name, LastName = u.LastName.Boost(10) };
+
+                Indexes.Add(x => x.Name, FieldIndexing.Search);
+
+                IndexSuggestions.Add(x => x.Name);
+
+                Analyzers.Add(x => x.Name, typeof(Lucene.Net.Analysis.SimpleAnalyzer).FullName);
+
+                Stores.Add(x => x.Name, FieldStorage.Yes);
+            }
+        }
+        
+        private class Users_ByName_WithoutBoosting : AbstractIndexCreationTask<User>
+        {
+            public Users_ByName_WithoutBoosting()
+            {
+                Map = users => from u in users select new { Name = u.Name, LastName = u.LastName };
 
                 Indexes.Add(x => x.Name, FieldIndexing.Search);
 

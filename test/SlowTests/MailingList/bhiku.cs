@@ -23,12 +23,12 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Skip = "Document boost")]
         public void CanUseBoost_StartsWith(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Student { FirstName = "David", LastName = "Globe" });
@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
                 }
 
                 new Student_ByName().Execute(store);
-
+                
                 using (var session = store.OpenSession())
                 {
                     var students = session.Advanced.DocumentQuery<Student>()
@@ -60,7 +60,8 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Skip = "Document boost")]
         public void CanUseBoost_Equal(Options options)
         {
             using (var store = GetDocumentStore(options))

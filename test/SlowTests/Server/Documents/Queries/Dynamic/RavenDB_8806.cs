@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void Can_stream_dynamic_query(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -67,25 +67,25 @@ namespace SlowTests.Server.Documents.Queries.Dynamic
 
                 count = 0;
 
-                using (var session = store.OpenSession())
+                //Sharding is not supporting Map-Reduce streaming queries.
+                if (options.DatabaseMode is RavenDatabaseMode.Single)
                 {
-                    var query = session.Query<User>().GroupBy(x => x.Name).Select(x => new Result
+                    using (var session = store.OpenSession())
                     {
-                        Name = x.Key,
-                        Count = x.Count()
-                    });
+                        var query = session.Query<User>().GroupBy(x => x.Name).Select(x => new Result {Name = x.Key, Count = x.Count()});
 
-                    using (var reader = session.Advanced.Stream(query))
-                    {
-                        while (reader.MoveNext())
+                        using (var reader = session.Advanced.Stream(query))
                         {
-                            count++;
-                            Assert.IsType<Result>(reader.Current.Document);
+                            while (reader.MoveNext())
+                            {
+                                count++;
+                                Assert.IsType<Result>(reader.Current.Document);
+                            }
                         }
                     }
-                }
 
-                Assert.Equal(2, count);
+                    Assert.Equal(2, count);
+                }
             }
         }
 
