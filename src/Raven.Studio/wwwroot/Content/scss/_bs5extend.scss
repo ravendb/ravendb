@@ -115,6 +115,14 @@
     }
 }
 
+// Vertical separator inside the badge
+.badge {
+    .vr {
+        margin: -2px 6px;
+        width: 2px;
+    }
+}
+
 .absolute-fill {
     position: absolute !important;
     top: 0;
