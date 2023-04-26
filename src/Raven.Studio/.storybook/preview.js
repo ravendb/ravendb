@@ -45,7 +45,7 @@ import pluginWidget from "plugins/widget";
 pluginWidget.install({});
 
 
-import { canonInit } from "components/common/shell/setup";
+import { commonInit } from "components/common/shell/setup";
 
 import { ModuleMocker } from 'jest-mock';
 import {useState} from "react";
@@ -58,7 +58,7 @@ window.ace = {
     require: () => ({})
 }
 
-canonInit();
+commonInit();
 
 import { Provider } from "react-redux";
 

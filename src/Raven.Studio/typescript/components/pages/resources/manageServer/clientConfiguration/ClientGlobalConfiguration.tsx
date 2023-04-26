@@ -23,7 +23,7 @@ export default function ClientGlobalConfiguration() {
         resolver: clientConfigurationYupResolver,
         mode: "onChange",
         defaultValues: async () =>
-            ClientConfigurationUtils.mapToFormData(await getGlobalClientConfigurationCallback.execute()),
+            ClientConfigurationUtils.mapToFormData(await getGlobalClientConfigurationCallback.execute(), true),
     });
 
     const {
@@ -36,7 +36,7 @@ export default function ClientGlobalConfiguration() {
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         return genUtils.tryHandleSubmit(async () => {
-            await manageServerService.saveGlobalClientConfiguration(ClientConfigurationUtils.mapToDto(formData));
+            await manageServerService.saveGlobalClientConfiguration(ClientConfigurationUtils.mapToDto(formData, true));
             reset(formData);
         });
     };
@@ -51,7 +51,7 @@ export default function ClientGlobalConfiguration() {
 
     return (
         <Form onSubmit={handleSubmit(onSave)}>
-            <Col md={6} className="p-4">
+            <Col md="12" lg="6" className="p-4">
                 <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
                     {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <i className="icon-save me-1" />}
                     Save
@@ -70,7 +70,7 @@ export default function ClientGlobalConfiguration() {
                                 Identity parts separator
                             </FormCheckbox>
                         </Col>
-                        <Col md={5}>
+                        <Col>
                             <FormInput
                                 type="text"
                                 control={control}
@@ -95,7 +95,7 @@ export default function ClientGlobalConfiguration() {
                                 Maximum number of requests per session
                             </FormCheckbox>
                         </Col>
-                        <Col lg={5}>
+                        <Col>
                             <FormInput
                                 type="number"
                                 control={control}
@@ -123,7 +123,7 @@ export default function ClientGlobalConfiguration() {
                                 Use Session Context for Load Balancing
                             </FormCheckbox>
                         </Col>
-                        <Col md={5}>
+                        <Col>
                             <Row>
                                 <Col>
                                     <FormSwitch
@@ -158,13 +158,15 @@ export default function ClientGlobalConfiguration() {
                                 control={control}
                                 name="readBalanceBehaviorEnabled"
                                 afterChange={(event) =>
-                                    !event.target.checked && setValue("readBalanceBehaviorValue", "None")
+                                    event.target.checked
+                                        ? setValue("readBalanceBehaviorValue", "None")
+                                        : setValue("readBalanceBehaviorValue", null)
                                 }
                             >
                                 Read balance behavior
                             </FormCheckbox>
                         </Col>
-                        <Col md={5}>
+                        <Col>
                             <FormSelect
                                 control={control}
                                 name="readBalanceBehaviorValue"

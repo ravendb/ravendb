@@ -1,4 +1,4 @@
 import "@testing-library/jest-dom";
-import { canonInit } from "components/common/shell/setup";
+import { commonInit } from "components/common/shell/setup";
 
-canonInit();
+commonInit();
