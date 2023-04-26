@@ -3271,9 +3271,7 @@ namespace Raven.Server.ServerWide
                 || _leaderRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
             {
                 var newExecutor = CreateNewClusterRequestExecutor(leaderUrl);
-                var oldExecutor = Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
-
-                oldExecutor?.Dispose();
+                Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
             }
 
             var command = new PutRaftCommand(_leaderRequestExecutor.Conventions, cmdJson, _engine.Url, commandType);
