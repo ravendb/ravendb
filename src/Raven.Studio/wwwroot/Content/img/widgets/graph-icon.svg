@@ -1,62 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 123 123">
-  <defs>
-    <style>
-      .a {
-        fill: #262a30;
-      }
-
-      .b, .d, .f {
-        fill: none;
-        stroke-miterlimit: 10;
-      }
-
-      .b {
-        stroke: #333d48;
-        stroke-width: 2px;
-      }
-
-      .c {
-        fill: url(#a);
-      }
-
-      .d {
-        stroke: #2f9ef3;
-      }
-
-      .d, .f {
-        stroke-linecap: round;
-        stroke-width: 3px;
-      }
-
-      .e {
-        fill: url(#b);
-      }
-
-      .f {
-        stroke: #ba50a1;
-      }
-    </style>
-    <linearGradient id="a" x1="61.287" y1="-0.212" x2="61.287" y2="121.845" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2f9ef3" stop-opacity="0.5"/>
-      <stop offset="1" stop-color="#2f9ef3" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="b" x1="61.478" y1="50.205" x2="61.478" y2="127.215" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ba50a1" stop-opacity="0.5"/>
-      <stop offset="1" stop-color="#ba50a1" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
-  <title>Artboard 4</title>
-  <rect class="a" x="-0.5" width="124" height="123"/>
-  <line class="b" x1="32.458" y1="14.536" x2="32.458" y2="110.147"/>
-  <line class="b" x1="52" y1="14.536" x2="52" y2="110.147"/>
-  <line class="b" x1="71.542" y1="14.536" x2="71.542" y2="110.147"/>
-  <line class="b" x1="91.084" y1="14.536" x2="91.084" y2="110.147"/>
-  <g>
-    <g>
-      <polygon class="c" points="11.948 48.391 21.815 44.944 31.676 16.822 41.541 46.299 51.406 37.752 61.27 40.972 71.137 35.624 81.009 57.355 90.876 55.272 100.751 60.09 110.625 37.152 110.625 110.146 110.624 110.147 11.948 110.147 11.948 48.391"/>
-      <polyline class="d" points="11.734 47.777 21.307 44.432 31.691 14.822 41.849 45.174 51.258 37.02 61.206 40.269 71.442 34.72 81.384 56.613 90.961 54.592 100.424 59.207 110.029 36.894"/>
-    </g>
-    <polygon class="e" points="12.139 86.767 22.007 83.32 31.867 55.201 41.732 84.677 51.597 76.131 61.461 79.35 71.328 74.002 81.2 95.733 91.067 93.65 100.943 98.469 110.817 75.529 110.817 110.146 110.815 110.147 12.139 110.147 12.139 86.767"/>
-    <polyline class="f" points="12.139 86.767 22.007 83.32 31.867 55.201 41.732 84.677 51.597 76.131 61.461 79.35 71.328 74.002 81.2 95.733 91.067 93.65 100.943 98.469 110.817 75.529"/>
-  </g>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 27.4.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 123 123" style="enable-background:new 0 0 123 123;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#181826;}
+	.st1{fill:none;stroke:#333D48;stroke-width:2;stroke-miterlimit:10;}
+	.st2{fill:url(#SVGID_1_);}
+	.st3{fill:none;stroke:#2F9EF3;stroke-width:3;stroke-linecap:round;stroke-miterlimit:10;}
+	.st4{fill:url(#SVGID_00000029748592551192187920000000668601270273263018_);}
+	.st5{fill:none;stroke:#BA50A1;stroke-width:3;stroke-linecap:round;stroke-miterlimit:10;}
+</style>
+<rect x="-0.5" class="st0" width="124" height="123"/>
+<line class="st1" x1="32.5" y1="14.5" x2="32.5" y2="110.1"/>
+<line class="st1" x1="52" y1="14.5" x2="52" y2="110.1"/>
+<line class="st1" x1="71.5" y1="14.5" x2="71.5" y2="110.1"/>
+<line class="st1" x1="91.1" y1="14.5" x2="91.1" y2="110.1"/>
+<g>
+	<g>
+		
+			<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="61.2865" y1="124.212" x2="61.2865" y2="2.155" gradientTransform="matrix(1 0 0 -1 0 124)">
+			<stop  offset="0" style="stop-color:#2F9EF3;stop-opacity:0.5"/>
+			<stop  offset="1" style="stop-color:#2F9EF3;stop-opacity:0"/>
+		</linearGradient>
+		<polygon class="st2" points="11.9,48.4 21.8,44.9 31.7,16.8 41.5,46.3 51.4,37.8 61.3,41 71.1,35.6 81,57.4 90.9,55.3 100.8,60.1 
+			110.6,37.2 110.6,110.1 110.6,110.1 11.9,110.1 		"/>
+		<polyline class="st3" points="11.7,47.8 21.3,44.4 31.7,14.8 41.8,45.2 51.3,37 61.2,40.3 71.4,34.7 81.4,56.6 91,54.6 
+			100.4,59.2 110,36.9 		"/>
+	</g>
+	
+		<linearGradient id="SVGID_00000165225798878203568400000000427144435385056649_" gradientUnits="userSpaceOnUse" x1="61.478" y1="73.795" x2="61.478" y2="-3.215" gradientTransform="matrix(1 0 0 -1 0 124)">
+		<stop  offset="0" style="stop-color:#BA50A1;stop-opacity:0.5"/>
+		<stop  offset="1" style="stop-color:#BA50A1;stop-opacity:0"/>
+	</linearGradient>
+	<polygon style="fill:url(#SVGID_00000165225798878203568400000000427144435385056649_);" points="12.1,86.8 22,83.3 31.9,55.2 
+		41.7,84.7 51.6,76.1 61.5,79.3 71.3,74 81.2,95.7 91.1,93.7 100.9,98.5 110.8,75.5 110.8,110.1 110.8,110.1 12.1,110.1 	"/>
+	<polyline class="st5" points="12.1,86.8 22,83.3 31.9,55.2 41.7,84.7 51.6,76.1 61.5,79.3 71.3,74 81.2,95.7 91.1,93.7 100.9,98.5 
+		110.8,75.5 	"/>
+</g>
 </svg>
