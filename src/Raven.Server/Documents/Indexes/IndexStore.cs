@@ -81,24 +81,45 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly DatabaseIndexDeleteController Delete;
 
-        public DatabaseIndexCreateController Create;
+        public readonly DatabaseIndexCreateController Create;
 
-        public IIndexReadOperationFactory IndexReadOperationFactory;
+        public readonly IIndexReadOperationFactory IndexReadOperationFactory;
 
         public readonly DatabaseIndexHasChangedController HasChanged;
 
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
+            : this(documentDatabase, serverStore,
+                new DatabaseIndexLockModeController(documentDatabase),
+                new DatabaseIndexPriorityController(documentDatabase),
+                new DatabaseIndexStateController(documentDatabase),
+                new DatabaseIndexCreateController(documentDatabase),
+                new DatabaseIndexDeleteController(documentDatabase),
+                new DatabaseIndexHasChangedController(documentDatabase),
+                new DatabaseIndexReadOperationFactory())
+        {
+        }
+
+        protected IndexStore(
+            DocumentDatabase documentDatabase,
+            ServerStore serverStore,
+            DatabaseIndexLockModeController lockMode,
+            DatabaseIndexPriorityController priority,
+            DatabaseIndexStateController state,
+            DatabaseIndexCreateController create,
+            DatabaseIndexDeleteController delete,
+            DatabaseIndexHasChangedController hasChanged,
+            IIndexReadOperationFactory indexReadOperationFactory)
         {
             _documentDatabase = documentDatabase;
             _serverStore = serverStore;
 
-            LockMode = new DatabaseIndexLockModeController(documentDatabase);
-            Priority = new DatabaseIndexPriorityController(documentDatabase);
-            State = new DatabaseIndexStateController(documentDatabase);
-            Create = new DatabaseIndexCreateController(documentDatabase);
-            Delete = new DatabaseIndexDeleteController(documentDatabase);
-            HasChanged = new DatabaseIndexHasChangedController(documentDatabase);
-            IndexReadOperationFactory = new DatabaseIndexReadOperationFactory();
+            LockMode = lockMode;
+            Priority = priority;
+            State = state;
+            Create = create;
+            Delete = delete;
+            HasChanged = hasChanged;
+            IndexReadOperationFactory = indexReadOperationFactory;
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
             var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;

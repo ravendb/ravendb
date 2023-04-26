@@ -15,10 +15,7 @@ public class DatabaseIndexDeleteController : AbstractIndexDeleteController
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
-    protected override string GetDatabaseName()
-    {
-        return _database.Name;
-    }
+    protected override string GetDatabaseName() => _database.Name;
 
     protected override IndexDefinitionBaseServerSide GetIndexDefinition(string name)
     {

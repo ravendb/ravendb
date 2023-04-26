@@ -18,6 +18,8 @@ public class ShardedIndexLockModeController : AbstractIndexLockModeController
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
+    protected override string GetDatabaseName() => _context.DatabaseName;
+
     protected override void ValidateIndex(string name, IndexLockMode mode)
     {
         var index = _context.Indexes.GetIndex(name);
@@ -26,11 +28,6 @@ public class ShardedIndexLockModeController : AbstractIndexLockModeController
 
         if (index.Type.IsAuto())
             throw new NotSupportedException($"'Lock Mode' can't be set for the Auto-Index '{name}'.");
-    }
-
-    protected override string GetDatabaseName()
-    {
-        return _context.DatabaseName;
     }
 
     protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodesAsync(index);

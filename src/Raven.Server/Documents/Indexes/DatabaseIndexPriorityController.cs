@@ -17,6 +17,8 @@ public class DatabaseIndexPriorityController : AbstractIndexPriorityController
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
+    protected override string GetDatabaseName() => _database.Name;
+
     protected override void ValidateIndex(string name, IndexPriority priority)
     {
         var index = _database.IndexStore.GetIndex(name);
@@ -25,11 +27,6 @@ public class DatabaseIndexPriorityController : AbstractIndexPriorityController
 
         if (index is FaultyInMemoryIndex faultyInMemoryIndex)
             faultyInMemoryIndex.SetPriority(priority); // this will throw proper exception
-    }
-
-    protected override string GetDatabaseName()
-    {
-        return _database.Name;
     }
 
     protected override async ValueTask WaitForIndexNotificationAsync(long index)

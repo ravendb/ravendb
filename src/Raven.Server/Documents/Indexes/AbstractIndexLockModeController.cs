@@ -16,9 +16,9 @@ public abstract class AbstractIndexLockModeController
         ServerStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
     }
 
-    protected abstract void ValidateIndex(string name, IndexLockMode mode);
-
     protected abstract string GetDatabaseName();
+
+    protected abstract void ValidateIndex(string name, IndexLockMode mode);
 
     protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
@@ -26,9 +26,7 @@ public abstract class AbstractIndexLockModeController
     {
         ValidateIndex(name, mode);
 
-        var databaseName = GetDatabaseName();
-
-        var command = new SetIndexLockCommand(name, mode, databaseName, raftRequestId);
+        var command = new SetIndexLockCommand(name, mode, GetDatabaseName(), raftRequestId);
 
         var (index, _) = await ServerStore.SendToLeaderAsync(command);
 

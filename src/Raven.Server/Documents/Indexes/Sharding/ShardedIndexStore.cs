@@ -6,10 +6,16 @@ namespace Raven.Server.Documents.Indexes.Sharding
 {
     public class ShardedIndexStore : IndexStore
     {
-        public ShardedIndexStore(ShardedDocumentDatabase database, ServerStore serverStore) : base(database, serverStore)
+        public ShardedIndexStore(ShardedDocumentDatabase database, ServerStore serverStore)
+            : base(database, serverStore,
+                new ShardedDatabaseIndexLockModeController(database),
+                new ShardedDatabaseIndexPriorityController(database),
+                new ShardedDatabaseIndexStateController(database),
+                new ShardedDatabaseIndexCreateController(database),
+                new ShardedDatabaseIndexDeleteController(database),
+                new DatabaseIndexHasChangedController(database),
+                new ShardedIndexReadOperationFactory())
         {
-            Create = new ShardedDatabaseIndexCreateController(database);
-            IndexReadOperationFactory = new ShardedIndexReadOperationFactory();
         }
     }
 }

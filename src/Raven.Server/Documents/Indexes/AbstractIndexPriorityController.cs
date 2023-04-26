@@ -16,9 +16,9 @@ public abstract class AbstractIndexPriorityController
         ServerStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
     }
 
-    protected abstract void ValidateIndex(string name, IndexPriority priority);
-
     protected abstract string GetDatabaseName();
+
+    protected abstract void ValidateIndex(string name, IndexPriority priority);
 
     protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
@@ -26,9 +26,7 @@ public abstract class AbstractIndexPriorityController
     {
         ValidateIndex(name, priority);
 
-        var databaseName = GetDatabaseName();
-
-        var command = new SetIndexPriorityCommand(name, priority, databaseName, raftRequestId);
+        var command = new SetIndexPriorityCommand(name, priority, GetDatabaseName(), raftRequestId);
 
         var (index, _) = await ServerStore.SendToLeaderAsync(command);
 

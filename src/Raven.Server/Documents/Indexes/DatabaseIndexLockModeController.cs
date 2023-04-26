@@ -16,6 +16,8 @@ public class DatabaseIndexLockModeController : AbstractIndexLockModeController
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
+    protected override string GetDatabaseName() => _database.Name;
+
     protected override void ValidateIndex(string name, IndexLockMode mode)
     {
         var index = _database.IndexStore.GetIndex(name);
@@ -27,11 +29,6 @@ public class DatabaseIndexLockModeController : AbstractIndexLockModeController
             index.SetLock(mode);  // this will throw proper exception
             return;
         }
-    }
-
-    protected override string GetDatabaseName()
-    {
-        return _database.Name;
     }
 
     protected override async ValueTask WaitForIndexNotificationAsync(long index)

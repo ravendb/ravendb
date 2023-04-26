@@ -16,9 +16,9 @@ public abstract class AbstractIndexStateController
         ServerStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
     }
 
-    protected abstract void ValidateIndex(string name, IndexState state);
-
     protected abstract string GetDatabaseName();
+
+    protected abstract void ValidateIndex(string name, IndexState state);
 
     protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
@@ -26,9 +26,7 @@ public abstract class AbstractIndexStateController
     {
         ValidateIndex(name, state);
 
-        var databaseName = GetDatabaseName();
-
-        var command = new SetIndexStateCommand(name, state, databaseName, raftRequestId);
+        var command = new SetIndexStateCommand(name, state, GetDatabaseName(), raftRequestId);
 
         var (index, _) = await ServerStore.SendToLeaderAsync(command);
 
