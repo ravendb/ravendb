@@ -2,9 +2,20 @@ import { ClientConfigurationFormData } from "./ClientConfigurationValidation";
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 
 export default class ClientConfigurationUtils {
-    static mapToFormData(dto: ClientConfiguration): ClientConfigurationFormData {
+    static mapToFormData(dto: ClientConfiguration, isGlobal: boolean): ClientConfigurationFormData {
         if (!dto) {
-            return null;
+            return {
+                overrideConfig: isGlobal,
+                identityPartsSeparatorEnabled: false,
+                identityPartsSeparatorValue: null,
+                maximumNumberOfRequestsEnabled: false,
+                maximumNumberOfRequestsValue: null,
+                useSessionContextEnabled: false,
+                loadBalancerSeedEnabled: false,
+                loadBalancerSeedValue: null,
+                readBalanceBehaviorEnabled: false,
+                readBalanceBehaviorValue: null,
+            };
         }
 
         return {
@@ -21,8 +32,8 @@ export default class ClientConfigurationUtils {
         };
     }
 
-    static mapToDto(formData: ClientConfigurationFormData): ClientConfiguration {
-        if (!formData.overrideConfig) {
+    static mapToDto(formData: ClientConfigurationFormData, isGlobal: boolean): ClientConfiguration {
+        if (!formData.overrideConfig && !isGlobal) {
             return {
                 Disabled: true,
                 Etag: undefined,

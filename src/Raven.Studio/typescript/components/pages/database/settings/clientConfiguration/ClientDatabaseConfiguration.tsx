@@ -34,13 +34,16 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         resolver: clientConfigurationYupResolver,
         mode: "onChange",
         defaultValues: async () =>
-            ClientConfigurationUtils.mapToFormData(await getClientConfigurationCallback.execute(db)),
+            ClientConfigurationUtils.mapToFormData(await getClientConfigurationCallback.execute(db), false),
     });
 
-    const globalConfig = useMemo(
-        () => ClientConfigurationUtils.mapToFormData(getClientGlobalConfigurationCallback.result),
-        [getClientGlobalConfigurationCallback.result]
-    );
+    const globalConfig = useMemo(() => {
+        const globalConfigResult = getClientGlobalConfigurationCallback.result;
+        if (!globalConfigResult) {
+            return null;
+        }
+        return ClientConfigurationUtils.mapToFormData(globalConfigResult, true);
+    }, [getClientGlobalConfigurationCallback.result]);
 
     const {
         overrideConfig,
@@ -55,7 +58,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         genUtils.tryHandleSubmit(async () => {
-            await manageServerService.saveClientConfiguration(ClientConfigurationUtils.mapToDto(formData), db);
+            await manageServerService.saveClientConfiguration(ClientConfigurationUtils.mapToDto(formData, false), db);
             reset(formData);
         });
     };
@@ -68,13 +71,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         return <LoadError error="Unable to load client configuration" />;
     }
 
-    if (getClientGlobalConfigurationCallback.error) {
-        return <LoadError error="Unable to load client global configuration" />;
-    }
-
     return (
         <Form onSubmit={handleSubmit(onSave)}>
-            <Col md={globalConfig ? 12 : 6} lg="12" className="p-4">
+            <Col md="12" lg={globalConfig ? 12 : 6} className="p-4">
                 <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
                     {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <i className="icon-save me-1" />}
                     Save
@@ -148,7 +147,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 <Col>
                                     <h3>
                                         {(overrideConfig && identityPartsSeparatorValue) ||
-                                            globalConfig?.identityPartsSeparatorValue ||
+                                            globalConfig.identityPartsSeparatorValue ||
                                             "'/' (Default)"}
                                     </h3>
                                 </Col>
@@ -188,7 +187,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 <Col>
                                     <h3>
                                         {(overrideConfig && maximumNumberOfRequestsValue) ||
-                                            globalConfig?.maximumNumberOfRequestsValue ||
+                                            globalConfig.maximumNumberOfRequestsValue ||
                                             "30 (default)"}
                                     </h3>
                                 </Col>
@@ -257,7 +256,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 control={control}
                                 name="readBalanceBehaviorEnabled"
                                 afterChange={(event) =>
-                                    !event.target.checked && setValue("readBalanceBehaviorValue", "None")
+                                    event.target.checked
+                                        ? setValue("readBalanceBehaviorValue", "None")
+                                        : setValue("readBalanceBehaviorValue", null)
                                 }
                                 disabled={!overrideConfig}
                             >
