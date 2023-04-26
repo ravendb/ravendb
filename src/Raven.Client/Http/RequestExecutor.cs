@@ -313,6 +313,7 @@ namespace Raven.Client.Http
 
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
+                GC.SuppressFinalize(this);
                 Cache.Dispose();
                 ContextPool.Dispose();
                 _updateTopologyTimer?.Dispose();
@@ -341,6 +342,23 @@ namespace Raven.Client.Http
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
 
             UpdateConnectionLimit(initialUrls);
+        }
+
+        ~RequestExecutor()
+        {
+            try
+            {
+                Dispose();
+            }
+#pragma warning disable CS0168
+            catch (Exception e)
+#pragma warning restore CS0168
+            {
+#if DEBUG
+                Console.WriteLine($"Finalizer of {GetType()} got an exception:{Environment.NewLine}{e}");
+#endif          
+                // nothing we can do here
+            }
         }
 
         public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
