@@ -376,14 +376,8 @@ namespace Sparrow.Json
             var address = allocation.Address;
 
 #if DEBUG
-            var current = _ptrCurrent;
-
-            var ptrAddress = new IntPtr(address);
-            var ptrCurrent = new IntPtr(current);
-            Debug.Assert(ptrAddress != ptrCurrent, $"address != current ({ptrAddress} != {ptrCurrent} [{nameof(_ptrCurrent)} = {new IntPtr(_ptrCurrent)}])");
             Debug.Assert(allocation.IsReturned == false, "allocation.IsReturned == false");
             allocation.IsReturned = true;
-
 #endif
 
 #if MEM_GUARD
@@ -415,6 +409,14 @@ namespace Sparrow.Json
                 _freed[index] = section;
                 return;
             }
+
+#if DEBUG
+            var current = _ptrCurrent;
+
+            var ptrAddress = new IntPtr(address);
+            var ptrCurrent = new IntPtr(current);
+            Debug.Assert(ptrAddress != ptrCurrent, $"address != current ({ptrAddress} != {ptrCurrent} [{nameof(_ptrCurrent)} = {new IntPtr(_ptrCurrent)}], allocated: {_allocated}, used: {_used})");
+#endif
             // since the returned allocation is at the end of the arena, we can just move
             // the pointer back
             _used -= allocation.SizeInBytes;
