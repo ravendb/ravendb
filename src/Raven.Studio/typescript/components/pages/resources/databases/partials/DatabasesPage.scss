@@ -1,0 +1,10 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.notifications-popover {
+    .notifications-popover-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: sizes.$gutter-xs;
+    }
+}
