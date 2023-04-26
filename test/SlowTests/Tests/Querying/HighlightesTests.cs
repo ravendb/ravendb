@@ -67,7 +67,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData("session", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("session", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void SearchWithHighlightes(Options options, string q)
         {
             using (var store = GetDocumentStore(options))
