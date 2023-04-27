@@ -57,10 +57,12 @@ unsafe partial struct SortingMatch
         }
 
         private readonly T _comparer;
+        private readonly TermsReader _termsReader;
 
-        public MatchComparer(in T comparer)
+        public MatchComparer(in T comparer, TermsReader termsReader)
         {
             _comparer = comparer;
+            _termsReader = termsReader;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -71,9 +73,10 @@ unsafe partial struct SortingMatch
                 int cmp;
                 if (typeof(TW) == typeof(SequenceItem))
                 {
-                    cmp = _comparer.CompareSequence(
-                        new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
-                        new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
+                    // cmp = _comparer.CompareSequence(
+                    //     new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
+                    //     new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
+                    cmp = _termsReader.Compare(ix.Key, iy.Key);
                 }
                 else if (typeof(TW) == typeof(NumericalItem<long>))
                 {
@@ -115,9 +118,10 @@ unsafe partial struct SortingMatch
                 int cmp;
                 if (typeof(TW) == typeof(SequenceItem))
                 {
-                    cmp = _comparer.CompareSequence(
-                        new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
-                        new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
+                    // cmp = _comparer.CompareSequence(
+                    //     new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
+                    //     new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
+                    cmp = _termsReader.Compare(ix.Key, iy.Key);
                 }
                 else if (typeof(TW) == typeof(NumericalItem<long>))
                 {

@@ -260,6 +260,14 @@ namespace Voron.Data.Fixed
                 return Add(key, str);
             }
         }
+        
+        public bool Add(TVal key, double val)
+        {
+            using (Slice.From(_tx.Allocator, (byte*)&val, sizeof(double), ByteStringType.Immutable, out Slice str))
+            {
+                return Add(key, str);
+            }
+        }
 
         public DirectAddScope DirectAdd(TVal key, out bool isNew, out byte* ptr)
         {
