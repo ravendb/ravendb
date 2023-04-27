@@ -1,14 +1,13 @@
 import React, { useMemo } from "react";
 import { Form, Col, Button, Card, Row, Spinner, Input } from "reactstrap";
-import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { FormCheckbox, FormInput, FormSelect, FormSelectOption, FormSwitch } from "components/common/Form";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { useAccessManager } from "hooks/useAccessManager";
 import { LoadError } from "components/common/LoadError";
-import genUtils = require("common/generalUtils");
 import database = require("models/resources/database");
 import {
     ClientConfigurationFormData,
@@ -17,6 +16,8 @@ import {
 import { Icon } from "components/common/Icon";
 import appUrl = require("common/appUrl");
 import ClientConfigurationUtils from "components/common/clientConfiguration/ClientConfigurationUtils";
+import useClientConfigurationFormController from "components/common/clientConfiguration/useClientConfigurationFormController";
+import { tryHandleSubmit } from "components/utils/common";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
@@ -30,12 +31,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
     const { isClusterAdminOrClusterNode: canNavigateToServerSettings } = useAccessManager();
 
-    const { handleSubmit, control, formState, setValue, reset, getValues } = useForm<ClientConfigurationFormData>({
+    const { handleSubmit, control, formState, setValue, reset } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
         mode: "onChange",
         defaultValues: async () =>
             ClientConfigurationUtils.mapToFormData(await getClientConfigurationCallback.execute(db), false),
     });
+
+    const formValues = useClientConfigurationFormController(control, setValue);
 
     const globalConfig = useMemo(() => {
         const globalConfigResult = getClientGlobalConfigurationCallback.result;
@@ -45,22 +48,15 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         return ClientConfigurationUtils.mapToFormData(globalConfigResult, true);
     }, [getClientGlobalConfigurationCallback.result]);
 
-    const {
-        overrideConfig,
-        identityPartsSeparatorEnabled,
-        maximumNumberOfRequestsEnabled,
-        readBalanceBehaviorEnabled,
-        useSessionContextEnabled,
-        loadBalancerSeedEnabled,
-        identityPartsSeparatorValue,
-        maximumNumberOfRequestsValue,
-    } = useWatch({ control });
-
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
-        genUtils.tryHandleSubmit(async () => {
+        tryHandleSubmit(async () => {
             await manageServerService.saveClientConfiguration(ClientConfigurationUtils.mapToDto(formData, false), db);
-            reset(formData);
+            reset(null, { keepValues: true });
         });
+    };
+
+    const onRefresh = async () => {
+        reset(ClientConfigurationUtils.mapToFormData(await getClientConfigurationCallback.execute(db), false));
     };
 
     if (getClientConfigurationCallback.loading || getClientGlobalConfigurationCallback.loading) {
@@ -68,7 +64,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     }
 
     if (getClientConfigurationCallback.error) {
-        return <LoadError error="Unable to load client configuration" />;
+        return <LoadError error="Unable to load client configuration" refresh={onRefresh} />;
     }
 
     return (
@@ -122,10 +118,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             <FormCheckbox
                                 control={control}
                                 name="identityPartsSeparatorEnabled"
-                                afterChange={(event) =>
-                                    !event.target.checked && setValue("identityPartsSeparatorValue", null)
-                                }
-                                disabled={!overrideConfig}
+                                disabled={!formValues.overrideConfig}
                             >
                                 Identity parts separator
                             </FormCheckbox>
@@ -136,17 +129,17 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 control={control}
                                 name="identityPartsSeparatorValue"
                                 placeholder="Default is '/'"
-                                disabled={!identityPartsSeparatorEnabled || !overrideConfig}
+                                disabled={!formValues.identityPartsSeparatorEnabled || !formValues.overrideConfig}
                             />
                         </Col>
                         {globalConfig && (
                             <>
                                 <Col>
-                                    <Input value={globalConfig.identityPartsSeparatorValue || undefined} disabled />
+                                    <Input defaultValue={globalConfig.identityPartsSeparatorValue} disabled />
                                 </Col>
                                 <Col>
                                     <h3>
-                                        {(overrideConfig && identityPartsSeparatorValue) ||
+                                        {(formValues.overrideConfig && formValues.identityPartsSeparatorValue) ||
                                             globalConfig.identityPartsSeparatorValue ||
                                             "'/' (Default)"}
                                     </h3>
@@ -162,10 +155,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             <FormCheckbox
                                 control={control}
                                 name="maximumNumberOfRequestsEnabled"
-                                afterChange={(event) =>
-                                    !event.target.checked && setValue("maximumNumberOfRequestsValue", null)
-                                }
-                                disabled={!overrideConfig}
+                                disabled={!formValues.overrideConfig}
                             >
                                 Maximum number of requests per session
                             </FormCheckbox>
@@ -176,17 +166,17 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 control={control}
                                 name="maximumNumberOfRequestsValue"
                                 placeholder="Default value is 30"
-                                disabled={!maximumNumberOfRequestsEnabled || !overrideConfig}
+                                disabled={!formValues.maximumNumberOfRequestsEnabled || !formValues.overrideConfig}
                             />
                         </Col>
                         {globalConfig && (
                             <>
                                 <Col>
-                                    <Input value={globalConfig.maximumNumberOfRequestsValue || undefined} disabled />
+                                    <Input defaultValue={globalConfig.maximumNumberOfRequestsValue} disabled />
                                 </Col>
                                 <Col>
                                     <h3>
-                                        {(overrideConfig && maximumNumberOfRequestsValue) ||
+                                        {(formValues.overrideConfig && formValues.maximumNumberOfRequestsValue) ||
                                             globalConfig.maximumNumberOfRequestsValue ||
                                             "30 (default)"}
                                     </h3>
@@ -202,13 +192,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             <FormCheckbox
                                 control={control}
                                 name="useSessionContextEnabled"
-                                afterChange={(event) => {
-                                    if (!event.target.checked) {
-                                        setValue("loadBalancerSeedValue", null);
-                                        setValue("loadBalancerSeedEnabled", false);
-                                    }
-                                }}
-                                disabled={!overrideConfig}
+                                disabled={!formValues.overrideConfig}
                             >
                                 Use Session Context for Load Balancing
                             </FormCheckbox>
@@ -220,11 +204,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                         control={control}
                                         name="loadBalancerSeedEnabled"
                                         color="primary"
-                                        disabled={!useSessionContextEnabled || !overrideConfig}
+                                        disabled={!formValues.useSessionContextEnabled || !formValues.overrideConfig}
                                         label="Seed"
-                                        afterChange={(event) =>
-                                            !event.target.checked && setValue("loadBalancerSeedValue", null)
-                                        }
                                     >
                                         Seed
                                     </FormSwitch>
@@ -235,7 +216,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                         control={control}
                                         name="loadBalancerSeedValue"
                                         placeholder="Enter seed number"
-                                        disabled={!loadBalancerSeedEnabled || !overrideConfig}
+                                        disabled={!formValues.loadBalancerSeedEnabled || !formValues.overrideConfig}
                                     />
                                 </Col>
                             </Row>
@@ -243,7 +224,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         {globalConfig && (
                             <>
                                 <Col>
-                                    <Input value={globalConfig.loadBalancerSeedValue || undefined} disabled />
+                                    <Input defaultValue={globalConfig.loadBalancerSeedValue} disabled />
                                 </Col>
                                 <Col></Col>
                             </>
@@ -255,34 +236,26 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             <FormCheckbox
                                 control={control}
                                 name="readBalanceBehaviorEnabled"
-                                afterChange={(event) =>
-                                    event.target.checked
-                                        ? setValue("readBalanceBehaviorValue", "None")
-                                        : setValue("readBalanceBehaviorValue", null)
-                                }
-                                disabled={!overrideConfig}
+                                disabled={!formValues.overrideConfig}
                             >
                                 Read balance behavior
                             </FormCheckbox>
                         </Col>
                         <Col>
-                            <FormSelect
+                            <FormSelect<ReadBalanceBehavior>
                                 control={control}
                                 name="readBalanceBehaviorValue"
-                                disabled={!readBalanceBehaviorEnabled || !overrideConfig}
-                            >
-                                <FormSelectOption<ReadBalanceBehavior> label="None" value="None" />
-                                <FormSelectOption<ReadBalanceBehavior> label="Round Robin" value="RoundRobin" />
-                                <FormSelectOption<ReadBalanceBehavior> label="Fastest Node" value="FastestNode" />
-                            </FormSelect>
+                                disabled={!formValues.readBalanceBehaviorEnabled || !formValues.overrideConfig}
+                                options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
+                            />
                         </Col>
                         {globalConfig && (
                             <>
                                 <Col>
-                                    <Input value={globalConfig.readBalanceBehaviorValue || undefined} disabled />
+                                    <Input defaultValue={globalConfig.readBalanceBehaviorValue} disabled />
                                 </Col>
                                 <Col>
-                                    <h3>{getEffectiveReadBalance(overrideConfig, getValues(), globalConfig)}</h3>
+                                    <h3>{getEffectiveReadBalance(formValues, globalConfig)}</h3>
                                 </Col>
                             </>
                         )}
@@ -294,11 +267,10 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 }
 
 function getEffectiveReadBalance(
-    overrideConfig: boolean,
     databaseConfig: ClientConfigurationFormData,
     globalConfig: ClientConfigurationFormData
 ): string {
-    if (overrideConfig) {
+    if (databaseConfig.overrideConfig) {
         return getEffectiveReadBalanceForConfig(databaseConfig);
     }
 

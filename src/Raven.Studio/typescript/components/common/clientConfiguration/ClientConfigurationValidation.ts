@@ -1,5 +1,6 @@
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
+import ClientConfigurationUtils from "./ClientConfigurationUtils";
 
 const schema = yup
     .object({
@@ -38,7 +39,7 @@ const schema = yup
         readBalanceBehaviorEnabled: yup.boolean().optional(),
         readBalanceBehaviorValue: yup
             .mixed<Raven.Client.Http.ReadBalanceBehavior>()
-            .oneOf(["None", "FastestNode", "RoundRobin"])
+            .oneOf(ClientConfigurationUtils.allReadBalanceBehaviors)
             .nullable()
             .when("readBalanceBehaviorEnabled", {
                 is: true,
