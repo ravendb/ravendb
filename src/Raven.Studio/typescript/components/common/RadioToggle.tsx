@@ -29,7 +29,7 @@ export function RadioToggleWithIcon({
 }: RadioToggleWithIconProps) {
     return (
         <div className={classNames("radio-toggle", className)}>
-            <Input
+            <input
                 type="radio"
                 id="radio-toggle-left"
                 name={name}
@@ -39,7 +39,7 @@ export function RadioToggleWithIcon({
             />
             <label htmlFor="radio-toggle-left">{leftItem.label}</label>
 
-            <Input
+            <input
                 type="radio"
                 id="radio-toggle-right"
                 name={name}
@@ -50,12 +50,8 @@ export function RadioToggleWithIcon({
             <label htmlFor="radio-toggle-right">{rightItem.label}</label>
 
             <div className="toggle-knob">
-                <label htmlFor="radio-toggle-left" className="p-0">
-                    <Icon icon={leftItem.iconName} margin="m-0" />
-                </label>
-                <label htmlFor="radio-toggle-right" className="p-0">
-                    <Icon icon={rightItem.iconName} margin="m-0" />
-                </label>
+                <Icon icon={leftItem.iconName} margin="m-0" />
+                <Icon icon={rightItem.iconName} margin="m-0" />
             </div>
         </div>
     );

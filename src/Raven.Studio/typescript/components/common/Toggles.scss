@@ -24,7 +24,8 @@ $toggle-knob-hover-bg: colors.$primary-var !default;
 $toggle-knob-hover-scale: 0.9 !default;
 
 .radio-toggle {
-    display: inline-flex;
+    display: inline-grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     position: relative;
     color: $toggle-knob-muted-color;

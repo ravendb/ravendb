@@ -64,7 +64,7 @@ const Template = () => {
                     <Icon icon="orchestrator" /> Orchestrator
                 </StatePill>
                 <StatePill color="progress">
-                    <Spinner size="xs" /> Progress
+                    <Spinner size="xs" className="me-1" /> Progress
                 </StatePill>
             </div>
         </div>

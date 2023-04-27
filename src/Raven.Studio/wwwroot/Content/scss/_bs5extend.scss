@@ -102,6 +102,12 @@
     animation: spin 1.3s infinite cubic-bezier(0.85, 0.2, 0.2, 0.85);
 }
 
+.spinner-border-xs {
+    width: $spinner-width-xs;
+    height: $spinner-height-xs;
+    border-width: $spinner-border-width-xs;
+}
+
 .form-control {
     &::placeholder {
         color: $text-muted-var;
