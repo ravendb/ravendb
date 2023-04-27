@@ -19,8 +19,9 @@
     </div>
     <div class="about-info">
         <div class="text-center">
-            <a href="https://ravendb.net/" target="_blank" class="visible-block"><img src="../../../Content/img/ravendb_logo.svg" class="margin-bottom" width="300px" /></a>
+            <a href="https://ravendb.net/" target="_blank" class="visible-block"><img src="../../../Content/img/ravendb_logo.svg" class="margin-bottom" width="240px" /></a>
             <div class="social margin-bottom margin-lg on-base-background">
+                <a href="https://ravendb.net" target="_blank"><i class="icon-global"></i></a>
                 <a href="https://www.facebook.com/RavenDB-265907650186374/" target="_blank"><i class="icon-facebook"></i></a>
                 <a href="https://twitter.com/ravendb" target="_blank"><i class="icon-twitter"></i></a>
                 <a href="https://www.linkedin.com/company/hibernating-rhinos-ltd-" target="_blank"><i class="icon-linkedin"></i></a>
@@ -45,7 +46,7 @@
                         </div>
                     </div>
                     <div>
-                        <a data-bind="click: openFeedbackForm" class="btn btn-info big-button">
+                        <a data-bind="click: openFeedbackForm" class="btn btn-info big-button rounded-pill">
                             <i class="icon-rocket"></i>
                             <div class="content">
                                 <small>Help us improve</small>
@@ -54,8 +55,8 @@
                         </a>
                     </div>
                     <div>
-                        <div class="flex-horizontal flex-stretch-items">
-                            <button data-bind="click: openLatestVersionDownload" class="btn btn-primary big-button flex-grow">
+                        <div class="flex-horizontal flex-stretch-items gap-3">
+                            <button data-bind="click: openLatestVersionDownload" class="btn btn-primary big-button rounded-pill flex-grow">
                                 <i class="icon-server"></i>
                                 <div class="content">
                                     <small data-bind="html: newVersionAvailableHtml"></small>
@@ -65,7 +66,7 @@
                                 </div>
                             </button>
                             <button data-bind="disable: spinners.latestVersionUpdates, click: refreshLatestVersionInfo, css: { 'btn-spinner': spinners.latestVersionUpdates }"
-                                    class="btn btn-primary" title="Click to refresh version info">
+                                    class="btn btn-secondary btn-refresh-circle rounded-pill" title="Click to refresh version info">
                                 <i class="icon-refresh"></i>
                             </button>
                         </div>
@@ -85,37 +86,39 @@
         <div class="license-info panel flex-vertical">
             <div class="header">
                 <div class="padding">
-                    <h2>License information</h2>
-                    <div class="flex-horizontal margin-top margin-bottom">
+                    <h2 class="d-flex align-items-center gap-3">
                         <div data-bind="attr: { class: 'roundborder flex-shrink-0 ' + licenseCssClass() }">
                             <i class="icon-license-information"></i>
                         </div>
+                        License information
+                    </h2>
+                    <div class="flex-horizontal align-items-baseline gap-3">
                         <div class="big-label">
                             <div class="content">
                                 <small>Type</small>
                                 <strong data-bind="text: licenseTypeText"></strong>
                             </div>
                         </div>
-                            <div class="big-label margin-right margin-right-sm" data-bind="visible: formattedExpiration">
+                        <div class="big-label" data-bind="visible: formattedExpiration">
                             <div class="content">
                                 <small data-bind="text: expiresText"></small>
                                 <strong data-bind="html: formattedExpiration"></strong>
                                 <small data-bind="text: automaticRenewText"></small>
                             </div>
                         </div>
-                            <div class="big-label">
-                                <div class="content">
-                                    <small>License Server
-                                        <i class="check-connection icon-refresh" title="Click to check connection"
-                                           data-bind="click: checkConnectionToLicenseServer, css: { 'btn-spinner margin-left margin-left-sm': spinners.checkConnectionToLicenseServer() }">
-                                        </i>
-                                    </small>
-                                    <span class="connected" data-bind="visible: connectedToLicenseServer"><i class="icon-check connection-status"></i></span>
-                                    <span class="not-connected" data-bind="visible: !connectedToLicenseServer()"><i class="icon-cancel connection-status"></i></span>
-                    </div>
-                </div>
+                        <div class="big-label">
+                            <div class="content">
+                                <small>License Server
+                                    <i class="check-connection icon-refresh" title="Click to check connection"
+                                        data-bind="click: checkConnectionToLicenseServer, css: { 'btn-spinner margin-left margin-left-sm': spinners.checkConnectionToLicenseServer() }">
+                                    </i>
+                                </small>
+                                <span class="connected" data-bind="visible: connectedToLicenseServer"><i class="icon-check connection-status m-0"></i> Connected</span>
+                                <span class="not-connected" data-bind="visible: !connectedToLicenseServer()"><i class="icon-cancel connection-status m-0"></i>Not connected</span>
+                            </div>
                         </div>
                     </div>
+                </div>
                 <div class="license-id-container padding" data-bind="visible: licenseId">
                     <div class="big-label">
                         <div class="content text-center">
@@ -139,7 +142,7 @@
                     <div class="name">Single database size</div><div class="value"><i class="icon-infinity"></i></div>
                     <div class="name">Management Studio (GUI)</div><div class="value"><i class="icon-checkmark"></i></div>
 
-                    <h4>Clustering</h4>
+                    <a href="https://ravendb.net/features#clusters" target="_blank" class="d-contents"><h4>Clustering <i class="icon-newtab"></i></h4></a>
                     <div class="name">Max cluster size</div><div class="value">
                         <strong data-bind="text: maxClusterSize, visible: maxClusterSize() > 0"></strong>
                         <i class="icon-infinity" data-bind="visible: maxClusterSize() === 0"></i>
@@ -150,15 +153,15 @@
                     <div class="name">Dynamic database distribution</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDynamicNodesDistribution') }"></i></div>
                     <div class="name">TCP Data Compression</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasTcpDataCompression') }"></i></div>
 
-                    <h4>Indexes</h4>
+                    <a href="https://ravendb.net/features#indexes" target="_blank" class="d-contents"><h4>Indexes <i class="icon-newtab"></i></h4></a>
                     <div class="name">Additional Assemblies from NuGet</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasAdditionalAssembliesFromNuGet') }"></i></div>
 
-                    <h4>Monitoring</h4>
+                    <a href="https://ravendb.net/features#monitoring" target="_blank" class="d-contents"><h4>Monitoring <i class="icon-newtab"></i></h4></a>
                     <div class="name">Cluster Dashboard</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">SNMP</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSnmpMonitoring') }"></i></div>
                     <div class="name">Monitoring Endpoints</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasMonitoringEndpoints') }"></i></div>
 
-                    <h4>Extensions</h4>
+                    <a href="https://ravendb.net/features#extensions" target="_blank" class="d-contents"><h4>Extensions <i class="icon-newtab"></i></h4></a>
                     <div class="name">Document Revisions</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Document Expiration</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Document Compression</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDocumentsCompression') }"></i></div>
@@ -168,38 +171,38 @@
                     <div class="name">Incremental Time Series</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Time Series Rollups & Retention</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasTimeSeriesRollupsAndRetention') }"></i></div>
 
-                    <h4>External Replication</h4>
+                    <a href="https://ravendb.net/features/replication/external-replication" target="_blank" class="d-contents"><h4>External Replication <i class="icon-newtab"></i></h4></a>
                     <div class="name">Immediate</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasExternalReplication') }"></i></div>
                     <div class="name">Delayed</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDelayedExternalReplication') }"></i></div>
 
-                    <h4>Filtered Replication</h4>
+                    <a href="https://ravendb.net/features/replication/filtered-replication" target="_blank" class="d-contents"><h4>Filtered Replication <i class="icon-newtab"></i></h4></a>
                     <div class="name">Replication Hub</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPullReplicationAsHub') }"></i></div>
                     <div class="name">Replication Sink</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPullReplicationAsSink') }"></i></div>
 
-                    <h4>Backups</h4>
+                    <a href="https://ravendb.net/features#backups" target="_blank" class="d-contents"><h4>Backups <i class="icon-newtab"></i></h4></a>
                     <div class="name">Local</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Cloud & Remote</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasCloudBackups') }"></i></div>
                     <div class="name">Snapshot backups</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSnapshotBackups') }"></i></div>
                     <div class="name">Encrypted backups</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasEncryptedBackups') }"></i></div>
 
-                    <h4>ETL</h4>
+                    <a href="https://ravendb.net/features#integration" target="_blank" class="d-contents"><h4>ETL <i class="icon-newtab"></i></h4></a>
                     <div class="name">SQL ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSqlEtl') }"></i></div>
                     <div class="name">OLAP ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasOlapEtl') }"></i></div>
                     <div class="name">RavenDB ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasRavenEtl') }"></i></div>
                     <div class="name">Elasticsearch ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasElasticSearchEtl') }"></i></div>
                     <div class="name">Queue ETLs</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasQueueEtl') }"></i></div>
 
-                    <h4>Data Subscriptions</h4>
+                    <a href="https://ravendb.net/features/extensions/subscriptions" target="_blank" class="d-contents"><h4>Data Subscriptions <i class="icon-newtab"></i></h4></a>
                     <div class="name">Single-worker Data Subscriptions</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Concurrent-worker Data Subscriptions</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasConcurrentDataSubscriptions') }"></i></div>
                     
-                    <h4>Security</h4>
+                    <a href="https://ravendb.net/features#security" target="_blank" class="d-contents"><h4>Security <i class="icon-newtab"></i></h4></a>
                     <div class="name">Certificates</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Read-only Certificates</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasReadOnlyCertificates') }"></i></div>
                     <div class="name">Encryption in transit</div><div class="value"><strong>TLS 1.2 & X.509</strong></div>
                     <div class="name">Storage encryption</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasEncryption') }"></i></div>
 
-                    <h4>Integrations</h4>
+                    <a href="https://ravendb.net/features#integration" target="_blank" class="d-contents"><h4>Integrations <i class="icon-newtab"></i></h4></a>
                     <div class="name">PostgreSQL Protocol Support</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPostgreSqlIntegration') }"></i></div>
                     <div class="name">Power BI Support</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPowerBI') }"></i></div>
                 </div>
@@ -207,34 +210,34 @@
             <div class="padding">
                 <div class="license-actions flex-horizontal">
                     <!-- ko if: !registered() -->
-                    <button class="btn btn-primary flex-grow" 
+                    <button class="btn btn-primary rounded-pill flex-grow" 
                             data-bind="click: register, 
                                        enable: isRegisterLicenseEnabled,
                                        attr: { title: registerTooltip }">
-                            <span>REGISTER LICENSE</span>
+                            <span>Register license</span>
                     </button>
                     <!-- /ko -->
                     <!-- ko if: registered() -->
-                    <button class="btn btn-primary flex-grow"
+                    <button class="btn btn-secondary rounded-pill flex-grow"
                             data-bind="click: register, 
                                        enable: isReplaceLicenseEnabled,
                                        attr: { title: replaceTooltip }">
-                            <i class="icon-replace"></i><span>REPLACE LICENSE</span>
+                            <i class="icon-replace"></i><span>Replace license</span>
                     </button>
-                    <button class="btn btn-warning flex-grow"
+                    <button class="btn btn-secondary rounded-pill flex-grow"
                             data-bind="click: forceLicenseUpdate,
                                        disable: spinners.forceLicenseUpdate() || !isForceUpdateEnabled(),
                                        css: { 'btn-spinner': spinners.forceLicenseUpdate },
                                        attr: { title: forceUpdateTooltip }">
-                            <i class="icon-force"></i><span>FORCE UPDATE</span>
+                            <i class="icon-force"></i><span>Force update</span>
                     </button>
-                    <button class="btn btn-info flex-grow"
+                    <button class="btn btn-info rounded-pill flex-grow"
                             data-bind="click: renewLicense,
                                        visible: canRenewLicense, 
                                        disable: spinners.renewLicense() || !isRenewLicenseEnabled(),
                                        css: { 'btn-spinner': spinners.renewLicense },
                                        attr: { title: renewTooltip }">
-                            <i class="icon-reset"></i><span>RENEW LICENSE</span>
+                            <i class="icon-reset"></i><span>Renew license</span>
                     </button>
                     <!-- /ko -->
                 </div>
@@ -243,11 +246,13 @@
         <div class="support-info panel flex-vertical">
             <div class="header">
                 <div class="padding">
-                    <h2>Support plan</h2>
-                    <div class="flex-horizontal margin-top margin-bottom">
+                    <h2 class="d-flex align-items-center gap-3">
                         <div data-bind="attr: { class: 'roundborder flex-shrink-0 ' + supportCssClass() }">
                             <i class="icon-support"></i>
                         </div>
+                        Support plan
+                    </h2>
+                    <div class="flex-horizontal align-items-baseline">
                         <div class="big-label">
                             <div class="content">
                                 <small>Type</small>
@@ -298,37 +303,37 @@
                     2 hour SLA<br />
                     <small class="text-muted">We're here for you <br />24/7</small>
                 </div>
-                <div class="community">
-                        <div class="dropup">
-                            <button class="btn btn-info btn-block dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="icon-newtab"></i> <span>ACCESS</span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                <li><a href="https://github.com/ravendb/ravendb/discussions" target="_blank">Github Discussions </a></li>
-                                <li><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank">Google Groups (Archive) </a></li>
-                            </ul>
-                </div>
+                <div class="community access-container">
+                    <div class="dropup">
+                        <button class="btn btn-secondary btn-block dropdown-toggle rounded-pill" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="icon-newtab"></i> <span>Access</span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                            <li><a href="https://github.com/ravendb/ravendb/discussions" target="_blank">Github Discussions </a></li>
+                            <li><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank">Google Groups (Archive) </a></li>
+                        </ul>
                     </div>
+                </div>
                 <div class="grid-span-2 professional production" data-bind="visible: canUpgradeSupport">
-                    <a target="_blank" class="btn btn-success btn-block" data-bind="attr: { href: isCloud() ? 'https://cloud.ravendb.net/pricing#support-options' : 'http://ravendb.net/support' }">
-                        <i class="icon-umbrella"></i> <span>UPGRADE</span>
+                    <a target="_blank" class="btn btn-success btn-block rounded-pill" data-bind="attr: { href: isCloud() ? 'https://cloud.ravendb.net/pricing#support-options' : 'http://ravendb.net/support' }">
+                        <i class="icon-umbrella"></i> <span>See support options</span>
                     </a>
                 </div>
             </div>
             <div class="padding" data-bind="visible: !hasLicense()">
-                    <div class="dropup">
-                        <button class="btn btn-info btn-block dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <i class="icon-newtab"></i> <span>ACCESS</span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
-                            <li><a href="https://github.com/ravendb/ravendb/discussions" target="_blank">Github Discussions </a></li>
-                            <li><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank">Google Groups (Archive) </a></li>
-                        </ul>
+                <div class="dropup">
+                    <button class="btn btn-info btn-block dropdown-toggle rounded-pill" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="icon-newtab"></i> <span>Access</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
+                        <li><a href="https://github.com/ravendb/ravendb/discussions" target="_blank">Github Discussions </a></li>
+                        <li><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank">Google Groups (Archive) </a></li>
+                    </ul>
+                </div>
             </div>
         </div>
-    </div>
     </div>
 </div>
 </div>

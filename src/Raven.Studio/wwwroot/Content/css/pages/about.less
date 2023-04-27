@@ -22,6 +22,19 @@
         }
     }
 
+    .btn-refresh-circle {
+        width: 52px;
+        height: 52px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .btn-spinner:before {
+        top: unset;
+        margin-top: auto;
+    }
+
     .big-label, .big-button {
         display: flex;
         text-align: left;
@@ -30,16 +43,13 @@
             font-size: 34px;
             margin-right: @grid-gutter-width/2;
             margin-top: 2px;
-            
             &.check-connection {
                 font-size: 16px;
                 cursor: pointer;
             }
-            
             &.check-connection:hover {
                 color: @brand-success;
             }
-            
             &.connection-status {
                 font-size: 18px;
             }
@@ -113,6 +123,7 @@
 
     .license-info, .support-info {
         flex-basis: 200px;
+        border-radius: @gutter-sm;
     }
 
     .license-id-container {
@@ -151,7 +162,9 @@
 
         h4 {
             text-align: center;
+            width: fit-content;
             grid-column: 1 / span 2;
+            margin: @gutter-xs auto;
         }
 
         .name {
@@ -203,7 +216,6 @@
         }
 
         & > div {
-            //background-color: @gray-dark;
             padding: @grid-gutter-width/2;
 
             &:not(.top-row) {
@@ -211,10 +223,10 @@
                 flex-direction: column;
                 justify-content: center;
             }
+        }
 
-            &:nth-of-type(3n) {
-                //border-left: 1px solid @gray-darker;
-            }
+        .access-container {
+            border-bottom-left-radius: @gutter-sm;
         }
 
         &.community {
@@ -263,8 +275,8 @@
 
     .roundborder {
         display: block;
-        width: 75px;
-        height: 75px;
+        width: 48px;
+        height: 48px;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -277,7 +289,7 @@
             width: 100%;
             height: 100%;
             border-radius: 300px;
-            border: 4px solid;
+            border: 2px solid;
             -webkit-transform: rotate(45deg);
             transform: rotate(45deg);
         }
@@ -294,7 +306,7 @@
         }
 
         i {
-            font-size: 40px;
+            font-size: 21px;
         }
 
         &.valid, &.professional-support, &.production-support {
