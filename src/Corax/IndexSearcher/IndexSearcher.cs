@@ -74,6 +74,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         _ownsTransaction = false;
         _transaction = tx;
+        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
     }

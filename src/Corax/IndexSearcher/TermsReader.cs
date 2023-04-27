@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
@@ -9,7 +10,7 @@ using Voron.Impl;
 
 namespace Corax;
 
-public readonly unsafe struct TermsReader : IDisposable
+public readonly unsafe struct TermsReader : IDisposable, IComparer<long>
 {
     private readonly LowLevelTransaction _llt;
     private readonly FixedSizeTree _fst;
@@ -21,6 +22,12 @@ public readonly unsafe struct TermsReader : IDisposable
         _fst = entriesToTermsTree.FixedTreeFor(name, sizeof(long));
         _xKeyScope = new CompactKeyCacheScope(_llt);
         _yKeyScope = new CompactKeyCacheScope(_llt);
+    }
+
+    public string GetTermFor(long id)
+    {
+        TryGetTermFor(id, out var s);
+        return s;
     }
     
     public bool TryGetTermFor(long id, out string term)
