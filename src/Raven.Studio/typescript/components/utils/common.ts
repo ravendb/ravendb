@@ -55,3 +55,22 @@ export function boundCopy<TArgs>(story: StoryFn<TArgs>, args?: TArgs): Story<TAr
     copy.args = args;
     return copy;
 }
+
+export async function tryHandleSubmit<T>(promise: () => Promise<T>) {
+    try {
+        return await promise();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// source: https://stackoverflow.com/a/55266531
+type AtLeastOne<T> = [T, ...T[]];
+
+export const exhaustiveStringTuple =
+    <T extends string>() =>
+    <L extends AtLeastOne<T>>(
+        ...x: L extends any ? (Exclude<T, L[number]> extends never ? L : Exclude<T, L[number]>[]) : never
+    ) =>
+        x;
+// ---

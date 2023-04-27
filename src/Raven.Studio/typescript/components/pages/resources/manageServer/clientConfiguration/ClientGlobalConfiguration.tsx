@@ -1,7 +1,7 @@
 import React from "react";
 import { Form, Col, Button, Card, Row, Spinner } from "reactstrap";
-import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { FormCheckbox, FormInput, FormSelect, FormSelectOption, FormSwitch } from "components/common/Form";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import {
     ClientConfigurationFormData,
     clientConfigurationYupResolver,
@@ -11,8 +11,9 @@ import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
-import genUtils = require("common/generalUtils");
 import ClientConfigurationUtils from "components/common/clientConfiguration/ClientConfigurationUtils";
+import useClientConfigurationFormController from "components/common/clientConfiguration/useClientConfigurationFormController";
+import { tryHandleSubmit } from "components/utils/common";
 
 // TODO: show modal on exit intent if is dirty
 export default function ClientGlobalConfiguration() {
@@ -26,19 +27,17 @@ export default function ClientGlobalConfiguration() {
             ClientConfigurationUtils.mapToFormData(await getGlobalClientConfigurationCallback.execute(), true),
     });
 
-    const {
-        identityPartsSeparatorEnabled,
-        maximumNumberOfRequestsEnabled,
-        readBalanceBehaviorEnabled,
-        useSessionContextEnabled,
-        loadBalancerSeedEnabled,
-    } = useWatch({ control });
+    const formValues = useClientConfigurationFormController(control, setValue);
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
-        return genUtils.tryHandleSubmit(async () => {
+        return tryHandleSubmit(async () => {
             await manageServerService.saveGlobalClientConfiguration(ClientConfigurationUtils.mapToDto(formData, true));
-            reset(formData);
+            reset(null, { keepValues: true });
         });
+    };
+
+    const onRefresh = async () => {
+        reset(ClientConfigurationUtils.mapToFormData(await getGlobalClientConfigurationCallback.execute(), true));
     };
 
     if (getGlobalClientConfigurationCallback.loading) {
@@ -46,7 +45,7 @@ export default function ClientGlobalConfiguration() {
     }
 
     if (getGlobalClientConfigurationCallback.error) {
-        return <LoadError error="Unable to load client global configuration" />;
+        return <LoadError error="Unable to load client global configuration" refresh={onRefresh} />;
     }
 
     return (
@@ -60,13 +59,7 @@ export default function ClientGlobalConfiguration() {
                 <Card className="card flex-row p-2 mt-4">
                     <Row className="flex-grow-1">
                         <Col>
-                            <FormCheckbox
-                                control={control}
-                                name="identityPartsSeparatorEnabled"
-                                afterChange={(event) =>
-                                    !event.target.checked && setValue("identityPartsSeparatorValue", null)
-                                }
-                            >
+                            <FormCheckbox control={control} name="identityPartsSeparatorEnabled">
                                 Identity parts separator
                             </FormCheckbox>
                         </Col>
@@ -76,7 +69,7 @@ export default function ClientGlobalConfiguration() {
                                 control={control}
                                 name="identityPartsSeparatorValue"
                                 placeholder="Default is '/'"
-                                disabled={!identityPartsSeparatorEnabled}
+                                disabled={!formValues.identityPartsSeparatorEnabled}
                             />
                         </Col>
                     </Row>
@@ -85,13 +78,7 @@ export default function ClientGlobalConfiguration() {
                 <Card className="flex-row mt-1 p-2">
                     <Row className="flex-grow-1">
                         <Col>
-                            <FormCheckbox
-                                control={control}
-                                name="maximumNumberOfRequestsEnabled"
-                                afterChange={(event) =>
-                                    !event.target.checked && setValue("maximumNumberOfRequestsValue", null)
-                                }
-                            >
+                            <FormCheckbox control={control} name="maximumNumberOfRequestsEnabled">
                                 Maximum number of requests per session
                             </FormCheckbox>
                         </Col>
@@ -101,7 +88,7 @@ export default function ClientGlobalConfiguration() {
                                 control={control}
                                 name="maximumNumberOfRequestsValue"
                                 placeholder="Default value is 30"
-                                disabled={!maximumNumberOfRequestsEnabled}
+                                disabled={!formValues.maximumNumberOfRequestsEnabled}
                             />
                         </Col>
                     </Row>
@@ -110,16 +97,7 @@ export default function ClientGlobalConfiguration() {
                 <Card className="mt-1">
                     <Row className="p-2">
                         <Col>
-                            <FormCheckbox
-                                control={control}
-                                name="useSessionContextEnabled"
-                                afterChange={(event) => {
-                                    if (!event.target.checked) {
-                                        setValue("loadBalancerSeedValue", null);
-                                        setValue("loadBalancerSeedEnabled", false);
-                                    }
-                                }}
-                            >
+                            <FormCheckbox control={control} name="useSessionContextEnabled">
                                 Use Session Context for Load Balancing
                             </FormCheckbox>
                         </Col>
@@ -130,11 +108,8 @@ export default function ClientGlobalConfiguration() {
                                         control={control}
                                         name="loadBalancerSeedEnabled"
                                         color="primary"
-                                        disabled={!useSessionContextEnabled}
+                                        disabled={!formValues.useSessionContextEnabled}
                                         label="Seed"
-                                        afterChange={(event) =>
-                                            !event.target.checked && setValue("loadBalancerSeedValue", null)
-                                        }
                                     >
                                         Seed
                                     </FormSwitch>
@@ -145,7 +120,7 @@ export default function ClientGlobalConfiguration() {
                                         control={control}
                                         name="loadBalancerSeedValue"
                                         placeholder="Enter seed number"
-                                        disabled={!loadBalancerSeedEnabled}
+                                        disabled={!formValues.loadBalancerSeedEnabled}
                                     />
                                 </Col>
                             </Row>
@@ -154,28 +129,17 @@ export default function ClientGlobalConfiguration() {
 
                     <Row className="p-2">
                         <Col>
-                            <FormCheckbox
-                                control={control}
-                                name="readBalanceBehaviorEnabled"
-                                afterChange={(event) =>
-                                    event.target.checked
-                                        ? setValue("readBalanceBehaviorValue", "None")
-                                        : setValue("readBalanceBehaviorValue", null)
-                                }
-                            >
+                            <FormCheckbox control={control} name="readBalanceBehaviorEnabled">
                                 Read balance behavior
                             </FormCheckbox>
                         </Col>
                         <Col>
-                            <FormSelect
+                            <FormSelect<ReadBalanceBehavior>
                                 control={control}
                                 name="readBalanceBehaviorValue"
-                                disabled={!readBalanceBehaviorEnabled}
-                            >
-                                <FormSelectOption<ReadBalanceBehavior> label="None" value="None" />
-                                <FormSelectOption<ReadBalanceBehavior> label="Round Robin" value="RoundRobin" />
-                                <FormSelectOption<ReadBalanceBehavior> label="Fastest Node" value="FastestNode" />
-                            </FormSelect>
+                                disabled={!formValues.readBalanceBehaviorEnabled}
+                                options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
+                            />
                         </Col>
                     </Row>
                 </Card>

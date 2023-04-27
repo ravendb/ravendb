@@ -8,4 +8,19 @@ describe("ClientGlobalConfiguration", function () {
 
         expect(await screen.findByText(/Save/)).toBeInTheDocument();
     });
+
+    it("can validate identity parts separator", async () => {
+        const { screen, fillInput, fireClick } = rtlRender(<ClientConfiguration />);
+
+        const inputElement = await screen.findByName("identityPartsSeparatorValue");
+        const saveButton = screen.getByRole("button", { name: "Save" });
+
+        await fillInput(inputElement, "|");
+        await fireClick(saveButton);
+        expect(screen.getByText("Identity parts separator cannot be set to '|'")).toBeInTheDocument();
+
+        await fillInput(inputElement, "ab");
+        await fireClick(saveButton);
+        expect(screen.getByText("Please enter exactly 1 character")).toBeInTheDocument();
+    });
 });
