@@ -72,17 +72,20 @@
     <div data-bind="with: databaseModel.restore">
         <h3>Backup Source Configuration</h3>
 
-        <div class="toggle margin-bottom-sm">
+        <div class="toggle margin-bottom-xs">
             <input class="styled" type="checkbox" id="restore_sharded_db" data-bind="checked: enableSharding">
             <label for="restore_sharded_db">Restore sharded database</label>
         </div>
+
+        <button type="button" class="btn btn-info margin-bottom-xs" data-bind="visible: enableSharding, click: restoreSourceObject().addRestoreItem">
+            <i class="icon-backup"></i> Add shard to restore
+        </button>
         
         <div class="form-group row" data-bind="validationElement: source">
             <div class="col-md-4">
-                <!-- TODO: allow other sources for sharded databases -->
-                <label class="control-label" data-bind="text: enableSharding() ? localServerCredentials().backupStorageTypeText : 'Source'"></label>
+                <label class="control-label">Source</label>
             </div>
-            <div class="col-md-8" data-bind="visible: !enableSharding()">
+            <div class="col-md-8">
                 <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
                     <span data-bind="text: $root.findRestoreSourceLabel(source())"></span>
                     <span class="caret"></span>
@@ -107,81 +110,63 @@
                 <span class="help-block" data-bind="validationMessage: source"></span>
             </div>
         </div>
-
-        <!-- Sharding -->
-        
-        <div class="toggle margin-bottom-sm">
-            <input class="styled" type="checkbox" id="restore_sharded_db" data-bind="checked: enableSharding">
-            <label for="restore_sharded_db">Enable sharding</label>
-        </div>
-        
-        <div data-bind="visible: enableSharding, foreach: shardingBackupDirectories">
-            <span class="margin-top-sm margin-bottom-xs"><i class="icon-shard text-info" title="Shard"></i> #<span data-bind="text: $index()"></span></span>
-            <div class="form-group flex-horizontal" style="align-items: start;">
-
-                <div data-bind="validationElement: $data.nodeTag">
-                    <div class="position-relative">
-                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                            <span>
-                                <i class="icon-node text-success"></i>
-                                <span>Node <span data-bind="text: $data.nodeTag()"></span></span>
-                            </span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" data-bind="foreach: $root.clusterNodes">
-                            <li data-bind="click: $parents[1].setShardingDirectoryNodeTag.bind($parent, $parentContext.$index(), $data.tag())">
-                                <a href="#" data-bind="text: $data.tag"></a>
-                            </li>
-                        </ul>
-                    </div>
-                    <span class="help-block" data-bind="validationMessage: $data.nodeTag"></span>
-                </div>
-                
-                <div data-bind="validationElement: directoryPath" class="flex-grow">
-                    <div class="dropdown btn-block">
-                        <input type="text" 
-                               class="form-control dropdown-toggle" 
-                               data-bind="textInput: directoryPath(), attr: { id: 'shardBackupDirectoryPath_' + $index() }" 
-                               data-toggle="dropdown" placeholder="Enter backup directory path" />
-                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                        <ul class="dropdown-menu" data-bind="foreach: directoryPathOptions, autoComplete: '#shardBackupDirectoryPath_' + $index()">
-                            <li data-bind="click: $parents[1].setShardingDirectoryPath.bind($parent, $parentContext.$index(), $data)">
-                                <a href="#" data-bind="text: $data"></a>
-                            </li>
-                        </ul>
-                    </div>
-                    <span class="help-block" data-bind="validationMessage: $data.directoryPath"></span>
-                </div>
-
-                <button
-                    type="button"
-                    class="btn btn-danger margin-left-xs"
-                    data-bind="visible: $index() !== 0, click: $parent.removeShardingDirectoryPath.bind($parent, $index())"
-                >
-                    <i class="icon-trash"></i>
-                </button>
-            </div>
-        </div>
-
-        <button type="button" class="btn btn-info margin-bottom-xs margin-top-xs" data-bind="visible: enableSharding,click: addShardingDirectoryPath">
-            <i class="icon-backup" /> Add shard backup folder
-        </button>
         
         <!-- Local Directory -->
 
-        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: localServerCredentials().backupDirectory, visible: source() === localServerCredentials().backupStorageType && !enableSharding()">
-            <div class="col-md-4">
-                <label class="control-label">Backup Directory<i class="required"></i></label>
-            </div>
-            <div class="col-md-8">
-                <input type="text" class="form-control" id="backupDirectoryrPath"
-                       data-bind="textInput: localServerCredentials().backupDirectory"
-                       placeholder="Enter backup directory path" />
-                <ul class="dropdown-menu" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#backupDirectoryrPath'">
-                    <li data-bind="click: _.partial($root.databaseModel.backupDirectoryHasChanged, $data)">
-                        <a href="#" data-bind="text: $data"></a>
-                    </li>
-                </ul>
+        <div class="form-group row" data-bind="visible: source() === localServerCredentials().backupStorageType">
+            <div data-bind="foreach: restoreSourceObject().items">
+                <div class="flex-horizontal">
+                    <div class="flex-start" data-bind="visible: $parent.enableSharding">
+                        <div class="margin-bottom">
+                            <i class="icon-shard text-info" title="Shard"></i> #<span data-bind="text: $index()"></span>
+                        </div>
+                        <button class="btn btn-danger" type="button" data-bind="click: $parent.restoreSourceObject().removeRestoreItem, visible: $index() > 0">
+                            <i class="icon-trash"></i>
+                        </button>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="form-group row" data-bind="visible: $parent.enableSharding">
+                            <div class="col-md-4">
+                                <label class="control-label">Node Tag<i class="required"></i></label>
+                            </div>
+                            <div class="col-md-8">
+                                <div data-bind="validationElement: nodeTag">
+                                    <div class="position-relative">
+                                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                            <span>
+                                                <i class="icon-node text-success"></i>
+                                                <span data-bind="text: nodeTag() ? 'Node ' + nodeTag() : 'select node'"></span>
+                                            </span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" data-bind="foreach: $root.clusterNodes">
+                                            <li data-bind="click: _.partial($parent.nodeTag, tag())">
+                                                <a href="#" data-bind="text: 'Node ' + tag()"></a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <span class="help-block" data-bind="validationMessage: nodeTag"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: folderName">
+                            <div class="col-md-4">
+                                <label class="control-label">Backup Directory<i class="required"></i></label>
+                            </div>
+                            <div class="col-md-8">
+                                <input type="text" class="form-control"
+                                       data-bind="textInput: folderName, attr: { id: uniqueId }"
+                                       placeholder="Enter backup directory path" />
+                                <ul class="dropdown-menu" data-bind="foreach: backupFolderPathOptions, autoComplete: '#' + uniqueId">
+                                    <li data-bind="click: _.partial($parent.folderName, $data)">
+                                        <a href="#" data-bind="text: $data"></a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div data-bind="template: { name: 'restore-points-selector' }"></div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -327,19 +312,7 @@
                         <input class="form-control" data-bind="textInput: container" />
                     </div>
                 </div>
-                <div class="form-group row">
-                    <div class="col-md-4">
-                        <label class="control-label">Remote Folder Name</label>
-                    </div>
-                    <div class="col-md-8">
-                        <input type="text" class="form-control" id="remoteFolderAzure" data-bind="textInput: remoteFolder"/>
-                        <ul class="dropdown-menu" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderAzure'">
-                            <li data-bind="click: _.partial($root.databaseModel.remoteFolderAzureChanged, $data)">
-                                <a href="#" data-bind="text: $data"></a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+                <div data-bind="template: { name: 'remote-folder-and-restore-point-selector' }"></div>
             </div>
         </div>
 
@@ -417,19 +390,7 @@
                        <input class="form-control" data-bind="textInput: bucketName" />
                    </div>
                </div>
-               <div class="form-group row">
-                   <div class="col-md-4">
-                       <label class="control-label">Remote Folder Name</label>
-                   </div>
-                   <div class="col-md-8">
-                       <input type="text" class="form-control" id="remoteFolderAmazon" data-bind="textInput: remoteFolder"/>
-                       <ul class="dropdown-menu" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderAmazon'">
-                           <li data-bind="click: _.partial($root.databaseModel.remoteFolderAmazonChanged, $data)">
-                               <a href="#" data-bind="text: $data"></a>
-                           </li>
-                       </ul>
-                   </div>
-               </div>
+               <div data-bind="template: { name: 'remote-folder-and-restore-point-selector' }"></div>
            </div>
        </div>
 
@@ -467,21 +428,10 @@
                     </textarea>
                     </div>
                 </div>
-                <div class="form-group row">
-                    <div class="col-md-4">
-                        <label class="control-label">Remote Folder Name</label>
-                    </div>
-                    <div class="col-md-8">
-                        <input type="text" class="form-control" id="remoteFolderGoogleCloud" data-bind="textInput: remoteFolder"/>
-                        <ul class="dropdown-menu" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderGoogleCloud'">
-                            <li data-bind="click: _.partial($root.databaseModel.remoteFolderGoogleCloudChanged, $data)">
-                                <a href="#" data-bind="text: $data"></a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+                <div data-bind="template: { name: 'remote-folder-and-restore-point-selector' }"></div>
             </div>
         </div>
+
         <div class="toggle">
             <input class="styled" type="checkbox" id="disable-ongoing-tasks" data-bind="checked: disableOngoingTasks">
             <label for="disable-ongoing-tasks">Disable ongoing tasks after restore</label>
@@ -489,83 +439,6 @@
         <div class="toggle">
             <input class="styled" type="checkbox" id="skip-indexes-import" data-bind="checked: skipIndexes">
             <label for="skip-indexes-import">Skip indexes</label>
-        </div>
-        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
-            <div class="col-md-4">
-                <label class="control-label">Restore Point</label>
-            </div>
-            <div class="col-md-12">
-                <div>
-                    <div class="dropdown btn-block">
-                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
-                                data-bind="disable: restorePoints().length === 0 || $parent.databaseModel.spinners.fetchingRestorePoints()">
-                            <span data-bind="text: restorePointButtonText, textInput: selectedRestorePoint"></span>
-                            <span class="caret" data-bind="visible: !$parent.databaseModel.spinners.fetchingRestorePoints() && restorePoints().length > 0"></span>
-                            <span class="btn-spinner" data-bind="visible: $parent.databaseModel.spinners.fetchingRestorePoints" id="restorePointSpinner"></span>
-                        </button>
-                        <div class="dropdown-menu has-info restore-point-dropdown">
-                            <ul class="menu max-height" role="menu" data-bind="foreach: restorePoints">
-                                <!-- ko if: $index() !== 0 -->
-                                <li class="divider"></li>
-                                <!-- /ko -->
-                                <li class="dropdown-header" data-bind="attr: { title: $data.databaseNameTitle }">
-                                    <span class="text-success" data-bind="text: $data.databaseName"></span>
-                                </li>
-                                <div class="dropdown-header header bg-info" title="">
-                                    <div class="restore-point-row restore-point-legend">
-                                        <div class="date">Date</div>
-                                        <div class="type">Backup Type</div>
-                                        <div class="encryption">Encrypted</div>
-                                        <div class="node">Node Tag</div>
-                                        <div data-bind="visible: $root.databaseModel.restore.enableSharding" class="node">Avaiable shards</div>
-                                        <div class="files">Files to Restore</div>
-                                    </div>
-                                </div>
-                                <!-- ko foreach: $data.restorePoints -->
-                                <li>
-                                    <a href="#" data-bind="click: _.partial($root.databaseModel.useRestorePoint, $data)" title="">
-                                        <div class="restore-point-row">
-                                            <div class="date" data-bind="text: dateTime"><span></span></div>
-                                            <div class="type" data-bind="text: backupType, css: backupType"></div>
-                                            <div class="encryption">
-                                                <i class="icon-lock text-success" data-bind="visible: isEncrypted" title="Encrypted"></i>
-                                                <i class="icon-unsecure" data-bind="visible: !isEncrypted" title="Not encrypted"></i>
-                                            </div>
-                                            <div class="node" data-bind="text: nodeTag"></div>
-                                            <div
-                                                data-bind="visible: $root.databaseModel.restore.enableSharding"
-                                                class="files flex-horizontal"
-                                            >
-                                                <span data-bind="text: '[' + availableShards.map(x => x.shardNumber).join(', ') + ']', style: { 'color': availableShards.length === $root.databaseModel.restore.shardingBackupDirectories().length ? 'white' : 'red' }"></span>
-                                            </div>
-                                            <div class="files" data-bind="text: filesToRestore.toLocaleString()"></div>
-                                        </div>
-                                    </a>
-                                </li>
-                                <!-- /ko -->
-                            </ul>
-                        </div>
-                    </div>
-                    <span class="help-block" data-bind="validationMessage: selectedRestorePoint"></span>
-                </div>
-            </div>
-        </div>
-        <div data-bind="with: selectedRestorePoint">
-            <div class="form-group" data-bind="visible: isEncrypted, validationElement: $parent.backupEncryptionKey">
-                <label class="control-label">
-                    Backup Encryption Key <small class="text-muted">(Base64 Encoding)</small>
-                </label>
-                <input type="text" class="form-control" placeholder="Key" autocomplete="off"
-                       data-bind="textInput: $parent.backupEncryptionKey">
-            </div> 
-            <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && isEncrypted">
-                <i class="icon-info"></i>
-                <div class="margin-left">Selected restore point is encrypted. The Backup Encryption Key will be used as the Database Encryption Key.</div>
-            </div>
-            <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && !isEncrypted">
-                <i class="icon-info"></i>
-                <div class="margin-left">Selected restore point is not encrypted. 'Encryption' tab was disabled.</div>
-            </div>
         </div>
     </div>
 </script>
@@ -812,6 +685,127 @@
         <div class="text-info bg-info padding padding-sm">Database encryption is only possible when authentication is enabled and a server certificate has been defined.</div>
         <div class="padding padding-sm">For more information go to the 
             <button class="btn-link" type="button" data-bind="click: $root.redirectToCertificates" data-dismiss="modal">certificates page</button>
+        </div>
+    </div>
+</script>
+
+
+<script type="text/html" id="remote-folder-and-restore-point-selector">
+    <div data-bind="foreach: $parent.restoreSourceObject().items">
+        <div class="flex-horizontal">
+            <div class="flex-start" data-bind="visible: $root.databaseModel.restore.enableSharding">
+                <div class="margin-bottom">
+                    <i class="icon-shard text-info" title="Shard"></i> #<span data-bind="text: $index()"></span>
+                </div>
+                <button class="btn btn-danger" type="button" data-bind="click: $parents[1].restoreSourceObject().removeRestoreItem, visible: $index() > 0">
+                    <i class="icon-trash"></i>
+                </button>
+            </div>
+            <div class="flex-grow">
+                <div class="form-group row">
+                    <div class="col-md-4">
+                        <label class="control-label">Remote Folder Name <i class="required"></i></label>
+                    </div>
+                    <div class="col-md-8">
+                        <input type="text" class="form-control"
+                               data-bind="textInput: folderName, attr: { id: uniqueId }"
+                               placeholder="Enter backup directory path" />
+                        <ul class="dropdown-menu" data-bind="foreach: backupFolderPathOptions, autoComplete: '#' + uniqueId">
+                            <li data-bind="click: _.partial($parent.folderName, $data)">
+                                <a href="#" data-bind="text: $data"></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="form-group row" data-bind="visible: $root.databaseModel.restore.enableSharding">
+                    <div class="col-md-4">
+                        <label class="control-label">Node Tag<i class="required"></i></label>
+                    </div>
+                    <div class="col-md-8">
+                        <div data-bind="validationElement: nodeTag">
+                            <div class="position-relative">
+                                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                    <span>
+                                        <i class="icon-node text-success"></i>
+                                        <span data-bind="text: nodeTag() ? 'Node ' + nodeTag() : 'select node'"></span>
+                                    </span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: $root.clusterNodes">
+                                    <li data-bind="click: _.partial($parent.nodeTag, tag())">
+                                        <a href="#" data-bind="text: 'Node ' + tag()"></a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <span class="help-block" data-bind="validationMessage: nodeTag"></span>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="template: { name: 'restore-points-selector' }"></div>
+            </div>
+        </div>
+    </div>
+</script>
+
+
+<script type="text/html" id="restore-points-selector">
+    <div class="form-group row"
+         data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
+        <div class="col-md-4">
+            <label class="control-label">Restore Point</label>
+        </div>
+        <div class="col-md-12">
+            <div>
+                <div class="dropdown btn-block">
+                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                            data-bind="disable: restorePoints().length === 0 || spinners.fetchingRestorePoints()">
+                        <span data-bind="text: restorePointButtonText, textInput: selectedRestorePoint"></span>
+                        <span class="caret"
+                              data-bind="visible: !spinners.fetchingRestorePoints() && restorePoints().length > 0"></span>
+                        <span class="btn-spinner" data-bind="visible: spinners.fetchingRestorePoints"
+                              id="restorePointSpinner"></span>
+                    </button>
+                    <div class="dropdown-menu has-info restore-point-dropdown">
+                        <ul class="menu max-height" role="menu" data-bind="foreach: restorePoints">
+                            <!-- ko if: $index() !== 0 -->
+                            <li class="divider"></li>
+                            <!-- /ko -->
+                            <li class="dropdown-header" data-bind="attr: { title: databaseNameTitle }">
+                                <span class="text-success" data-bind="text: databaseName"></span>
+                            </li>
+                            <div class="dropdown-header header bg-info" title="">
+                                <div class="restore-point-row restore-point-legend">
+                                    <div class="date">Date</div>
+                                    <div class="type">Backup Type</div>
+                                    <div class="encryption">Encrypted</div>
+                                    <div class="node">Node Tag</div>
+                                    <div class="files">Files to Restore</div>
+                                </div>
+                            </div>
+                            <!-- ko foreach: restorePoints -->
+                            <li>
+                                <a href="#" data-bind="click: $parents[1].selectedRestorePoint"
+                                   title="">
+                                    <div class="restore-point-row">
+                                        <div class="date" data-bind="text: dateTime"><span></span></div>
+                                        <div class="type" data-bind="text: backupType, css: backupType"></div>
+                                        <div class="encryption">
+                                            <i class="icon-lock text-success" data-bind="visible: isEncrypted"
+                                               title="Encrypted"></i>
+                                            <i class="icon-unsecure" data-bind="visible: !isEncrypted"
+                                               title="Not encrypted"></i>
+                                        </div>
+                                        <div class="node" data-bind="text: nodeTag"></div>
+                                        <div class="files" data-bind="text: filesToRestore.toLocaleString()"></div>
+                                    </div>
+                                </a>
+                            </li>
+                            <!-- /ko -->
+                        </ul>
+                    </div>
+                </div>
+                <span class="help-block" data-bind="validationMessage: selectedRestorePoint"></span>
+            </div>
         </div>
     </div>
 </script>

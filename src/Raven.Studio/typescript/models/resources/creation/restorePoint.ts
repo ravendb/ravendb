@@ -3,12 +3,6 @@
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
-interface AvailableShard {
-    shardNumber: number;
-    folderName: string;
-    lastFileNameToRestore: string;
-}
-
 class restorePoint {
     dateTime: string;
     location: string;
@@ -19,7 +13,6 @@ class restorePoint {
     filesToRestore: number;
     databaseName = ko.observable<string>();
     nodeTag: string;
-    availableShards: AvailableShard[];
 
     backupType: KnockoutComputed<string>;
 
@@ -34,7 +27,6 @@ class restorePoint {
         this.filesToRestore = dto.FilesToRestore;
         this.databaseName(dto.DatabaseName);
         this.nodeTag = dto.NodeTag || "-";
-        this.availableShards = [];
 
         this.backupType = ko.pureComputed(() => {
             let backupType = "";

@@ -4,6 +4,7 @@ import endpoints = require("endpoints");
 class getRestorePointsCommand extends commandBase {
 
     private readonly path: string;
+    private readonly nodeTag: string;
     private readonly shardNumber: number;
 
     private readonly skipReportingError: boolean;
@@ -13,12 +14,14 @@ class getRestorePointsCommand extends commandBase {
     private readonly credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings;
 
     private constructor(path: string,
+                        nodeTag: string, 
                         skipReportingError: boolean,
                         connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
                         credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings,
                         shardNumber?: number) {
         super();
         this.credentials = credentials;
+        this.nodeTag = nodeTag;
         this.connectionType = connectionType;
         this.skipReportingError = skipReportingError;
         this.path = path;
@@ -56,20 +59,20 @@ class getRestorePointsCommand extends commandBase {
             });
     }
     
-    static forServerLocal(path: string, skipReportingError: boolean, shardNumber: number) {
-        return new getRestorePointsCommand(path, skipReportingError, "Local", null, shardNumber);
+    static forServerLocal(path: string, nodeTag: string, skipReportingError: boolean, shardNumber: number | undefined) {
+        return new getRestorePointsCommand(path, nodeTag, skipReportingError, "Local", null, shardNumber);
     }
     
-    static forS3Backup(credentials: Raven.Client.Documents.Operations.Backups.S3Settings, skipReportingError: boolean) {
-        return new getRestorePointsCommand("", skipReportingError, "S3", credentials);
+    static forS3Backup(credentials: Raven.Client.Documents.Operations.Backups.S3Settings, skipReportingError: boolean, shardNumber: number | undefined) {
+        return new getRestorePointsCommand("", null, skipReportingError, "S3", credentials, shardNumber);
     }
     
-    static forAzureBackup(credentials: Raven.Client.Documents.Operations.Backups.AzureSettings, skipReportingError: boolean) {
-        return new getRestorePointsCommand("", skipReportingError, "Azure", credentials);
+    static forAzureBackup(credentials: Raven.Client.Documents.Operations.Backups.AzureSettings, skipReportingError: boolean, shardNumber: number | undefined) {
+        return new getRestorePointsCommand("", null, skipReportingError, "Azure", credentials, shardNumber);
     }
 
-    static forGoogleCloudBackup(credentials: Raven.Client.Documents.Operations.Backups.GoogleCloudSettings, skipReportingError: boolean) {
-        return new getRestorePointsCommand("", skipReportingError, "GoogleCloud", credentials);
+    static forGoogleCloudBackup(credentials: Raven.Client.Documents.Operations.Backups.GoogleCloudSettings, skipReportingError: boolean, shardNumber: number | undefined) {
+        return new getRestorePointsCommand("", null, skipReportingError, "GoogleCloud", credentials, shardNumber);
     }
 }
 
