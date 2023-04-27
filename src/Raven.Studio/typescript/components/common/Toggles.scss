@@ -5,7 +5,7 @@
 
 @use "sass:math";
 
-$toggle-label-fontsize: 0.75em !default;
+$toggle-label-fontsize: 0.9em !default;
 
 $toggle-baseheight: 35px !default;
 $toggle-bg: colors.$well-bg-var !default;
@@ -75,16 +75,14 @@ $toggle-knob-hover-scale: 0.9 !default;
 
     label {
         height: $toggle-baseheight;
-        line-height: $toggle-baseheight;
-        flex-basis: 50%;
-        flex-grow: 1;
+        line-height: 1em;
+        display: flex;
+        align-items: center;
         color: $toggle-knob-muted-color;
         cursor: pointer;
-        text-transform: uppercase;
         font-size: $toggle-label-fontsize;
-        letter-spacing: 0.13em;
-        display: block;
         margin: 0;
+        text-align: center;
 
         &:hover {
             color: $toggle-hover-color;
@@ -92,13 +90,12 @@ $toggle-knob-hover-scale: 0.9 !default;
 
         &:first-of-type {
             order: 0;
-            text-align: right;
+            justify-content: flex-end;
             padding-right: sizes.$gutter-sm;
         }
 
         &:last-of-type {
             order: 3;
-            text-align: left;
             padding-left: sizes.$gutter-sm;
         }
     }
@@ -173,7 +170,7 @@ $toggle-knob-hover-scale: 0.9 !default;
 
 //RADIO MULTI TOGGLE STYLES
 
-$multi-toggle-label-fontsize: $toggle-label-fontsize !default;
+$multi-toggle-label-fontsize: 0.75em !default;
 
 $multi-toggle-baseheight: $toggle-baseheight !default;
 

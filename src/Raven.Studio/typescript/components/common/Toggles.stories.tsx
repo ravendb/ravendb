@@ -22,13 +22,13 @@ export function Toggles() {
         useState<string[]>([]);
 
     const leftRadioToggleItem: RadioToggleWithIconInputItem = {
-        label: "Bug",
+        label: "BUG",
         value: "bug",
         iconName: "bug",
     };
 
     const rightRadioToggleItem: RadioToggleWithIconInputItem = {
-        label: "Feature",
+        label: "FEATURE",
         value: "feature",
         iconName: "experimental",
     };

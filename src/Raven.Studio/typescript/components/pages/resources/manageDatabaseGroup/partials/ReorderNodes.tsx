@@ -4,8 +4,8 @@ import { NodeInfoReorderComponent } from "components/pages/resources/manageDatab
 import { useDrop } from "react-dnd";
 import { NodeInfo } from "components/models/databases";
 import { DatabaseGroup, DatabaseGroupList } from "components/common/DatabaseGroup";
-import { Radio } from "components/common/Checkbox";
 import { Icon } from "components/common/Icon";
+import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 
 interface ReorderNodesControlsProps {
     sortableMode: boolean;
@@ -60,16 +60,36 @@ export function ReorderNodes(props: ReorderNodesProps) {
 
     const findCardIndex = useCallback((node: NodeInfo) => newOrder.findIndex((x) => x.tag === node.tag), [newOrder]);
 
+    const leftRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: (
+            <>
+                Shuffle nodes order
+                <br />
+                after failure recovery
+            </>
+        ),
+        value: "shuffle",
+        iconName: "shuffle",
+    };
+
+    const rightRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: "Try to maintain nodes order",
+        value: "order",
+        iconName: "order",
+    };
+
+    const radioToggleSelectedItem = fixOrder ? rightRadioToggleItem : leftRadioToggleItem;
+
     return (
         <div ref={drop}>
-            <div className="d-flex px-3 pt-3">
-                <div className="me-2">After failure recovery:</div>
-                <Radio selected={!fixOrder} toggleSelection={() => setFixOrder(false)} className="me-2">
-                    Shuffle nodes order
-                </Radio>
-                <Radio selected={fixOrder} toggleSelection={() => setFixOrder(true)}>
-                    Try to maintain nodes order
-                </Radio>
+            <div className="px-3 pt-3">
+                <RadioToggleWithIcon
+                    name="after-recovery"
+                    leftItem={leftRadioToggleItem}
+                    rightItem={rightRadioToggleItem}
+                    selectedItem={radioToggleSelectedItem}
+                    setSelectedItem={(x) => setFixOrder(x !== leftRadioToggleItem)}
+                />
             </div>
             <DatabaseGroup>
                 <DatabaseGroupList>
