@@ -47,10 +47,11 @@ class getFolderPathOptionsCommand extends commandBase {
         } as any;
         
         if (this.connectionType === "Local") {
-            args.path = this.inputPath ? this.inputPath : "";
+            args.path = this.inputPath ?? "";
             args.backupFolder = this.isBackupFolder;
+            args.nodeTag = this.nodeTag ?? undefined;
         }
-
+        
         const url = this.db 
             ? endpoints.databases.studioDatabaseTasks.adminStudioTasksFolderPathOptions + this.urlEncodeArgs(args)
             : endpoints.global.studioTasks.adminStudioTasksFolderPathOptions + this.urlEncodeArgs(args);

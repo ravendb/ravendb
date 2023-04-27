@@ -763,6 +763,12 @@ type etlScriptDefinitionCacheItem = {
 type addressType = "ipv4" | "ipv6" | "hostname" | "invalid";
 type timeMagnitude = "minutes" | "hours" | "days";
 
+interface RestorePointsGroup {
+    databaseName: string;
+    databaseNameTitle: string;
+    restorePoints: restorePoint[];
+}
+
 interface pullReplicationExportFileFormat {
     Database: string;
     HubName: string;

@@ -4,48 +4,223 @@ import amazonSettings = require("models/database/tasks/periodicBackup/amazonSett
 import s3Settings = require("viewmodels/database/tasks/destinations/s3Settings");
 import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
-import commandBase = require("commands/commandBase");
 import moment = require("moment");
+import restorePoint from "models/resources/creation/restorePoint";
+import recentError from "common/notifications/models/recentError";
+
+const unknownDatabaseName = "Unknown Database";
+
+class restoreItem {
+    
+    private readonly parent: restoreSettings;
+    
+    uniqueId = _.uniqueId("backup-dir");
+    
+    nodeTag = ko.observable<string>();
+    
+    folderName = ko.observable<string>(); // local folder or remote folder name
+
+    backupFolderPathOptions = ko.observableArray<string>([]);
+    
+    restorePoints = ko.observableArray<RestorePointsGroup>([]);
+    restorePointError = ko.observable<string>();
+    selectedRestorePoint = ko.observable<restorePoint>();
+
+    spinners = {
+        fetchingRestorePoints: ko.observable(false)
+    }
+    
+    validationGroup: KnockoutValidationGroup;
+
+    restorePointButtonText = ko.pureComputed<string>(() => {
+        const count = this.restorePoints().length;
+
+        if (this.spinners.fetchingRestorePoints()) {
+            // case 1: Loading restore points
+            return "Loading restore points...";
+        } else if (count === 0) {
+            // case 2: No restore points fetched yet
+            return `Enter required fields above to continue`;
+        } else {
+            // case 3: Restore points found
+            const restorePoint = this.selectedRestorePoint();
+            if (!restorePoint) {
+                // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+                const text: string = `Select restore point... (${count.toLocaleString()} ${count > 1 ? 'options' : 'option'})`;
+                return text;
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+            const text: string = `${restorePoint.dateTime}, ${restorePoint.backupType()} Backup`;
+            return text;
+        }
+    });
+    
+    constructor(parent: restoreSettings) {
+        this.parent = parent;
+        _.bindAll(this, "refreshPathAndRestorePoints", "updateBackupDirectoryPathOptions", "fetchRestorePoints");
+        this.folderName.throttle(300).subscribe(this.refreshPathAndRestorePoints);
+    }
+    
+    shardNumber() {
+        if (!this.parent.isShardedProvider()) {
+            return undefined;
+        }
+        
+        return this.parent.items().indexOf(this);
+    }
+
+    initValidation() {
+        this.nodeTag.extend({
+            required: true
+        });
+
+        this.selectedRestorePoint.extend({
+            required: true
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            nodeTag: this.nodeTag,
+            selectedRestorePoint: this.selectedRestorePoint,
+        });
+    }
+    
+    refreshPathAndRestorePoints() {
+        this.updateBackupDirectoryPathOptions();
+        this.fetchRestorePoints();
+    }
+    
+    updateBackupDirectoryPathOptions() {
+        this.parent.getFolderPathOptions(this.folderName(), this.nodeTag())
+            .done((optionsList: string[]) => this.backupFolderPathOptions(optionsList));
+    }
+    
+    clearRestorePoints() {
+        this.restorePoints([]);
+        this.restorePointError(null);
+    }
+    
+    isValid() {
+        return !!_.trim(this.folderName());
+    }
+
+    fetchRestorePoints() {
+        if (!this.isValid()) {
+            return ;
+        }
+        
+        this.restorePointError(null);
+        this.spinners.fetchingRestorePoints(true);
+
+        this.parent.fetchRestorePointsCommand(this, this.shardNumber()) 
+            .execute()
+            .done(restorePoints => {
+                const groups: Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }> = [];
+                restorePoints.List.forEach(rp => {
+                    const databaseName = rp.DatabaseName = rp.DatabaseName ?? unknownDatabaseName;
+                    if (!groups.find(x => x.databaseName === databaseName)) {
+                        const title = databaseName !== unknownDatabaseName ? "Database Name" : "Unidentified folder format name";
+                        groups.push({ databaseName: databaseName, databaseNameTitle: title, restorePoints: [] });
+                    }
+
+                    const group = groups.find(x => x.databaseName === databaseName);
+                    group.restorePoints.push(new restorePoint(rp));
+                });
+
+                this.restorePoints(groups);
+                this.selectedRestorePoint(null);
+                this.restorePointError(null);
+            })
+            .fail((response: JQueryXHR) => {
+                const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
+                this.restorePointError(generalUtils.trimMessage(messageAndOptionalException.message));
+                this.clearRestorePoints();
+            })
+            .always(() => {
+                this.spinners.fetchingRestorePoints(false);
+            });
+    }
+}
 
 export abstract class restoreSettings {
     backupStorageType: restoreSource;
     backupStorageTypeText: string;
-    mandatoryFieldsText: string;
 
     folderContent: KnockoutComputed<string>;
-    fetchRestorePointsCommand: (backupDirectory?: string, shardNumber?: number) => commandBase;
+    
+    items = ko.observableArray<restoreItem>([]);
+    isShardedProvider: () => boolean;
+    
+    fetchRestorePointsCommand: (item: restoreItem, shardNumber: number) => getRestorePointsCommand;
 
-    abstract getFolderPathOptions(backupDirectory?: string): JQueryPromise<string[]>;
+    abstract getFolderPathOptions(folderName: string, nodeTag: string): JQueryPromise<string[]>;
     
     abstract getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                                 backupLocation: string): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase
-    abstract isValid(backupDirectory?: string): boolean;
+    abstract isValid(): boolean;
     
-    abstract onCredentialsChange(onChange: () => void): void;
-
+    protected constructor(isShardedProvider: () => boolean) {
+        this.isShardedProvider = isShardedProvider;
+        _.bindAll(this, "addRestoreItem", "removeRestoreItem", "refreshPathAndRestorePoints");
+        
+        this.items.push(new restoreItem(this));
+    }
+    
     protected getFolderPathOptionsByCommand(folderPathOptionsCommand: any): JQueryPromise<string[]> {
-        const optionsListDeferred = $.Deferred<string[]>();
+        return folderPathOptionsCommand.execute()
+            .then((result: Raven.Server.Web.Studio.FolderPathOptions) => result.List);
+    }
+    
+    refreshPathAndRestorePoints() {
+        this.updateBackupDirectoryPathOptions();
+        this.fetchRestorePoints();
+    }
+
+    updateBackupDirectoryPathOptions() {
+        this.items().forEach(item => {
+            item.updateBackupDirectoryPathOptions();
+        });
+    }
+
+    clearRestorePoints() {
+        this.items().forEach(item => {
+            item.clearRestorePoints();
+        });
+    }
+
+    fetchRestorePoints() {
+        if (!this.isValid()) {
+            this.clearRestorePoints();
+            return;
+        }
         
-        folderPathOptionsCommand.execute()
-            .done((result: Raven.Server.Web.Studio.FolderPathOptions) => optionsListDeferred.resolve(result.List));
-        
-        return optionsListDeferred;
+        this.items().forEach((item) => {
+            item.fetchRestorePoints();
+        });
+    }
+    
+    addRestoreItem() {
+        const newItem = new restoreItem(this);
+        this.items.push(newItem);
+        this.refreshPathAndRestorePoints();
+    }
+
+    removeRestoreItem(item: restoreItem) {
+        this.items.remove(item);
     }
 }
 
 export class localServerCredentials extends restoreSettings {
     backupStorageType: restoreSource = 'local'; 
     backupStorageTypeText ='Local Server Directory';
-    mandatoryFieldsText = "Backup Directory";
 
-    backupDirectory = ko.observable<string>();
-    folderContent = ko.pureComputed(() => this.backupDirectory());
+    fetchRestorePointsCommand = (item: restoreItem) => {
+        const shardNumber = item.shardNumber();
+        return getRestorePointsCommand.forServerLocal(item.folderName(), item.nodeTag(), true, shardNumber);
+    };
 
-    fetchRestorePointsCommand = (backupDirectory: string = this.backupDirectory(), shardNumber: number = null) =>
-        getRestorePointsCommand.forServerLocal(backupDirectory, true, shardNumber);
-
-    getFolderPathOptions(backupDirectory: string = this.backupDirectory()) {
-        return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forServerLocal(backupDirectory, true))
+    getFolderPathOptions(folderName: string, nodeTag: string) {
+        return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forServerLocal(folderName, true, nodeTag));
     }
 
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
@@ -57,25 +232,21 @@ export class localServerCredentials extends restoreSettings {
     }
 
     isValid(): boolean {
-        return !!_.trim(this.backupDirectory());
+        return true;
     }
 
-    onCredentialsChange(onChange: () => void) {
-        this.backupDirectory.throttle(300).subscribe((onChange));
+    registerWatchers() {
+        // empty by design 
     }
     
-    static empty(): localServerCredentials {
-        return new localServerCredentials();
+    static empty(isShardedProvider: () => boolean): localServerCredentials {
+        return new localServerCredentials(isShardedProvider);
     }
 }
 
 export class amazonS3Credentials extends restoreSettings {
     backupStorageType: restoreSource = "amazonS3";
     backupStorageTypeText = "Amazon S3";
-    mandatoryFieldsText = "required fields";
-    
-    remoteFolder = ko.observable<string>();
-    folderContent = ko.pureComputed(() => this.remoteFolder());
     
     sessionToken = ko.observable<string>("");
     
@@ -89,7 +260,7 @@ export class amazonS3Credentials extends restoreSettings {
     accessKeyPropertyName = ko.pureComputed(() => s3Settings.getAccessKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
     secretKeyPropertyName = ko.pureComputed(() => s3Settings.getSecretKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
 
-    toDto(): Raven.Client.Documents.Operations.Backups.S3Settings {
+    toDto(remoteFolderName: string): Raven.Client.Documents.Operations.Backups.S3Settings {
         let selectedRegion = _.trim(this.regionName()).toLowerCase();
         const foundRegion = amazonSettings.availableAwsRegionEndpointsStatic.find(x => amazonSettings.getDisplayRegionName(x).toLowerCase() === selectedRegion);
         if (foundRegion) {
@@ -102,7 +273,7 @@ export class amazonS3Credentials extends restoreSettings {
             AwsRegionName: selectedRegion,
             BucketName: _.trim(this.bucketName()),
             AwsSessionToken: this.sessionToken(),
-            RemoteFolderName: _.trim(this.remoteFolder()),
+            RemoteFolderName: remoteFolderName,
             Disabled: false,
             GetBackupConfigurationScript: null,
             CustomServerUrl: this.useCustomS3Host() ? this.customServerUrl() : null,
@@ -128,17 +299,19 @@ export class amazonS3Credentials extends restoreSettings {
         });
     }
 
-    fetchRestorePointsCommand = () => getRestorePointsCommand.forS3Backup(this.toDto(), true);
+    fetchRestorePointsCommand = (item: restoreItem) => {
+        const shardNumber = item.shardNumber();
+        return getRestorePointsCommand.forS3Backup(this.toDto(item.folderName()), true, shardNumber);
+    };
 
-    getFolderPathOptions() {
-        return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "S3"));
+    getFolderPathOptions(folderName: string) {
+        return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(folderName), "S3"));
     }
 
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                        backupLocation: string) {
         const amazonS3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
-        amazonS3Configuration.Settings = this.toDto();
-        amazonS3Configuration.Settings.RemoteFolderName = backupLocation;
+        amazonS3Configuration.Settings = this.toDto(backupLocation);
         (amazonS3Configuration as any as restoreTypeAware).Type = "S3";
         return amazonS3Configuration;
     }
@@ -154,18 +327,22 @@ export class amazonS3Credentials extends restoreSettings {
                (!useCustomHost || !!_.trim(this.customServerUrl()));
     }
 
-    onCredentialsChange(onChange: () => void) {
+    registerWatchers() {
+        const onChange = () => {
+            this.updateBackupDirectoryPathOptions();
+            this.fetchRestorePoints();
+        }
+        
         this.accessKey.throttle(300).subscribe(onChange);
         this.secretKey.throttle(300).subscribe(onChange);
         this.regionName.throttle(300).subscribe(onChange);
         this.bucketName.throttle(300).subscribe(onChange);
-        this.remoteFolder.throttle(300).subscribe(onChange);
         this.customServerUrl.throttle(300).subscribe(onChange);
         this.forcePathStyle.throttle(300).subscribe(onChange);
     }
     
-    static empty(): amazonS3Credentials {
-        return new amazonS3Credentials();
+    static empty(isShardedProvider: () => boolean): amazonS3Credentials {
+        return new amazonS3Credentials(isShardedProvider);
     }
     
     update(credentialsDto: federatedCredentials) {
@@ -173,47 +350,48 @@ export class amazonS3Credentials extends restoreSettings {
         this.regionName(credentialsDto.AwsRegionName);
         this.secretKey(credentialsDto.AwsSecretKey);
         this.bucketName(credentialsDto.BucketName);
-        this.remoteFolder(credentialsDto.RemoteFolderName);
         this.sessionToken(credentialsDto.AwsSessionToken);
+        
+        const item = new restoreItem(this);
+        item.folderName(credentialsDto.RemoteFolderName);
+        this.items([item]);
     }
 }
 
 export class azureCredentials extends restoreSettings {
     backupStorageType: restoreSource = "azure";
     backupStorageTypeText = "Azure";
-    mandatoryFieldsText = "required fields";
-    
-    remoteFolder = ko.observable<string>();
-    folderContent = ko.pureComputed(() => this.remoteFolder());
     
     accountName = ko.observable<string>();
     accountKey = ko.observable<string>();
     sasToken = ko.observable<string>();
     container = ko.observable<string>();
     
-    toDto(): Raven.Client.Documents.Operations.Backups.AzureSettings {
+    toDto(remoteFolderName: string): Raven.Client.Documents.Operations.Backups.AzureSettings {
         return {
             AccountKey: _.trim(this.accountKey()),
             SasToken: _.trim(this.sasToken()),
             AccountName: _.trim(this.accountName()),
             StorageContainer: _.trim(this.container()),
-            RemoteFolderName: _.trim(this.remoteFolder()),
+            RemoteFolderName: remoteFolderName,
             Disabled: false,
             GetBackupConfigurationScript: null
         }
     }
 
-    fetchRestorePointsCommand = () => getRestorePointsCommand.forAzureBackup(this.toDto(), true);
+    fetchRestorePointsCommand = (item: restoreItem) => {
+        const shardNumber = item.shardNumber();
+        return getRestorePointsCommand.forAzureBackup(this.toDto(item.folderName()), true, shardNumber);
+    };
 
-    getFolderPathOptions() {
-        return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "Azure"))
+    getFolderPathOptions(folderName: string) {
+        return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(folderName), "Azure"))
     }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                        backupLocation: string) {
         const azureConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromAzureConfiguration;
-        azureConfiguration.Settings = this.toDto();
-        azureConfiguration.Settings.RemoteFolderName = backupLocation;
+        azureConfiguration.Settings = this.toDto(backupLocation);
         (azureConfiguration as any as restoreTypeAware).Type = "Azure";
         return azureConfiguration;
     }
@@ -222,58 +400,63 @@ export class azureCredentials extends restoreSettings {
         return !!_.trim(this.accountName()) && !!_.trim(this.accountKey()) && !!_.trim(this.container());
     }
     
-    onCredentialsChange(onChange: () => void) {
-        this.accountKey.throttle(300).subscribe((onChange));
-        this.sasToken.throttle(300).subscribe((onChange));
+    registerWatchers() {
+        const onChange = () => {
+            this.updateBackupDirectoryPathOptions();
+            this.fetchRestorePoints();
+        }
+        
+        this.accountKey.throttle(300).subscribe(onChange);
+        this.sasToken.throttle(300).subscribe(onChange);
         this.accountName.throttle(300).subscribe(onChange);
         this.container.throttle(300).subscribe(onChange);
-        this.remoteFolder.throttle(300).subscribe(onChange);
     }
 
-    static empty(): azureCredentials {
-        return new azureCredentials();
+    static empty(isShardedProvider: () => boolean): azureCredentials {
+        return new azureCredentials(isShardedProvider);
     }
     
     update(dto: AzureSasCredentials) {
         this.accountName(dto.AccountName);
-        this.remoteFolder(dto.RemoteFolderName);
         this.sasToken(dto.SasToken);
         this.container(dto.StorageContainer);
+        
+        const item = new restoreItem(this);
+        item.folderName(dto.RemoteFolderName);
+        this.items([item]);
     }
 }
 
 export class googleCloudCredentials extends restoreSettings {
     backupStorageType: restoreSource = 'googleCloud';
     backupStorageTypeText ='Google Cloud Platform';
-    mandatoryFieldsText = "required fields";
-    
-    remoteFolder = ko.observable<string>();
-    folderContent = ko.pureComputed(() => this.remoteFolder());
     
     bucketName = ko.observable<string>();
     googleCredentials = ko.observable<string>();
 
-    toDto(): Raven.Client.Documents.Operations.Backups.GoogleCloudSettings {
+    toDto(remoteFolderName: string): Raven.Client.Documents.Operations.Backups.GoogleCloudSettings {
         return {
             BucketName: _.trim(this.bucketName()),
             GoogleCredentialsJson: _.trim(this.googleCredentials()),
-            RemoteFolderName: _.trim(this.remoteFolder()),
+            RemoteFolderName: remoteFolderName,
             Disabled: false,
             GetBackupConfigurationScript: null
         }
     }
 
-    fetchRestorePointsCommand = () => getRestorePointsCommand.forGoogleCloudBackup(this.toDto(), true);
+    fetchRestorePointsCommand = (item: restoreItem) => {
+        const shardNumber = item.shardNumber();
+        return getRestorePointsCommand.forGoogleCloudBackup(this.toDto(item.folderName()), true, shardNumber);
+    };
 
-    getFolderPathOptions() {
-        return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "GoogleCloud"))
+    getFolderPathOptions(folderName: string) {
+        return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(folderName), "GoogleCloud"))
     }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                        backupLocation: string) {
         const googleCloudConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromGoogleCloudConfiguration;
-        googleCloudConfiguration.Settings = this.toDto();
-        googleCloudConfiguration.Settings.RemoteFolderName = backupLocation;
+        googleCloudConfiguration.Settings = this.toDto(backupLocation);
         (googleCloudConfiguration as any as restoreTypeAware).Type = "GoogleCloud";
         return googleCloudConfiguration;
     }
@@ -282,36 +465,38 @@ export class googleCloudCredentials extends restoreSettings {
         return !!_.trim(this.bucketName()) && !!_.trim(this.googleCredentials());
     }
 
-    onCredentialsChange(onChange: () => void) {
-        this.bucketName.throttle(300).subscribe((onChange));
+    registerWatchers() {
+        const onChange = () => {
+            this.updateBackupDirectoryPathOptions();
+            this.fetchRestorePoints();
+        }
+        
+        this.bucketName.throttle(300).subscribe(onChange);
         this.googleCredentials.throttle(300).subscribe(onChange);
-        this.remoteFolder.throttle(300).subscribe(onChange);
     }
     
-    static empty(): googleCloudCredentials{
-        return new googleCloudCredentials();
+    static empty(isShardedProvider: () => boolean): googleCloudCredentials{
+        return new googleCloudCredentials(isShardedProvider);
     }
 }
 
 export class ravenCloudCredentials extends restoreSettings {
     backupStorageType: restoreSource = "cloud";
     backupStorageTypeText = "RavenDB Cloud";
-    mandatoryFieldsText = "Backup Link";
     
     backupLink = ko.observable<string>();
     isBackupLinkValid = ko.observable<boolean>();
-    folderContent = ko.pureComputed(() => this.backupLink());
     
     timeLeft = ko.observable<moment.Moment>(null);
     timeLeftText: KnockoutComputed<string>;
 
     cloudBackupProvider = ko.observable<BackupStorageType>();
-    amazonS3 = ko.observable<amazonS3Credentials>(amazonS3Credentials.empty());
-    azure = ko.observable<azureCredentials>(azureCredentials.empty());
+    amazonS3 = ko.observable<amazonS3Credentials>(amazonS3Credentials.empty(() => this.isShardedProvider()));
+    azure = ko.observable<azureCredentials>(azureCredentials.empty(() => this.isShardedProvider()));
     //googleCloud = ko.observable<googleCloudCredentials>(null); // todo: add when Raven Cloud supports this
 
-    constructor() {
-        super();
+    constructor(isShardedProvider: () => boolean) {
+        super(isShardedProvider);
         
         this.timeLeftText = ko.pureComputed(() => {
             const timeLeft = this.timeLeft();
@@ -352,7 +537,7 @@ export class ravenCloudCredentials extends restoreSettings {
             AwsAccessKey: _.trim(s3.accessKey()),
             AwsRegionName: _.trim(s3.regionName()),
             BucketName: _.trim(s3.bucketName()),
-            RemoteFolderName: _.trim(s3.remoteFolder()),
+            RemoteFolderName: this.items()[0].folderName(),
             Disabled: false,
             GetBackupConfigurationScript: null,
             //TODO RavenDB-14716
@@ -370,19 +555,21 @@ export class ravenCloudCredentials extends restoreSettings {
             AccountName: azure.accountName(),
             Disabled: false,
             GetBackupConfigurationScript: null,
-            RemoteFolderName: azure.remoteFolder(),
+            RemoteFolderName: this.items()[0].folderName(),
             SasToken: azure.sasToken()
         } 
     }
     
     // toGoogleCloudDto() // todo: add when Raven Cloud supports this
 
-    fetchRestorePointsCommand = () => {
+    fetchRestorePointsCommand = (item: restoreItem) => {
+        const shardNumber = item.shardNumber();
+        
         switch (this.cloudBackupProvider()) {
             case "S3":
-                return getRestorePointsCommand.forS3Backup(this.toAmazonS3Dto(), true);
+                return getRestorePointsCommand.forS3Backup(this.toAmazonS3Dto(), true, shardNumber);
             case "Azure":
-                return getRestorePointsCommand.forAzureBackup(this.toAzureDto(), true)
+                return getRestorePointsCommand.forAzureBackup(this.toAzureDto(), true, shardNumber)
             default:
                 throw new Error("Unable to fetch restore points, unknown provider: " + this.cloudBackupProvider());
         }
@@ -417,14 +604,14 @@ export class ravenCloudCredentials extends restoreSettings {
     }
     
     isValid(): boolean {
-        return !!_.trim(this.backupLink()) && this.isBackupLinkValid();
+        return true; 
     }
 
-    onCredentialsChange(onChange: (newValue: string) => void) {
-        this.backupLink.throttle(300).subscribe((backupLinkNewValue) => onChange(backupLinkNewValue));
+    registerWatchers() {
+        // empty by design
     }
-    
-    static empty() {
-        return new ravenCloudCredentials();
+
+    static empty(isShardedProvider: () => boolean) {
+        return new ravenCloudCredentials(isShardedProvider);
     }
 }

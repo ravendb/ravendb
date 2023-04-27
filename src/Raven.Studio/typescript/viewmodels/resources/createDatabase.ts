@@ -62,7 +62,6 @@ class createDatabase extends dialogViewModelBase {
     databaseLocationInfoMessage: KnockoutComputed<string>;
 
     recentPathsAutocomplete: lastUsedAutocomplete;
-    backupFolderPathOptions = ko.observableArray<string>([]);
     sourceJournalsPathOptions = ko.observableArray<string>([]);
     
     pathOptions = ko.observableArray<{ path: string, isRecent: boolean }>([]);
@@ -172,7 +171,7 @@ class createDatabase extends dialogViewModelBase {
         });
         
         this.databaseModel.restore.backupEncryptionKey.subscribe(key => {
-            const restorePoint = this.databaseModel.restore.selectedRestorePoint();
+            const restorePoint = this.databaseModel.restore.restoreSourceObject()?.items()[0]?.selectedRestorePoint();
             if (restorePoint && restorePoint.isEncrypted && restorePoint.isSnapshotRestore) {
                 // update database encryption key to match backup encryption key
                 this.databaseModel.encryption.key(key);
@@ -305,18 +304,14 @@ class createDatabase extends dialogViewModelBase {
             }
         });
         
-        const updatePathAndRestorePoints = () => {
-            this.updateBackupDirectoryPathOptions();
-            this.databaseModel.fetchRestorePoints();
-        };
         
-        this.databaseModel.restore.azureCredentials().onCredentialsChange(updatePathAndRestorePoints);
-        this.databaseModel.restore.amazonS3Credentials().onCredentialsChange(updatePathAndRestorePoints);
-        this.databaseModel.restore.googleCloudCredentials().onCredentialsChange(updatePathAndRestorePoints);
-        this.databaseModel.restore.localServerCredentials().onCredentialsChange(updatePathAndRestorePoints);
+        this.databaseModel.restore.azureCredentials().registerWatchers();
+        this.databaseModel.restore.amazonS3Credentials().registerWatchers();
+        this.databaseModel.restore.googleCloudCredentials().registerWatchers();
+        this.databaseModel.restore.localServerCredentials().registerWatchers();
         
-        this.databaseModel.restoreSourceObject.subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
+        this.databaseModel.restore.restoreSourceObject.subscribe((obj) => {
+            obj.updateBackupDirectoryPathOptions();
         });
 
         this.databaseLocationInfoToDisplay = ko.pureComputed(() => {
@@ -400,17 +395,11 @@ class createDatabase extends dialogViewModelBase {
                 this.pathOptions(result);
             });
     }
-    
-    updateBackupDirectoryPathOptions() {
-        this.databaseModel.restoreSourceObject().getFolderPathOptions()
-            .done((optionsList: string[]) => this.backupFolderPathOptions(optionsList));
-    }
 
     private getLocalFolderPaths(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
         return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
             .execute();
     }
-    
 
     updateSourceJournalsPathOptions(path: string) {
         this.getLocalFolderPaths(path)
@@ -448,17 +437,7 @@ class createDatabase extends dialogViewModelBase {
 
             const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
 
-            let allShardingBackupDirectoriesValid = true;
-
-            if (this.databaseModel.restore.enableSharding()) {
-                this.databaseModel.restore.shardingBackupDirectories().forEach(x => {
-                    if (!this.isValid(x.validationGroup)) {
-                        allShardingBackupDirectoriesValid = false
-                    }
-                });
-            }
-
-            const allValid = globalValid && _.every(sectionsValidityList, x => !!x) && allShardingBackupDirectoriesValid;
+            const allValid = globalValid && _.every(sectionsValidityList, x => !!x);
 
             if (allValid) {
                 // disable validation for name as it might display error: database already exists
@@ -553,7 +532,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     findRestoreSourceLabel() {
-        return this.databaseModel.restoreSourceObject().backupStorageTypeText;
+        return this.databaseModel.restore.restoreSourceObject().backupStorageTypeText;
     }
 
     toggleSelectAll() {
