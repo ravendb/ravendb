@@ -9,6 +9,7 @@ using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -196,7 +197,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries, RavenArchitecture.AllX64)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         [ClassData(typeof(TestDataForDocChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenStoreMultipleTimeSeriesOfDocThatHasEtagOfMultipleBatchAhead(
@@ -262,7 +263,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries, RavenArchitecture.AllX64)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenRemoveWholeSegment_ShouldDestBeAsSrc(
             string justForXUint,

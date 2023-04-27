@@ -1740,7 +1740,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
         }
 
-        [Theory]
+        [RavenMultiplatformTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries, RavenArchitecture.AllX64)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndMultipleSegmentOfTimeSeriesInAnotherSession_ShouldDestBeAsSrc(
             string justForXUint,
