@@ -24,7 +24,7 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : PlatformDetails.Is32Bits ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
         [Fact]
         public async Task Run()
         {
