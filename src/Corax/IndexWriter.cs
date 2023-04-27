@@ -1454,8 +1454,8 @@ namespace Corax
                     continue; 
 
                 InsertTextualField(fieldsTree, entriesToTermsTree, indexedField, workingBuffer, ref keys);
-                InsertNumericFieldLongs(fieldsTree, indexedField, workingBuffer);
-                InsertNumericFieldDoubles(fieldsTree, indexedField, workingBuffer);
+                InsertNumericFieldLongs(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
+                InsertNumericFieldDoubles(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
             }
 
             if (_dynamicFieldsTerms != null)
@@ -1463,8 +1463,8 @@ namespace Corax
                 foreach (var (_, indexedField) in _dynamicFieldsTerms)
                 {
                     InsertTextualField(fieldsTree, entriesToTermsTree, indexedField, workingBuffer, ref keys);
-                    InsertNumericFieldLongs(fieldsTree, indexedField, workingBuffer);
-                    InsertNumericFieldDoubles(fieldsTree, indexedField, workingBuffer);
+                    InsertNumericFieldLongs(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
+                    InsertNumericFieldDoubles(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
 
                 }
             }
@@ -1812,10 +1812,13 @@ namespace Corax
             return AddEntriesToTermResult.NothingToDo;
         }
 
-        private unsafe void InsertNumericFieldLongs(Tree fieldsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        private unsafe void InsertNumericFieldLongs(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
             FixedSizeTree fieldTree = fieldsTree.FixedTreeFor(indexedField.NameLong, sizeof(long));
-          
+            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(long)); 
+
+            _entriesAlreadyAdded.Clear();
+            
             foreach (var (term, entries) in indexedField.Longs)
             {
                 // We are not going to be using these entries anymore after this. 
@@ -1824,6 +1827,23 @@ namespace Corax
                 var localEntry = entries;
                 if (localEntry.HasChanges() == false)
                     continue;
+                
+                var removals = entries.Removals;
+                for (int i = 0; i < removals.Length; i++)
+                {
+                    // if already added, we don't need to remove it in this batch
+                    if(_entriesAlreadyAdded.Contains(removals[i])) 
+                        continue;
+                    entriesToTerms.Delete(removals[i]);
+                }
+                var additions = entries.Additions;
+                for (int i = 0; i < additions.Length; i++)
+                {
+                    if(_entriesAlreadyAdded.Add(additions[i]) == false)
+                        continue;
+                    entriesToTerms.Add(additions[i], term);
+                }
+                
                 
                 long termId;
                 using var _ = fieldTree.Read(term, out var result);
@@ -1849,10 +1869,12 @@ namespace Corax
             }
         }
         
-        private unsafe void InsertNumericFieldDoubles(Tree fieldsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        private unsafe void InsertNumericFieldDoubles(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
             var fieldTree = fieldsTree.FixedTreeForDouble(indexedField.NameDouble, sizeof(long));
+            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(double)); 
 
+            _entriesAlreadyAdded.Clear();
             foreach (var (term, entries) in indexedField.Doubles)
             {
                 // We are not going to be using these entries anymore after this. 
@@ -1861,6 +1883,22 @@ namespace Corax
                 var localEntry = entries;
                 if (localEntry.HasChanges() == false)
                     continue;
+                
+                var removals = entries.Removals;
+                for (int i = 0; i < removals.Length; i++)
+                {
+                    // if already added, we don't need to remove it in this batch
+                    if(_entriesAlreadyAdded.Contains(removals[i])) 
+                        continue;
+                    entriesToTerms.Delete(removals[i]);
+                }
+                var additions = entries.Additions;
+                for (int i = 0; i < additions.Length; i++)
+                {
+                    if(_entriesAlreadyAdded.Add(additions[i]) == false)
+                        continue;
+                    entriesToTerms.Add(additions[i], term);
+                }
                 
                 using var _ = fieldTree.Read(term, out var result);
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Corax.Mappings;
@@ -20,39 +21,36 @@ public unsafe class SortingMatchHeapTests: NoDisposalNeeded
     }
     
     
+    public struct DataComparer : IComparer<long>
+    {
+        public int Compare(long x, long y)
+        {
+            var xd = Data.First(i => i.Key == x);
+            var yd = Data.First(i => i.Key ==  y);
+            return string.Compare(xd.Value, yd.Value, StringComparison.Ordinal);
+        }
+    }
+    
     [Fact]
     public void DifferentPagesSortProperly()
     {
-        var buffer5 = stackalloc byte[1024];
-        var buffer10 = stackalloc byte[1024];
-        var heap5 = new SortingMatchHeap<AscendingMatchComparer, SequenceItem>(
-            new AscendingMatchComparer(),
-            buffer5, 5);
-        var heap10 = new SortingMatchHeap<AscendingMatchComparer, SequenceItem>(
-            new AscendingMatchComparer(),
-            buffer10, 10);
+        var buffer5 = stackalloc long[5];
+        var buffer10 = stackalloc long[10];
+        var heap5 = new SortingMatchHeap<DataComparer>(new DataComparer());
+        var heap10 = new SortingMatchHeap<DataComparer>(new DataComparer());
+        heap5.Set(buffer5, null, 5);
+        heap10.Set(buffer10, null, 10);
         using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         
         foreach ((long k, string id, string val) in Data)
         {
-            Slice.From(allocator, val, out Slice s);
-            heap5.Add(new MatchComparer<AscendingMatchComparer, SequenceItem>.Item
-            {
-                Key = k,
-                Value = new SequenceItem(s.Content.Ptr, s.Size)
-            });
+            heap5.Add(k,0);
         }
         
           
         foreach ((long k, string id, string val) in Data)
         {
-            Slice.From(allocator, val , out Slice s);
-    
-            heap10.Add(new MatchComparer<AscendingMatchComparer, SequenceItem>.Item
-            {
-                Key = k,
-                Value = new SequenceItem(s.Content.Ptr, s.Size)
-            });
+            heap10.Add(k,0);
         }
 
         var fill5 = new long[5];
@@ -72,7 +70,7 @@ public unsafe class SortingMatchHeapTests: NoDisposalNeeded
          Assert.Equal(expected10, actual10);
     }
     
-    public (long Key, string Id, string Value)[] Data => new (long Key, string Id, string Value)[]
+    public static (long Key, string Id, string Value)[] Data => new (long Key, string Id, string Value)[]
     {
         (4456544, "testitems/2", "2012-09-11T00:00:00.0000000"), (4456548, "testitems/2", "2012-02-27T00:00:00.0000000"),
         (4456552, "testitems/2", "2012-02-09T00:00:00.0000000"), (4456556, "testitems/2", "2012-09-13T00:00:00.0000000"),
