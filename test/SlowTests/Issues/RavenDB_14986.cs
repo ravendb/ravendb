@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CanSetFieldStorageNoAndFieldIndexingNoInMapReduceCorax(Options options) => CanSetFieldStorageNoAndFieldIndexingNoInMapReduce(options, simpleMapReduceErrors =>
         {
-            Assert.Equal(1, simpleMapReduceErrors.Errors.Length);
+            Assert.Equal(25, simpleMapReduceErrors.Errors.Length);
             Assert.True(simpleMapReduceErrors.Errors.All(x => x.Error.Contains("that is neither indexed nor stored is useless because it cannot be searched or retrieved.")));
         });
 

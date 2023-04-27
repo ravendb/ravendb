@@ -109,9 +109,6 @@ public static class CoraxIndexingHelpers
         
         foreach (var field in indexDefinition.IndexFields.Values)
         {
-            if (forQuerying == false && index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No)
-                throw new InvalidOperationException($"A field `{field.Name}` that is neither indexed nor stored is useless because it cannot be searched or retrieved.");
-            
             var fieldName = field.Name;
             Slice.From(context, fieldName, out Slice fieldNameSlice);
             var fieldId = field.Id;
