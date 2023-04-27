@@ -1,11 +1,10 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import classNames from "classnames";
 import { Icon } from "./Icon";
-import { Input } from "reactstrap";
 import IconName from "typings/server/icons";
 
 export interface RadioToggleWithIconInputItem<T extends string | number = string> {
-    label: string;
+    label: string | ReactNode | ReactNode[];
     value: T;
     iconName: IconName;
 }
