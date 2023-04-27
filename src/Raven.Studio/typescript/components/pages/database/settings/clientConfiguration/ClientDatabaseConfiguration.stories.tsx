@@ -4,6 +4,7 @@ import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import ClientDatabaseConfiguration from "./ClientDatabaseConfiguration";
 import { mockServices } from "test/mocks/services/MockServices";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Pages/Database/Settings/ClientConfiguration",
@@ -11,20 +12,28 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof ClientDatabaseConfiguration>;
 
-export const WithGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
+function commonInit() {
+    const { accessManager } = mockStore;
     const { manageServerService } = mockServices;
 
-    manageServerService.withGetGlobalClientConfiguration();
+    accessManager.with_securityClearance("ClusterAdmin");
     manageServerService.withGetDatabaseClientConfiguration();
+}
+
+export const WithGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
+    commonInit();
+
+    const { manageServerService } = mockServices;
+    manageServerService.withGetGlobalClientConfiguration();
 
     return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
 };
 
 export const WithoutGlobalConfiguration: ComponentStory<typeof ClientDatabaseConfiguration> = () => {
-    const { manageServerService } = mockServices;
+    commonInit();
 
+    const { manageServerService } = mockServices;
     manageServerService.withThrowingGetGlobalClientConfiguration();
-    manageServerService.withGetDatabaseClientConfiguration();
 
     return <ClientDatabaseConfiguration db={DatabasesStubs.nonShardedSingleNodeDatabase()} />;
 };
