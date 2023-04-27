@@ -102,6 +102,7 @@ namespace FastTests
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
+                            [RavenConfiguration.GetKey(x => x.Queries.RegexTimeout)] = (250).ToString()
                         }
                     };
 
@@ -635,7 +636,7 @@ namespace FastTests
             {
             }
 
-            public static Options ForSearchEngine( RavenSearchEngineMode mode)
+            public static Options ForSearchEngine(RavenSearchEngineMode mode)
             {
                 var config = new RavenTestParameters() {SearchEngine = mode};
                 return ForSearchEngine(config);
