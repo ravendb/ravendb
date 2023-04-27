@@ -20,33 +20,34 @@ type FormToggleProps<TFieldValues extends FieldValues, TName extends FieldPath<T
     TFieldValues,
     TName
 > &
-    Omit<CheckboxProps, "selected" | "toggleSelection"> &
-    ExternalProps;
-
-interface FormSelectOptionProps<T extends string | number = string> {
-    value: T;
-    label: string;
-}
-interface ExternalProps {
-    afterChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-}
+    Omit<CheckboxProps, "selected" | "toggleSelection">;
 
 export function FormInput<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(props: FormElementProps<TFieldValues, TName> & FormInputProps & ExternalProps) {
+>(props: FormElementProps<TFieldValues, TName> & FormInputProps) {
     return <FormInputGeneral {...props} />;
 }
 
 export function FormSelect<
+    TOption extends string | number,
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(props: FormElementProps<TFieldValues, TName> & Omit<InputProps, "type"> & ExternalProps) {
-    return <FormInputGeneral type="select" {...props} />;
-}
+>(
+    props: FormElementProps<TFieldValues, TName> &
+        Omit<InputProps, "type"> & { options: valueAndLabelItem<TOption, string>[] }
+) {
+    const { options, ...rest } = props;
 
-export function FormSelectOption<T extends string | number = string>({ value, label }: FormSelectOptionProps<T>) {
-    return <option value={value}>{label}</option>;
+    return (
+        <FormInputGeneral type="select" {...rest}>
+            {options.map((x) => (
+                <option key={x.value} value={x.value}>
+                    {x.label}
+                </option>
+            ))}
+        </FormInputGeneral>
+    );
 }
 
 export function FormCheckbox<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
@@ -70,9 +71,8 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
 function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
->(props: FormElementProps<TFieldValues, TName> & InputProps & ExternalProps) {
-    const { name, control, defaultValue, rules, shouldUnregister, children, afterChange, type, ...restInputProps } =
-        props;
+>(props: FormElementProps<TFieldValues, TName> & InputProps) {
+    const { name, control, defaultValue, rules, shouldUnregister, children, type, ...rest } = props;
 
     const {
         field: { onChange, onBlur, value },
@@ -91,13 +91,10 @@ function FormInputGeneral<
                 name={name}
                 type={type}
                 onBlur={onBlur}
-                onChange={(x) => {
-                    onChange(x);
-                    afterChange?.(x);
-                }}
+                onChange={onChange}
                 value={value == null ? "" : value}
                 invalid={invalid}
-                {...restInputProps}
+                {...rest}
             >
                 {children}
             </Input>
@@ -109,7 +106,7 @@ function FormInputGeneral<
 function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
     props: FormToggleProps<TFieldValues, TName> & { type: Extract<InputType, "checkbox" | "switch" | "radio"> }
 ) {
-    const { name, control, rules, defaultValue, type, shouldUnregister, afterChange, ...rest } = props;
+    const { name, control, rules, defaultValue, type, shouldUnregister, ...rest } = props;
 
     const {
         field: { onChange, onBlur, value },
@@ -141,10 +138,7 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
         <div>
             <ToggleComponent
                 selected={!!value}
-                toggleSelection={(x) => {
-                    onChange(x);
-                    afterChange?.(x);
-                }}
+                toggleSelection={onChange}
                 invalid={invalid}
                 onBlur={onBlur}
                 {...rest}

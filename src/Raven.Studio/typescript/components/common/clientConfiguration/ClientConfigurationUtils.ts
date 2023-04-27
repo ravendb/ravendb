@@ -1,7 +1,32 @@
 import { ClientConfigurationFormData } from "./ClientConfigurationValidation";
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
+import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
+import assertUnreachable from "components/utils/assertUnreachable";
+import { exhaustiveStringTuple } from "components/utils/common";
 
 export default class ClientConfigurationUtils {
+    static allReadBalanceBehaviors = exhaustiveStringTuple<ReadBalanceBehavior>()("None", "RoundRobin", "FastestNode");
+
+    static formatReadBalanceBehavior(readBalanceBehavior: ReadBalanceBehavior) {
+        switch (readBalanceBehavior) {
+            case "None":
+                return "None";
+            case "RoundRobin":
+                return "Round Robin";
+            case "FastestNode":
+                return "Fastest node";
+            default:
+                assertUnreachable(readBalanceBehavior);
+        }
+    }
+
+    static getReadBalanceBehaviorOptions(): valueAndLabelItem<ReadBalanceBehavior, string>[] {
+        return ClientConfigurationUtils.allReadBalanceBehaviors.map((value) => ({
+            value,
+            label: ClientConfigurationUtils.formatReadBalanceBehavior(value),
+        }));
+    }
+
     static mapToFormData(dto: ClientConfiguration, isGlobal: boolean): ClientConfigurationFormData {
         if (!dto) {
             return {
