@@ -1,4 +1,6 @@
 using System;
+using System.Buffers.Binary;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace Sparrow.Binary
@@ -15,9 +17,13 @@ namespace Sparrow.Binary
         //https://stackoverflow.com/questions/2709430/count-number-of-bits-in-a-64-bit-long-big-integer
         public static long NumberOfSetBits(long i)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.PopCount((ulong)i);
+#else
             i = i - ((i >> 1) & 0x5555555555555555);
             i = (i & 0x3333333333333333) + ((i >> 2) & 0x3333333333333333);
             return (((i + (i >> 4)) & 0xF0F0F0F0F0F0F0F) * 0x101010101010101) >> 56;
+#endif
         }
 
 
@@ -139,33 +145,49 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LeadingZeroes(int n)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.LeadingZeroCount((uint)n);
+#else
             if (n == 0)
                 return 32;
             return 31 - MostSignificantBit(n);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LeadingZeroes(uint n)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.LeadingZeroCount(n);
+#else
             if (n == 0)
                 return 32;
             return 31 - MostSignificantBit(n);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LeadingZeroes(long n)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.LeadingZeroCount((ulong)n);
+#else
             if (n == 0)
                 return 64;
             return 63 - MostSignificantBit(n);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LeadingZeroes(ulong n)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.LeadingZeroCount(n);
+#else
             if (n == 0)
                 return 64;
             return 63 - MostSignificantBit(n);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -205,6 +227,10 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int FloorLog2(uint n)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.Log2(n);
+#else
+
             uint v = n;
             v |= v >> 1; // first round down to one less than a power of 2 
             v |= v >> 2;
@@ -213,11 +239,15 @@ namespace Sparrow.Binary
             v |= v >> 16;
 
             return MultiplyDeBruijnBitPosition[(uint)(v * 0x07C4ACDDU) >> 27];
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int FloorLog2(int n)
         {
+#if NET6_0_OR_GREATER
+            return BitOperations.Log2((uint)n);
+#else
             int v = n;
             v |= v >> 1; // first round down to one less than a power of 2 
             v |= v >> 2;
@@ -226,6 +256,7 @@ namespace Sparrow.Binary
             v |= v >> 16;
 
             return MultiplyDeBruijnBitPosition[(uint)(v * 0x07C4ACDDU) >> 27];
+#endif
         }
 
         private static readonly int[] powerOf2Table =
@@ -251,17 +282,25 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int PowerOf2(int v)
         {
+#if NET6_0_OR_GREATER
+            return (int)BitOperations.RoundUpToPowerOf2((uint)v);
+#else
             if (v < powerOf2Table.Length)
                 return powerOf2Table[v];
             return PowerOf2Internal(v);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long PowerOf2(long v)
         {
+#if NET6_0_OR_GREATER
+            return (long)BitOperations.RoundUpToPowerOf2((ulong)v);
+#else
             if (v < powerOf2Table.Length)
                 return powerOf2Table[v];
             return PowerOf2Internal(v);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -337,10 +376,14 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint SwapBytes(uint value)
         {
+#if NET6_0_OR_GREATER
+            return BinaryPrimitives.ReverseEndianness(value);
+#else
             return ((value & 0xff000000) >> 24) |
                    ((value & 0x00ff0000) >> 8)  |
                    ((value & 0x0000ff00) << 8)  |
                    ((value & 0x000000ff) << 24);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -358,6 +401,10 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong SwapBytes(ulong value)
         {
+#if NET6_0_OR_GREATER
+            return BinaryPrimitives.ReverseEndianness(value);
+#else
+
             return (((value & 0xff00000000000000UL) >> 56) |
                     ((value & 0x00ff000000000000UL) >> 40) |
                     ((value & 0x0000ff0000000000UL) >> 24) |
@@ -366,6 +413,7 @@ namespace Sparrow.Binary
                     ((value & 0x0000000000ff0000UL) << 24) |
                     ((value & 0x000000000000ff00UL) << 40) |
                     ((value & 0x00000000000000ffUL) << 56));
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -396,6 +444,20 @@ namespace Sparrow.Binary
         public static bool IsPowerOfTwo(int value)
         {
             return value != 0 && (value & (value - 1)) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ByteForBit(int idx)
+        {
+            return (uint)(idx >> (int)BitVector.Log2BitsPerByte);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte BitInByte(int idx)
+        {
+            // PERF: Will do the same thing using less bytes.
+            //       For reference this is equivalent to [ 0x80 >> (idx % (int)BitsPerByte) ]
+            return (byte)(0x80 >> (idx & (BitVector.BitsPerByte - 1)));
         }
     }
 }

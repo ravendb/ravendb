@@ -3,17 +3,12 @@ using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using System.Text;
+using static Sparrow.Binary.Bits;
 
 namespace Sparrow.Binary
 {
-    public unsafe struct PtrBitVector
+    public readonly unsafe struct PtrBitVector
     {
-        public const int BitsPerByte = 8;
-        public const int BitsPerWord = sizeof(ulong) * BitsPerByte; // 64
-        public const int BytesPerWord = sizeof(ulong) / sizeof(byte); // 8
-
-        public const uint Log2BitsPerByte = 3; // Math.Log( BitsPerByte, 2 )
-
         public readonly byte* Bits;
         public readonly int Count;
 
@@ -21,20 +16,6 @@ namespace Sparrow.Binary
         {
             Bits = (byte*)bits;
             Count = numberOfBits;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint ByteForBit(int idx)
-        {
-            return (uint)(idx >> (int)Log2BitsPerByte);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte BitInByte(int idx)
-        {
-            // PERF: Will do the same thing using less bytes.
-            //       For reference this is equivalent to [ 0x80 >> (idx % (int)BitsPerByte) ]
-            return (byte)(0x80 >> (idx & (int)(BitsPerByte - 1)));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -46,31 +27,12 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GetBitInSpan(Span<byte> ptr, int idx)
-        {
-            uint word = ByteForBit(idx);
-            byte mask = BitInByte(idx);
-            return (ptr[(int)word]& mask) != 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetBitInPointer(void* ptr, int idx, bool value)
         {
             uint word = ByteForBit(idx);
             byte mask = BitInByte(idx);
 
             byte* bytePtr = (byte*)ptr;
-            bool currentValue = (bytePtr[word] & mask) != 0;
-            if (currentValue != value)
-                bytePtr[word] ^= mask;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SetBitInSpan(Span<byte> bytePtr, int idx, bool value)
-        {
-            int word = (int)ByteForBit(idx);
-            byte mask = BitInByte(idx);
-
             bool currentValue = (bytePtr[word] & mask) != 0;
             if (currentValue != value)
                 bytePtr[word] ^= mask;
@@ -124,49 +86,49 @@ namespace Sparrow.Binary
 
             ulong* ptr = (ulong*)Bits;
             int count = Count;
-            int words = count / BitsPerWord;
+            int words = count / BitVector.BitsPerWord;
 
             ulong value;
             int i;
             int idx;
 
-            int accumulator = BitsPerWord;            
+            int accumulator = BitVector.BitsPerWord;            
             for (i = 0; i < words; i++)
             {
                 value = ptr[i];
                 if (value == 0)
                 {
-                    accumulator += BitsPerWord;
+                    accumulator += BitVector.BitsPerWord;
                     continue;
                 }
 
                 if (BitConverter.IsLittleEndian)
-                    value = Binary.Bits.SwapBytes(value);
+                    value = SwapBytes(value);
 
-                idx = accumulator - Binary.Bits.MostSignificantBit(value) - 1;
+                idx = accumulator - MostSignificantBit(value) - 1;
                 return idx < count ? idx : -1;
             }
 
             value = 0;
-            byte* bytePtr = Bits + words * BytesPerWord;
+            byte* bytePtr = Bits + words * BitVector.BytesPerWord;
 
             // We want to know how many bytes we have left. 
-            int bitsLeft = (count % BitsPerWord);
-            int rotations = bitsLeft / BitsPerByte;
-            if (bitsLeft % BitsPerByte != 0)
+            int bitsLeft = (count % BitVector.BitsPerWord);
+            int rotations = bitsLeft / BitVector.BitsPerByte;
+            if (bitsLeft % BitVector.BitsPerByte != 0)
                 rotations++;
 
             // We write the value and shift
             for (i = 0; i < rotations; i++)
             {
-                value <<= BitsPerByte; // We shift first, because shifting 0 is still 0
+                value <<= BitVector.BitsPerByte; // We shift first, because shifting 0 is still 0
                 value |= bytePtr[i];
             }
 
             // We move the value as many places as we need to fill with zeroes.
-            value <<= (BitsPerByte * (BytesPerWord - rotations));
+            value <<= (BitVector.BitsPerByte * (BitVector.BytesPerWord - rotations));
 
-            idx = accumulator - Binary.Bits.MostSignificantBit(value) - 1;
+            idx = accumulator - MostSignificantBit(value) - 1;
             return idx < count ? idx : -1;
         }
 
