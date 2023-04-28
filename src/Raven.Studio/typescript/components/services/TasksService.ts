@@ -11,6 +11,7 @@ import getManualBackupCommand from "commands/database/tasks/getManualBackupComma
 import getOngoingTaskInfoCommand from "commands/database/tasks/getOngoingTaskInfoCommand";
 import getSubscriptionConnectionDetailsCommand from "commands/database/tasks/getSubscriptionConnectionDetailsCommand";
 import dropSubscriptionConnectionCommand from "commands/database/tasks/dropSubscriptionConnectionCommand";
+import createSampleDataClassCommand from "commands/database/studio/createSampleDataClassCommand";
 
 export default class TasksService {
     async getOngoingTasks(db: database, location: databaseLocationSpecifier) {
@@ -50,5 +51,9 @@ export default class TasksService {
 
     async getManualBackup(db: database) {
         return new getManualBackupCommand(db.name).execute();
+    }
+
+    async getSampleDataClasses(db: database) {
+        return new createSampleDataClassCommand(db).execute();
     }
 }

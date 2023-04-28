@@ -1,0 +1,75 @@
+@use "variables";
+
+.token {
+    &.comment,
+    &.prolog,
+    &.token.doctype,
+    &.token.cdata {
+        color: hsl(30, 20%, 50%);
+    }
+
+    &.punctuation {
+        opacity: 0.7;
+    }
+
+    &.property,
+    &.tag,
+    &.boolean,
+    &.constant,
+    &.symbol {
+        color: variables.$token-boolean;
+    }
+
+    &.number {
+        color: variables.$token-number;
+    }
+
+    &.selector,
+    &.attr-name,
+    &.string,
+    &.char,
+    &.builtin,
+    &.inserted {
+        color: variables.$token-string;
+    }
+
+    &.operator,
+    &.entity,
+    &.url,
+    &.variable {
+        color: variables.$token-operator;
+    }
+
+    &.atrule,
+    &.attr-value,
+    &.keyword {
+        color: variables.$token-keyword;
+    }
+
+    &.regex,
+    &.important {
+        color: variables.$token-important;
+    }
+
+    &.deleted {
+        color: variables.$token-deleted;
+    }
+
+    &.important,
+    &.bold {
+        color: variables.$token-important;
+        font-weight: bold;
+    }
+
+    &.italic {
+        font-style: italic;
+    }
+
+    &.entity {
+        cursor: help;
+    }
+}
+
+.namespace {
+    opacity: 0.7;
+}

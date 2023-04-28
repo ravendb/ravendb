@@ -37,4 +37,8 @@ export default class MockTasksService extends AutoMockService<TasksService> {
             TasksStubs.subscriptionConnectionDetails()
         );
     }
+
+    withGetSampleDataClasses(dto?: MockedValue<string>) {
+        return this.mockResolvedValue(this.mocks.getSampleDataClasses, dto, TasksStubs.getSampleDataClasses());
+    }
 }

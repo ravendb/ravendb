@@ -152,24 +152,24 @@ $btn-primary-border: lighten($btn-primary-bg, 1%);
 $btn-primary-icon: inherit;
 
 $btn-success-color: colors.$gray-lighter;
-$btn-success-bg: colors.$brand-success-dark;
+$btn-success-bg: colors.$success;
 $btn-success-border: lighten($btn-success-bg, 1%);
-$btn-success-icon: colors.$brand-success-light;
+$btn-success-icon: colors.$success;
 
 $btn-info-color: colors.$gray-lighter;
-$btn-info-bg: colors.$brand-info-dark;
+$btn-info-bg: colors.$info;
 $btn-info-border: lighten($btn-info-bg, 1%);
-$btn-info-icon: colors.$brand-info-light;
+$btn-info-icon: colors.$info;
 
 $btn-warning-color: colors.$gray-lighter;
-$btn-warning-bg: colors.$brand-warning-dark;
+$btn-warning-bg: colors.$warning;
 $btn-warning-border: lighten($btn-warning-bg, 1%);
-$btn-warning-icon: colors.$brand-warning-light;
+$btn-warning-icon: colors.$warning;
 
 $btn-danger-color: colors.$gray-lighter;
-$btn-danger-bg: colors.$brand-danger-dark;
+$btn-danger-bg: colors.$danger;
 $btn-danger-border: lighten($btn-danger-bg, 1%);
-$btn-danger-icon: colors.$brand-danger-light;
+$btn-danger-icon: colors.$danger;
 
 $btn-link-disabled-color: colors.$gray-light;
 // Allows for customizing button radius independently from global border radius
@@ -478,30 +478,30 @@ $jumbotron-heading-font-size: ceil(($font-size-base * 4.5));
 //== Form states and alerts
 //
 //## Define colors for form feedback states and, by default, alerts.
-$bg-success-color: colors.$brand-success-light;
-$bg-info-color: colors.$brand-info-light;
-$bg-warning-color: colors.$brand-warning-light;
-$bg-danger-color: colors.$brand-danger-light;
+$bg-success-color: colors.$success;
+$bg-info-color: colors.$info;
+$bg-warning-color: colors.$warning;
+$bg-danger-color: colors.$danger;
 
-$bg-success-color-emphasis: lighten(colors.$brand-success-light, 5%);
-$bg-info-color-emphasis: lighten(colors.$brand-info-light, 5%);
-$bg-warning-color-emphasis: lighten(colors.$brand-warning-light, 5%);
-$bg-danger-color-emphasis: lighten(colors.$brand-danger-light, 5%);
+$bg-success-color-emphasis: lighten(colors.$success, 5%);
+$bg-info-color-emphasis: lighten(colors.$info, 5%);
+$bg-warning-color-emphasis: lighten(colors.$warning, 5%);
+$bg-danger-color-emphasis: lighten(colors.$danger, 5%);
 $bg-experimental-color-emphasis: lighten(colors.$color-5-2, 5%);
 
-$state-success-text: colors.$brand-success;
+$state-success-text: colors.$success;
 $state-success-bg: #3b583e;
 $state-success-border: darken($state-success-bg, 5%);
 
-$state-info-text: colors.$brand-info;
+$state-info-text: colors.$info;
 $state-info-bg: #294962;
 $state-info-border: darken($state-info-bg, 7%);
 
-$state-warning-text: colors.$brand-warning;
+$state-warning-text: colors.$warning;
 $state-warning-bg: #5d503b;
 $state-warning-border: darken($state-warning-bg, 5%);
 
-$state-danger-text: colors.$brand-danger;
+$state-danger-text: colors.$danger;
 $state-danger-bg: #5e3746;
 $state-danger-border: darken($state-danger-bg, 5%);
 
@@ -552,15 +552,15 @@ $popover-arrow-outer-fallback-color: darken($popover-fallback-border-color, 20%)
 //** Default label background color
 $label-default-bg: $body-bg;
 //** Primary label background color
-$label-primary-bg: colors.$brand-primary-dark;
+$label-primary-bg: colors.$primary;
 //** Success label background color
-$label-success-bg: colors.$brand-success-dark;
+$label-success-bg: colors.$success;
 //** Info label background color
-$label-info-bg: colors.$brand-info-dark;
+$label-info-bg: colors.$info;
 //** Warning label background color
-$label-warning-bg: colors.$brand-warning-dark;
+$label-warning-bg: colors.$warning;
 //** Danger label background color
-$label-danger-bg: colors.$brand-danger-dark;
+$label-danger-bg: colors.$danger;
 //** Default label text color
 $label-color: colors.$gray-lighter;
 //** Default text color of a linked label
@@ -680,29 +680,29 @@ $panel-default-border: $panel-bg;
 $panel-default-heading-bg: colors.$gray-dark;
 
 $panel-primary-text: $text-emphasis;
-$panel-primary-bg: colors.$brand-primary-dark;
+$panel-primary-bg: colors.$primary;
 $panel-primary-border: transparent;
-$panel-primary-heading-bg: colors.$brand-primary-dark;
+$panel-primary-heading-bg: colors.$primary;
 
 $panel-success-text: $text-emphasis;
-$panel-success-bg: colors.$brand-success-dark;
+$panel-success-bg: colors.$success;
 $panel-success-border: transparent;
-$panel-success-heading-bg: colors.$brand-success-dark;
+$panel-success-heading-bg: colors.$success;
 
 $panel-info-text: $text-emphasis;
-$panel-info-bg: colors.$brand-info-dark;
+$panel-info-bg: colors.$info;
 $panel-info-border: transparent;
-$panel-info-heading-bg: colors.$brand-info-dark;
+$panel-info-heading-bg: colors.$info;
 
 $panel-warning-text: $text-emphasis;
-$panel-warning-bg: colors.$brand-warning-dark;
+$panel-warning-bg: colors.$warning;
 $panel-warning-border: transparent;
-$panel-warning-heading-bg: colors.$brand-warning-dark;
+$panel-warning-heading-bg: colors.$warning;
 
 $panel-danger-text: $text-emphasis;
-$panel-danger-bg: colors.$brand-danger-dark;
+$panel-danger-bg: colors.$danger;
 $panel-danger-border: transparent;
-$panel-danger-heading-bg: colors.$brand-danger-dark;
+$panel-danger-heading-bg: colors.$danger;
 //== Thumbnails
 //
 //##
@@ -768,7 +768,7 @@ $carousel-caption-color: #fff;
 //
 //##
 $close-font-weight: normal;
-$close-color: colors.$brand-danger;
+$close-color: colors.$danger;
 $close-text-shadow: none;
 //== Code
 //
@@ -781,7 +781,7 @@ $pre-color: colors.$gray-light;
 $pre-border-color: none;
 $pre-scrollable-max-height: 340px;
 
-$code-color: colors.$brand-info-light;
+$code-color: colors.$info;
 $code-bg: $pre-bg;
 //== Type
 //

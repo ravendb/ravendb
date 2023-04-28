@@ -1,0 +1,10 @@
+@use "Content/scss/sizes";
+
+.code {
+    .code-classes {
+        height: unset;
+        padding: sizes.$gutter-xs;
+        background-color: var(--panel-bg-1);
+        border-radius: sizes.$gutter-xs;
+    }
+}

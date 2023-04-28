@@ -40,7 +40,7 @@
         height: 100%;
         min-width: 1600px;
         background-repeat: no-repeat;
-        background-image: url("../../../../../wwwroot/Content/img/documents.svg");
+        background-image: url("../../../../../../wwwroot/Content/img/documents.svg");
         left: 50%;
         transform: translateX(-50%);
         background-clip: content-box;
@@ -83,16 +83,10 @@
                 align-items: center;
                 gap: sizes.$gutter-sm;
                 padding: 0;
+                margin-bottom: sizes.$gutter;
                 h3 {
                     margin: 0;
                 }
-            }
-
-            .sample-code-classes {
-                height: unset;
-                padding: sizes.$gutter-xs;
-                background-color: var(--panel-bg-1);
-                border-radius: sizes.$gutter-xs;
             }
         }
     }

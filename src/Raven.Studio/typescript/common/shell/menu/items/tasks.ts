@@ -1,5 +1,7 @@
-﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+﻿import { bridgeToReact } from "common/reactUtils";
+import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import CreateSampleData from "components/pages/database/tasks/createSampleData/CreateSampleData";
 
 export = getTasksMenuItem;
 
@@ -43,7 +45,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/sampleData',
-            moduleId: require('viewmodels/database/tasks/createSampleData'),
+            moduleId: bridgeToReact(CreateSampleData, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Create Sample Data',
             nav: true,

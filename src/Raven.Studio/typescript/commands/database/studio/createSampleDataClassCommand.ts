@@ -3,8 +3,11 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class createSampleDataClassCommand extends commandBase {
-    constructor(private db: database) {
+    private db: database
+
+    constructor(db: database) {
         super();
+        this.db = db;
     }
 
     execute(): JQueryPromise<string> {
