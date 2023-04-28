@@ -71,9 +71,13 @@ namespace Raven.Debug.StackTrace
 
                         // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
                         // Thread id is in the frame name as "Thread (<ID>)"
-                        string template = "Thread (";
+                        const string template = "Thread (";
                         string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
-                        int threadId = int.Parse(threadFrame.Substring(template.Length, threadFrame.Length - (template.Length + 1)));
+
+                        // we are looking for the first index of ) because
+                        // we need to handle a thread name like this: Thread (4008) (.NET IO ThreadPool Worker)
+                        var firstIndex = threadFrame.IndexOf(")"); 
+                        var threadId = int.Parse(threadFrame.Substring(template.Length, firstIndex - template.Length));
 
                         if (samplesForThread.TryGetValue(threadId, out var samples))
                         {
