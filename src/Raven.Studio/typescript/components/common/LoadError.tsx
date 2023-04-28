@@ -13,7 +13,7 @@ export function LoadError(props: LoadErrorProps) {
 
     return (
         <Alert color="danger">
-            <div className="d-flex">
+            <div className="d-flex gap-1">
                 <div>
                     <strong>Error loading data</strong>
                     {error && <div>{error}</div>}
