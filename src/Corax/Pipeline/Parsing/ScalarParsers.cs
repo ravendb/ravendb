@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Corax.Pipeline.Parsing
 {
-    public class ScalarParsing
+    public static class ScalarParsers
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool ValidateAscii(ReadOnlySpan<byte> buffer)
@@ -66,6 +66,24 @@ namespace Corax.Pipeline.Parsing
                     counter++;
             }
             return counter;
+        }
+
+        public static int CountWhitespacesAscii(ReadOnlySpan<byte> buffer)
+        {
+            const long table = 1 << '\t' | 1 << '\n'     | 1 << '\u000B' | 1 << '\f'     | 
+                               1 << '\r' | 1 << '\u001C' | 1 << '\u001D' | 1 << '\u001E' | 1 << '\u001F';
+
+            int whitespaceCount = 0;
+
+            foreach (byte b in buffer)
+            {
+                if (b > 0x1F)
+                    continue;
+
+                whitespaceCount += (int)(table >> b) & 1;
+            }
+
+            return whitespaceCount;
         }
     }
 }

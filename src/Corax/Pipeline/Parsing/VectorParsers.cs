@@ -5,9 +5,10 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
+
 namespace Corax.Pipeline.Parsing
 {
-    public class SseParsing
+    public static class VectorParsers
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool ValidateSse41Ascii(ReadOnlySpan<byte> buffer)
@@ -97,7 +98,7 @@ namespace Corax.Pipeline.Parsing
                 count += BitOperations.PopCount((uint)Sse2.MoveMask(utf8ContinuationMask));
             }
 
-            return (int)count + ScalarParsing.CountCodePointsFromUtf8(buffer.Slice((int)pos));
+            return (int)count + ScalarParsers.CountCodePointsFromUtf8(buffer.Slice((int)pos));
         }
 
         public static int Utf16LengthFromUtf8(ReadOnlySpan<byte> buffer)
@@ -119,7 +120,40 @@ namespace Corax.Pipeline.Parsing
                 count += BitOperations.PopCount((uint)Sse2.MoveMask(utf8FourByte));
             }
 
-            return count + ScalarParsing.Utf16LengthFromUtf8(buffer.Slice((int)pos));
+            return count + ScalarParsers.Utf16LengthFromUtf8(buffer.Slice((int)pos));
+        }
+
+        public static int CountWhitespacesAscii(ReadOnlySpan<byte> buffer)
+        {
+            Vector128<byte> mask32 = Vector128.Create((byte)0x1F);
+
+            int count = 0;
+            int N = Vector128<byte>.Count;
+
+            const long table = 1 << '\t' | 1 << '\n'     | 1 << '\u000B' | 1 << '\f'     |
+                               1 << '\r' | 1 << '\u001C' | 1 << '\u001D' | 1 << '\u001E' | 1 << '\u001F';
+
+            int pos;
+            for (pos = 0; pos + N <= buffer.Length; pos += N)
+            {
+                var input = Vector128.LoadUnsafe(ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference(buffer), pos));
+                int mask = Sse2.MoveMask(Vector128.LessThanOrEqual(input, mask32));
+                if (mask == 0)
+                    continue;
+
+                do
+                {
+                    int trailingZeroCount = BitOperations.TrailingZeroCount(mask);
+                    byte b = buffer[pos + trailingZeroCount];
+                    count += (int)((table >> b) & 1);
+                    mask &= ~(1 << trailingZeroCount);
+                }
+                while (mask != 0);
+            }
+
+            // Process the remaining bytes using the scalar method
+            count += ScalarParsers.CountWhitespacesAscii(buffer.Slice(pos));
+            return count;
         }
     }
 }

@@ -38,13 +38,13 @@ namespace FastTests.Corax.Pipeline
             var bytes = Encoding.UTF8.GetBytes(stringToCheck);
 
             var isAsciiRef = IsAsciiRef(bytes);
-            Assert.Equal(isAsciiRef, ScalarParsing.ValidateAscii(bytes));
+            Assert.Equal(isAsciiRef, ScalarParsers.ValidateAscii(bytes));
             if (Sse41.IsSupported)
-                Assert.Equal(isAsciiRef, SseParsing.ValidateSse41Ascii(bytes));
+                Assert.Equal(isAsciiRef, VectorParsers.ValidateSse41Ascii(bytes));
             if (Sse2.IsSupported)
-                Assert.Equal(isAsciiRef, SseParsing.ValidateSse2Ascii(bytes));
+                Assert.Equal(isAsciiRef, VectorParsers.ValidateSse2Ascii(bytes));
 
-            Assert.Equal(isAsciiRef, Parsing.ValidateAscii(bytes));
+            Assert.Equal(isAsciiRef, StandardParsers.ValidateAscii(bytes));
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
@@ -59,11 +59,11 @@ namespace FastTests.Corax.Pipeline
         {
             var bytes = Encoding.UTF8.GetBytes(input);
 
-            Assert.Equal(expectedLength, ScalarParsing.CountCodePointsFromUtf8(bytes));
+            Assert.Equal(expectedLength, ScalarParsers.CountCodePointsFromUtf8(bytes));
             if (Sse2.IsSupported)
-                Assert.Equal(expectedLength, SseParsing.CountCodePointsFromUtf8(bytes));
+                Assert.Equal(expectedLength, VectorParsers.CountCodePointsFromUtf8(bytes));
 
-            Assert.Equal(expectedLength, Parsing.CountCodePointsFromUtf8(bytes));
+            Assert.Equal(expectedLength, StandardParsers.CountCodePointsFromUtf8(bytes));
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
@@ -78,11 +78,54 @@ namespace FastTests.Corax.Pipeline
         {
             var bytes = Encoding.UTF8.GetBytes(input);
 
-            Assert.Equal(input.Length, ScalarParsing.Utf16LengthFromUtf8(bytes));
+            Assert.Equal(input.Length, ScalarParsers.Utf16LengthFromUtf8(bytes));
             if (Sse2.IsSupported)
-                Assert.Equal(input.Length, SseParsing.Utf16LengthFromUtf8(bytes));
+                Assert.Equal(input.Length, VectorParsers.Utf16LengthFromUtf8(bytes));
 
-            Assert.Equal(input.Length, Parsing.Utf16LengthFromUtf8(bytes));
+            Assert.Equal(input.Length, StandardParsers.Utf16LengthFromUtf8(bytes));
+        }
+
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData("Hello, World!")]
+        [InlineData("Hello\tWorld\n")]
+        [InlineData("\u000B\f\r\u001C\u001D\u001E\u001F")]
+        [InlineData("\t\n\u000B\f\r\u001C\u001D\u001E\u001F\t")]
+        [InlineData("Whitespace\tat\nthe\u000Bend\f")]
+        public void CountWhitespaces(string input)
+        {
+            static int CountWhitespacesRef(ReadOnlySpan<byte> buffer)
+            {
+                int whitespaceCount = 0;
+
+                foreach (byte b in buffer)
+                {
+                    switch (b)
+                    {
+                        case (byte)'\t':
+                        case (byte)'\n':
+                        case (byte)'\f':
+                        case (byte)'\r':
+                        case (byte)'\u000B':
+                        case (byte)'\u001C':
+                        case (byte)'\u001D':
+                        case (byte)'\u001E':
+                        case (byte)'\u001F':
+                            whitespaceCount++;
+                            break;
+                    }
+                }
+
+                return whitespaceCount;
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(input);
+            var referenceLength = CountWhitespacesRef(bytes);
+
+            Assert.Equal(referenceLength, ScalarParsers.CountWhitespacesAscii(bytes));
+            if (Sse2.IsSupported)
+                Assert.Equal(referenceLength, VectorParsers.CountWhitespacesAscii(bytes));
+
+            Assert.Equal(referenceLength, StandardParsers.CountWhitespacesAscii(bytes));
         }
     }
 }
