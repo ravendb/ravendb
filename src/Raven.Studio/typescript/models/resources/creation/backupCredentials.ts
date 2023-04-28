@@ -7,6 +7,7 @@ import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOp
 import moment = require("moment");
 import restorePoint from "models/resources/creation/restorePoint";
 import recentError from "common/notifications/models/recentError";
+import licenseModel from "models/auth/licenseModel";
 
 const unknownDatabaseName = "Unknown Database";
 
@@ -60,6 +61,8 @@ class restoreItem {
         this.parent = parent;
         _.bindAll(this, "refreshPathAndRestorePoints", "updateBackupDirectoryPathOptions", "fetchRestorePoints");
         this.folderName.throttle(300).subscribe(this.refreshPathAndRestorePoints);
+        
+        this.initValidation();
     }
     
     shardNumber() {
@@ -72,11 +75,39 @@ class restoreItem {
 
     initValidation() {
         this.nodeTag.extend({
-            required: true
+            required: {
+                onlyIf: () => this.parent.isShardedProvider()
+            }
+        });
+
+        this.folderName.extend({
+            required: {
+                onlyIf: () => this.restorePoints().length === 0
+            }
         });
 
         this.selectedRestorePoint.extend({
-            required: true
+            validation: [
+                {
+                    validator: () => !this.restorePointError(),
+                    message: `Couldn't fetch restore points, {0}`,
+                    params: this.restorePointError
+                },
+                {
+                    validator: (restorePoint: restorePoint) => {
+                        if (restorePoint && restorePoint.isEncrypted && restorePoint.isSnapshotRestore) {
+                            // check if license supports that
+                            return (licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
+                        }
+                        return true;
+                    },
+                    message: "License doesn't support storage encryption"
+                },
+                {
+                    validator: (value: string) => !!value,
+                    message: "This field is required"
+                }
+            ]
         });
 
         this.validationGroup = ko.validatedObservable({
@@ -153,12 +184,12 @@ export abstract class restoreSettings {
     
     fetchRestorePointsCommand: (item: restoreItem, shardNumber: number) => getRestorePointsCommand;
 
+    abstract isValid(): boolean;
+    
     abstract getFolderPathOptions(folderName: string, nodeTag: string): JQueryPromise<string[]>;
     
     abstract getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
                                                 backupLocation: string): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase
-    abstract isValid(): boolean;
-    
     protected constructor(isShardedProvider: () => boolean) {
         this.isShardedProvider = isShardedProvider;
         _.bindAll(this, "addRestoreItem", "removeRestoreItem", "refreshPathAndRestorePoints");
@@ -187,6 +218,23 @@ export abstract class restoreSettings {
             item.clearRestorePoints();
         });
     }
+    
+    isItemsValid(): boolean {
+        let valid = true;
+        
+        this.items().forEach(item => {
+            if (!item.isValid()) {
+                valid = false;
+            }
+            
+            if (!item.validationGroup.isValid()) {
+                item.validationGroup.errors.showAllMessages();
+                valid = false;
+            } 
+        });
+        
+        return valid;
+    }
 
     fetchRestorePoints() {
         if (!this.isValid()) {
@@ -202,7 +250,8 @@ export abstract class restoreSettings {
     addRestoreItem() {
         const newItem = new restoreItem(this);
         this.items.push(newItem);
-        this.refreshPathAndRestorePoints();
+        
+        newItem.refreshPathAndRestorePoints();
     }
 
     removeRestoreItem(item: restoreItem) {
