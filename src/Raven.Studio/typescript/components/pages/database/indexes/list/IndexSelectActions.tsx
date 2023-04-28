@@ -10,10 +10,9 @@ import {
     DropdownToggle,
     Spinner,
     UncontrolledDropdown,
-    UncontrolledPopover,
 } from "reactstrap";
 import { Icon } from "components/common/Icon";
-import { Checkbox, Switch } from "components/common/Checkbox";
+import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
 
 interface IndexSelectActionProps {

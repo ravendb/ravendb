@@ -138,7 +138,7 @@ export class amazonS3Credentials extends restoreSettings {
         return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "S3"));
     }
 
-    getShardingFolderPathOptions(backupDirectory: string): JQueryPromise<string[]> {
+    getShardingFolderPathOptions(): JQueryPromise<string[]> {
         throw new Error("Amazon S3 is currently not supported for sharded database restore");
     }
 
@@ -217,7 +217,7 @@ export class azureCredentials extends restoreSettings {
         return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "Azure"))
     }
 
-    getShardingFolderPathOptions(backupDirectory: string): JQueryPromise<string[]> {
+    getShardingFolderPathOptions(): JQueryPromise<string[]> {
         throw new Error("Azure is currently not supported for sharded database restore");
     }
     
@@ -281,7 +281,7 @@ export class googleCloudCredentials extends restoreSettings {
         return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "GoogleCloud"))
     }
 
-    getShardingFolderPathOptions(backupDirectory: string): JQueryPromise<string[]> {
+    getShardingFolderPathOptions(): JQueryPromise<string[]> {
         throw new Error("Google is currently not supported for sharded database restore");
     }
     
@@ -409,7 +409,7 @@ export class ravenCloudCredentials extends restoreSettings {
         return $.Deferred<string[]>().reject();
     }
 
-    getShardingFolderPathOptions(backupDirectory: string): JQueryPromise<string[]> {
+    getShardingFolderPathOptions(): JQueryPromise<string[]> {
         throw new Error("Raven cloud is currently not supported for sharded database restore");
     }
     

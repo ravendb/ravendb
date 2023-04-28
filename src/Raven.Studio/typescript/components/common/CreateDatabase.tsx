@@ -801,7 +801,6 @@ export function StepNodeSelection(props: StepNodeSelectionProps) {
     const [shardNodes] = useState(initialNodes);
 
     function updateShardNodes(): () => void {
-        const nextShardNodes = [...shardNodes];
         console.log("TODO Update selected node");
         return;
     }
