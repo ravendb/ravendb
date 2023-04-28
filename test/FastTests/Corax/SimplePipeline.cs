@@ -28,10 +28,10 @@ namespace FastTests.Corax
             Assert.Equal(2, t1.Length);
             Assert.Equal(0, t1[0].Offset);
             Assert.Equal(5u, t1[0].Length);
-            Assert.Equal(TokenType.Word, t1[0].Type);
+            Assert.Equal(TokenType.Word | TokenType.Ascii, t1[0].Type);
             Assert.Equal(6, t1[1].Offset);
             Assert.Equal(5u, t1[1].Length);
-            Assert.Equal(TokenType.Word, t1[1].Type);
+            Assert.Equal(TokenType.Word | TokenType.Ascii, t1[1].Type);
 
             t1 = tokenSlice;
             Assert.Equal(6, tokenizer.Tokenize(source.Slice(0, 6), ref t1));

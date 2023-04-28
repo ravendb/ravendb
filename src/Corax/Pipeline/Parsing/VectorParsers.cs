@@ -125,13 +125,10 @@ namespace Corax.Pipeline.Parsing
 
         public static int CountWhitespacesAscii(ReadOnlySpan<byte> buffer)
         {
-            Vector128<byte> mask32 = Vector128.Create((byte)0x1F);
+            Vector128<byte> mask32 = Vector128.Create((byte)0x20);
 
             int count = 0;
             int N = Vector128<byte>.Count;
-
-            const long table = 1 << '\t' | 1 << '\n'     | 1 << '\u000B' | 1 << '\f'     |
-                               1 << '\r' | 1 << '\u001C' | 1 << '\u001D' | 1 << '\u001E' | 1 << '\u001F';
 
             int pos;
             for (pos = 0; pos + N <= buffer.Length; pos += N)
@@ -144,9 +141,13 @@ namespace Corax.Pipeline.Parsing
                 do
                 {
                     int trailingZeroCount = BitOperations.TrailingZeroCount(mask);
-                    byte b = buffer[pos + trailingZeroCount];
-                    count += (int)((table >> b) & 1);
                     mask &= ~(1 << trailingZeroCount);
+                    
+                    byte b = buffer[pos + trailingZeroCount];
+                    if (b == 0xA0) // U+00A0  no-break space
+                        continue;
+
+                    count += (int)((ScalarParsers.SingleByteTable >> b) & 1);
                 }
                 while (mask != 0);
             }

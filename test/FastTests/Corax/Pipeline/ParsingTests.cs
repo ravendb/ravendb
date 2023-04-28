@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
-using System.Threading.Tasks;
+using Corax.Pipeline;
 using Corax.Pipeline.Parsing;
-using FastTests.Client;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Xunit;
@@ -126,6 +122,44 @@ namespace FastTests.Corax.Pipeline
                 Assert.Equal(referenceLength, VectorParsers.CountWhitespacesAscii(bytes));
 
             Assert.Equal(referenceLength, StandardParsers.CountWhitespacesAscii(bytes));
+        }
+
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData("Hello, World!", 2)]
+        [InlineData("Hello,  World!", 2)]
+        [InlineData("Привет, мир!", 2)]
+        [InlineData("こんにちは、世界！", 1)]
+        [InlineData("🙂🙃😀😃", 1)]
+        [InlineData("안녕하세요, 세계!", 2)]
+        [InlineData("The quick brown \U0001f98a jumps over the lazy 🐶. What a wonderful day! ", 13)]
+        [InlineData("One day, a terrible dragon 🐉 attacked the kingdom, and the queen had to use her magical powers to save her people. ", 22)]
+        [InlineData("One day, a terrible dragon  attacked the kingdom,  and the queen had to use her magical powers to save her people. ", 21)]
+        [InlineData("\u000B\f\r\u001C\u001D\u001E\u001F", 0)]
+        [InlineData("\u0009\u000A\u000B\u000C\u000D\u001C\u001D\u001E\u001F ", 0)]
+        [InlineData("Whitespace\tat\nthe\u000Bend\f", 4)]
+        [InlineData("Hello,                                                          World!", 2)]
+        [InlineData("    Hello,             World!", 2)]
+        [InlineData("", 0)]
+        [InlineData("                        ", 0)]
+        public void WhitespaceTokenizer(string input, int expectedTokens)
+        {
+            var bytes = Encoding.UTF8.GetBytes(input);
+
+            var tokenArray = new Token[128];
+
+            var tokens = tokenArray.AsSpan();
+            ScalarTokenizers.TokenizeWhitespaceAsciiScalar(bytes, ref tokens);
+            Assert.Equal(expectedTokens, tokens.Length);
+            if (Sse2.IsSupported)
+            {
+                tokens = tokenArray.AsSpan();
+                VectorTokenizers.TokenizeWhitespaceAsciiSse(bytes, ref tokens);
+                Assert.Equal(expectedTokens, tokens.Length);
+            }
+
+            tokens = tokenArray.AsSpan();
+            ScalarTokenizers.TokenizeWhitespace(input, ref tokens);
+            Assert.Equal(expectedTokens, tokens.Length);
         }
     }
 }
