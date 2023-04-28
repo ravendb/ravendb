@@ -100,6 +100,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     useEffect(() => {
         // noinspection JSIgnoredPromiseFromCall
         reload();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fetchTasks, database]);
 
     const addNewOngoingTask = useCallback(() => {

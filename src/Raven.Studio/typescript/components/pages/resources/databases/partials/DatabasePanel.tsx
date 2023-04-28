@@ -102,6 +102,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     const [lockChanges, setLockChanges] = useState(false);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [inProgressAction, setInProgressAction] = useState<string>(null);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);

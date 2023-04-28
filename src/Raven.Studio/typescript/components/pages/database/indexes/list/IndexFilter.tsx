@@ -2,12 +2,11 @@
 import classNames from "classnames";
 import { shardingTodo } from "common/developmentHelper";
 import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "components/models/indexes";
-import { Badge, Button, Col, DropdownItem, Input, InputGroup, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+import { Button, DropdownItem, Input, InputGroup } from "reactstrap";
 import useBoolean from "hooks/useBoolean";
 import { DropdownPanel } from "components/common/DropdownPanel";
 import { Switch } from "components/common/Checkbox";
 import produce from "immer";
-import { MultiCheckboxToggle } from "components/common/MultiCheckboxToggle";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -57,9 +56,9 @@ interface IndexFilterDescriptionProps {
 }
 
 export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
-    const { filter, setFilter, indexes } = props;
+    const { filter, setFilter } = props;
 
-    const indexesCount = indexes.length;
+    //TODO: const indexesCount = indexes.length;
 
     shardingTodo();
     /* TODO
@@ -102,6 +101,7 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
         );
     }
 
+    /* TODO
     const indexingErrorsOnlyPart = filter.showOnlyIndexesWithIndexingErrors ? (
         <>
             <Badge pill color="warning" className="mx-1">
@@ -110,7 +110,7 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
         </>
     ) : (
         ""
-    );
+    );*/
 
     const onSearchTextChange = (searchText: string) => {
         setFilter(
@@ -161,6 +161,7 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
     );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const indexesStatesList = [
     { value: "all", label: "All", count: 8 },
     { value: "normal", label: "Normal" },
