@@ -12,6 +12,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import { highlight, languages } from "prismjs";
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 
+// TODO: remove when React component is finished
 class createSampleData extends shardViewModelBase {
     
     view = require("views/database/tasks/createSampleData.html");
