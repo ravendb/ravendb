@@ -81,7 +81,6 @@ class databaseCreationModel {
     };
 
     restoreValidationGroup = ko.validatedObservable({ 
-        selectedRestorePoint: this.restore.selectedRestorePoint,
         backupEncryptionKey: this.restore.backupEncryptionKey
     });
     
@@ -253,7 +252,7 @@ class databaseCreationModel {
     }
     
     isSharded(): boolean {
-        return this.restore.enableSharding();
+        return this.restore && this.restore.enableSharding();
     }
     
     private assertShardTopologySpace() {
@@ -493,40 +492,6 @@ class databaseCreationModel {
                 {
                     validator: () => this.spinners.backupCredentialsLoading() || this.restore.ravenCloudCredentials().isValid(),
                     message: "Failed to get link credentials"
-                }
-            ]
-        });
-        
-        this.restore.localServerCredentials().backupDirectory.extend({
-            required: {
-                onlyIf: () => this.restore.restorePoints().length === 0 
-            }
-        });
-
-        this.restore.selectedRestorePoint.extend({
-            validation: [
-                {
-                    validator: () => this.restore.enableSharding() || this.restoreSourceObject().isValid(),
-                    message: "Please enter valid source data"
-                },
-                {
-                    validator: () => !this.restore.restorePointError(),
-                    message: `Couldn't fetch restore points, {0}`,
-                    params: this.restore.restorePointError
-                },
-                {
-                    validator: (restorePoint: restorePoint) => {
-                        if (restorePoint && restorePoint.isEncrypted && restorePoint.isSnapshotRestore) {
-                            // check if license supports that
-                            return (licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
-                        }
-                        return true;
-                    },
-                    message: "License doesn't support storage encryption"
-                },
-                {
-                    validator: (value: string) => !!value,
-                    message: "This field is required"
                 }
             ]
         });

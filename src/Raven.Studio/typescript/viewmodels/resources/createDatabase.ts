@@ -118,7 +118,6 @@ class createDatabase extends dialogViewModelBase {
         const dataPath = this.databaseModel.path.dataPath();
         this.updateDatabaseLocationInfo(this.databaseModel.name(), dataPath);
         
-        this.updateBackupDirectoryPathOptions();
         this.updatePathOptions(this.databaseModel.path.dataPath());
 
         return $.when<any>(getTopologyTask, getEncryptionKeyTask, getStudioSettingsTask)
@@ -437,12 +436,23 @@ class createDatabase extends dialogViewModelBase {
 
             const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
 
-            const allValid = globalValid && _.every(sectionsValidityList, x => !!x);
+            let allValid = globalValid && _.every(sectionsValidityList, x => !!x);
+            
+            if (this.databaseModel.creationMode === "restore") {
+                const source = this.databaseModel.restore.restoreSourceObject();
+                if (!source.isValid()) {
+                    allValid = false;
+                }
+                
+                if (!source.isItemsValid()) {
+                    allValid = false;
+                }
+            }
 
             if (allValid) {
                 // disable validation for name as it might display error: database already exists
                 // since we get async notifications during db creation
-                this.databaseModel.name.extend({validatable: false});
+                this.databaseModel.name.extend({ validatable: false });
                 
                 this.recentPathsAutocomplete.recordUsage();
 
