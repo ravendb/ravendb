@@ -216,8 +216,8 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         }
     };
 
-    const dropSubscription = async (taskId: number, taskName: string, workerId: string) => {
-        await tasksService.dropSubscription(database, taskId, taskName, workerId);
+    const dropSubscription = async (taskId: number, taskName: string, nodeTag: string, workerId: string) => {
+        await tasksService.dropSubscription(database, taskId, taskName, nodeTag, workerId);
     };
 
     return (
@@ -417,7 +417,12 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                                         {...sharedPanelProps}
                                         connections={connectionDetails}
                                         dropSubscription={(workerId) =>
-                                            dropSubscription(x.shared.taskId, x.shared.taskName, workerId)
+                                            dropSubscription(
+                                                x.shared.taskId,
+                                                x.shared.taskName,
+                                                x.shared.responsibleNodeTag,
+                                                workerId
+                                            )
                                         }
                                         onToggleDetails={async (newState) => {
                                             if (newState) {
