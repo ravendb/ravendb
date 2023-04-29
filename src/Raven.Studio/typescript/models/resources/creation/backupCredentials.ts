@@ -401,9 +401,7 @@ export class amazonS3Credentials extends restoreSettings {
         this.bucketName(credentialsDto.BucketName);
         this.sessionToken(credentialsDto.AwsSessionToken);
         
-        const item = new restoreItem(this);
-        item.folderName(credentialsDto.RemoteFolderName);
-        this.items([item]);
+        this.items()[0].folderName(credentialsDto.RemoteFolderName);
     }
 }
 
@@ -470,9 +468,7 @@ export class azureCredentials extends restoreSettings {
         this.sasToken(dto.SasToken);
         this.container(dto.StorageContainer);
         
-        const item = new restoreItem(this);
-        item.folderName(dto.RemoteFolderName);
-        this.items([item]);
+        this.items()[0].folderName(dto.RemoteFolderName);
     }
 }
 
@@ -546,6 +542,11 @@ export class ravenCloudCredentials extends restoreSettings {
 
     constructor(isShardedProvider: () => boolean) {
         super(isShardedProvider);
+        
+        //TODO: ???
+        // this object and this.amazonS3 and this.azure contains list with restore points - let's connect this list to same space to unify approach
+        this.amazonS3().items = this.items;
+        this.azure().items = this.items;
         
         this.timeLeftText = ko.pureComputed(() => {
             const timeLeft = this.timeLeft();
@@ -656,8 +657,8 @@ export class ravenCloudCredentials extends restoreSettings {
         return true; 
     }
 
-    registerWatchers() {
-        // empty by design
+    registerWatchers(onChange: (newValue: string) => void) {
+        this.backupLink.throttle(300).subscribe((backupLinkNewValue) => onChange(backupLinkNewValue));
     }
 
     static empty(isShardedProvider: () => boolean) {
