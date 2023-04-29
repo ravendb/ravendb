@@ -9,13 +9,16 @@ class dropSubscriptionConnectionCommand extends commandBase {
     private readonly taskId: number;
 
     private readonly taskName: string;
+    
+    private readonly nodeTag: string;
 
     private readonly workerId: string = undefined;
 
-    constructor(db: database, taskId: number, taskName: string, workerId: string = undefined) {
+    constructor(db: database, taskId: number, taskName: string, nodeTag: string = undefined, workerId: string = undefined) {
         super();
         this.workerId = workerId;
         this.taskName = taskName;
+        this.nodeTag = nodeTag;
         this.taskId = taskId;
         this.db = db;
     }
@@ -35,9 +38,10 @@ class dropSubscriptionConnectionCommand extends commandBase {
     private dropSubscription(): JQueryPromise<void> {
         const args = { 
             id: this.taskId,
-            workerId: this.workerId
+            workerId: this.workerId,
+            nodeTag: this.nodeTag
         };
-        const url = endpoints.databases.subscriptions.subscriptionsDrop + this.urlEncodeArgs( args );
+        const url = endpoints.databases.subscriptions.subscriptionsDrop + this.urlEncodeArgs(args);
 
         return this.post(url, null, this.db); 
     }

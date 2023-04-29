@@ -17,8 +17,8 @@ export default class TasksService {
         return new getOngoingTasksCommand(db, location).execute();
     }
 
-    async dropSubscription(db: database, taskId: number, taskName: string, workerId: string = null) {
-        return new dropSubscriptionConnectionCommand(db, taskId, taskName, workerId).execute();
+    async dropSubscription(db: database, taskId: number, taskName: string, nodeTag: string = undefined, workerId: string = null) {
+        return new dropSubscriptionConnectionCommand(db, taskId, taskName, nodeTag, workerId).execute();
     }
 
     async getSubscriptionTaskInfo(
