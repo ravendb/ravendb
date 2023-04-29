@@ -165,9 +165,9 @@ class createDatabase extends dialogViewModelBase {
             this.databaseModel.replicationAndSharding.nodes([this.clusterNodes[0]]);
         }
         
-        this.databaseModel.restore.selectedRestorePoint.subscribe(restorePoint => {
+        this.databaseModel.addOnRestorePointChanged(restorePoint => {
             this.encryptionSection.canProvideOwnKey(!restorePoint || !restorePoint.isEncrypted || !restorePoint.isSnapshotRestore);
-        });
+        })
         
         this.databaseModel.restore.backupEncryptionKey.subscribe(key => {
             const restorePoint = this.databaseModel.restore.restoreSourceObject()?.items()[0]?.selectedRestorePoint();

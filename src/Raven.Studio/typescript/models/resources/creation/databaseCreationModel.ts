@@ -11,6 +11,7 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import RestoreBackupConfigurationBase = Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
 import SingleShardRestoreSetting = Raven.Client.Documents.Operations.Backups.Sharding.SingleShardRestoreSetting;
 import ShardedRestoreSettings = Raven.Client.Documents.Operations.Backups.Sharding.ShardedRestoreSettings;
+import restorePoint from "models/resources/creation/restorePoint";
 
 type shardTopologyItem = {
     replicas: KnockoutObservableArray<clusterNode>;
@@ -175,21 +176,21 @@ class databaseCreationModel {
            this.assertShardTopologySpace();
         })
 
-      
-
         // Raven Cloud - Backup Link 
-        this.restore.ravenCloudCredentials().onCredentialsChange((backupLinkNewValue) => {
+        
+        this.restore.ravenCloudCredentials().registerWatchers((backupLinkNewValue) => {
             if (_.trim(backupLinkNewValue)) {
                 this.downloadCloudCredentials(backupLinkNewValue)
             } else {
-                this.clearRestorePoints();
+                this.restore.googleCloudCredentials().clearRestorePoints();
             }
         });
         
-        this.restore.selectedRestorePoint.subscribe(restorePoint => {
+        this.addOnRestorePointChanged(restorePoint => {
             const canCreateEncryptedDbs = this.canCreateEncryptedDatabases();
-            
+
             const encryptionSection = this.getEncryptionConfigSection();
+
             this.lockActiveTab(true);
             try {
                 if (restorePoint) {
@@ -197,26 +198,26 @@ class databaseCreationModel {
                         if (restorePoint.isSnapshotRestore) {
                             // encrypted snapshot - we are forced to encrypt newly created database 
                             // it requires license and https
-                            
+
                             encryptionSection.enabled(true);
                             encryptionSection.disableToggle(true);
                         } else {
                             // encrypted backup - we need license and https for encrypted db
-                            
+
                             encryptionSection.enabled(canCreateEncryptedDbs);
                             encryptionSection.disableToggle(!canCreateEncryptedDbs);
                         }
                     } else { //backup is not encrypted
                         if (restorePoint.isSnapshotRestore) {
                             // not encrypted snapshot - we can not create encrypted db
-                            
+
                             encryptionSection.enabled(false);
                             encryptionSection.disableToggle(true);
                         } else {
                             // not encrypted backup - we need license and https for encrypted db
-                            
+
                             encryptionSection.enabled(false);
-                            encryptionSection.disableToggle(!canCreateEncryptedDbs); 
+                            encryptionSection.disableToggle(!canCreateEncryptedDbs);
                         }
                     }
                 } else {
@@ -225,8 +226,7 @@ class databaseCreationModel {
             } finally {
                 this.lockActiveTab(false);
             }
-        });
-
+        })
         
         this.restore.restoreSourceObject.subscribe((o) => {
             o.refreshPathAndRestorePoints();
@@ -249,6 +249,14 @@ class databaseCreationModel {
         const methods: Array<keyof this & string>  = ["dataPathHasChanged", "isSharded"];
         
         _.bindAll(this, ...methods);
+    }
+    
+    addOnRestorePointChanged(action: (restorePoint: restorePoint) => void) {
+        this.restore.localServerCredentials().items()[0].selectedRestorePoint.subscribe(action);
+        this.restore.azureCredentials().items()[0].selectedRestorePoint.subscribe(action);
+        this.restore.amazonS3Credentials().items()[0].selectedRestorePoint.subscribe(action);
+        this.restore.googleCloudCredentials().items()[0].selectedRestorePoint.subscribe(action);
+        this.restore.ravenCloudCredentials().items()[0].selectedRestorePoint.subscribe(action);
     }
     
     isSharded(): boolean {

@@ -251,7 +251,7 @@
                                     <label class="control-label">Remote Folder Name</label>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="control-label text-info text-left" data-bind="text: remoteFolder"></label>
+                                    <label class="control-label text-info text-left" data-bind="text: items()[0].folderName"></label>
                                 </div>
                             </div>
                         </div>
@@ -287,7 +287,7 @@
                                     <label class="control-label">Remote Folder Name</label>
                                 </div>
                                 <div class="col-md-8">
-                                    <label class="control-label text-info text-left" data-bind="text: remoteFolder"></label>
+                                    <label class="control-label text-info text-left" data-bind="text: items()[0].folderName"></label>
                                 </div>
                             </div>
                         </div>
@@ -300,6 +300,7 @@
                             <label class="control-label text-info" data-bind="text: timeLeftText"></label>
                         </div>
                     </div>
+                    <div data-bind="template: { name: 'remote-folder-and-restore-point-selector' }"></div>
                 </div>
             </div>
         </div>
@@ -722,7 +723,7 @@
                 </button>
             </div>
             <div class="flex-grow">
-                <div class="form-group row">
+                <div class="form-group row" data-bind="visible: $root.databaseModel.restore.source() !== 'cloud'">
                     <div class="col-md-4">
                         <label class="control-label">Remote Folder Name <i class="required"></i></label>
                     </div>
