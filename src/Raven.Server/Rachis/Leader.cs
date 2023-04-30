@@ -71,6 +71,7 @@ namespace Raven.Server.Rachis
         /// DEBUG ONLY
         /// </summary>
         public Dictionary<string, FollowerAmbassador> CurrentPeers => new Dictionary<string, FollowerAmbassador>(_voters.Concat(_nonVoters).Concat(_promotables));
+        public Dictionary<string, FollowerAmbassador> CurrentVoters => new Dictionary<string, FollowerAmbassador>(_voters);
 
         public ConcurrentDictionary<string, int> PeersVersion = new ConcurrentDictionary<string, int>();
 
@@ -363,13 +364,12 @@ namespace Raven.Server.Rachis
 
                         if (lowestIndexInEntireCluster > lastTruncated)
                         {
-                            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                            using (context.OpenWriteTransaction())
+                            _engine.TxMerger.EnqueueSync((context) =>
                             {
                                 _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
                                 LowestIndexInEntireCluster = lowestIndexInEntireCluster;
-                                context.Transaction.Commit();
-                            }
+                                return 1;
+                            });
                         }
                     }
                     catch (Exception ex)

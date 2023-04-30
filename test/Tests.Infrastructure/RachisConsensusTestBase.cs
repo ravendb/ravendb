@@ -100,6 +100,17 @@ namespace Tests.Infrastructure
             Assert.True(currentState == RachisState.Leader ||
                         currentState == RachisState.LeaderElect,
                 "The leader has changed while waiting for cluster to become stable, it is now " + currentState + " Beacuse: " + leader.LastStateChangeReason);
+
+            var votersCount = watcherCluster ? 0 : nodeCount - 1;
+            if(votersCount>0)
+                await ActionWithLeader(async (leader1) =>
+                {
+                    while (leader1.CurrentLeader.CurrentVoters.Count < votersCount)
+                    {
+                        await Task.Delay(100);
+                    }
+                });
+
             return leader;
         }
 
@@ -222,7 +233,7 @@ namespace Tests.Infrastructure
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], new DummyNotificationCenter(serverStore), new SystemTime(), out _, CancellationToken.None);
+            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], new SystemTime(), out _, CancellationToken.None);
             rachis.OnDispose += (sender, args) =>
             {
                 serverStore.Dispose();
@@ -629,11 +640,5 @@ namespace Tests.Infrastructure
             }
         }
 
-        private class DummyNotificationCenter : ServerNotificationCenter
-        {
-            public DummyNotificationCenter(ServerStore serverStore) : base(serverStore, serverStore.NotificationCenter.Storage)
-            {
-            }
-        }
     }
 }

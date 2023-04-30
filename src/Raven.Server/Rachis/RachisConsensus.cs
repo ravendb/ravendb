@@ -434,7 +434,7 @@ namespace Raven.Server.Rachis
             Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
-        public void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, ServerNotificationCenter notificationCenter, SystemTime time, out long clusterTopologyEtag, CancellationToken shutdown)
+        public void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, SystemTime time, out long clusterTopologyEtag, CancellationToken shutdown)
         {
             try
             {
@@ -451,7 +451,7 @@ namespace Raven.Server.Rachis
 
                 ContextPool = new ClusterContextPool(changes, _persistentState, configuration.Memory.MaxContextSizeToKeep);
                 TxMerger = new ClusterTransactionOperationsMerger(this, configuration, time, shutdown);
-                TxMerger.Initialize(ContextPool, notificationCenter);
+                TxMerger.Initialize(ContextPool);
                 TxMerger.Start();
 
                 ClusterTopology topology;
@@ -1430,22 +1430,23 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public long AppendToLog(CommandBase cmd, long term)
-        {
-            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            {
-                var djv = cmd.ToJson(context);
-                var cmdJson = context.ReadObject(djv, "raft/command");
+        // public long AppendToLog(CommandBase cmd, long term)
+        // {
+        //     using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+        //     {
+        //         var djv = cmd.ToJson(context);
+        //         var cmdJson = context.ReadObject(djv, "raft/command");
+        //
+        //         using (var tx = context.OpenWriteTransaction())
+        //         {
+        //             var index = InsertToLeaderLog(context, term, cmdJson, RachisEntryFlags.StateMachineCommand);
+        //             tx.Commit();
+        //      
+        //             return index;
+        //         }
+        //     }
+        // }
 
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    var index = InsertToLeaderLog(context, term, cmdJson, RachisEntryFlags.StateMachineCommand);
-                    tx.Commit();
-             
-                    return index;
-                }
-            }
-        }
 
         public unsafe long InsertToLeaderLog(ClusterOperationContext context, long term, BlittableJsonReaderObject cmd,
             RachisEntryFlags flags)
@@ -2135,7 +2136,7 @@ namespace Raven.Server.Rachis
                 // And then HardResetToNewCluster->SwitchToSingleLeader runs in parallel.
                 // In the second call of the SwitchToSingleLeader the 'leader.Run()' throws because it's term isn't updated.
             }
-            
+
 
             // It was throwing in tx OnDispose (which is set in SwitchToSingleLeader)
             // Happens when old Leader.Run->SwitchToCandidateState->SwitchToSingleLeader runs

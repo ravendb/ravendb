@@ -363,7 +363,7 @@ namespace RachisTests
         {
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
             firstLeader.CurrentLeader.StepDown();
-            Assert.True(await firstLeader.WaitForState(RachisState.Follower, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)), "Old leader hasn't stepped down.");
+            Assert.True(await firstLeader.WaitForState(RachisState.Follower, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)), $"Old leader hasn't stepped down, firstLeader.CurrentState={firstLeader.CurrentState}.");
         }
 
         /// <summary>

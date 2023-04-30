@@ -38,7 +38,6 @@ namespace Raven.Server.Documents.TransactionMerger
     {
         private readonly string _resourceName;
         private JsonContextPoolBase<TOperationContext> _contextPool;
-        protected NotificationCenter.AbstractNotificationCenter NotificationCenter;
         private readonly RavenConfiguration _configuration;
         private readonly SystemTime _time;
         private readonly CancellationToken _shutdown;
@@ -77,11 +76,9 @@ namespace Raven.Server.Documents.TransactionMerger
             _lastHighDirtyMemCheck = time.GetUtcNow();
         }
 
-        public void Initialize([NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] NotificationCenter.AbstractNotificationCenter notificationCenter)
+        public void Initialize([NotNull] JsonContextPoolBase<TOperationContext> contextPool)
         {
             _contextPool = contextPool ?? throw new ArgumentNullException(nameof(contextPool));
-            NotificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
-
             _initialized = true;
         }
 
@@ -109,6 +106,7 @@ namespace Raven.Server.Documents.TransactionMerger
         public async Task Enqueue(MergedTransactionCommand<TOperationContext, TTransaction> cmd)
         {
             Debug.Assert(cmd.TaskCompletionSource.Task.IsCompleted == false, $"{cmd.GetType()} is already completed");
+            Debug.Assert(Thread.CurrentThread.ManagedThreadId != _txLongRunningOperation.ManagedThreadId, $"Cannot Enqueue \"{cmd.GetType()}\" into the TxMerger from its dedicated thread.");
 
             if (_initialized == false)
                 throw new InvalidOperationException($"Tx Merger for '{_resourceName}' is not initialized.");
