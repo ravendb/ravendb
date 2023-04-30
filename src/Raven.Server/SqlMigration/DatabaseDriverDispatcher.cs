@@ -8,7 +8,7 @@ namespace Raven.Server.SqlMigration
 {
     public static class DatabaseDriverDispatcher
     {
-        public static IDatabaseDriver CreateDriver(MigrationProvider provider, string connectionString)
+        public static IDatabaseDriver CreateDriver(MigrationProvider provider, string connectionString, string[] schemas = null)
         {
             switch (provider)
             {
@@ -19,7 +19,7 @@ namespace Raven.Server.SqlMigration
                     return new MySqlDatabaseMigrator(connectionString);
 
                 case MigrationProvider.NpgSQL:
-                    return new NpgSqlDatabaseMigrator(connectionString);
+                    return new NpgSqlDatabaseMigrator(connectionString, schemas);
 
                 case MigrationProvider.Oracle:
                     return new OracleDatabaseMigrator(connectionString);
