@@ -1,4 +1,5 @@
-﻿using Raven.Server.SqlMigration.Schema;
+﻿using System.Linq;
+using Raven.Server.SqlMigration.Schema;
 
 namespace Raven.Server.SqlMigration.NpgSQL
 {
@@ -6,8 +7,19 @@ namespace Raven.Server.SqlMigration.NpgSQL
     {
         protected override string FactoryName => "Npgsql";
 
-        public NpgSqlDatabaseMigrator(string connectionString) : base(connectionString)
+        private const string SelectColumnsTemplate = "SELECT C.TABLE_SCHEMA, C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE" +
+                                             " FROM INFORMATION_SCHEMA.COLUMNS C JOIN INFORMATION_SCHEMA.TABLES T " +
+                                             " ON C.TABLE_CATALOG = T.TABLE_CATALOG AND C.TABLE_SCHEMA = T.TABLE_SCHEMA AND C.TABLE_NAME = T.TABLE_NAME " +
+                                             " WHERE T.TABLE_TYPE <> 'VIEW' AND T.TABLE_SCHEMA IN ({0})";
+
+        private readonly string _selectColumns;
+
+        public NpgSqlDatabaseMigrator(string connectionString, string[] schemas) : base(connectionString)
         {
+            const string defaultSchema = "'public'";
+            var schemasString = schemas == null || schemas.Length == 0 ? defaultSchema : string.Join(',', schemas.Select(x => $"'{x}'"));
+
+            _selectColumns = string.Format(SelectColumnsTemplate, schemasString);
         }
 
         protected override string QuoteColumn(string columnName)
