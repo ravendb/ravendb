@@ -54,7 +54,8 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
                 NodeState = _server.ServerStore.CurrentRachisState,
                 StartTime = testStartTime,
                 ServerVersion = ServerVersion.FullVersion,
-                OsName = LicenseManager.OsInfo.FullName
+                OsName = LicenseManager.OsInfo.FullName,
+                OsType = LicenseManager.OsInfo.Type
             };
         }
     }
