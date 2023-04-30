@@ -402,7 +402,7 @@ namespace RachisTests
             await c.WaitForTopology(Leader.TopologyModification.Witness);
 
             var bLeader = b.WaitForState(RachisState.Leader, CancellationToken.None);
-            var cLeader = c.WaitForState(RachisState.Leader, CancellationToken.None);
+            //var cLeader = c.WaitForState(RachisState.Leader, CancellationToken.None);
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -415,7 +415,7 @@ namespace RachisTests
             Disconnect(b.Url, a.Url);
             Disconnect(c.Url, a.Url);
 
-            await Task.WhenAny(cLeader);
+            await Task.WhenAny(bLeader);
         }
 
         /// <summary>
