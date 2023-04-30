@@ -33,6 +33,15 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return base.CreateFetcher();
     }
 
+    protected override ConflictStatus GetConflictStatus(Document item)
+    {
+        SubscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(_database.Name, out var cv);
+        var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+            remoteAsString: item.ChangeVector,
+            localAsString: cv);
+        return conflictStatus;
+    }
+
     protected override bool ShouldSend(Document item, out string reason, out Exception exception, out Document result)
     {
         exception = null;

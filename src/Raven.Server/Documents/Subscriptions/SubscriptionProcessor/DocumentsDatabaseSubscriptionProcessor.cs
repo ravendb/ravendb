@@ -119,9 +119,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
-                var conflictStatus = ChangeVectorUtils.GetConflictStatus(
-                    remoteAsString: item.ChangeVector,
-                    localAsString: SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+                var conflictStatus = GetConflictStatus(item);
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
@@ -180,6 +178,14 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 reason = $"Criteria script threw exception for document id {item.Id}";
                 return false;
             }
+        }
+
+        protected virtual ConflictStatus GetConflictStatus(Document item)
+        {
+            var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+                remoteAsString: item.ChangeVector,
+                localAsString: SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+            return conflictStatus;
         }
 
         protected virtual bool ShouldFetchFromResend(DocumentsOperationContext context, string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector, out string reason)
