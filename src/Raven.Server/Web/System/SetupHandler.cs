@@ -27,6 +27,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
+using Raven.Server.Rachis.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -511,11 +512,8 @@ namespace Raven.Server.Web.System
                 // Making sure we don't have leftovers from previous setup
                 try
                 {
-                    using (var tx = context.OpenWriteTransaction())
-                    {
-                        ServerStore.Engine.DeleteTopology(context);
-                        tx.Commit();
-                    }
+                    var command = new DeleteTopologyCommand(ServerStore.Engine);
+                    await ServerStore.Engine.TxMerger.Enqueue(command);
                 }
                 catch (Exception)
                 {
@@ -532,7 +530,6 @@ namespace Raven.Server.Web.System
                     progress => SetupManager.SetupUnsecuredTask(progress,
                         unsecuredSetupInfo,
                         ServerStore,
-                        context,
                         operationCancelToken.Token),
                     token: operationCancelToken);
 

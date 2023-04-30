@@ -760,15 +760,16 @@ namespace Raven.Server.Rachis
                     }
                     _running.Lower();
                     _shutdownRequested.Set();
+                    var lastStateChangeReason = _engine.LastStateChangeReason;
+                    NotLeadingException te = null;
+                    if (string.IsNullOrEmpty(lastStateChangeReason) == false)
+                        te = new NotLeadingException(lastStateChangeReason);
+
                     TaskExecutor.Execute(_ =>
                     {
                         _newEntriesArrived.TrySetCanceled();
                         _errorOccurred.TrySetCanceled();
-                        var lastStateChangeReason = _engine.LastStateChangeReason;
-                        NotLeadingException te = null;
-                        if (string.IsNullOrEmpty(lastStateChangeReason) == false)
-                            te = new NotLeadingException(lastStateChangeReason);
-
+                       
                         foreach (var entry in _entries)
                         {
                             if (entry.Key <= _lastCommit)
@@ -820,6 +821,19 @@ namespace Raven.Server.Rachis
                     foreach (var ambassador in _voters)
                     {
                         ae.Execute(ambassador.Value.Dispose);
+                    }
+
+                    var faulted = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    faulted.SetException(new ObjectDisposedException(ToString()));
+                    var existing = Interlocked.Exchange(ref _topologyModification, faulted);
+                    
+                    if (te == null)
+                    {
+                        existing?.TrySetCanceled();
+                    }
+                    else
+                    {
+                        existing?.TrySetException(te);
                     }
 
                     _newEntry.Dispose();

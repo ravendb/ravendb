@@ -1154,7 +1154,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void DeleteTopology(ClusterOperationContext context)
+        private void DeleteTopology(ClusterOperationContext context)
         {
             var topology = GetTopology(context);
             var newTopology = new ClusterTopology(
@@ -1205,7 +1205,7 @@ namespace Raven.Server.Rachis
             return topologyBlittable;
         }
 
-        public BlittableJsonReaderObject SetTopology(ClusterOperationContext context, ClusterTopology topology)
+        internal BlittableJsonReaderObject SetTopology(ClusterOperationContext context, ClusterTopology topology)
         {
             Debug.Assert(context.Transaction != null);
             var topologyJson = SetTopology(this, context, topology);
