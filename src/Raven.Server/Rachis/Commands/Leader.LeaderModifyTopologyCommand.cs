@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -137,7 +138,7 @@ public partial class Leader
             var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
             _leader._entries[index] = new Leader.CommandState { TaskCompletionSource = tcs, CommandIndex = index };
 
-            tcs.Task.ContinueWith(_ =>
+            tcs.Task.ContinueWith(t =>
             {
                 Interlocked.Exchange(ref _leader._topologyModification, null)?.TrySetResult(null);
             });

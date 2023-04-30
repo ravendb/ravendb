@@ -55,7 +55,7 @@ namespace Raven.Server.Commercial
         }
 
         public static async Task<IOperationResult> SetupUnsecuredTask(Action<IOperationProgress> onProgress, UnsecuredSetupInfo unsecuredSetupInfo,
-            ServerStore serverStore, ClusterOperationContext context, CancellationToken token)
+            ServerStore serverStore, CancellationToken token)
         {
             var zipOnly = unsecuredSetupInfo.ZipOnly;
             var progress = new SetupProgressAndResult(tuple =>
