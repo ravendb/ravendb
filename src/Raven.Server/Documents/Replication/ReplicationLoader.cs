@@ -109,24 +109,7 @@ namespace Raven.Server.Documents.Replication
 
         public long GetMinimalEtagForReplication()
         {
-            var replicationNodes = Destinations?.ToList();
-            if (replicationNodes == null || replicationNodes.Count == 0)
-                return long.MaxValue;
-
             long minEtag = long.MaxValue;
-
-            foreach (var lastEtagPerDestination in _lastSendEtagPerDestination)
-            {
-                replicationNodes.Remove(lastEtagPerDestination.Key);
-                minEtag = Math.Min(lastEtagPerDestination.Value.LastEtag, minEtag);
-            }
-            if (replicationNodes.Count > 0)
-            {
-                // if we don't have information from all our destinations, we don't know what tombstones
-                // we can remove. Note that this explicitly _includes_ disabled destinations, which prevents
-                // us from doing any tombstone cleanup.
-                return 0;
-            }
 
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -141,6 +124,24 @@ namespace Raven.Server.Documents.Replication
                         minEtag = Math.Min(myEtag, minEtag);
                     }
                 }
+            }
+
+            var replicationNodes = Destinations?.ToList();
+            if (replicationNodes == null || replicationNodes.Count == 0)
+                return minEtag;
+
+            foreach (var lastEtagPerDestination in _lastSendEtagPerDestination)
+            {
+                replicationNodes.Remove(lastEtagPerDestination.Key);
+                minEtag = Math.Min(lastEtagPerDestination.Value.LastEtag, minEtag);
+            }
+
+            if (replicationNodes.Count > 0)
+            {
+                // if we don't have information from all our destinations, we don't know what tombstones
+                // we can remove. Note that this explicitly _includes_ disabled destinations, which prevents
+                // us from doing any tombstone cleanup.
+                return 0;
             }
 
             return minEtag;
