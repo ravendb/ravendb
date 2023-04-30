@@ -6,6 +6,7 @@
 
 using System;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard.Cluster.Notifications
@@ -22,6 +23,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
         
         public string ServerVersion { get; set; }
         public string OsName { get; set; }
+        public OSType OsType { get; set; }
 
         public override ClusterDashboardNotificationType Type => ClusterDashboardNotificationType.ClusterOverview;
         
@@ -36,6 +38,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
             json[nameof(StartTime)] = StartTime;
             json[nameof(ServerVersion)] = ServerVersion;
             json[nameof(OsName)] = OsName;
+            json[nameof(OsType)] = OsType;
 
             return json;
         }
