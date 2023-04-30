@@ -876,6 +876,17 @@ namespace Tests.Infrastructure
             }
             Assert.True(condition, states);
             Assert.True(await WaitForNotHavingPromotables(clusterNodes));
+
+            var votersCount = watcherCluster ? 0 : numberOfNodes - 1;
+            if(votersCount > 0)
+                await ActionWithLeader(async (leader1) =>
+                {
+                    while (leader1.ServerStore.Engine.CurrentLeader.CurrentVoters.Count < votersCount)
+                    {
+                        await Task.Delay(100);
+                    }
+                }, clusterNodes);
+
             return (clusterNodes, leader, certificates);
         }
 

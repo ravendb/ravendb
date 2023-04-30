@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.TransactionMerger;
@@ -45,6 +46,17 @@ public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsM
         Enqueue(cmd).GetAwaiter().GetResult();
     }
 
+    public Task Enqueue(Func<ClusterOperationContext, long> executeFunc)
+    {
+        var cmd = new ExecutableMergedCommand(executeFunc);
+        return Enqueue(cmd);
+    }
+
+    public void EnqueueSync(Func<ClusterOperationContext, long> executeFunc)
+    {
+        Enqueue(executeFunc).GetAwaiter().GetResult();
+    }
+
     private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim(false);
     public bool IsDisposed => _disposeEvent.IsSet;
 
@@ -54,5 +66,29 @@ public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsM
             return;
         _disposeEvent.Set();
         base.Dispose();
+    }
+
+    private class ExecutableMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
+    {
+        private Func<ClusterOperationContext, long> _executeFunc;
+
+        public ExecutableMergedCommand(Func<ClusterOperationContext, long> executeFunc)
+        {
+            _executeFunc = executeFunc;
+        }
+
+        protected override long ExecuteCmd(ClusterOperationContext context)
+        {
+            if (_executeFunc == null)
+            {
+                return 1;
+            }
+            return _executeFunc.Invoke(context);
+        }
+
+        public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

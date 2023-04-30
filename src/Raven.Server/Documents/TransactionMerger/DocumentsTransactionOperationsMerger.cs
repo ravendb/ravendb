@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Voron.Debugging;
 using Voron.Util;
 
@@ -10,6 +11,8 @@ namespace Raven.Server.Documents.TransactionMerger;
 public class DocumentsTransactionOperationsMerger : AbstractTransactionOperationsMerger<DocumentsOperationContext, DocumentsTransaction>
 {
     private readonly DocumentDatabase _database;
+
+    protected AbstractDatabaseNotificationCenter NotificationCenter;
 
     public DocumentsTransactionOperationsMerger([NotNull] DocumentDatabase database)
         : base(database.Name, database.Configuration, database.Time, database.DatabaseShutdown)
@@ -22,6 +25,12 @@ public class DocumentsTransactionOperationsMerger : AbstractTransactionOperation
     protected override bool IsEncrypted { get; }
 
     protected override bool Is32Bits { get; }
+
+    public void Initialize([NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool, [NotNull] AbstractDatabaseNotificationCenter notificationCenter)
+    {
+        NotificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
+        base.Initialize(contextPool);
+    }
 
     internal override DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsTransaction previousTransaction, DocumentsOperationContext currentContext)
     {
@@ -51,10 +60,6 @@ public class DocumentsTransactionOperationsMerger : AbstractTransactionOperation
 
     internal override void NotifyAboutSlowWrite(CommitStats stats)
     {
-        if (NotificationCenter is not AbstractDatabaseNotificationCenter)
-        {
-            throw new InvalidOperationException("DocumentsTransactionOperationsMerger NotificationCenter should be 'AbstractDatabaseNotificationCenter'");
-        }
-        SlowWriteNotification.Notify(stats, (AbstractDatabaseNotificationCenter)NotificationCenter);
+        SlowWriteNotification.Notify(stats, NotificationCenter);
     }
 }
