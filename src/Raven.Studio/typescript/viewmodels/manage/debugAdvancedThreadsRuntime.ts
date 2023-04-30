@@ -112,6 +112,10 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                         sortable: x => x.CpuUsage,
                         defaultSortOrder: "desc"
                     }),
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.UnmanagedAllocationsInBytes ? generalUtils.formatBytesToSize(x.UnmanagedAllocationsInBytes, 2) : "N/A", "Unmanged Allocations", "10%", {
+                        sortable: x => x.UnmanagedAllocationsInBytes ?? 0,
+                        defaultSortOrder: "desc",
+                    }),
                     new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Overall CPU Time", "10%", {
                         sortable: x => x.Duration,
                         defaultSortOrder: "desc"
@@ -119,7 +123,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || "n/a") + ")", "Thread Id", "10%", {
                         sortable: x => x.Id
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "20%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "10%", {
                         sortable: x => x.StartingTime
                     }),
                     new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.State, "State", "10%", {
