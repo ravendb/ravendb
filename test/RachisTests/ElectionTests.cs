@@ -8,6 +8,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
@@ -385,6 +386,36 @@ namespace RachisTests
                 await follower.WaitForTopology(Leader.TopologyModification.Voter);
             }
             a.CurrentLeader.StepDown();
+            Assert.True(a.LeaderTag != d.Tag);
+        }
+
+        [Fact]
+        public async Task ClusterWithWitnessAndElections()
+        {
+            var a = SetupServer(true);
+            var b = SetupServer();
+            var c = SetupServer();
+
+            await a.AddToClusterAsync(b.Url);
+            await b.WaitForTopology(Leader.TopologyModification.Voter);
+            await a.AddWitnessToClusterAsync(c.Url);
+            await c.WaitForTopology(Leader.TopologyModification.Witness);
+
+            var bLeader = b.WaitForState(RachisState.Leader, CancellationToken.None);
+            var cLeader = c.WaitForState(RachisState.Leader, CancellationToken.None);
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    await a.PutAsync(new TestCommand { Name = "test", Value = i });
+                }
+            }
+
+            Disconnect(b.Url, a.Url);
+            Disconnect(c.Url, a.Url);
+
+            await Task.WhenAny(cLeader);
         }
 
         /// <summary>

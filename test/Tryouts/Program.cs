@@ -31,7 +31,7 @@ namespace Tryouts
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
                     using (var test = new ElectionTests(testOutputHelper))
                     {
-                         await test.ForceStepDownWithWitness();
+                         await test.ClusterWithWitnessAndElections();
                     }
                 }
                 catch (Exception e)

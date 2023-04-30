@@ -193,7 +193,7 @@ namespace RachisTests
             }
 
             var (lastIndex, _) = await a.PutAsync(new TestCommand { Name = "test", Value = 9 });
-            var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            var waitForCommitIndexChange = d.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
             Assert.True(await waitForCommitIndexChange.WaitWithoutExceptionAsync(TimeSpan.FromSeconds(5)));
 
             using (b.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
