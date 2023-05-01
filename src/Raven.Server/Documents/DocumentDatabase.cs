@@ -471,8 +471,8 @@ namespace Raven.Server.Documents
                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        const int batchSize = 256;
-                        var executed = await ExecuteClusterTransaction(context, batchSize: batchSize);
+                        var batchSize = Configuration.Databases.ClusterTransactionsBatchSize;
+                        var executed = await ExecuteClusterTransaction(context, batchSize);
                         if (executed.Count == batchSize)
                         {
                             // we might have more to execute
@@ -495,6 +495,10 @@ namespace Raven.Server.Documents
             var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
                 ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: batchSize));
 
+            if (_logger.IsInfoEnabled)
+                //_nextClusterCommand refers to each individual put/delete while batch size refers to number of transaction (each contains multiple commands)
+                _logger.Info($"Read {batch.Count} cluster transaction commands - database:{Name}, fromCount:{_nextClusterCommand}, take:{batchSize}");
+            
             if (batch.Count == 0)
             {
                 var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);

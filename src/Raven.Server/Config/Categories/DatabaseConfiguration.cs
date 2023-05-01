@@ -149,5 +149,12 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Databases.RegularCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting RegularCleanupThreshold { get; set; }
+        
+        /// <summary>
+        /// specifies the max size of cluster transaction batch to be executed on the database at once
+        /// </summary>
+        [DefaultValue(256)]
+        [ConfigurationEntry("Databases.ClusterTransactionBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int ClusterTransactionsBatchSize { get; set; }
     }
 }
