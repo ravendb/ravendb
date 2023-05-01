@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Streaming;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Handlers.Streaming
 {

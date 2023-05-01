@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL;
@@ -121,6 +122,24 @@ namespace SlowTests.Server.Documents.ETL
 
             var result = AddEtl(_src, dest, collections, script, applyToAllDocuments);
             return (_src, dest, result);
+        }
+
+        protected ManualResetEventSlim WaitForEtlToComplete(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, int numOfBatches = 1)
+        {
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            return record.IsSharded 
+                ? Sharding.Etl.WaitForEtl(store, predicate, numOfBatches) 
+                : WaitForEtl(store, predicate);
+            /*
+            switch (dbMode)
+            {
+                case RavenDatabaseMode.Single:
+                    return WaitForEtl(store, predicate);
+                case RavenDatabaseMode.Sharded:
+                    return Sharding.Etl.WaitForEtl(store, predicate, count);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(dbMode), dbMode, null);
+            }*/
         }
 
         protected ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)

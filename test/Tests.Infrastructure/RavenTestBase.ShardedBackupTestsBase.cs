@@ -21,7 +21,6 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
