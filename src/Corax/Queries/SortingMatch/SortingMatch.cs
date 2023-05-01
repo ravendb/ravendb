@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Corax.Utils;
+using Corax.Utils.Spatial;
 using Sparrow.Server;
 
 namespace Corax.Queries
@@ -295,24 +296,33 @@ namespace Corax.Queries
         
         private struct EntryComparerBySpatial : IEntryComparer<long>, IComparerInit
         {
-            private TermsReader _reader;
+            private SpatialReader _reader;
+            private (double X, double Y) _center;
+            private SpatialUnits _units;
+            private double _round;
 
             public void Init(ref SortingMatch<TInner> match)
             {
-                _reader = match._searcher.TermsReaderFor(match._orderMetadata.Field.FieldName);
+                _center = (match._orderMetadata.Point.X, match._orderMetadata.Point.Y);
+                _units = match._orderMetadata.Units;
+                _round = match._orderMetadata.Round;
+                _reader = match._searcher.SpatialReader(match._orderMetadata.Field.FieldName);
             }
 
             public int Compare(long x, long y)
             {
-                var hasX = _reader.TryGetTermFor(x, out ReadOnlySpan<byte> xTerm);
-                var hasY = _reader.TryGetTermFor(y, out ReadOnlySpan<byte> yTerm);
+                var hasX = _reader.TryGetSpatialPoint(x, out var xCoords);
+                var hasY = _reader.TryGetSpatialPoint(y, out var yCoords);
 
                 if (hasY == false)
                     return hasX ? 1 : 0;
                 if (hasX == false)
                     return -1;
 
-                return SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
+                var xDist = SpatialUtils.GetGeoDistance(xCoords, _center, _round, _units);
+                var yDist = SpatialUtils.GetGeoDistance(yCoords, _center, _round, _units);
+
+                return xDist.CompareTo(yDist);
             }
 
             public long GetEntryId(long x)

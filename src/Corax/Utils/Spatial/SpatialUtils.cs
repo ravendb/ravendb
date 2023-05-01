@@ -69,6 +69,26 @@ public class SpatialUtils
         
         return distance - distance % comparer.Round;
     }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static double GetGeoDistance(in (double lat, double lng) fieldCoordinates, (double X, double Y) center, double round, SpatialUnits units)
+    {
+        var distance = HaverstineDistanceInInternationalNauticalMiles(center.Y, center.X, fieldCoordinates.lat, fieldCoordinates.lng);
+        const double NumberOfMilesInNauticalMile = 1.1515;
+        const double NumberOfKilometersInNauticalMile = 1.852;
+
+        distance = units switch
+        {
+            SpatialUnits.Miles => distance * NumberOfMilesInNauticalMile,
+            SpatialUnits.Kilometers => distance * NumberOfKilometersInNauticalMile,
+            _ => distance
+        };
+
+        if (round <= 0)
+            return distance;
+        
+        return distance - distance % round;
+    }
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
