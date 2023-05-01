@@ -495,9 +495,13 @@ namespace Raven.Server.Documents
             var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
                 ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: batchSize));
 
+            Stopwatch stopwatch = null;
             if (_logger.IsInfoEnabled)
+            {
+                stopwatch = Stopwatch.StartNew();
                 //_nextClusterCommand refers to each individual put/delete while batch size refers to number of transaction (each contains multiple commands)
-                _logger.Info($"Read {batch.Count} cluster transaction commands - database:{Name}, fromCount:{_nextClusterCommand}, take:{batchSize}");
+                _logger.Info($"Read {batch.Count:#,#;;0} cluster transaction commands - fromCount: {_nextClusterCommand}, take: {batchSize}");
+            }
             
             if (batch.Count == 0)
             {
@@ -552,7 +556,12 @@ namespace Raven.Server.Documents
                     ClusterTransactionWaiter.SetException(command.Options.TaskId, command.Index, exception);
                 }
             }
-
+            finally
+            {
+                if (_logger.IsInfoEnabled && stopwatch != null)
+                    _logger.Info($"cluster transaction batch took {stopwatch.Elapsed:c}");
+            }
+            
             return batch;
         }
 
