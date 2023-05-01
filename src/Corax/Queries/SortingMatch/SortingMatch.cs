@@ -1,13 +1,12 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
+using Voron.Data.Fixed;
 
 namespace Corax.Queries
 {
@@ -50,8 +49,8 @@ namespace Corax.Queries
                 {
                     MatchCompareFieldType.Sequence => SortBy<TermsScorer, long, EntryComparerByTerm>(orderMetadata),
                     MatchCompareFieldType.Alphanumeric => SortBy<TermsScorer, long, EntryComparerByTermAlphaNumeric>(orderMetadata),
-                    // MatchCompareFieldType.Integer => &Fill<Fetcher, NumericalItem<long>>,
-                    // MatchCompareFieldType.Floating => &Fill<Fetcher, NumericalItem<double>>,
+                    MatchCompareFieldType.Integer => SortBy<TermsScorer, long, EntryComparerByLong>(orderMetadata),
+                    MatchCompareFieldType.Floating => SortBy<TermsScorer, long, EntryComparerByDouble>(orderMetadata),
                     MatchCompareFieldType.Spatial => SortBy<TermsScorer, long, EntryComparerBySpatial>(orderMetadata),
                     _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
                 };
@@ -252,7 +251,8 @@ namespace Corax.Queries
 
             public int Compare(long x, long y)
             {
-                return _reader.Compare(x, y);
+                var cmp = _reader.Compare(x, y);
+                return cmp == 0 ? x.CompareTo(y) : cmp;
             }
 
             public long GetEntryId(long x)
@@ -263,6 +263,82 @@ namespace Corax.Queries
             public void Init(ref SortingMatch<TInner> match)
             {
                 _reader = match._searcher.TermsReaderFor(match._orderMetadata.Field.FieldName);
+            }
+        }
+        
+        private struct EntryComparerByLong : IEntryComparer<long>, IComparerInit
+        {
+            private FixedSizeTree _fst;
+
+            public int Compare(long x, long y)
+            {
+                if (_fst == null)
+                    return 0; // nothing to figure out _by_
+                
+                using var _ = _fst.Read(x, out var ySlice);
+                using var __ = _fst.Read(y, out var xSlice);
+
+                if (ySlice.HasValue == false)
+                {
+                    return xSlice.HasValue == false ? 0 : 1;
+                }
+
+                if (xSlice.HasValue == false)
+                    return -1;
+
+                long xTerm = xSlice.ReadInt64();
+                long yTerm = ySlice.ReadInt64();
+
+                var cmp = xTerm.CompareTo(yTerm);
+                return cmp == 0 ? x.CompareTo(y) : cmp;
+            }
+
+            public long GetEntryId(long x)
+            {
+                return x;
+            }
+
+            public void Init(ref SortingMatch<TInner> match)
+            {
+                _fst = match._searcher.LongReader(match._orderMetadata.Field.FieldName);
+            }
+        }
+        
+        private struct EntryComparerByDouble : IEntryComparer<long>, IComparerInit
+        {
+            private FixedSizeTree _fst;
+
+            public int Compare(long x, long y)
+            {
+                if (_fst == null)
+                    return 0; // nothing to figure out _by_
+                
+                using var _ = _fst.Read(x, out var ySlice);
+                using var __ = _fst.Read(y, out var xSlice);
+
+                if (ySlice.HasValue == false)
+                {
+                    return xSlice.HasValue == false ? 0 : 1;
+                }
+
+                if (xSlice.HasValue == false)
+                    return -1;
+
+                var xTerm = xSlice.ReadDouble();
+                var yTerm = ySlice.ReadDouble();
+
+                var cmp = xTerm.CompareTo(yTerm);
+                return cmp == 0 ? x.CompareTo(y) : cmp;
+            }
+
+            public long GetEntryId(long x)
+            {
+                return x;
+            }
+
+            public void Init(ref SortingMatch<TInner> match)
+            {
+                _fst = match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
             }
         }
 
@@ -285,7 +361,8 @@ namespace Corax.Queries
                 if (hasX == false)
                     return -1;
 
-                return SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
+                var cmp = SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
+                return cmp == 0 ? x.CompareTo(y) : cmp;
             }
 
             public long GetEntryId(long x)
@@ -322,7 +399,8 @@ namespace Corax.Queries
                 var xDist = SpatialUtils.GetGeoDistance(xCoords, _center, _round, _units);
                 var yDist = SpatialUtils.GetGeoDistance(yCoords, _center, _round, _units);
 
-                return xDist.CompareTo(yDist);
+                var cmp = xDist.CompareTo(yDist);
+                return cmp == 0 ? x.CompareTo(y) : cmp;
             }
 
             public long GetEntryId(long x)

@@ -104,7 +104,6 @@ public unsafe ref struct SortingMatchHeap<TComparer, T>
             if(_comparer.Compare(_entries[parent], _entries[current]) > 0)
                 break;
 
-          
             (_entries[parent], _entries[current]) = (_entries[current], _entries[parent]);
             current = parent;
         }
