@@ -366,6 +366,24 @@ public unsafe struct IndexEntryReader
             return Read(out var _, out value);
         }
 
+        public (double Lat, double Lng) ReadSpatialPoint()
+        {
+            if (_offset == Invalid || 
+                (Type & IndexEntryFieldType.SpatialPoint) == 0)
+                goto Fail;
+
+            var buffer = _parent._buffer;
+            var intOffset = _offset +sizeof(IndexEntryFieldType);
+
+            Debug.Assert(_isTyped, "Spatial field should be typed");
+
+            var lat = Unsafe.ReadUnaligned<double>(buffer + intOffset);
+            var lng = Unsafe.ReadUnaligned<double>(buffer + intOffset + sizeof(double));
+            return (lat, lng);
+
+            Fail:
+            throw new InvalidOperationException("Cannot request a spatial value when the field is not spatial.");
+        }
 
         public bool Read(out IndexEntryFieldType type, out Span<byte> value, int elementIdx = 0)
         {

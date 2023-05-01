@@ -55,6 +55,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly Tree _metadataTree;
     private readonly Tree _fieldsTree;
     private readonly Tree _entriesToTermsTree;
+    private Tree _entriesToSpatialTree;
 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
@@ -412,6 +413,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public TermsReader TermsReaderFor(Slice name)
     {
         return new TermsReader(_transaction.LowLevelTransaction, _entriesToTermsTree, name);
+    }
+    
+    public SpatialReader SpatialReader(Slice name)
+    {
+        _entriesToSpatialTree ??= _transaction.ReadTree(Constants.IndexWriter.EntriesToSpatialSlice);
+
+        return new SpatialReader(_transaction.LowLevelTransaction, _entriesToSpatialTree, name);
     }
 
     public void Dispose()

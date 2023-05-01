@@ -358,6 +358,7 @@ namespace Corax
 
         private class IndexedField
         {
+            public Dictionary<long, (double,double)> Spatial;
             public readonly Dictionary<Slice, EntriesModifications> Textual;
             public readonly Dictionary<long, EntriesModifications> Longs;
             public readonly Dictionary<double, EntriesModifications> Doubles;
@@ -1002,6 +1003,8 @@ namespace Corax
 
                         while (spatialIterator.ReadNext())
                         {
+                            EnsureSmallestPoint((spatialIterator.Latitude, spatialIterator.Longitude));
+
                             for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
                                 ExactInsert(spatialIterator.Geohash.Slice(0, i));
                         }
@@ -1011,6 +1014,8 @@ namespace Corax
                     case IndexEntryFieldType.SpatialPoint:
                         if (_fieldReader.Read(out valueInEntry) == false)
                             break;
+                        
+                        EnsureSmallestPoint(_fieldReader.ReadSpatialPoint());
 
                         for (int i = 1; i <= valueInEntry.Length; ++i)
                             ExactInsert(valueInEntry.Slice(0, i));
@@ -1048,6 +1053,20 @@ namespace Corax
 
                         Insert(value);
                         break;
+                }
+            }
+
+            private void EnsureSmallestPoint((double Lat, double Lng) coords)
+            {
+                _indexedField.Spatial ??= new();
+                ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Spatial, _entryId, out var exists);
+                if (exists == false)
+                {
+                    term = coords;
+                }
+                else if (coords.CompareTo(term) < 0)
+                {
+                    term = coords;
                 }
             }
 
@@ -1443,6 +1462,7 @@ namespace Corax
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
             Tree fieldsTree = Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
             Tree entriesToTermsTree = Transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
+            Tree entriesToSpatialTree = Transaction.CreateTree(Constants.IndexWriter.EntriesToSpatialSlice);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfTermsInIndex, _numberOfTermModifications);
             ProcessDeletes();
@@ -1458,6 +1478,7 @@ namespace Corax
                 InsertTextualField(fieldsTree, entriesToTermsTree, indexedField, workingBuffer, ref keys);
                 InsertNumericFieldLongs(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
                 InsertNumericFieldDoubles(fieldsTree, entriesToTermsTree, indexedField, workingBuffer);
+                InsertSpatialField(entriesToSpatialTree, indexedField);
             }
 
             if (_dynamicFieldsTerms != null)
@@ -1503,11 +1524,25 @@ namespace Corax
             }
         }
 
+        private unsafe void InsertSpatialField(Tree entriesToSpatialTree, IndexedField indexedField)
+        {
+            if (indexedField.Spatial == null)
+                return;
+            
+            var entriesToTerms = entriesToSpatialTree.FixedTreeFor(indexedField.Name, sizeof(double)+sizeof(double));
+            foreach (var (entry, (lat,lng))  in indexedField.Spatial)
+            {
+                using (entriesToTerms.DirectAdd(entry, out _, out var ptr))
+                {
+                    Unsafe.WriteUnaligned(ptr, lat);
+                    Unsafe.WriteUnaligned(ptr + sizeof(double), lng);
+                }
+            }
+        }
 
         private void InsertTextualField(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, ref Slice[] sortedTermsBuffer)
         {
             var fieldTree = fieldsTree.CompactTreeFor(indexedField.Name);
-            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(long)); 
             var currentFieldTerms = indexedField.Textual;
             int termsCount = currentFieldTerms.Count;
             
@@ -1589,21 +1624,26 @@ namespace Corax
                     }
                 }
 
-                foreach (long removal in _removalsForTerm)
+                // For spatial, we handle this in InsertSpatialField, so we skip it here
+                if (indexedField.Spatial == null) 
                 {
-                    // if already added, we don't need to remove it in this batch
-                    if(_entriesAlreadyAdded.Contains(removal)) 
-                        continue;
-                    entriesToTerms.Delete(removal);
+                    var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(long)); 
+                    foreach (long removal in _removalsForTerm)
+                    {
+                        // if already added, we don't need to remove it in this batch
+                        if (_entriesAlreadyAdded.Contains(removal))
+                            continue;
+                        entriesToTerms.Delete(removal);
+                    }
+
+                    foreach (long addition in _additionsForTerm)
+                    {
+                        if (_entriesAlreadyAdded.Add(addition) == false)
+                            continue;
+                        entriesToTerms.Add(addition, termContainerId);
+                    }
                 }
 
-                foreach (long addition in _additionsForTerm)
-                {
-                    if(_entriesAlreadyAdded.Add(addition) == false)
-                        continue;
-                    entriesToTerms.Add(addition, termContainerId);
-                }
-                
                 scope.Dispose();
             }
         }
