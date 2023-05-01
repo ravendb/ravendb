@@ -35,7 +35,7 @@ namespace FastTests.Corax
                 var match1 = searcher.StartWithQuery("Id", "l");
                 var concat = searcher.And(allEntries, match1);
 
-                var match = searcher.OrderByDescending(concat,
+                var match = searcher.OrderBy(concat,
                     new OrderMetadata(searcher.FieldMetadataBuilder("Content", ContentId), false, MatchCompareFieldType.Integer));
 
                 List<string> sortedByCorax = new();

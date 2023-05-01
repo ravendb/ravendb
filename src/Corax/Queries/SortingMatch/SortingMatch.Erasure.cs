@@ -56,9 +56,8 @@ namespace Corax.Queries
             }
         }
 
-        private static class StaticFunctionCache<TInner, TComparer>
+        private static class StaticFunctionCache<TInner>
             where TInner : IQueryMatch
-            where TComparer : struct, IMatchComparer
         {
             public static readonly FunctionTable FunctionTable;
 
@@ -66,11 +65,11 @@ namespace Corax.Queries
             {
                 static long CountFunc(ref SortingMatch match)
                 {
-                    return ((SortingMatch<TInner, TComparer>)match._inner).TotalResults;
+                    return ((SortingMatch<TInner>)match._inner).TotalResults;
                 }
                 static int FillFunc(ref SortingMatch match, Span<long> matches)
                 {
-                    if (match._inner is SortingMatch<TInner, TComparer> inner)
+                    if (match._inner is SortingMatch<TInner> inner)
                     {
                         var result = inner.Fill(matches);
                         match._inner = inner;
@@ -84,11 +83,10 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static SortingMatch Create<TInner, TComparer>(in SortingMatch<TInner, TComparer> query)
+        public static SortingMatch Create<TInner>(in SortingMatch<TInner> query)
             where TInner : IQueryMatch
-            where TComparer : struct, IMatchComparer
         {
-            return new SortingMatch(query, StaticFunctionCache<TInner, TComparer>.FunctionTable);
+            return new SortingMatch(query, StaticFunctionCache<TInner>.FunctionTable);
         }
 
         public QueryInspectionNode Inspect()

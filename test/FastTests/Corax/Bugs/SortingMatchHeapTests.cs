@@ -21,7 +21,7 @@ public unsafe class SortingMatchHeapTests: NoDisposalNeeded
     }
     
     
-    public struct DataComparer : IComparer<long>
+    public struct DataComparer : IEntryComparer<long>
     {
         public int Compare(long x, long y)
         {
@@ -29,28 +29,35 @@ public unsafe class SortingMatchHeapTests: NoDisposalNeeded
             var yd = Data.First(i => i.Key ==  y);
             return string.Compare(xd.Value, yd.Value, StringComparison.Ordinal);
         }
+
+        public long GetEntryId(long x)
+        {
+            return x;
+        }
     }
     
     [Fact]
     public void DifferentPagesSortProperly()
     {
-        var buffer5 = stackalloc long[5];
-        var buffer10 = stackalloc long[10];
-        var heap5 = new SortingMatchHeap<DataComparer>(new DataComparer());
-        var heap10 = new SortingMatchHeap<DataComparer>(new DataComparer());
-        heap5.Set(buffer5, null, 5);
-        heap10.Set(buffer10, null, 10);
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        
+        var heap5 = new SortingMatchHeap<DataComparer, long>(new DataComparer());
+        var heap10 = new SortingMatchHeap<DataComparer, long>(new DataComparer());
+        bsc.Allocate(5 * sizeof(long), out var mem5);
+        bsc.Allocate(10  * sizeof(long), out var mem10);
+        heap5.Set(mem5);
+        heap10.Set(mem10);
         using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         
         foreach ((long k, string id, string val) in Data)
         {
-            heap5.Add(k,0);
+            heap5.Add(k);
         }
         
           
         foreach ((long k, string id, string val) in Data)
         {
-            heap10.Add(k,0);
+            heap10.Add(k);
         }
 
         var fill5 = new long[5];

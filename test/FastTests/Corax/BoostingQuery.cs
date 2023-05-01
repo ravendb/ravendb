@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -67,7 +68,7 @@ namespace FastTests.Corax
                 var contentMatch = searcher.TermQuery(searcher.FieldMetadataBuilder("Content1", hasBoost: true), "1");
                 var orMatch = searcher.Or(boostedStartWithMatch, contentMatch);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
-                var orderByScore = searcher.OrderByScore(boostedOrMatch);
+                var orderByScore = searcher.OrderBy(boostedOrMatch, new OrderMetadata(true, MatchCompareFieldType.Score));
                 Span<long> ids = stackalloc long[2048];
                 int read = orderByScore.Fill(ids);
                 ids = ids.Slice(0, read);
@@ -101,7 +102,7 @@ namespace FastTests.Corax
                     searcher.InQuery(contentMetadata, new() {"1", "2", "3"})
                     , 10);
 
-                match = searcher.OrderByScore(match);
+                match = searcher.OrderBy(match,new OrderMetadata(true, MatchCompareFieldType.Score));
                 Span<long> ids = stackalloc long[amount];
                 var read = match.Fill(ids);
                 List<string> result = new();
@@ -140,7 +141,7 @@ namespace FastTests.Corax
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
                 var contentMatch2 = searcher.TermQuery("Content1", "2", hasBoost: true);
                 var orMatch2 = searcher.Or(contentMatch2, boostedOrMatch);
-                var sortedMatch = searcher.OrderByScore(orMatch2);
+                var sortedMatch = searcher.OrderBy(orMatch2, new OrderMetadata(true, MatchCompareFieldType.Score));
 
                 Span<long> ids = stackalloc long[2048];
                 int read = sortedMatch.Fill(ids);
@@ -176,7 +177,7 @@ namespace FastTests.Corax
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
                 var contentMatch2 = searcher.TermQuery("Content1", "2", hasBoost: true);
                 var orMatch2 = searcher.Or(contentMatch2, boostedOrMatch);
-                var sortedMatch = searcher.OrderByScore(orMatch2, 4);
+                var sortedMatch = searcher.OrderBy(orMatch2, new OrderMetadata(true, MatchCompareFieldType.Score), 4);
 
                 // TODO: Check what happens in OrderBy statements when the buffer is too small. 
                 Span<long> ids = stackalloc long[1024];
@@ -218,7 +219,7 @@ namespace FastTests.Corax
 
                 var orMatch = searcher.Or(boostedContent0, boostedContent1);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
-                var sortedMatch = searcher.OrderByScore(boostedOrMatch);
+                var sortedMatch = searcher.OrderBy(boostedOrMatch,new OrderMetadata(true,MatchCompareFieldType.Score));
 
                 Span<long> ids = stackalloc long[1024];
                 var read = sortedMatch.Fill(ids);
@@ -258,7 +259,8 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             var contentMetadata = searcher.FieldMetadataBuilder("Content1", hasBoost: true);
             {
-                var query = searcher.OrderByScore(searcher.InQuery(contentMetadata, new List<string>() {"0", "1"}));
+                var query = searcher.OrderBy(searcher.InQuery(contentMetadata, new List<string>() {"0", "1"})
+                    ,new OrderMetadata(true,MatchCompareFieldType.Score));
 
                 Span<long> ids = stackalloc long[1024];
                 var read = query.Fill(ids);
@@ -337,7 +339,7 @@ namespace FastTests.Corax
             var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1, hasBoost: true);
             {
                 var query = searcher.InQuery(contentMetadata, new List<string>() {"0", "1", "2", "3"});
-                var sortedMatch = searcher.OrderByScore(query);
+                var sortedMatch = searcher.OrderBy(query,new OrderMetadata(true,MatchCompareFieldType.Score));
 
                 Span<long> ids = stackalloc long[1024];
                 var read = sortedMatch.Fill(ids);
