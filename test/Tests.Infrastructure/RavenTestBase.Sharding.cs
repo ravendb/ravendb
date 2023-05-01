@@ -30,11 +30,12 @@ public partial class RavenTestBase
 
     public class ShardingTestBase
     {
-        public ShardedBackupTestsBase Backup;
-        public ShardedSubscriptionTestBase Subscriptions;
+        public readonly ShardedBackupTestsBase Backup;
+        public readonly ShardedSubscriptionTestBase Subscriptions;
+        public readonly ShardedEtlTestsBase Etl;
+        public readonly ReshardingTestBase Resharding;
 
         private readonly RavenTestBase _parent;
-        public readonly ReshardingTestBase Resharding;
 
         public ShardingTestBase(RavenTestBase parent)
         {
@@ -42,6 +43,7 @@ public partial class RavenTestBase
             Backup = new ShardedBackupTestsBase(_parent);
             Resharding = new ReshardingTestBase(_parent);
             Subscriptions = new ShardedSubscriptionTestBase(_parent);
+            Etl = new ShardedEtlTestsBase(_parent);
         }
 
         public DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, Dictionary<int, DatabaseTopology> shards = null)

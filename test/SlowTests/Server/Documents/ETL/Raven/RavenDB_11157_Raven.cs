@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,21 +20,26 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Theory]
-        [InlineData("Users", null)]
-        [InlineData(null, null)]
-        [InlineData("Users", @"
+        private const string BasicScript = @"
     loadToUsers(this);
 
 function loadCountersOfUsersBehavior(doc, counter)
 {
     return true;
 }
-")]
+";
 
-        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting(string collection, string script)
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(RavenDatabaseMode.Single, "Users", null)]
+        [InlineData(RavenDatabaseMode.Single, null, null)]
+        [InlineData(RavenDatabaseMode.Single, "Users", BasicScript)]
+        [InlineData(RavenDatabaseMode.Sharded, "Users", null)]
+        [InlineData(RavenDatabaseMode.Sharded, null, null)]
+        [InlineData(RavenDatabaseMode.Sharded, "Users", BasicScript)]
+
+        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting_internal(RavenDatabaseMode dbMode, string collection, string script)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForMode(dbMode)))
             using (var dest = GetDocumentStore())
             {
                 if (collection == null)
@@ -41,7 +47,7 @@ function loadCountersOfUsersBehavior(doc, counter)
                 else
                     AddEtl(src, dest, collection, script: script);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -113,16 +119,17 @@ function loadCountersOfUsersBehavior(doc, counter)
             }
         }
 
-        [Fact]
-        public void Should_not_send_counters_metadata_when_using_script()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_not_send_counters_metadata_when_using_script(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -152,11 +159,11 @@ function loadCountersOfUsersBehavior(doc, counter)
             }
         }
 
-
-        [Fact]
-        public void Should_handle_counters()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_handle_counters(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script:
@@ -180,7 +187,7 @@ var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
 person.addCounter(loadCounter('down'));
 "
 );
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -287,10 +294,11 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
-        public void Can_use_get_counters()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_use_get_counters(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script:
@@ -308,7 +316,7 @@ for (var i = 0; i < counters.length; i++) {
 }
 "
 );
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -341,10 +349,11 @@ for (var i = 0; i < counters.length; i++) {
             }
         }
 
-        [Fact]
-        public void Should_remove_counter_if_add_counter_gets_null_argument()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_remove_counter_if_add_counter_gets_null_argument(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script:
@@ -353,7 +362,7 @@ var doc = loadToUsers(this);
 doc.addCounter(loadCounter('likes'));
 "
                 );
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -394,7 +403,7 @@ doc.addCounter(loadCounter('likes'));
                     ("users/2", "likes", 1L, false)
                 });
 
-                etlDone.Reset();
+                etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -412,10 +421,11 @@ doc.addCounter(loadCounter('likes'));
             }
         }
 
-        [Fact]
-        public void Can_use_has_counter()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_use_has_counter(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script:
@@ -432,7 +442,7 @@ if (hasCounter('down')) {
 }
 "
                 );
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -466,15 +476,16 @@ if (hasCounter('down')) {
             }
         }
 
-        [Fact]
-        public void Must_not_send_counters_and_counter_tombstones_from_non_relevant_collections()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Must_not_send_counters_and_counter_tombstones_from_non_relevant_collections(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = dest.OpenSession())
                 {
@@ -531,12 +542,15 @@ if (hasCounter('down')) {
             }
         }
 
-        [Fact]
-        public void Should_send_counter_even_if_doc_was_updater_later()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_send_counter_even_if_doc_was_updater_later(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User(), "users/1");
@@ -555,8 +569,6 @@ if (hasCounter('down')) {
 
                 AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
-
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
@@ -568,15 +580,16 @@ if (hasCounter('down')) {
             }
         }
 
-        [Fact]
-        public void Should_send_updated_counter_values()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_send_updated_counter_values(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccessesInCurrentBatch > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccessesInCurrentBatch > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -612,18 +625,19 @@ if (hasCounter('down')) {
             }
         }
 
-        [Fact]
-        public void Should_skip_counter_if_has_lower_etag_than_document()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void Should_skip_counter_if_has_lower_etag_than_document(Options options)
         {
-            using (var src = GetDocumentStore(new Options()
-            {
-                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2"
-            }))
+            options.ModifyDatabaseRecord += x => 
+                x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2";
+
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -637,7 +651,7 @@ if (hasCounter('down')) {
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                etlDone.Reset();
+                etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 3);
 
                 using (var session = src.OpenSession())
                 {
@@ -674,8 +688,6 @@ if (hasCounter('down')) {
                     session.SaveChanges();
                 }
 
-                etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
-
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
@@ -701,14 +713,17 @@ if (hasCounter('down')) {
         }
 
         [Theory]
-        [InlineData("Users")]
-        [InlineData(null)]
-        public void Should_send_all_counters_on_doc_update(string collection = null)
+        [InlineData("Users", RavenDatabaseMode.Single)]
+        [InlineData("Users", RavenDatabaseMode.Sharded)]
+        [InlineData(null, RavenDatabaseMode.Single)]
+        [InlineData(null, RavenDatabaseMode.Sharded)]
+        public void Should_send_all_counters_on_doc_update(string collection, RavenDatabaseMode dbMode)
         {
-            using (var src = GetDocumentStore(new Options()
-            {
-                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2"
-            }))
+            var options = Options.ForMode(dbMode);
+            options.ModifyDatabaseRecord +=
+                x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2";
+
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 using (var session = src.OpenSession())
@@ -735,7 +750,7 @@ if (hasCounter('down')) {
                 else
                     AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LastProcessedEtag >= 10);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LastProcessedEtag >= 10);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -750,10 +765,11 @@ if (hasCounter('down')) {
             }
         }
 
-        [Fact]
-        public void Should_handle_counters_according_to_behavior_defined_in_script()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void Should_handle_counters_according_to_behavior_defined_in_script(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script:
@@ -772,11 +788,11 @@ function loadCountersOfUsersBehavior(docId, counter)
         return true;
     }
 }");
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
-
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                
                 using (var session = src.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Joe",
                         LastName = "Doe",
@@ -838,17 +854,18 @@ function loadCountersOfUsersBehavior(docId, counter)
             }
         }
 
-        [Fact]
-        public void Should_not_send_counters_if_load_counters_behavior_isnt_defined()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void Should_not_send_counters_if_load_counters_behavior_isnt_defined(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script:
                     @"
 loadToUsers(this);");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -886,8 +903,10 @@ loadToUsers(this);");
             }
         }
 
-        [Fact]
-        public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set()
+        //todo
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set(Options options)
         {
             using (var src = GetDocumentStore(new Options()
             {
@@ -937,7 +956,7 @@ function loadCountersOfUsersBehavior(docId, counter)
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Error_if_load_counter_behavior_func_doesnt_match_any_collection_that_script_applies_to()
         {
             var config = new RavenEtlConfiguration
@@ -978,10 +997,11 @@ function loadCountersOfCustomersBehavior(docId, counter) // it's ok
                          "are loaded to the same collection on a destination side", errors[0]);
         }
 
-        [Fact]
-        public void Load_counters_behavior_function_can_use_other_function_defined_in_script()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void Load_counters_behavior_function_can_use_other_function_defined_in_script(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script: @"
@@ -996,7 +1016,7 @@ function loadCountersOfUsersBehavior(docId, counter)
     return loadAllCounters();
 }");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -1017,15 +1037,16 @@ function loadCountersOfUsersBehavior(docId, counter)
             }
         }
 
-        [Fact]
-        public void Should_override_counter_value()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void Should_override_counter_value(Options options)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -1068,10 +1089,11 @@ function loadCountersOfUsersBehavior(docId, counter)
             }
         }
 
-        [Fact]
-        public void Can_define_multiple_load_counter_behavior_functions()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void Can_define_multiple_load_counter_behavior_functions(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script:
@@ -1095,7 +1117,7 @@ function loadCountersOfUsersBehavior(docId, counter)
     }
 ");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
 
                 using (var session = src.OpenSession())
                 {

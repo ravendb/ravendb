@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Employee = Orders.Employee;
@@ -18,16 +22,20 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Fact]
-        public void Simple_script()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        public void Simple_script(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
+            using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
                 AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -68,12 +76,16 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 }
             }
         }
-        
-        [Fact]
-        public void WithDocumentPrefix()
+
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        public void WithDocumentPrefix(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
+            using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
                 AddEtl(src, new RavenEtlConfiguration()
                     {
@@ -156,7 +168,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                                session.Advanced.Exists(secondaryId) == false;
                     }
                 }, true);
-                
+
                 using (var session = dest.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A,Chicago");
@@ -170,11 +182,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void SetMentorToEtlAndFailover()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SetMentorToEtlAndFailover(Options options)
         {
             using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:null ,mentor: "C");
 
@@ -182,7 +195,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 Assert.Equal("C",database.EtlLoader.RavenDestinations[0].MentorNode);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -224,19 +237,23 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void No_script()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        public void No_script(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
+            using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
                 AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Joe Doe"
                     });
@@ -274,13 +291,14 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void Filtering_and_transformation_with_load_document()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Filtering_and_transformation_with_load_document(Options dstOptions)
         {
             using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var dest = GetDocumentStore(dstOptions))
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 AddEtl(src, dest, "users", @"
 if (this.Age % 4 == 0) 
@@ -300,18 +318,21 @@ loadToUsers(
                 {
                     for (int i = 0; i < count; i++)
                     {
+                        var userId = "users/" + i;
+                        var addressId = $"addresses/{i}${userId}";
+
                         session.Store(new User
                         {
                             Age = i,
                             Name = "James",
                             LastName = "Smith",
-                            AddressId = $"addresses/{i}"
-                        }, "users/" + i);
+                            AddressId = addressId
+                        }, userId);
 
                         session.Store(new Address
                         {
                             City = "New York"
-                        }, $"addresses/{i}");
+                        }, addressId);
                     }
 
                     session.SaveChanges();
@@ -367,13 +388,14 @@ loadToUsers(
             }
         }
 
-        [Fact]
-        public void Loading_to_different_collections()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Loading_to_different_collections(Options dstOptions)
         {
             using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var dest = GetDocumentStore(dstOptions))
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 AddEtl(src, dest, "users", @"
 loadToUsers(this);
@@ -409,7 +431,7 @@ loadToAddresses(load(this.AddressId));
                 {
                     for (var i = 1; i <= count; i++)
                     {
-                        var user = session.Load<User>($"users/{i}"+ "-A");
+                        var user = session.Load<User>($"users/{i}" + "-A");
                         Assert.NotNull(user);
                         Assert.Equal("James", user.Name);
                         Assert.Equal("Smith", user.LastName);
@@ -433,9 +455,9 @@ loadToAddresses(load(this.AddressId));
                     }
                 }
 
-                var stats = dest.Maintenance.Send(new GetStatisticsOperation());
-
-                Assert.Equal(15, stats.CountOfDocuments);
+                //var stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                var docsCount = GetCountOfDocuments(dest);
+                Assert.Equal(15, docsCount);
 
                 etlDone.Reset();
 
@@ -460,19 +482,23 @@ loadToAddresses(load(this.AddressId));
                     Assert.Equal(0, addresses.Length);
                 }
 
-                stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                docsCount = GetCountOfDocuments(dest);
 
-                Assert.Equal(12, stats.CountOfDocuments);
+                Assert.Equal(12, docsCount);
             }
         }
 
-        [Fact]
-        public void Loading_to_different_collections_using_this()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        public void Loading_to_different_collections_using_this(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
+            using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0, numOfBatches: 3);
 
                 AddEtl(src, dest, "Employees", @"
 loadToPeople(this);
@@ -521,11 +547,11 @@ loadToAddresses(this.Address);
                     }
                 }
 
-                var stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                var docsCount = GetCountOfDocuments(dest);
 
-                Assert.Equal(10, stats.CountOfDocuments);
+                Assert.Equal(10, docsCount);
 
-                etlDone.Reset();
+                etlDone = WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -545,19 +571,23 @@ loadToAddresses(this.Address);
                     Assert.Equal(0, addresses.Length);
                 }
 
-                stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                docsCount = GetCountOfDocuments(dest);
 
-                Assert.Equal(8, stats.CountOfDocuments);
+                Assert.Equal(8, docsCount);
             }
         }
 
-        [Fact]
-        public void Loading_to_the_same_collection_by_js_object_should_preserve_collection_metadata()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        public void Loading_to_the_same_collection_by_js_object_should_preserve_collection_metadata(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
+            using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 AddEtl(src, dest, "users", @"
 loadToUsers({Name: this.Name + ' ' + this.LastName });
@@ -592,13 +622,17 @@ loadToUsers({Name: this.Name + ' ' + this.LastName });
             }
         }
 
-        [Fact]
-        public void Update_of_disassembled_document()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        public void Update_of_disassembled_document(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
+            using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 AddEtl(src, dest, "Orders", @"
 var orderData = {
@@ -718,15 +752,19 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
-        public void Can_get_document_id()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        public void Can_get_document_id(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
+            using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
                 AddEtl(src, dest, "Users", "this.Name = id(this); loadToUsers(this);");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -750,7 +788,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Can_put_space_after_loadTo_method_in_script()
         {
             var config = new RavenEtlConfiguration
@@ -768,10 +806,13 @@ loadToOrders(orderData);
                 }
             };
 
-            config.Initialize(new RavenConnectionString() { Database = "Foo", TopologyDiscoveryUrls = new []{"http://localhost:8080" } });
+            config.Initialize(new RavenConnectionString
+            {
+                Database = "Foo", 
+                TopologyDiscoveryUrls = new []{"http://localhost:8080" }
+            });
 
-            List<string> errors;
-            config.Validate(out errors);
+            config.Validate(out List<string> errors);
 
             Assert.Equal(0, errors.Count);
 
@@ -781,8 +822,7 @@ loadToOrders(orderData);
             Assert.Equal("Users", collections[0]);
         }
 
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Error_if_script_does_not_contain_any_loadTo_method()
         {
             var config = new RavenEtlConfiguration
@@ -800,28 +840,34 @@ loadToOrders(orderData);
                 }
             };
 
-            config.Initialize(new RavenConnectionString() { Database = "Foo", TopologyDiscoveryUrls = new[] { "http://localhost:8080" } });
+            config.Initialize(new RavenConnectionString
+            {
+                Database = "Foo", 
+                TopologyDiscoveryUrls = new[] { "http://localhost:8080" }
+            });
 
-            List<string> errors;
-            config.Validate(out errors);
+            config.Validate(out List<string> errors);
 
             Assert.Equal(1, errors.Count);
 
             Assert.Equal("No `loadTo<CollectionName>()` method call found in 'test' script", errors[0]);
         }
 
-        [Fact]
-        public void Can_load_to_specific_collection_when_applying_to_all_docs()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        public void Can_load_to_specific_collection_when_applying_to_all_docs(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
+            using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 AddEtl(src, dest, new string[0], script: @"
 loadToUsers(this);
 ", applyToAllDocuments: true);
-
 
                 using (var session = src.OpenSession())
                 {
@@ -841,6 +887,30 @@ loadToUsers(this);
                     Assert.NotNull(session.Load<User>("users/1"));
                 }
             }
+        }
+
+        private long GetCountOfDocuments(IDocumentStore store)
+        {
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            if (record.IsSharded == false)
+            {
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
+                return stats.CountOfDocuments;
+            }
+
+            var docsCount = 0L;
+            var dbs = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
+            foreach (var task in dbs)
+            {
+                var db = task.Result;
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    docsCount += db.DocumentsStorage.GetNumberOfDocuments();
+                }
+            }
+
+            return docsCount;
         }
 
         private class UserWithAddress : User

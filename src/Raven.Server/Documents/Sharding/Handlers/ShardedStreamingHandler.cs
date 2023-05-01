@@ -10,6 +10,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/streams/docs", "GET")]
         public async Task StreamDocsGet()
         {
+            // here!!!
             using (var processor = new ShardedStreamingHandlerProcessorForGetDocs(this))
                 await processor.ExecuteAsync();
         }

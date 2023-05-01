@@ -20,11 +20,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         {
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
                 using (var token = RequestHandler.CreateOperationToken())
-            {
-                await GetDocumentsAndWriteAsync(context, RequestHandler.GetStart(), RequestHandler.GetPageSize(), RequestHandler.GetStringQueryString("startsWith", required: false),
-                    RequestHandler.GetStringQueryString("excludes", required: false), RequestHandler.GetStringQueryString("matches", required: false),
-                    RequestHandler.GetStringQueryString("startAfter", required: false), RequestHandler.GetStringQueryString("format", required: false), token);
-            }
+                {
+                    var start = RequestHandler.GetStart();
+                    var pageSize = RequestHandler.GetPageSize();
+                    var startsWith = RequestHandler.GetStringQueryString("startsWith", required: false);
+                    var excludes = RequestHandler.GetStringQueryString("excludes", required: false);
+                    var matches = RequestHandler.GetStringQueryString("matches", required: false);
+                    var after = RequestHandler.GetStringQueryString("startAfter", required: false);
+                    var format = RequestHandler.GetStringQueryString("format", required: false);
+
+                    await GetDocumentsAndWriteAsync(context, start, pageSize, startsWith,
+                        excludes, matches, after, format, token);
+                }
         }
     }
 }
