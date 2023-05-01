@@ -425,6 +425,8 @@ namespace Corax
                 _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i));
 
             _entriesAlreadyAdded = new HashSet<long>();
+            _additionsForTerm = new HashSet<long>();
+            _removalsForTerm = new HashSet<long>();
         }
         
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -872,7 +874,7 @@ namespace Corax
         }
 
         private readonly long _initialNumberOfEntries;
-        private HashSet<long> _entriesAlreadyAdded;
+        private HashSet<long> _entriesAlreadyAdded, _additionsForTerm, _removalsForTerm;
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
         private void AddSuggestions(IndexedField field, Slice slice)
@@ -1510,7 +1512,7 @@ namespace Corax
             int termsCount = currentFieldTerms.Count;
             
             _entriesAlreadyAdded.Clear();
-
+         
             if (sortedTermsBuffer.Length < termsCount)
             {
                 if (sortedTermsBuffer.Length > 0)
@@ -1535,6 +1537,9 @@ namespace Corax
                 if (entries.HasChanges() == false)
                     continue;
                 
+                AddRange(_additionsForTerm, entries.Additions);
+                AddRange(_removalsForTerm, entries.Removals);
+
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 
@@ -1584,23 +1589,31 @@ namespace Corax
                     }
                 }
 
-                var removals = entries.Removals;
-                for (int i = 0; i < removals.Length; i++)
+                foreach (long removal in _removalsForTerm)
                 {
                     // if already added, we don't need to remove it in this batch
-                    if(_entriesAlreadyAdded.Contains(removals[i])) 
+                    if(_entriesAlreadyAdded.Contains(removal)) 
                         continue;
-                    entriesToTerms.Delete(removals[i]);
+                    entriesToTerms.Delete(removal);
                 }
-                var additions = entries.Additions;
-                for (int i = 0; i < additions.Length; i++)
+
+                foreach (long addition in _additionsForTerm)
                 {
-                    if(_entriesAlreadyAdded.Add(additions[i]) == false)
+                    if(_entriesAlreadyAdded.Add(addition) == false)
                         continue;
-                    entriesToTerms.Add(additions[i], termContainerId);
+                    entriesToTerms.Add(addition, termContainerId);
                 }
                 
                 scope.Dispose();
+            }
+        }
+
+        private void AddRange(HashSet<long> set, ReadOnlySpan<long> span)
+        {
+            set.Clear();
+            for (int i = 0; i < span.Length; i++)
+            {
+                set.Add(span[i]);
             }
         }
 
