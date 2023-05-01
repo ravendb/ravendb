@@ -243,7 +243,7 @@ namespace Voron.Benchmark.Corax
             var ageField = FieldMetadata.Build(_ageSlice, default, 2, default, default);
             var ageTerm = _indexSearcher.StartWithQuery(ageField, _ageValueSlice);
             var andQuery = _indexSearcher.And(typeTerm, ageTerm);
-            var query = _indexSearcher.OrderByAscending(andQuery, new OrderMetadata(ageField, true, MatchCompareFieldType.Sequence), take: TakeSize);           
+            var query = _indexSearcher.OrderBy(andQuery, new OrderMetadata(ageField, true, MatchCompareFieldType.Sequence), take: TakeSize);           
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)

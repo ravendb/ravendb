@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils.Spatial;
@@ -15,6 +16,20 @@ public readonly struct OrderMetadata
     public readonly IPoint Point;
     public readonly double Round;
     public readonly SpatialUnits Units;
+
+    public override string ToString()
+    {
+        return FieldType switch
+        {
+            MatchCompareFieldType.Sequence => Field.FieldName.ToString(),
+            MatchCompareFieldType.Integer => Field.FieldName + " as long",
+            MatchCompareFieldType.Floating => Field.FieldName + " as double",
+            MatchCompareFieldType.Score => "score()",
+            MatchCompareFieldType.Alphanumeric => " alphanumeric(" + Field.FieldName + ")",
+            MatchCompareFieldType.Spatial => $"spatial(point: {Point}, round: {Round}, units: {Units})",
+            _ => FieldType.ToString()
+        } + (Ascending ? "" : " desc");
+    }
 
     public OrderMetadata(bool hasBoost, MatchCompareFieldType fieldType, bool ascending = true)
     {

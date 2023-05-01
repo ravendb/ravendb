@@ -1,25 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Sparrow.Server;
 using static Corax.Queries.SortingMatch;
 
 namespace Corax.Queries;
 
-public unsafe ref struct SortingMatchHeap<TComparer>
-    where TComparer : struct, IComparer<long>
+public interface IEntryComparer<T>
+    where T : unmanaged
+{
+    [Pure]
+    int Compare(T x, T y);
+
+    [Pure]
+    long GetEntryId(T x);
+}
+
+
+public unsafe ref struct SortingMatchHeap<TComparer, T>
+    where TComparer : struct, IEntryComparer<T> 
+    where T : unmanaged
 {
     private readonly TComparer _comparer;
     public int Count;
-    private long* _entries;
-    private float* _scores;
+    private T* _entries;
     private int _totalMatches;
 
     public (long,string)[] DebugEntries
     {
         get
         {
+            if (_comparer is not IEntryComparer<long>)
+                return null;
+
             var c = _comparer;
             return new Span<long>(_entries, Count).ToArray()
                 .Select(l => (l, ((TermsReader)(object)c).GetTermFor(l)))
@@ -32,11 +48,10 @@ public unsafe ref struct SortingMatchHeap<TComparer>
         Count = 0;
     }
 
-    public void Set(long* entries, float* scores, int totalMatches)
+    public void Set(ByteString bs)
     {
-        _entries = entries;
-        _scores = scores;
-        _totalMatches = totalMatches;
+        _entries = (T*)bs.Ptr;
+        _totalMatches = bs.Length / sizeof(T);
     }
 
     public bool CapacityIncreaseNeeded(int read)
@@ -45,44 +60,19 @@ public unsafe ref struct SortingMatchHeap<TComparer>
         return (Count + read + 16 > _totalMatches);
     }
 
-
-    public void Add(long entryId, float score)
+    public void Add(T entry)
     {
         if (Count < _totalMatches)
         {
-            _entries[Count] = entryId;
-            if (typeof(TComparer) == typeof(BoostingComparer))
-            {
-                _scores[Count] = score;
-            }
+            _entries[Count] = entry;
             Count++;
             HeapUp();
         }
-        else if (Compare(entryId, score) > 0)
+        else if (_comparer.Compare(_entries[0], entry) > 0)
         {
-            _entries[0] = entryId;
-            if (typeof(TComparer) == typeof(BoostingComparer))
-            {
-                _scores[0] = score;
-            }
-
+            _entries[0] = entry;
             HeapDown(Count);
         }
-
-    }
-
-    private int Compare(int xIdx, int yIdx)
-    {
-        return typeof(TComparer) == typeof(BoostingComparer) ? 
-            _scores[xIdx].CompareTo(yIdx) :
-            _comparer.Compare(_entries[xIdx], _entries[yIdx]);
-    }
-
-    private int Compare(long entryId, float score)
-    {
-        return typeof(TComparer) == typeof(BoostingComparer) ? 
-            _scores[0].CompareTo(score) : 
-            _comparer.Compare(_entries[0], entryId);
     }
 
     public void Complete(Span<long> matches)
@@ -92,13 +82,13 @@ public unsafe ref struct SortingMatchHeap<TComparer>
         ref long dest = ref matches[0];
         while (resultsCount > 0)
         {
-            long actualKey = _entries[0];
+            T actualKey = _entries[0];
             // copy the last entry
             resultsCount--;
             _entries[0] = _entries[resultsCount];
             HeapDown(resultsCount);
             // now we are never using it, we can overwrite 
-            dest = actualKey;
+            dest = _comparer.GetEntryId(actualKey);
             dest = ref Unsafe.Add(ref dest, 1);
         }
     }
@@ -110,13 +100,11 @@ public unsafe ref struct SortingMatchHeap<TComparer>
         while (current > 0)
         {
             var parent = (current - 1) / 2;
-            if (Compare(parent, current) > 0)
+
+            if(_comparer.Compare(_entries[parent], _entries[current]) > 0)
                 break;
 
-            if (typeof(TComparer) == typeof(BoostingComparer))
-            {
-                (_scores[parent], _scores[current]) = (_scores[current], _scores[parent]);
-            }
+          
             (_entries[parent], _entries[current]) = (_entries[current], _entries[parent]);
             current = parent;
         }
@@ -133,19 +121,15 @@ public unsafe ref struct SortingMatchHeap<TComparer>
             if (childIdx + 1 < endOfHeap)
             {
                 // find smallest child
-                if (Compare(childIdx, childIdx+1) < 0)
+                if(_comparer.Compare(_entries[childIdx], _entries[childIdx+1]) < 0)
                 {
                     childIdx++;
                 }
             }
-
-            if (Compare(current, childIdx) > 0)
+            
+            if(_comparer.Compare(_entries[current], _entries[childIdx]) > 0)
                 break;
 
-            if (typeof(TComparer) == typeof(BoostingComparer))
-            {
-                (_scores[childIdx], _scores[current]) = (_scores[current], _scores[childIdx]);
-            }
             (_entries[childIdx], _entries[current]) = (_entries[current], _entries[childIdx]);
             current = childIdx;
         }

@@ -897,6 +897,16 @@ namespace Sparrow.Server
             segments.RemoveRange(currentIdx, segments.Count - currentIdx);
         }
 
+        public int GrowAllocation(ref ByteString str, ref InternalScope scope, int additionalSize)
+        {
+            var newScope = Allocate(str.Length + additionalSize, out var newStr);
+            Memory.Compare(newStr.Ptr, str.Ptr, str.Length);
+            scope.Dispose();
+            str = newStr;
+            scope = newScope;
+            return newStr.Length;
+        }        
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalScope Allocate<T>(int length, out Span<T> output)
             where T : unmanaged
