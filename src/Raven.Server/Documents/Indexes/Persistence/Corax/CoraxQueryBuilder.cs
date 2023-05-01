@@ -1149,18 +1149,7 @@ internal static class CoraxQueryBuilder
             case 0:
                 return match;
             case 1:
-            {
-                var order = orderMetadata[0];
-                if (order.HasBoost)
-                    return indexSearcher.OrderByScore(match, take: take);
-
-                return (order.FieldType, order.Ascending) switch
-                {
-                    (MatchCompareFieldType.Spatial, _) => indexSearcher.OrderByDistance(in match, in order),
-                    (_, true) => indexSearcher.OrderByAscending(match,  order, take),
-                    (_, false) => indexSearcher.OrderByDescending(match,  order, take)
-                };
-            }
+                return indexSearcher.OrderBy(match, orderMetadata[0], take);
 
             case 2:
             {

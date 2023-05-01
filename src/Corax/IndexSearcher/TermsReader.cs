@@ -10,7 +10,7 @@ using Voron.Impl;
 
 namespace Corax;
 
-public readonly unsafe struct TermsReader : IDisposable, IComparer<long>
+public readonly unsafe struct TermsReader : IDisposable
 {
     private readonly LowLevelTransaction _llt;
     private readonly FixedSizeTree _fst;
@@ -26,7 +26,7 @@ public readonly unsafe struct TermsReader : IDisposable, IComparer<long>
 
     public string GetTermFor(long id)
     {
-        TryGetTermFor(id, out var s);
+        TryGetTermFor(id, out string s);
         return s;
     }
     
@@ -46,6 +46,25 @@ public readonly unsafe struct TermsReader : IDisposable, IComparer<long>
 
         _xKeyScope.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], item.PageLevelMetadata);
         term = _xKeyScope.Key.ToString();
+        return true;
+    }
+
+    public bool TryGetTermFor(long id, out ReadOnlySpan<byte> term)
+    {
+        using var _ = _fst.Read(id, out var termId);
+        if (termId.HasValue == false)
+        {
+            term = null;
+            return false;
+        }
+
+        long termContainerId = termId.ReadInt64();
+        var item = Container.Get(_llt, termContainerId);
+        int remainderBits = item.Address[0] >> 4;
+        int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
+
+        _xKeyScope.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], item.PageLevelMetadata);
+        term = _xKeyScope.Key.Decoded();
         return true;
     }
 
