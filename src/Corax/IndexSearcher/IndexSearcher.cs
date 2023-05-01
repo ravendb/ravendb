@@ -421,7 +421,20 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         return new SpatialReader(_transaction.LowLevelTransaction, _entriesToSpatialTree, name);
     }
+    
+    public FixedSizeTree LongReader(Slice name)
+    {
+        if (_fieldMapping.TryGetByFieldName(name, out var field) == false)
+            return null;
+        return _entriesToTermsTree.FixedTreeFor(field.FieldNameLong, sizeof(long));
+    }
 
+    public FixedSizeTree DoubleReader(Slice name)
+    {
+        if (_fieldMapping.TryGetByFieldName(name, out var field) == false)
+            return null;
+        return _entriesToTermsTree.FixedTreeFor(field.FieldNameDouble, sizeof(double));
+    }
     public void Dispose()
     {
         if (_ownsTransaction)

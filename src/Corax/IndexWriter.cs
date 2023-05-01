@@ -16,15 +16,12 @@ using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Utils;
-using Sparrow.Server.Platform;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.PostingLists;
 using Voron.Impl;
-using Voron.Util;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Corax
@@ -1545,7 +1542,8 @@ namespace Corax
             var fieldTree = fieldsTree.CompactTreeFor(indexedField.Name);
             var currentFieldTerms = indexedField.Textual;
             int termsCount = currentFieldTerms.Count;
-            
+            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(long)); 
+
             _entriesAlreadyAdded.Clear();
          
             if (sortedTermsBuffer.Length < termsCount)
@@ -1572,13 +1570,18 @@ namespace Corax
                 if (entries.HasChanges() == false)
                     continue;
                 
-                AddRange(_additionsForTerm, entries.Additions);
-                AddRange(_removalsForTerm, entries.Removals);
-
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 
                 bool found = fieldTree.TryGetNextValue(termsSpan, out var termContainerId, out var existingIdInTree, out var scope);
+                
+                
+                if (indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
+                {
+                    AddRange(_additionsForTerm, entries.Additions);
+                    AddRange(_removalsForTerm, entries.Removals);
+                }
+                
                 Debug.Assert(found || entries.TotalRemovals == 0, "Cannot remove entries from term that isn't already there");
                 if (entries.TotalAdditions > 0 && found == false)
                 {
@@ -1624,24 +1627,9 @@ namespace Corax
                     }
                 }
 
-                // For spatial, we handle this in InsertSpatialField, so we skip it here
-                if (indexedField.Spatial == null) 
+                if (indexedField.Spatial == null)
                 {
-                    var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(long)); 
-                    foreach (long removal in _removalsForTerm)
-                    {
-                        // if already added, we don't need to remove it in this batch
-                        if (_entriesAlreadyAdded.Contains(removal))
-                            continue;
-                        entriesToTerms.Delete(removal);
-                    }
-
-                    foreach (long addition in _additionsForTerm)
-                    {
-                        if (_entriesAlreadyAdded.Add(addition) == false)
-                            continue;
-                        entriesToTerms.Add(addition, termContainerId);
-                    }
+                    InsertEntriesForTerm(entriesToTerms, termContainerId);
                 }
 
                 scope.Dispose();
@@ -1868,7 +1856,7 @@ namespace Corax
         private unsafe void InsertNumericFieldLongs(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
             FixedSizeTree fieldTree = fieldsTree.FixedTreeFor(indexedField.NameLong, sizeof(long));
-            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(long)); 
+            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.NameLong, sizeof(long)); 
 
             _entriesAlreadyAdded.Clear();
             
@@ -1880,24 +1868,9 @@ namespace Corax
                 var localEntry = entries;
                 if (localEntry.HasChanges() == false)
                     continue;
-                
-                var removals = entries.Removals;
-                for (int i = 0; i < removals.Length; i++)
-                {
-                    // if already added, we don't need to remove it in this batch
-                    if(_entriesAlreadyAdded.Contains(removals[i])) 
-                        continue;
-                    entriesToTerms.Delete(removals[i]);
-                }
-                var additions = entries.Additions;
-                for (int i = 0; i < additions.Length; i++)
-                {
-                    if(_entriesAlreadyAdded.Add(additions[i]) == false)
-                        continue;
-                    entriesToTerms.Add(additions[i], term);
-                }
-                
-                
+                  
+                UpdateEntriesForTerm(entries, entriesToTerms, term);
+
                 long termId;
                 using var _ = fieldTree.Read(term, out var result);
                 if (localEntry.TotalAdditions > 0 && result.HasValue == false)
@@ -1921,11 +1894,37 @@ namespace Corax
                 }
             }
         }
-        
+
+        private void UpdateEntriesForTerm(EntriesModifications entries, FixedSizeTree entriesToTerms, long term)
+        {
+            AddRange(_additionsForTerm, entries.Additions);
+            AddRange(_removalsForTerm, entries.Removals);
+
+            InsertEntriesForTerm(entriesToTerms, term);
+        }
+
+        private void InsertEntriesForTerm(FixedSizeTree entriesToTerms, long term)
+        {
+            foreach (long removal in _removalsForTerm)
+            {
+                // if already added, we don't need to remove it in this batch
+                if (_entriesAlreadyAdded.Contains(removal))
+                    continue;
+                entriesToTerms.Delete(removal);
+            }
+
+            foreach (long addition in _additionsForTerm)
+            {
+                if (_entriesAlreadyAdded.Add(addition) == false)
+                    continue;
+                entriesToTerms.Add(addition, term);
+            }
+        }
+
         private unsafe void InsertNumericFieldDoubles(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
             var fieldTree = fieldsTree.FixedTreeForDouble(indexedField.NameDouble, sizeof(long));
-            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(double)); 
+            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.NameDouble, sizeof(double)); 
 
             _entriesAlreadyAdded.Clear();
             foreach (var (term, entries) in indexedField.Doubles)
@@ -1936,22 +1935,8 @@ namespace Corax
                 var localEntry = entries;
                 if (localEntry.HasChanges() == false)
                     continue;
-                
-                var removals = entries.Removals;
-                for (int i = 0; i < removals.Length; i++)
-                {
-                    // if already added, we don't need to remove it in this batch
-                    if(_entriesAlreadyAdded.Contains(removals[i])) 
-                        continue;
-                    entriesToTerms.Delete(removals[i]);
-                }
-                var additions = entries.Additions;
-                for (int i = 0; i < additions.Length; i++)
-                {
-                    if(_entriesAlreadyAdded.Add(additions[i]) == false)
-                        continue;
-                    entriesToTerms.Add(additions[i], term);
-                }
+
+                UpdateEntriesForTerm(entries, entriesToTerms, BitConverter.DoubleToInt64Bits(term));
                 
                 using var _ = fieldTree.Read(term, out var result);
 
