@@ -95,6 +95,21 @@ public abstract class AbstractExecutor : IDisposable
             {
                 try
                 {
+                    if (command.CommandTask.IsCompleted == false)
+                    {
+                        // we must not return the context if a command task is still running so we need to await it
+                        // this can happen when ThrowOnFailure mode is used and we throw on first failure
+
+                        try
+                        {
+                            await command.CommandTask;
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+                    }
+
                     command.ContextReleaser?.Dispose();
                     command.ContextReleaser = null; // we set it to null, since we pool it and might get old values if not cleared
                 }
