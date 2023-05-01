@@ -304,6 +304,12 @@ namespace Voron
             Debug.Assert(Size == sizeof(long));
             return *(long*)Content.Ptr;
         }
+        
+        public double ReadDouble()
+        {
+            Debug.Assert(Size == sizeof(double));
+            return *(double*)Content.Ptr;
+        }
 
         public override int GetHashCode()
         {
