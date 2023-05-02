@@ -175,6 +175,7 @@ namespace FastTests
                     }
 
                     options.ModifyDatabaseRecord?.Invoke(doc);
+                    var sharded = doc.IsSharded;
 
                     var store = new DocumentStore
                     {
@@ -242,11 +243,11 @@ namespace FastTests
                             AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(raftCommand, timeout));
 
                             // skip 'wait for requests' on DocumentDatabase dispose
-                            Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name));
+                            Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name, sharded));
                         }
                         else
                         {
-                            ApplySkipDrainAllRequestsToDatabase(serverToUse, name);
+                            ApplySkipDrainAllRequestsToDatabase(serverToUse, name, sharded);
                         }
                     }
 
@@ -299,17 +300,37 @@ namespace FastTests
             }
         }
 
-        private void ApplySkipDrainAllRequestsToDatabase(RavenServer serverToUse, string name)
+        private void ApplySkipDrainAllRequestsToDatabase(RavenServer serverToUse, string name, bool sharded)
+        {
+            if (sharded)
+            {
+                AsyncHelpers.RunSync(() => ApplySkipDrainAllRequestsToShardedDatabaseAsync(serverToUse, name));
+                return;
+            }
+            AsyncHelpers.RunSync(() => ApplySkipDrainAllRequestsToDatabaseAsync(serverToUse, name));
+        }
+
+        private async Task ApplySkipDrainAllRequestsToShardedDatabaseAsync(RavenServer serverToUse, string name)
         {
             try
             {
-                /*var documentDatabase = AsyncHelpers.RunSync(async () => await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
-                Assert.True(documentDatabase != null, $"(RavenDB-16924) documentDatabase is null on '{serverToUse.ServerStore.NodeTag}' {Environment.NewLine}{Cluster.CollectLogsFromNodes(Servers)}");
-                documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;*/
+                await foreach (var shard in Sharding.GetShardsDocumentDatabaseInstancesFor(name, new List<RavenServer>{ serverToUse }))
+                {
+                    shard.ForTestingPurposesOnly().SkipDrainAllRequests = true;
+                }
             }
-            catch (InvalidOperationException)
+            catch (DatabaseNotRelevantException)
             {
-                //TODO expected if sharded - need to fix that
+            }
+        }
+
+        private async Task ApplySkipDrainAllRequestsToDatabaseAsync(RavenServer serverToUse, string name)
+        {
+            try
+            {
+                var documentDatabase = await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                Assert.True(documentDatabase != null, $"(RavenDB-16924) documentDatabase is null on '{serverToUse.ServerStore.NodeTag}' {Environment.NewLine}{Cluster.CollectLogsFromNodes(Servers)}");
+                documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
             }
             catch (DatabaseNotRelevantException)
             {
