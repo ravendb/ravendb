@@ -4,6 +4,7 @@ namespace Voron.Data.CompactTrees;
 
 public interface ICompactTreeIterator
 {
+    void Init(CompactTree tree);
     void Seek(ReadOnlySpan<byte> key);
     void Seek(CompactKey key);
     void Reset();

@@ -11,32 +11,23 @@ namespace Voron.Data.CompactTrees
         {
             // PERF: Even if we are returning ICompactTreeIterator instead, we are counting on the
             //       caller to be able to do devirtualization if we don't have to store the reference. 
-            return forward ? new ForwardIterator(this) : new BackwardIterator(this);
+            return forward ? Iterate<ForwardIterator>() : Iterate<BackwardIterator>();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TDirection Iterate<TDirection>() where TDirection : struct, ICompactTreeIterator
         {
-            if (typeof(TDirection) == typeof(ForwardIterator))
-            {
-                return (TDirection)(object)new ForwardIterator(this);
-            }
-            else if (typeof(TDirection) == typeof(BackwardIterator))
-            {
-                return (TDirection)(object)new BackwardIterator(this);
-            }
-            else
-            {
-                throw new ArgumentException($"The iterator type \'{typeof(TDirection).Name}\' is unknown.");
-            }
+            var it = new TDirection();
+            it.Init(this);
+            return it;
         }
 
         public unsafe struct ForwardIterator : ICompactTreeIterator
         {
-            private readonly CompactTree _tree;
+            private CompactTree _tree;
             private IteratorCursorState _cursor;
 
-            public ForwardIterator(CompactTree tree)
+            public void Init(CompactTree tree)
             {
                 _tree = tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
@@ -133,10 +124,10 @@ namespace Voron.Data.CompactTrees
 
         public unsafe struct BackwardIterator : ICompactTreeIterator
         {
-            private readonly CompactTree _tree;
+            private CompactTree _tree;
             private IteratorCursorState _cursor;
 
-            public BackwardIterator(CompactTree tree)
+            public void Init(CompactTree tree)
             {
                 _tree = tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
