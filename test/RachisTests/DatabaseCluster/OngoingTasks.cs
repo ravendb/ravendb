@@ -23,12 +23,12 @@ namespace RachisTests.DatabaseCluster
         {
         }
 
-        [Fact]
-        public async Task CanGetTaskInfo()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetTaskInfo(Options options)
         {
             var clusterSize = 3;
-            var databaseName = "TestDB";
-            var (_, leader) = await CreateRaftCluster(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize, watcherCluster: true);
             ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
             AddEtlOperationResult addRavenEtlResult;
@@ -47,25 +47,10 @@ var orderData = {
 
 loadToOrders(orderData);
 ";
-
-            using (var store = new DocumentStore
+            options.Server = leader;
+            options.ReplicationFactor = clusterSize;
+            using (var store = GetDocumentStore(options))
             {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName
-            }.Initialize())
-            {
-                var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
-                foreach (var server in Servers)
-                {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
-                }
-                foreach (var server in Servers)
-                {
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                }
-
                 watcher = new ExternalReplication("Watcher1", "Connection")
                 {
                     Name = "MyExternalReplication"
@@ -134,18 +119,7 @@ loadToOrders(orderData);
                     }
                 };
                 addSqlEtlResult = store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(sqlConfiguration));
-            }
-
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName,
-                Conventions =
-                {
-                    DisableTopologyUpdates = true
-                }
-            }.Initialize())
-            {
+           
                 var taskId = addWatcherRes.TaskId;
                 var replicationResult = (OngoingTaskReplication)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
 
@@ -184,12 +158,12 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
-        public async Task CanGetTaskInfoByName()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetTaskInfoByName(Options options)
         {
             var clusterSize = 3;
-            var databaseName = "TestDB";
-            var (_, leader) = await CreateRaftCluster(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize, watcherCluster: true);
             RavenEtlConfiguration etlConfiguration;
             SqlEtlConfiguration sqlConfiguration;
             ExternalReplication watcher;
@@ -204,25 +178,11 @@ var orderData = {
 
 loadToOrders(orderData);
 ";
+            options.Server = leader;
+            options.ReplicationFactor = clusterSize;
 
-            using (var store = new DocumentStore
+            using (var store = GetDocumentStore(options))
             {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName
-            }.Initialize())
-            {
-                var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
-                foreach (var server in Servers)
-                {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
-                }
-                foreach (var server in Servers)
-                {
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                }
-
                 watcher = new ExternalReplication("Watcher1", "Connection")
                 {
                     Name = "MyExternalReplication"
@@ -291,18 +251,7 @@ loadToOrders(orderData);
                     }
                 };
                 store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(sqlConfiguration));
-            }
-
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName,
-                Conventions =
-                {
-                    DisableTopologyUpdates = true
-                }
-            }.Initialize())
-            {
+            
                 var replicationResult = (OngoingTaskReplication)await GetTaskInfo((DocumentStore)store, "MyExternalReplication", OngoingTaskType.Replication);
 
                 Assert.Equal(watcher.Database, replicationResult.DestinationDatabase);
@@ -335,33 +284,18 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
-        public async Task CanToggleTaskState()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanToggleTaskState(Options options)
         {
             var clusterSize = 3;
-            var databaseName = "TestDB";
-            var (_, leader) = await CreateRaftCluster(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize, watcherCluster: true);
             ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
-
-            using (var store = new DocumentStore
+            options.ReplicationFactor = clusterSize;
+            options.Server = leader;
+            using (var store = GetDocumentStore(options))
             {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName
-            }.Initialize())
-            {
-                var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
-                foreach (var server in Servers)
-                {
-                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
-                }
-                foreach (var server in Servers)
-                {
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                }
-
                 var watcher = new ExternalReplication("Watcher1", "Connection");
 
                 addWatcherRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher, new[] { "http://127.0.0.1:9090" });
@@ -369,18 +303,7 @@ loadToOrders(orderData);
                 var backupConfig = Backup.CreateBackupConfiguration(backupPath: NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", disabled: true);
 
                 updateBackupResult = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
-            }
-
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName,
-                Conventions =
-                {
-                    DisableTopologyUpdates = true
-                }
-            }.Initialize())
-            {
+            
                 var taskId = addWatcherRes.TaskId;
                 var op = new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, true);
                 var res = await store.Maintenance.SendAsync(op);
