@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
@@ -14,12 +15,10 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -78,27 +77,24 @@ namespace RachisTests
                 await WaitForSubscriptionMreAndAssert(reachedMaxDocCountInBatchMre, subsTask, reachedMaxDocCountInAckMre, iteration: 3);
             }
         }
-        [Theory]
-        [InlineData(1, 20)]
-        [InlineData(5, 10)]
-        [InlineData(10, 5)]
-        [InlineData(20, 2)]
-        public async Task ContinueFromThePointIStoppedConcurrentSubscription(int batchSize, int numberOfConnections)
+
+        [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Subscriptions)]
+        [RavenData(1, 20, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(5, 10, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(10, 5, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(20, 2, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task ContinueFromThePointIStoppedConcurrentSubscription(Options options, int batchSize, int numberOfConnections)
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
+            options.Server = leader;
+            options.ReplicationFactor = nodesAmount;
 
-            var defaultDatabase = GetDatabaseName();
-
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
-
-            using (var store = new DocumentStore
+            using (var store = GetDocumentStore(options))
             {
-                Urls = new[] { leader.WebUrl },
-                Database = defaultDatabase
-            }.Initialize())
-            {
+                var defaultDatabase = store.Database;
+
                 var reachedMaxDocCountInAckMre = new AsyncManualResetEvent();
                 var reachedMaxDocCountInBatchMre = new AsyncManualResetEvent();
 
@@ -118,23 +114,19 @@ namespace RachisTests
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster)]
-        public async Task SubscripitonDeletionFromCluster()
+        [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscripitonDeletionFromCluster(Options options)
         {
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
 
-            var defaultDatabase = GetDatabaseName();
+            options.Server = leader;
+            options.ReplicationFactor = nodesAmount;
 
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
-
-            using (var store = new DocumentStore
+            using (var store = GetDocumentStore(options))
             {
-                Urls = new[] { leader.WebUrl },
-                Database = defaultDatabase
-            }.Initialize())
-            {
-                var usersCount = new List<User>();
+                var defaultDatabase = store.Database;
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
 
                 var subscriptionId = await store.Subscriptions.CreateAsync<User>();
@@ -190,29 +182,25 @@ namespace RachisTests
             }
         }
 
-        [Fact]
-        public async Task SetMentorToSubscriptionWithFailover()
+        [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SetMentorToSubscriptionWithFailover(Options options)
         {
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
 
-            var defaultDatabase = GetDatabaseName();
+            options.Server = leader;
+            options.ReplicationFactor = nodesAmount;
 
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
-
-            string mentor = "C";
-            using (var store = new DocumentStore
+            using (var store = GetDocumentStore(options))
             {
-                Urls = new[] { leader.WebUrl },
-                Database = defaultDatabase
-            }.Initialize())
-            {
+                var defaultDatabase = store.Database;
                 var reachedMaxDocCountInAckMre = new AsyncManualResetEvent();
                 var reachedMaxDocCountInBatchMre = new AsyncManualResetEvent();
 
                 await GenerateDocuments(store);
 
-                (var subscription, var subsTask) = await CreateAndInitiateSubscription(store, defaultDatabase, reachedMaxDocCountInAckMre, reachedMaxDocCountInBatchMre, 20, mentor: mentor);
+                (var subscription, var subsTask) = await CreateAndInitiateSubscription(store, defaultDatabase, reachedMaxDocCountInAckMre, reachedMaxDocCountInBatchMre, 20, mentor: "C");
 
                 await WaitForSubscriptionMreAndAssert(reachedMaxDocCountInBatchMre, subsTask, reachedMaxDocCountInAckMre, iteration: 1);
 
@@ -249,26 +237,23 @@ namespace RachisTests
             Interlocked.Exchange(ref AckCounter, 0);
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions, RavenArchitecture.AllX64)]
-        [InlineData(3)]
-        [InlineData(5)]
-        public async Task DistributedRevisionsSubscription(int nodesAmount)
+        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster, RavenArchitecture.AllX64)]
+        [RavenData(3, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(5, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task DistributedRevisionsSubscription(Options options, int nodesAmount)
         {
             var uniqueRevisions = new HashSet<string>();
             var uniqueDocs = new HashSet<string>();
 
             var (_, leader) = await CreateRaftCluster(nodesAmount).ConfigureAwait(false);
 
-            var defaultDatabase = GetDatabaseName();
+            options.Server = leader;
+            options.ReplicationFactor = nodesAmount;
 
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
+            using (var store = GetDocumentStore(options))
+            {
+                var defaultDatabase = store.Database;
 
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { leader.WebUrl },
-                Database = defaultDatabase
-            }.Initialize())
-            {
                 await SetupRevisions(leader, defaultDatabase).ConfigureAwait(false);
 
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
@@ -364,10 +349,11 @@ namespace RachisTests
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Subscriptions, RavenArchitecture.AllX86)]
-        public async Task DistributedRevisionsSubscription32Bit()
+        [RavenMultiplatformTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Cluster, RavenArchitecture.AllX86)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task DistributedRevisionsSubscription32Bit(Options options)
         {
-            await DistributedRevisionsSubscription(3);
+            await DistributedRevisionsSubscription(options, 3);
         }
 
         private static void HandleSubscriptionBatch(int nodesAmount, SubscriptionBatch<Revision<User>> b, HashSet<string> uniqueDocs, ref int docsCount, HashSet<string> uniqueRevisions,
@@ -681,17 +667,16 @@ namespace RachisTests
             }
         }
 
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task SubscriptionWorkerShouldNotFailoverToErroredNodes()
+        [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Subscriptions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SubscriptionWorkerShouldNotFailoverToErroredNodes(Options options)
         {
             var cluster = await CreateRaftCluster(numberOfNodes: 3);
+            options.ReplicationFactor = 3;
+            options.Server = cluster.Leader;
+            options.DeleteDatabaseOnDispose = false;
 
-            using (var store = GetDocumentStore(new Options
-            {
-                ReplicationFactor = 3,
-                Server = cluster.Leader,
-                DeleteDatabaseOnDispose = false
-            }))
+            using (var store = GetDocumentStore(options))
             {
                 Servers.ForEach(x => x.ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true);
 
@@ -701,11 +686,11 @@ namespace RachisTests
                     var reqEx = store.GetRequestExecutor();
                     var name = subscriptionManager.Create(new SubscriptionCreationOptions<User>());
 
-                    var subs = await SubscriptionFailoverWithWaitingChains.GetSubscription(name, store.Database, cluster.Nodes);
-                    Assert.NotNull(subs);
-                    await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(subs.SubscriptionId, cluster.Nodes);
+                    var sub = await store.Subscriptions.GetSubscriptionStateAsync(name);
+                    Assert.NotNull(sub);
+                    await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(sub.SubscriptionId, cluster.Nodes);
 
-                    await ActionWithLeader(async l => await WaitForResponsibleNode(l.ServerStore, store.Database, name, toBecomeNull: false));
+                    await ActionWithLeader(async l => await WaitForResponsibleNode(store, l.ServerStore.NodeTag, name, toBecomeNull: false));
 
                     Assert.True(WaitForValue(() => reqEx.Topology != null, true));
                     var topology = reqEx.Topology;
@@ -717,7 +702,7 @@ namespace RachisTests
                     var node2 = Servers.First(x => x.WebUrl.Equals(serverNode2.Url, StringComparison.InvariantCultureIgnoreCase));
                     var (_, ___, disposedTag2) = await DisposeServerAndWaitForFinishOfDisposalAsync(node2);
                     var onlineServer = cluster.Nodes.Single(x => x.ServerStore.NodeTag != disposedTag && x.ServerStore.NodeTag != disposedTag2).ServerStore;
-                    await WaitForResponsibleNode(onlineServer, store.Database, name, toBecomeNull: true);
+                    await WaitForResponsibleNode(store, onlineServer.NodeTag, name, toBecomeNull: true);
 
                     using (reqEx.ContextPool.AllocateOperationContext(out var context))
                     {
@@ -750,23 +735,18 @@ namespace RachisTests
             }
         }
 
-        private async Task WaitForResponsibleNode(ServerStore online, string dbName, string subscriptionName, bool toBecomeNull = false)
+        private async Task WaitForResponsibleNode(DocumentStore store, string forNode, string subscriptionName, bool toBecomeNull = false)
         {
             var sp = Stopwatch.StartNew();
+            var op = new GetOngoingTaskInfoOperation(subscriptionName, OngoingTaskType.Subscription);
+
             try
             {
                 while (sp.ElapsedMilliseconds < 60_000)
                 {
-                    string tag;
-                    using (online.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var databaseRecord = online.Cluster.ReadDatabase(context, dbName);
-                        var db = await online.DatabasesLandlord.TryGetOrCreateResourceStore(dbName).ConfigureAwait(false);
-                        var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                        tag = databaseRecord.Topology.WhoseTaskIsIt(online.Engine.CurrentState, subscriptionState, null);
-                    }
-
+                    var res = await store.Maintenance.ForNode(forNode).SendAsync(op);
+                    string tag = res.ResponsibleNode.NodeTag;
+                   
                     if (toBecomeNull)
                     {
                         if (tag != null)

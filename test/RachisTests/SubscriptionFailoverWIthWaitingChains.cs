@@ -300,44 +300,5 @@ namespace RachisTests
             {
             }
         }
-
-        internal static async Task<SubscriptionStorage.SubscriptionGeneralDataAndStats> GetSubscription(string name, string database, List<RavenServer> nodes, CancellationToken token = default)
-        {
-            foreach (var curNode in nodes)
-            {
-                DocumentDatabase db;
-                try
-                {
-                    db = await curNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database).WithCancellation(token);
-                }
-                catch (DatabaseNotRelevantException)
-                {
-                    continue;
-                }
-
-                using (curNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    SubscriptionStorage.SubscriptionGeneralDataAndStats subscription = null;
-                    try
-                    {
-                        subscription = db
-                            .SubscriptionStorage
-                            .GetSubscription(context, id: null, name, history: false);
-                    }
-                    catch (SubscriptionDoesNotExistException)
-                    {
-                        // expected
-                    }
-
-                    if (subscription == null)
-                        continue;
-
-                    return subscription;
-                }
-            }
-
-            return null;
-        }
     }
 }
