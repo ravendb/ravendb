@@ -412,6 +412,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     
     public TermsReader TermsReaderFor(Slice name)
     {
+        if (_entriesToTermsTree == null)
+            return default;
         return new TermsReader(_transaction.LowLevelTransaction, _entriesToTermsTree, name);
     }
     
@@ -419,11 +421,16 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         _entriesToSpatialTree ??= _transaction.ReadTree(Constants.IndexWriter.EntriesToSpatialSlice);
 
+        if (_entriesToSpatialTree == null)
+            return default;
+        
         return new SpatialReader(_transaction.LowLevelTransaction, _entriesToSpatialTree, name);
     }
     
     public FixedSizeTree LongReader(Slice name)
     {
+        if (_entriesToTermsTree == null)
+            return null;
         if (_fieldMapping.TryGetByFieldName(name, out var field) == false)
             return null;
         return _entriesToTermsTree.FixedTreeFor(field.FieldNameLong, sizeof(long));
@@ -431,6 +438,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public FixedSizeTree DoubleReader(Slice name)
     {
+        if (_entriesToTermsTree == null)
+            return null;
         if (_fieldMapping.TryGetByFieldName(name, out var field) == false)
             return null;
         return _entriesToTermsTree.FixedTreeFor(field.FieldNameDouble, sizeof(double));
