@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
@@ -214,6 +215,11 @@ namespace Corax.Queries
                 return cmp.GetEntryId(x);
             }
 
+            public string GetEntryText(TItem x)
+            {
+                return cmp.GetEntryText(x);
+            }
+
             public void Init(ref SortingMatch<TInner> match)
             {
                 cmp.Init(ref match);
@@ -224,14 +230,22 @@ namespace Corax.Queries
         {
             public int Compare((long, float) x, (long, float) y)
             {
-                var cmp = x.Item2.CompareTo(y.Item2);
+                // with order by score() we want to find the *highest* value by default, so we sort
+                // in the opposite order by default for the values of the score
+                var cmp = y.Item2.CompareTo(x.Item2);
                 if (cmp != 0) return cmp;
+                // if the score is identical, we then compare entry ids in the usual manner 
                 return x.Item1.CompareTo(y.Item1);
             }
 
             public long GetEntryId((long, float) x)
             {
                 return x.Item1;
+            }
+
+            public string GetEntryText((long, float) x)
+            {
+                return x.Item2.ToString(CultureInfo.InvariantCulture);
             }
 
             public void Init(ref SortingMatch<TInner> match)
@@ -260,6 +274,11 @@ namespace Corax.Queries
                 return x;
             }
 
+            public string GetEntryText(long x)
+            {
+                return _reader.GetTermFor(x);
+            }
+
             public void Init(ref SortingMatch<TInner> match)
             {
                 _reader = match._searcher.TermsReaderFor(match._orderMetadata.Field.FieldName);
@@ -275,8 +294,8 @@ namespace Corax.Queries
                 if (_fst == null)
                     return 0; // nothing to figure out _by_
                 
-                using var _ = _fst.Read(x, out var ySlice);
-                using var __ = _fst.Read(y, out var xSlice);
+                using var _ = _fst.Read(x, out var xSlice);
+                using var __ = _fst.Read(y, out var ySlice);
 
                 if (ySlice.HasValue == false)
                 {
@@ -302,6 +321,13 @@ namespace Corax.Queries
             {
                 _fst = match._searcher.LongReader(match._orderMetadata.Field.FieldName);
             }
+            
+            public string GetEntryText(long x)
+            {
+                using var _ = _fst.Read(x, out var xSlice);
+                return xSlice.HasValue == false ? "n/a" : xSlice.ReadInt64().ToString(CultureInfo.InvariantCulture);
+            }
+
         }
         
         private struct EntryComparerByDouble : IEntryComparer<long>, IComparerInit
@@ -313,8 +339,8 @@ namespace Corax.Queries
                 if (_fst == null)
                     return 0; // nothing to figure out _by_
                 
-                using var _ = _fst.Read(x, out var ySlice);
-                using var __ = _fst.Read(y, out var xSlice);
+                using var _ = _fst.Read(x, out var xSlice);
+                using var __ = _fst.Read(y, out var ySlice);
 
                 if (ySlice.HasValue == false)
                 {
@@ -336,6 +362,12 @@ namespace Corax.Queries
                 return x;
             }
 
+            public string GetEntryText(long x)
+            {
+                using var _ = _fst.Read(x, out var xSlice);
+                return xSlice.HasValue == false ? "n/a" : xSlice.ReadDouble().ToString(CultureInfo.InvariantCulture);
+            }
+
             public void Init(ref SortingMatch<TInner> match)
             {
                 _fst = match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
@@ -353,13 +385,7 @@ namespace Corax.Queries
 
             public int Compare(long x, long y)
             {
-                var hasX = _reader.TryGetTermFor(x, out ReadOnlySpan<byte> xTerm);
-                var hasY = _reader.TryGetTermFor(y, out ReadOnlySpan<byte> yTerm);
-
-                if (hasY == false)
-                    return hasX ? 1 : 0;
-                if (hasX == false)
-                    return -1;
+                _reader.GetDecodedTerms(x, out var xTerm, y, out var yTerm);
 
                 var cmp = SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
                 return cmp == 0 ? x.CompareTo(y) : cmp;
@@ -368,6 +394,11 @@ namespace Corax.Queries
             public long GetEntryId(long x)
             {
                 return x;
+            }
+
+            public string GetEntryText(long x)
+            {
+                return _reader.GetTermFor(x);
             }
         }
         
@@ -406,6 +437,12 @@ namespace Corax.Queries
             public long GetEntryId(long x)
             {
                 return x;
+            }
+
+            public string GetEntryText(long x)
+            {
+                _reader.TryGetSpatialPoint(x, out var xCoords);
+                return xCoords.ToString();
             }
         }
 
@@ -474,7 +511,7 @@ namespace Corax.Queries
             if (matchesToUse.Length > matches.Length)
             {
                 matchesToUse[..matches.Length].CopyTo(matches);
-                match._bufferUsedCount = matchesToUse.Length;
+                match._bufferUsedCount = matches.Length;
             }
 
             scorer.Dispose();

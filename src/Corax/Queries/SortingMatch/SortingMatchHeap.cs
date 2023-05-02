@@ -17,6 +17,9 @@ public interface IEntryComparer<T>
 
     [Pure]
     long GetEntryId(T x);
+
+    [Pure]
+    string GetEntryText(T x);
 }
 
 
@@ -37,8 +40,8 @@ public unsafe ref struct SortingMatchHeap<TComparer, T>
                 return null;
 
             var c = _comparer;
-            return new Span<long>(_entries, Count).ToArray()
-                .Select(l => (l, ((TermsReader)(object)c).GetTermFor(l)))
+            return new Span<T>(_entries, Count).ToArray()
+                .Select(l => (c.GetEntryId(l), c.GetEntryText(l)))
                 .ToArray();
         }
     }
@@ -79,7 +82,8 @@ public unsafe ref struct SortingMatchHeap<TComparer, T>
     {
         Debug.Assert(Count <= matches.Length);
         int resultsCount = Count;
-        ref long dest = ref matches[0];
+        if (resultsCount == 0) return;
+        ref long dest = ref matches[resultsCount-1];
         while (resultsCount > 0)
         {
             T actualKey = _entries[0];
@@ -89,7 +93,7 @@ public unsafe ref struct SortingMatchHeap<TComparer, T>
             HeapDown(resultsCount);
             // now we are never using it, we can overwrite 
             dest = _comparer.GetEntryId(actualKey);
-            dest = ref Unsafe.Add(ref dest, 1);
+            dest = ref Unsafe.Subtract(ref dest, 1);
         }
     }
 
