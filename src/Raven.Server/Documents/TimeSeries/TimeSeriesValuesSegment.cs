@@ -613,7 +613,10 @@ namespace Raven.Server.Documents.TimeSeries
             if (tagPointer.Pointer == null)
                 return null;
 
-            return context.GetLazyStringValue(tagPointer.Pointer);
+            var lzs = context.GetLazyStringValue(tagPointer.Pointer, out bool success);
+            if (success == false)
+                ThrowInvalidTagLength();
+            return lzs;
         }
 
         public IEnumerable<SingleResult> YieldAllValues(DocumentsOperationContext context, DateTime baseline, bool includeDead = true)

@@ -139,6 +139,13 @@ namespace Sparrow.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T DecodeCompact<T>(ReadOnlySpan<byte> buffer, out int len, out bool success, int pos = 0) where T : unmanaged
+        {
+            T value = VariableSizeEncoding.ReadCompact<T>(buffer, pos, out len, out success);
+            return UnZag(value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Decode<T>(ReadOnlySpan<byte> buffer, out int len, int pos = 0) where T : unmanaged
         {
             T value = VariableSizeEncoding.Read<T>(buffer, out len, pos);

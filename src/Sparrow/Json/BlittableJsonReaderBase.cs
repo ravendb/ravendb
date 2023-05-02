@@ -188,9 +188,15 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ReadVariableSizeInt(byte* buffer, int pos, out int offset)
+        public static int ReadVariableSizeInt(byte* buffer, int pos, out int offset, out bool success)
         {
-            return VariableSizeEncoding.Read<int>(buffer + pos, out offset);
+            return VariableSizeEncoding.Read<int>(buffer + pos, out offset, out success);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ReadVariableSizeInt(ReadOnlySpan<byte> buffer, int pos, out int offset, out bool success)
+        {
+            return VariableSizeEncoding.ReadCompact<int>(buffer, pos, out offset, out success);
         }
 
         private static void ThrowInvalidShift()

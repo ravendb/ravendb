@@ -29,7 +29,6 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
-using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -2568,6 +2567,11 @@ namespace Raven.Server.Documents
             return value;
         }
 
+        private static void ThrowInvalidTagLength()
+        {
+            throw new InvalidOperationException($"The tag length is invalid.");
+        }
+
         private static void ThrowInvalidShortSize(string name, int size)
         {
             throw new InvalidOperationException($"{name} size is invalid, expected short but got {size}.");
@@ -2604,7 +2608,10 @@ namespace Raven.Server.Documents
         public static LazyStringValue TableValueToId(JsonOperationContext context, int index, ref TableValueReader tvr)
         {
             var ptr = tvr.Read(index, out _);
-            return context.GetLazyStringValue(ptr);
+            var lzs = context.GetLazyStringValue(ptr, out bool success);
+            if (success == false)
+                ThrowInvalidTagLength();
+            return lzs;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
