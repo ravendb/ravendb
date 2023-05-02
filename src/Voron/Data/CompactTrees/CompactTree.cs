@@ -1212,6 +1212,17 @@ namespace Voron.Data.CompactTrees
         {
             if (p.Header == null)
                 return; // page may have been released
+
+            if (p.Header->Upper - p.Header->Lower < 0)
+            {
+                throw new InvalidOperationException($"Lower {p.Header->Lower} > Upper {p.Header->Upper}");
+            }
+
+            if (p.Header->FreeSpace > Constants.Storage.PageSize - PageHeader.SizeOf)
+            {
+                throw new InvalidOperationException($"FreeSpace is too large: {p.Header->FreeSpace}");
+            }
+
             var actualFreeSpace = p.ComputeFreeSpace();
             if (p.Header->FreeSpace != actualFreeSpace)
             {
@@ -1567,6 +1578,8 @@ namespace Voron.Data.CompactTrees
             // Ensure that the key has already been 'updated' this is internal and shouldn't check explicitly that.
             // It is the responsibility of the caller to ensure that is the case. 
             Debug.Assert(key.Dictionary == state.Header->DictionaryId);
+            Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
+            Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
 
             ushort* @base = state.EntriesOffsetsPtr;
             int length = state.Header->NumberOfEntries;
