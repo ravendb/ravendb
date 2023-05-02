@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
-using Raven.Client.Documents;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -21,8 +19,6 @@ namespace RachisTests
         [Fact]
         public async Task BackToFirstNodeAfterRevive()
         {
-            var db = GetDatabaseName();
-
             // we don't want to move the node to rehab, since it should be restored to the top of the list.
             var settings = new Dictionary<string, string>()
             {
@@ -31,16 +27,13 @@ namespace RachisTests
             };
 
             var (_, leader) = await CreateRaftCluster(3, shouldRunInMemory: false, customSettings: settings);
-            await CreateDatabaseInCluster(db, 3, leader.WebUrl);
-
-            using (var leaderStore = new DocumentStore
+            using (var store = GetDocumentStore(new Options
+                   {
+                       Server = leader,
+                       ReplicationFactor = 3
+                   }))
             {
-                Database = db,
-                Urls = new[] { leader.WebUrl }
-            }.Initialize())
-            {
-                var re = leaderStore.GetRequestExecutor();
-                using (var session = leaderStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2, timeout: TimeSpan.FromSeconds(30));
                     session.Store(new User
@@ -50,13 +43,14 @@ namespace RachisTests
                     session.SaveChanges();
                 }
 
+                var re = store.GetRequestExecutor();
                 var firstNodeUrl = re.Url;
                 var firstNode = Servers.Single(s => s.WebUrl == firstNodeUrl);
 
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(firstNode);
 
                 // check that replication works.
-                using (var session = leaderStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1, timeout: TimeSpan.FromSeconds(30));
                     session.Store(new User
