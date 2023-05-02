@@ -1,4 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -112,5 +115,40 @@ namespace FastTests.Client.Documents
             }
         }
 
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task LoadStartingWith(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/")).ToList();
+                    Assert.Equal(1, docs.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        await session.StoreAsync(new User(), "users/");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var docs = (await session.Advanced.LoadStartingWithAsync<User>("users/")).ToList();
+                    Assert.Equal(6, docs.Count); // fails, returns 1 doc
+                }
+            }
+        }
     }
 }

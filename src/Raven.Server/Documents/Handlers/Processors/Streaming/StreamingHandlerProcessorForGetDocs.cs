@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Server.Documents.Handlers.Streaming;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -57,6 +58,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                         return RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, state.Start, state.Take);
                     },
                     initialState);
+
+                var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + databaseChangeVector + "\"";
 
                 await using (var writer = GetLoadDocumentsResultsWriter(format, context, RequestHandler.ResponseBodyStream(), token.Token))
                 {
