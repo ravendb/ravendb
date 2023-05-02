@@ -642,7 +642,10 @@ namespace Voron.Data.CompactTrees
             var entry = state.Page.Pointer + entriesOffsets[state.LastSearchPosition];
             var len = DecodeEntry(entry, out var keyContainerDiff, out oldValue);
             var keyContainerId = DecodeKeyFromPage(ref state, keyContainerDiff);
-            DecrementTermReferenceCount(keyContainerId);
+            if (keyContainerId != 0)
+            {
+                DecrementTermReferenceCount(keyContainerId);
+            }
 
             state.Header->FreeSpace += (ushort)(sizeof(ushort) + len);
             state.Header->Lower -= sizeof(short); // the upper will be fixed on defrag
