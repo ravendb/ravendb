@@ -47,6 +47,7 @@ using Tests.Infrastructure.Entities;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.Utils.BackupUtils;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
@@ -2698,6 +2699,65 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                     documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = null;
                 }
+            }
+        }
+
+                        // Performing backup Delay to the time:
+        [InlineData(1)] // until the next scheduled backup time.
+        [InlineData(5)] // after the next scheduled backup.
+        [Theory, Trait("Category", "Smuggler")]
+        public async Task ShouldProperlyPlaceOriginalBackupTimePropertyWithDelay(int delayDurationInMinutes)
+        {
+            const string fullBackupFrequency = "*/2 * * * *";
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options { Server = server }))
+            {
+                using (var session = store.OpenAsyncSession())
+                    await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 1, session);
+
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                Assert.NotNull(database);
+                database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
+
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency);
+                var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
+                
+                // Let's delay the backup task
+                var taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                Assert.NotNull(taskBackupInfo);
+                Assert.NotNull(taskBackupInfo.OnGoingBackup);
+                Assert.NotNull(taskBackupInfo.OnGoingBackup.StartTime);
+
+                var delayDuration = TimeSpan.FromMinutes(delayDurationInMinutes);
+                var delayUntil = DateTime.Now + delayDuration;
+                await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
+
+                // There should be no OnGoingBackup operation in the OngoingTaskBackup
+                await WaitForValueAsync(async () =>
+                {
+                    var afterDelayTaskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                    return afterDelayTaskBackupInfo is { OnGoingBackup: null };
+                }, true);
+
+                var backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                Assert.NotNull(backupStatus);
+                Assert.NotNull(backupStatus.DelayUntil);
+                Assert.NotNull(backupStatus.OriginalBackupTime);
+
+                var nextFullBackup = GetNextBackupOccurrence(new NextBackupOccurrenceParameters
+                {
+                    BackupFrequency = fullBackupFrequency,
+                    Configuration = config,
+                    LastBackupUtc = taskBackupInfo.OnGoingBackup.StartTime.Value
+                });
+                Assert.NotNull(nextFullBackup);
+
+                Assert.Equal(backupStatus.OriginalBackupTime,
+                    delayUntil < nextFullBackup 
+                        ? taskBackupInfo.OnGoingBackup.StartTime    // until the next scheduled backup time.
+                        : nextFullBackup.Value.ToUniversalTime());  // after the next scheduled backup.
             }
         }
 
