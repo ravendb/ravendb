@@ -1,21 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Sparrow.Server.Utils
 {
     public class Base64
     {
         // This code was taken from: https://github.com/dotnet/coreclr/blob/master/src/mscorlib/shared/System/Convert.cs
-
-
-        internal static readonly char[] base64Table =
-        {
-            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
-            'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
-            'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
-            't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7',
-            '8', '9', '+', '/', '='
-        };
 
 
         /// <summary>
@@ -253,10 +245,10 @@ _EqualityCharEncountered:
 
             }
 
-// We get here either from above or by jumping out of the loop:
-_AllInputConsumed:
+            // We get here either from above or by jumping out of the loop:
+            _AllInputConsumed:
 
-// The last block of chars has less than 4 items
+            // The last block of chars has less than 4 items
             if (currBlockCodes != 0x000000FFu)
                 throw new FormatException(("Format_BadBase64CharArrayLength"));
 
@@ -282,43 +274,48 @@ _AllInputConsumed:
             return (int)outlen;
         }
 
+        // Taken from: https://github.com/dotnet/runtime/blob/634cc1e04e91b2b264a57798a2c733ae261758f9/src/libraries/System.Private.CoreLib/src/System/Convert.cs#L2595
         public static unsafe int ConvertToBase64Array(char* outChars, byte* inData, int offset, int length)
         {
             int lengthmod3 = length % 3;
             int calcLength = offset + (length - lengthmod3);
             int j = 0;
-            //Convert three bytes at a time to base64 notation.  This will consume 4 chars.
+
+            // Convert three bytes at a time to base64 notation.  This will consume 4 chars.
             int i;
 
-            // get a pointer to the base64Table to avoid unnecessary range checking
-            fixed (char* base64 = &base64Table[0])
+            // get a pointer to the base64 table to avoid unnecessary range checking
+            fixed (byte* base64 = Base64Table)
             {
                 for (i = offset; i < calcLength; i += 3)
                 {
-                    outChars[j] = base64[(inData[i] & 0xfc) >> 2];
-                    outChars[j + 1] = base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
-                    outChars[j + 2] = base64[((inData[i + 1] & 0x0f) << 2) | ((inData[i + 2] & 0xc0) >> 6)];
-                    outChars[j + 3] = base64[(inData[i + 2] & 0x3f)];
+                    outChars[j] = (char)base64[(inData[i] & 0xfc) >> 2];
+                    outChars[j + 1] = (char)base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                    outChars[j + 2] = (char)base64[((inData[i + 1] & 0x0f) << 2) | ((inData[i + 2] & 0xc0) >> 6)];
+                    outChars[j + 3] = (char)base64[inData[i + 2] & 0x3f];
+                    
                     j += 4;
                 }
 
-                //Where we left off before
+                // Where we left off before
                 i = calcLength;
 
                 switch (lengthmod3)
                 {
-                    case 2: //One character padding needed
-                        outChars[j] = base64[(inData[i] & 0xfc) >> 2];
-                        outChars[j + 1] = base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
-                        outChars[j + 2] = base64[(inData[i + 1] & 0x0f) << 2];
-                        outChars[j + 3] = base64[64]; //Pad
+                    case 2: // One character padding needed
+                        outChars[j] = (char)base64[(inData[i] & 0xfc) >> 2];
+                        outChars[j + 1] = (char)base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                        outChars[j + 2] = (char)base64[(inData[i + 1] & 0x0f) << 2];
+                        outChars[j + 3] = (char)base64[64]; // Pad
+                        
                         j += 4;
                         break;
                     case 1: // Two character padding needed
-                        outChars[j] = base64[(inData[i] & 0xfc) >> 2];
-                        outChars[j + 1] = base64[(inData[i] & 0x03) << 4];
-                        outChars[j + 2] = base64[64]; //Pad
-                        outChars[j + 3] = base64[64]; //Pad
+                        outChars[j] = (char)base64[(inData[i] & 0xfc) >> 2];
+                        outChars[j + 1] = (char)base64[(inData[i] & 0x03) << 4];
+                        outChars[j + 2] = (char)base64[64]; // Pad
+                        outChars[j + 3] = (char)base64[64]; // Pad
+                        
                         j += 4;
                         break;
                 }
@@ -327,23 +324,27 @@ _AllInputConsumed:
             return j;
         }
 
+        private static ReadOnlySpan<byte> Base64Table => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="u8;
+
         public static unsafe int ConvertToBase64ArrayUnpadded(char* outChars, byte* inData, int offset, int length)
         {
             int lengthmod3 = length % 3;
             int calcLength = offset + (length - lengthmod3);
             int j = 0;
             //Convert three bytes at a time to base64 notation.  This will consume 4 chars.
-            int i;
 
-            // get a pointer to the base64Table to avoid unnecessary range checking
-            fixed (char* base64 = &base64Table[0])
+            // PERF: In this case where the JIT will bake in the address of the base64 table inside the assembly data section,
+            // getting the pointer to the base64 table to avoid unnecessary range checking does not introduce pinning overhead.
+            fixed (byte* base64 = Base64Table)
             {
+                int i;
                 for (i = offset; i < calcLength; i += 3)
                 {
-                    outChars[j] = base64[(inData[i] & 0xfc) >> 2];
-                    outChars[j + 1] = base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
-                    outChars[j + 2] = base64[((inData[i + 1] & 0x0f) << 2) | ((inData[i + 2] & 0xc0) >> 6)];
-                    outChars[j + 3] = base64[(inData[i + 2] & 0x3f)];
+                    outChars[j] = (char)base64[(inData[i] & 0xfc) >> 2];
+                    outChars[j + 1] = (char)base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                    outChars[j + 2] = (char)base64[((inData[i + 1] & 0x0f) << 2) | ((inData[i + 2] & 0xc0) >> 6)];
+                    outChars[j + 3] = (char)base64[(inData[i + 2] & 0x3f)];
+                    
                     j += 4;
                 }
 
@@ -353,14 +354,119 @@ _AllInputConsumed:
                 switch (lengthmod3)
                 {
                     case 2: //One character padding needed
-                        outChars[j] = base64[(inData[i] & 0xfc) >> 2];
-                        outChars[j + 1] = base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
-                        outChars[j + 2] = base64[(inData[i + 1] & 0x0f) << 2];
+                        outChars[j] = (char)base64[(inData[i] & 0xfc) >> 2];
+                        outChars[j + 1] = (char)base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                        outChars[j + 2] = (char)base64[(inData[i + 1] & 0x0f) << 2];
+                        
                         j += 3;
                         break;
                     case 1: // Two character padding needed
-                        outChars[j] = base64[(inData[i] & 0xfc) >> 2];
-                        outChars[j + 1] = base64[(inData[i] & 0x03) << 4];
+                        outChars[j] = (char)base64[(inData[i] & 0xfc) >> 2];
+                        outChars[j + 1] = (char)base64[(inData[i] & 0x03) << 4];
+                        
+                        j += 2;
+                        break;
+                }
+            }
+
+            return j;
+        }
+
+        public static unsafe int ConvertToBase64ArrayUnpadded(ReadOnlySpan<char> outChars, byte* inData, int offset, int length)
+        {
+            int lengthmod3 = length % 3;
+            int calcLength = offset + (length - lengthmod3);
+            int j = 0;
+
+            //Convert three bytes at a time to base64 notation.  This will consume 4 chars.
+
+            // PERF: In this case where the JIT will bake in the address of the base64 table inside the assembly data section,
+            // getting the pointer to the base64 table to avoid unnecessary range checking does not introduce pinning overhead.
+            fixed (byte* base64 = Base64Table)
+            {
+                ref char outCharsRef = ref MemoryMarshal.GetReference(outChars);
+
+                int i;
+                for (i = offset; i < calcLength; i += 3)
+                {
+                    Unsafe.Add(ref outCharsRef, j) = (char)base64[(inData[i] & 0xfc) >> 2];
+                    Unsafe.Add(ref outCharsRef, j + 1) = (char)base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                    Unsafe.Add(ref outCharsRef, j + 2) = (char)base64[((inData[i + 1] & 0x0f) << 2) | ((inData[i + 2] & 0xc0) >> 6)];
+                    Unsafe.Add(ref outCharsRef, j + 3) = (char)base64[(inData[i + 2] & 0x3f)];
+
+                    j += 4;
+                }
+
+                //Where we left off before
+                i = calcLength;
+
+                switch (lengthmod3)
+                {
+                    case 2: //One character padding needed
+                        Unsafe.Add(ref outCharsRef, j) = (char)base64[(inData[i] & 0xfc) >> 2];
+                        Unsafe.Add(ref outCharsRef, j + 1) = (char)base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                        Unsafe.Add(ref outCharsRef, j + 2) = (char)base64[(inData[i + 1] & 0x0f) << 2];
+
+                        j += 3;
+                        break;
+                    case 1: // Two character padding needed
+                        Unsafe.Add(ref outCharsRef, j) = (char)base64[(inData[i] & 0xfc) >> 2];
+                        Unsafe.Add(ref outCharsRef, j + 1) = (char)base64[(inData[i] & 0x03) << 4];
+                        j += 2;
+                        break;
+                }
+            }
+
+            return j;
+        }
+
+
+        // PERF: While this method is not used much in performance sensitive areas, it does illustrate how to build span based
+        // algorithms using unsafe albeit fast methods that avoid bound checks. Avoid using the fixed keyword in hot paths requires
+        // us to support the algorithms their most general form using explicit access to underlying data.
+        // https://issues.hibernatingrhinos.com/issue/RavenDB-20321
+        public static unsafe int ConvertToBase64ArrayUnpadded(ReadOnlySpan<char> outChars, Span<byte> inData, int offset, int length)
+        {
+            int lengthmod3 = length % 3;
+            int calcLength = offset + (length - lengthmod3);
+            int j = 0;
+
+            //Convert three bytes at a time to base64 notation.  This will consume 4 chars.
+
+            // PERF: In this case where the JIT will bake in the address of the base64 table inside the assembly data section,
+            // getting the pointer to the base64 table to avoid unnecessary range checking does not introduce pinning overhead.
+            fixed (byte* base64 = Base64Table)
+            {
+                ref byte inDataRef = ref MemoryMarshal.GetReference(inData);
+                ref char outCharsRef = ref MemoryMarshal.GetReference(outChars);
+
+                int i;
+                for (i = offset; i < calcLength; i += 3)
+                {
+                    Unsafe.Add(ref outCharsRef, j) = (char)base64[(Unsafe.Add(ref inDataRef, i) & 0xfc) >> 2];
+                    Unsafe.Add(ref outCharsRef, j + 1) = (char)base64[((Unsafe.Add(ref inDataRef, i) & 0x03) << 4) | ((Unsafe.Add(ref inDataRef, i + 1) & 0xf0) >> 4)];
+                    Unsafe.Add(ref outCharsRef, j + 2) = (char)base64[((Unsafe.Add(ref inDataRef, i + 1) & 0x0f) << 2) | ((Unsafe.Add(ref inDataRef, i + 2) & 0xc0) >> 6)];
+                    Unsafe.Add(ref outCharsRef, j + 3) = (char)base64[(Unsafe.Add(ref inDataRef, i + 2) & 0x3f)];
+
+                    j += 4;
+                }
+
+                //Where we left off before
+                i = calcLength;
+
+                switch (lengthmod3)
+                {
+                    case 2: //One character padding needed
+                        Unsafe.Add(ref outCharsRef, j) = (char)base64[(Unsafe.Add(ref inDataRef, i) & 0xfc) >> 2];
+                        Unsafe.Add(ref outCharsRef, j + 1) = (char)base64[((Unsafe.Add(ref inDataRef, i) & 0x03) << 4) | ((Unsafe.Add(ref inDataRef, i + 1) & 0xf0) >> 4)];
+                        Unsafe.Add(ref outCharsRef, j + 2) = (char)base64[(Unsafe.Add(ref inDataRef, i + 1) & 0x0f) << 2];
+
+                        j += 3;
+                        break;
+                    case 1: // Two character padding needed
+                        Unsafe.Add(ref outCharsRef, j) = (char)base64[(Unsafe.Add(ref inDataRef, i) & 0xfc) >> 2];
+                        Unsafe.Add(ref outCharsRef, j + 1) = (char)base64[(Unsafe.Add(ref inDataRef, i) & 0x03) << 4];
+
                         j += 2;
                         break;
                 }

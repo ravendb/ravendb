@@ -424,12 +424,8 @@ namespace Voron
         public unsafe void FillBase64Id(Guid databaseGuidId)
         {
             DbId = databaseGuidId;
-            fixed (char* pChars = Base64Id)
-            {
-                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&databaseGuidId, 0, 16);
-                Debug.Assert(result == 22);
-            }
-
+            var result = Base64.ConvertToBase64ArrayUnpadded(Base64Id, (byte*)&databaseGuidId, 0, 16);
+            Debug.Assert(result == 22);
             _options.SetEnvironmentId(databaseGuidId);
         }
 

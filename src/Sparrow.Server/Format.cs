@@ -76,12 +76,8 @@ namespace Sparrow.Server
             if (bytes.Length != 16)
                 throw new ArgumentException("Expected buffer to be exactly 16 bytes long");
             string result = new string(' ', 22);
-            fixed (char* pChars = result)
-            fixed(byte* pBytes = bytes)
-            {
-                int size = Base64.ConvertToBase64ArrayUnpadded(pChars, pBytes, 0, 16);
-                Debug.Assert(size == 22);
-            }
+            int size = Base64.ConvertToBase64ArrayUnpadded(result, bytes, 0, 16);
+            Debug.Assert(size == 22);
 
             return result;
         }

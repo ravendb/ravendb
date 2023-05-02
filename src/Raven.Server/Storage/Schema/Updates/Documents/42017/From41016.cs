@@ -511,11 +511,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var databaseGuidId = new Guid(buffer);
             var dbIdStr = new string(' ', 22);
 
-            fixed (char* pChars = dbIdStr)
-            {
-                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&databaseGuidId, 0, 16);
-                Debug.Assert(result == 22);
-            }
+            var result = Base64.ConvertToBase64ArrayUnpadded(dbIdStr, (byte*)&databaseGuidId, 0, 16);
+            Debug.Assert(result == 22);
 
             return dbIdStr;
         }

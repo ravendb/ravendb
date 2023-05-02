@@ -15,11 +15,8 @@ namespace Raven.Server.Documents.Replication
         public static unsafe string AsChangeVectorDbId(this Guid DbId)
         {
             var dbIdAsString = new string(' ', 22);
-            fixed (char* dbIdPtr = dbIdAsString)
-            {
-                var res = Base64.ConvertToBase64ArrayUnpadded(dbIdPtr, (byte*)&DbId, 0, 16);
-                Debug.Assert(res == 22);
-            }
+            var res = Base64.ConvertToBase64ArrayUnpadded(dbIdAsString, (byte*)&DbId, 0, 16);
+            Debug.Assert(res == 22);
 
             return dbIdAsString;
         }
