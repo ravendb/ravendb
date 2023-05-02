@@ -16,8 +16,10 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
@@ -610,7 +612,7 @@ namespace RachisTests
                 Database = db
             }.Initialize())
             {
-                await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
+                var res = await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
                 {
                     Record = new DatabaseRecord(db)
                     {
@@ -625,13 +627,19 @@ namespace RachisTests
                     Name = db
                 });
 
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    await store.GetRequestExecutor().ExecuteAsync(new WaitForRaftIndexCommand(res.Index), context);
+                }
+
                 await WaitForAssertionAsync(() =>
                 {
                     using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
                         var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
-                        Assert.Equal(0, record.DeletionInProgress?.Count ?? 0);
+                        // Assert.Equal(0, record.DeletionInProgress?.Count ?? 0);
+                        Assert.True(0 == (record.DeletionInProgress?.Count ?? 0), GetRecordFixedString(record, cluster.Leader));
 
                         var topology = record.Topology;
                         Assert.Equal(3, topology.ReplicationFactor);
@@ -641,8 +649,19 @@ namespace RachisTests
                     }
 
                     return Task.CompletedTask;
-                });
+                }, timeoutInMs: 15_000);
             }
+        }
+
+        private static string GetRecordFixedString(DatabaseRecord record, RavenServer leader)
+        {
+            var topology = record.Topology;
+            return $"topology.ReplicationFactor={topology.ReplicationFactor}" +
+                   $"\ntopology.Members={string.Join(',', topology.Members)}" +
+                   $"\ntopology.Rehabs={string.Join(',', topology.Rehabs)}" +
+                   $"\ntopology.Promotables={string.Join(',', topology.Promotables)}" +
+                   $"\nleader={leader.ServerStore.NodeTag}" +
+                   $"\nrecord.DeletionInProgress={string.Join(',', record.DeletionInProgress)}";
         }
 
         [Fact]

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -105,9 +106,14 @@ namespace Tests.Infrastructure
             if(votersCount>0)
                 await ActionWithLeader(async (leader1) =>
                 {
+                    var sw = Stopwatch.StartNew();
                     while (leader1.CurrentLeader.CurrentVoters.Count < votersCount)
                     {
                         await Task.Delay(100);
+                        if (sw.ElapsedMilliseconds > 15_000)
+                        {
+                            throw new TimeoutException("waited too much to leader voters.");
+                        }
                     }
                 });
 
