@@ -881,9 +881,14 @@ namespace Tests.Infrastructure
             if(votersCount > 0)
                 await ActionWithLeader(async (leader1) =>
                 {
+                    var sw = Stopwatch.StartNew();
                     while (leader1.ServerStore.Engine.CurrentLeader.CurrentVoters.Count < votersCount)
                     {
                         await Task.Delay(100);
+                        if (sw.ElapsedMilliseconds > 15_000)
+                        {
+                            throw new TimeoutException("waited too much to leader voters.");
+                        }
                     }
                 }, clusterNodes);
 
