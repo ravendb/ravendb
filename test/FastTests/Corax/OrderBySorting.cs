@@ -6,6 +6,7 @@ using Corax;
 using Corax.Mappings;
 using Corax.Utils;
 using FastTests.Voron;
+using Raven.Server.Documents.Indexes;
 using Sparrow.Server;
 using Voron;
 using Xunit.Abstractions;
@@ -29,7 +30,7 @@ namespace FastTests.Corax
             PrepareData();
             IndexEntries();
             longList.Sort(CompareDescending);
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
                 var allEntries = searcher.AllEntries();
                 var match1 = searcher.StartWithQuery("Id", "l");

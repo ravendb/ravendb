@@ -70,14 +70,19 @@ namespace FastTests.Corax
                 Assert.Equal(2, match.Fill(ids));
                 using var reader = searcher.TermsReaderFor("Content");
                 Assert.True(ids[0] < ids[1]);
+
+                var term0 = entry1.Content.OrderBy(x => x).First();
+                var term1 = entry2.Content.OrderBy(x => x).First();
+                
+                
                 var cmp = reader.Compare(ids[0], ids[1]);
-                Assert.True(cmp > 0);
+                Assert.Equal(string.Compare(term0, term1, StringComparison.Ordinal),Math.Sign(cmp));
                 cmp = reader.Compare(ids[1], ids[0]);
-                Assert.True(cmp < 0);
+                Assert.Equal(string.Compare(term1, term0, StringComparison.Ordinal), Math.Sign(cmp));
                 cmp = reader.Compare(ids[0], ids[0]);
-                Assert.True(cmp == 0);
+                Assert.Equal(string.Compare(term0, term0, StringComparison.Ordinal), Math.Sign(cmp));
                 cmp = reader.Compare(ids[1], ids[1]);
-                Assert.True(cmp == 0);
+                Assert.Equal(string.Compare(term1, term1, StringComparison.Ordinal), Math.Sign(cmp));
             }
         }
 
@@ -975,7 +980,7 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env);
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(bsc));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
             {

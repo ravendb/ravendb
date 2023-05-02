@@ -49,29 +49,37 @@ public readonly unsafe struct TermsReader : IDisposable
         return true;
     }
 
-    public bool TryGetTermFor(long id, out ReadOnlySpan<byte> term)
+    public void GetDecodedTerms(long x, out ReadOnlySpan<byte> xTerm, long y, out ReadOnlySpan<byte> yTerm)
+    {
+        // we have to do this so we won't get both terms from the same scope, maybe overwriting one another 
+        ReadTerm(x, out xTerm, _xKeyScope);
+        ReadTerm(y, out yTerm, _yKeyScope);
+    }
+    
+    private void ReadTerm(long id, out ReadOnlySpan<byte> term, CompactKeyCacheScope scope)
     {
         using var _ = _fst.Read(id, out var termId);
-        if (termId.HasValue == false)
+        if (termId.HasValue)
         {
-            term = null;
-            return false;
+            long termContainerId = termId.ReadInt64();
+            var item = Container.Get(_llt, termContainerId);
+            int remainderBits = item.Address[0] >> 4;
+            int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
+
+            scope.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], item.PageLevelMetadata);
+            term = scope.Key.Decoded();
         }
-
-        long termContainerId = termId.ReadInt64();
-        var item = Container.Get(_llt, termContainerId);
-        int remainderBits = item.Address[0] >> 4;
-        int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
-
-        _xKeyScope.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], item.PageLevelMetadata);
-        term = _xKeyScope.Key.Decoded();
-        return true;
+        else
+        {
+            term = ReadOnlySpan<byte>.Empty;
+        }
     }
+
 
     public int Compare(long x, long y)
     {
-        using var _ = _fst.Read(x, out var ySlice);
-        using var __ = _fst.Read(y, out var xSlice);
+        using var _ = _fst.Read(x, out var xSlice);
+        using var __ = _fst.Read(y, out var ySlice);
 
         if (ySlice.HasValue == false)
         {

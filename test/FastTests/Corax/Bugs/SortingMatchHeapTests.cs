@@ -27,12 +27,18 @@ public unsafe class SortingMatchHeapTests: NoDisposalNeeded
         {
             var xd = Data.First(i => i.Key == x);
             var yd = Data.First(i => i.Key ==  y);
-            return string.Compare(xd.Value, yd.Value, StringComparison.Ordinal);
+            var cmp = string.Compare(xd.Value, yd.Value, StringComparison.Ordinal);
+            return cmp == 0 ? x.CompareTo(y) : cmp;
         }
 
         public long GetEntryId(long x)
         {
             return x;
+        }
+
+        public string GetEntryText(long x)
+        {
+            return Data.First(i => i.Key == x).Value;
         }
     }
     
@@ -52,28 +58,23 @@ public unsafe class SortingMatchHeapTests: NoDisposalNeeded
         foreach ((long k, string id, string val) in Data)
         {
             heap5.Add(k);
-        }
-        
-          
-        foreach ((long k, string id, string val) in Data)
-        {
             heap10.Add(k);
         }
 
         var fill5 = new long[5];
         heap5.Complete(fill5);
-        Assert.Equal(5,heap5.Count);
         var fill10 = new long[10];
         heap10.Complete(fill10);
         Assert.Equal(10, heap10.Count);
-        
+        Assert.Equal(5,heap5.Count);
+
         Assert.Equal(fill5, fill10.Take(5));
 
         var actual5 = fill5.Select(l=>Data.Single(x=>x.Key == l)).ToArray();
-        var expected5 = Data.OrderBy(x => x.Value).Take(5).ToArray();
+        var expected5 = Data.OrderBy(x => x.Value).ThenBy(x=>x.Key).Take(5).ToArray();
         Assert.Equal(expected5, actual5);
         var actual10 = fill10.Select(l=>Data.Single(x=>x.Key == l)).ToArray();
-        var expected10 = Data.OrderBy(x => x.Value).Take(10).ToArray();
+        var expected10 = Data.OrderBy(x => x.Value).ThenBy(x=>x.Key).Take(10).ToArray();
          Assert.Equal(expected10, actual10);
     }
     
