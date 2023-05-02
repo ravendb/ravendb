@@ -536,10 +536,10 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe LazyStringValue GetLazyStringValue(byte* ptr)
+        public unsafe LazyStringValue GetLazyStringValue(byte* ptr, out bool success)
         {
             // See format of the lazy string ID in the GetLowerIdSliceAndStorageKey method
-            var size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out var offset);
+            var size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out var offset, out success);
             return AllocateStringValue(null, ptr + offset, size);
         }
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.X86;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -12,7 +11,7 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow.Compression;
 using Sparrow.Json;
-using Sparrow.Server.Compression;
+
 
 namespace Micro.Benchmark.Benchmarks
 {
@@ -28,9 +27,9 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core60,
+                        Runtime = CoreRuntime.Core70,
                         Platform = Platform.X64,
-                        Jit = Jit.RyuJit,
+                        Jit = Jit.Default,
                     },
                     Run =
                     {
@@ -41,8 +40,6 @@ namespace Micro.Benchmark.Benchmarks
 
                 // Exporters for data
                 AddExporter(GetExporters().ToArray());
-                // Generate plots using R if %R_HOME% is correctly set
-                AddExporter(RPlotExporter.Default);
 
                 AddValidator(BaselineValidator.FailOnError);
                 AddValidator(JitOptimizationsValidator.FailOnError);
@@ -179,7 +176,7 @@ namespace Micro.Benchmark.Benchmarks
             int pos = 0;
             for (int i = 0; i < Operations; i++)
             {
-                VariableSizeEncoding.Read<int>(encodedSpan, out int length, pos);
+                VariableSizeEncoding.ReadCompact<int>(encodedSpan, pos, out int length, out _);
                 pos += length;
             }
         }
@@ -207,7 +204,7 @@ namespace Micro.Benchmark.Benchmarks
             {
                 fixed (byte* buffer = encodedSpan)
                 {
-                    VariableSizeEncoding.ReadCompact<int>(buffer + pos, out int length, out var success);
+                    VariableSizeEncoding.ReadCompact<int>(buffer + pos, out int length, out _);
                     pos += length;
                 }
             }
@@ -221,9 +218,21 @@ namespace Micro.Benchmark.Benchmarks
                 int pos = 0;
                 for (int i = 0; i < Operations; i++)
                 {
-                    VariableSizeEncoding.ReadCompact<int>(buffer + pos, out int length, out var success);
+                    VariableSizeEncoding.ReadCompact<int>(buffer + pos, out int length, out _ );
                     pos += length;
                 }
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public void BlittableJsonDecodingSpan()
+        {
+            var encodedSpan = _encodedNumbers;
+            int pos = 0;
+            for (int i = 0; i < Operations; i++)
+            {
+                BlittableJsonReaderBase.ReadVariableSizeInt(encodedSpan, pos, out var offset, out _);
+                pos += offset;
             }
         }
 
@@ -235,7 +244,7 @@ namespace Micro.Benchmark.Benchmarks
                 int pos = 0;
                 for (int i = 0; i < Operations; i++)
                 {
-                    BlittableJsonReaderBase.ReadVariableSizeInt(encodedPtr, pos, out var offset);
+                    BlittableJsonReaderBase.ReadVariableSizeInt(encodedPtr, pos, out var offset, out _);
                     pos += offset;
                 }
             }
@@ -292,7 +301,5 @@ namespace Micro.Benchmark.Benchmarks
             success = false;
             return -1;
         }
-
-
     }
 }
