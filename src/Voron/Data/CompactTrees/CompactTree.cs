@@ -983,47 +983,15 @@ namespace Voron.Data.CompactTrees
             Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
             if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
             {
-                // In splits we will always recompress IF the page has been compressed with an older dictionary.
+                // we are *not* checking if we need to re-compress here, we already did with FindPageFor()
                 bool splitAnyways = true;
-                if (state.Header->DictionaryId != _state.TreeDictionaryId)
+                if (state.Header->FreeSpace >= requiredSize + sizeof(short) &&
+                    // at the same time, we need to avoid spending too much time doing de-frags
+                    // so we'll only do that when we have at least 1KB of free space to recover
+                    state.Header->FreeSpace > Constants.Storage.PageSize / 8)
                 {
-                    // We will recompress with the new dictionary, which has the side effect of also reclaiming the
-                    // free space if there is any available. It may very well happen that this new dictionary
-                    // is not as good as the old for this particular page (rare but it can happen). In those cases,
-                    // we will not upgrade and just split the pages using the old dictionary. Eventually the new
-                    // dictionary will catch up. 
-                    if (TryRecompressPage(ref state))
-                    {
-                        Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
-
-                        // Since the recompressing has changed the topology of the entire page, we need to reencode the key
-                        // to move forward. 
-                        key.ChangeDictionary(state.Header->DictionaryId);
-
-                        // We need to recompute this because it will change.
-
-                        //T TODO: handle this scenario
-                        // encodedKey = key.EncodedWithCurrent(out encodedKeyLengthInBits);
-                        // requiredSize = sizeof(ushort) + encodedKey.Length + valueBufferLength;
-
-                        // It may happen that between the more effective dictionary and the reclaimed space we have enough
-                        // to avoid the split. 
-                        if (state.Header->Upper - state.Header->Lower >= requiredSize + sizeof(short))
-                            splitAnyways = false;
-                    }
-                }
-                else
-                {
-                    // If we are not recompressing, but we still have enough free space available we will go for reclaiming space
-                    // by rearranging unused space.
-                    if (state.Header->FreeSpace >= requiredSize + sizeof(short) &&
-                        // at the same time, we need to avoid spending too much time doing de-frags
-                        // so we'll only do that when we have at least 1KB of free space to recover
-                        state.Header->FreeSpace > Constants.Storage.PageSize / 8)
-                    {
-                        DefragPage(_llt, ref state);
-                        splitAnyways = state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short);
-                    }
+                    DefragPage(_llt, ref state);
+                    splitAnyways = state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short);
                 }
 
                 if (splitAnyways)
@@ -1254,9 +1222,15 @@ namespace Voron.Data.CompactTrees
             DebugStuff.RenderAndShow(this);
         }
 
+        private HashSet<long> _pagesThatWeFailedToRecompress;
+
         [SkipLocalsInit] 
-        private bool TryRecompressPage(ref CursorState state)
+        private void TryRecompressPage(ref CursorState state)
         {
+            if (_pagesThatWeFailedToRecompress != null && // already tried and failed, let's ignore this for now
+                _pagesThatWeFailedToRecompress.Contains(state.Page.PageNumber))
+                return;
+            
             // The finding process may call Recompress to avoid the expensive re-encoding and decoding of keys,
             // and instead upgrade the page. However, since TryRecompressPage may also be called from the finding
             // process, the page may not yet be marked as 'writable'.
@@ -1330,14 +1304,20 @@ namespace Voron.Data.CompactTrees
 
             state.Header->DictionaryId = newDictionary.DictionaryId;
             RemoveItems(deleteOnSuccess.Items);
-            return true;
+            return;
 
             Failure:
             // Probably it is best to just not allocate and copy the page afterwards if we use it, but
             // failure is likely to be a rare scenario in an already rare event, not worth the trouble 
             Memory.Copy(state.Page.Pointer, tmp.Base, Constants.Storage.PageSize);
             RemoveItems(deleteOnFailure.Items);
-            return false;
+
+            // We want to ensure that for the duration of the current transaction we'll not try to recompress
+            // this page again. This is important since we may have a page (such as the root page or an important branch)
+            // that we traverse a *lot* while trying to add a lot of items to the tree. This gives us one shot per transaction
+            // per page, no more.
+            _pagesThatWeFailedToRecompress ??= new();
+            _pagesThatWeFailedToRecompress.Add(state.Page.PageNumber);
 
             void RemoveItems(Span<long> ids)
             {
