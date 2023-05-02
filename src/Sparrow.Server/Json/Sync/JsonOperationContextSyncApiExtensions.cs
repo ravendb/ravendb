@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
@@ -35,24 +36,22 @@ namespace Sparrow.Server.Json.Sync
             // todo: maybe use ManagedPinnedBuffer here
             var maxByteSize = Encodings.Utf8.GetMaxByteCount(jsonString.Length);
 
-            fixed (char* val = jsonString)
+            var buffer = ArrayPool<byte>.Shared.Rent(maxByteSize);
+            try
             {
-                var buffer = ArrayPool<byte>.Shared.Rent(maxByteSize);
-                try
+                // PERF: There is no advantage to fix the array, since internally the same will happen.
+                // If the framework does indeed improves the implementation to work natively, we will
+                // miss it because of it. 
+                // https://issues.hibernatingrhinos.com/issue/RavenDB-20321
+                Encodings.Utf8.GetBytes(jsonString, buffer);
+                using (var ms = new MemoryStream(buffer))
                 {
-                    fixed (byte* buf = buffer)
-                    {
-                        Encodings.Utf8.GetBytes(val, jsonString.Length, buf, maxByteSize);
-                        using (var ms = new MemoryStream(buffer))
-                        {
-                            return ReadForMemory(syncContext, ms, documentId);
-                        }
-                    }
+                    return ReadForMemory(syncContext, ms, documentId);
                 }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(buffer);
-                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
 

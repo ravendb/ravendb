@@ -2342,11 +2342,8 @@ namespace Raven.Server.Rachis
                 return;
 
             var guid = new Guid(str);
-            fixed (char* pChars = _clusterIdBase64Id)
-            {
-                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&guid, 0, 16);
-                Debug.Assert(result == 22);
-            }
+            var result = Base64.ConvertToBase64ArrayUnpadded(_clusterIdBase64Id, (byte*)&guid, 0, 16);
+            Debug.Assert(result == 22);
         }
 
         public void ReportLeaderTime(long leaderTime)
