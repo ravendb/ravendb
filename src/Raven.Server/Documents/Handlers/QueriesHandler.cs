@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
@@ -131,6 +132,7 @@ namespace Raven.Server.Documents.Handlers
             if (indexQuery.Metadata.HasFacet)
             {
                 await FacetedQuery(indexQuery, queryContext, token);
+                AddQueryTimingsToTrafficWatch(indexQuery);
                 return;
             }
 
@@ -147,6 +149,7 @@ namespace Raven.Server.Documents.Handlers
             try
             {
                 result = await Database.QueryRunner.ExecuteQuery(indexQuery, queryContext, existingResultEtag, token).ConfigureAwait(false);
+                AddQueryTimingsToTrafficWatch(indexQuery);
             }
             catch (IndexDoesNotExistException)
             {
@@ -174,6 +177,12 @@ namespace Raven.Server.Documents.Handlers
             
             if (ShouldAddPagingPerformanceHint(numberOfResults))
                 AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
+        }
+
+        private void AddQueryTimingsToTrafficWatch(IndexQueryServerSide indexQuery) // IndexQueryServerSide ???
+        {
+            if (TrafficWatchManager.HasRegisteredClients && indexQuery.Timings != null)
+                HttpContext.Items[nameof(QueryTimings)] = indexQuery.Timings.ToTimings();
         }
 
         private Action<AbstractBlittableJsonTextWriter> WriteAdditionalData(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
