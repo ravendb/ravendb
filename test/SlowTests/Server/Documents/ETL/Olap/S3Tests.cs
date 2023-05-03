@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Newtonsoft.Json;
 using Parquet;
 using Parquet.Data;
@@ -25,7 +26,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
-    public class S3Tests : EtlTestBase
+    public class S3Tests : RavenTestBase
     {
         public S3Tests(ITestOutputHelper output) : base(output)
         {
@@ -73,7 +74,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -91,7 +92,7 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
@@ -137,7 +138,7 @@ loadToOrders(partitionBy(key),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -155,7 +156,7 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
 
@@ -336,7 +337,7 @@ loadToOrders(partitionBy(key), orderData);
 
                     Assert.True(etlDone.Wait(timeout), $"olap etl to s3 did not finish in {timeout.TotalMinutes} minutes. stats : {GetPerformanceStats(database)}");
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
@@ -369,7 +370,7 @@ loadToOrders(partitionBy(key), orderData);
                         }
                     }
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{salesTableName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
@@ -457,7 +458,7 @@ loadToOrders(partitionBy(key), orderData);
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -493,7 +494,7 @@ loadToOrders(partitionBy(['order_date', key]),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
@@ -538,7 +539,7 @@ loadToOrders(partitionBy(['order_date', key]),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
 loadToOrders(noPartition(),
@@ -552,7 +553,7 @@ loadToOrders(noPartition(),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
 
@@ -664,7 +665,7 @@ loadToOrders(noPartition(),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -685,7 +686,7 @@ loadToOrders(partitionBy(
 
                     var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: "/", listFolders: true);
@@ -792,7 +793,7 @@ loadToOrders(partitionBy(
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -811,7 +812,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: "/", listFolders: true);
@@ -842,7 +843,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 
                     Indexes.WaitForIndexing(store);
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
 loadToOrders(noPartition(), {
@@ -854,7 +855,7 @@ loadToOrders(noPartition(), {
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -946,7 +947,7 @@ loadToOrders(noPartition(), {
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
 for (var i = 0; i < this.Lines.length; i++){
@@ -959,7 +960,7 @@ for (var i = 0; i < this.Lines.length; i++){
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -1005,7 +1006,7 @@ for (var i = 0; i < this.Lines.length; i++){
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
     loadToOrders(partitionBy(['Company', this.Company]), {
@@ -1016,7 +1017,7 @@ for (var i = 0; i < this.Lines.length; i++){
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -1068,7 +1069,7 @@ for (var i = 0; i < this.Lines.length; i++){
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -1116,12 +1117,12 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                         S3Settings = settings1
                     };
 
-                    var result = AddEtl(store, configuration, connectionString);
+                    var result = Etl.AddEtl(store, configuration, connectionString);
                     var taskId = result.TaskId;
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings1, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings1, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings1.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -1187,10 +1188,10 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
                     Assert.NotNull(update.RaftCommandIndex);
 
-                    etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
                     Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-                    using (var s3Client = new RavenAwsS3Client(settings2, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings2, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings2.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -1235,7 +1236,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var script = @"
     loadToOrders(partitionBy(['Company', this.Company]), {
@@ -1250,7 +1251,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}{CollectionName}";
                         Assert.False(prefix.EndsWith('/'));
@@ -1298,7 +1299,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     }
                 }
             };
-            AddEtl(store, configuration, new OlapConnectionString
+            Etl.AddEtl(store, configuration, new OlapConnectionString
             {
                 Name = connectionStringName,
                 S3Settings = settings
@@ -1308,7 +1309,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
         private void SetupS3OlapEtl(DocumentStore store, S3Settings settings, OlapEtlConfiguration configuration)
         {
             var connectionStringName = $"{store.Database} to S3";
-            AddEtl(store, configuration, new OlapConnectionString
+            Etl.AddEtl(store, configuration, new OlapConnectionString
             {
                 Name = connectionStringName,
                 S3Settings = settings
@@ -1359,7 +1360,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
             try
             {
-                using (var s3Client = new RavenAwsS3Client(s3Settings, DefaultBackupConfiguration))
+                using (var s3Client = new RavenAwsS3Client(s3Settings, EtlTestBase_New.DefaultBackupConfiguration))
                 {
                     var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter, listFolder);
                     if (cloudObjects.FileInfoDetails.Count == 0)

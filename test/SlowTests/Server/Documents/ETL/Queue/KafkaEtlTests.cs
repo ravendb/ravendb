@@ -32,7 +32,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         using (var store = GetDocumentStore())
         {
             var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultCollections);
-            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store.OpenSession())
             {
@@ -85,7 +85,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         using (var store = GetDocumentStore())
         {
             var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultCollections);
-            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store.OpenSession())
             {
@@ -129,7 +129,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         var numberOfLinesPerOrder = 2;
 
         var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultCollections);
-        var etlDone = WaitForEtl(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
+        var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
 
         for (int i = 0; i < numberOfOrders; i++)
         {
@@ -179,7 +179,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
 
         var config = SetupQueueEtlToKafka(store,
             @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + TopicSuffix + @"(userData)", new[] { "Users", "People" });
-        var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+        var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
         using (var session = store.OpenSession())
         {
@@ -350,7 +350,7 @@ output('test output')"
                                                             Source: '/registrations/direct-signup'
                                                      }})", new[] { "Users" });
 
-            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store.OpenSession())
             {
@@ -402,7 +402,7 @@ output('test output')"
                     }
                 });
 
-            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store.OpenSession())
             {
@@ -481,7 +481,7 @@ output('test output')"
         using (var dstStore = Sharding.GetDocumentStore())
         {
             var config = SetupQueueEtlToKafka(srcStore, DefaultScript, DefaultCollections);
-            var etlDone = WaitForEtl(srcStore, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = Etl.WaitForEtl(srcStore, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = srcStore.OpenSession())
             {

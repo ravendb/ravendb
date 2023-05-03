@@ -100,7 +100,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
             _definedExchangesAndQueues.Add(queue);
         }
 
-        AddEtl(store, config,
+        Etl.AddEtl(store, config,
             new QueueConnectionString
             {
                 Name = connectionStringName,

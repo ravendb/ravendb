@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.Sharding;
-using Raven.Server.ServerWide.Context;
 
 namespace FastTests;
 
@@ -23,7 +19,7 @@ public partial class RavenTestBase
         }
 
 
-        public ManualResetEventSlim WaitForEtl(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, int count = 1)
+        public ManualResetEventSlim WaitForEtl(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, int count)
         {
             var dbs = _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
             if (count < 1 || count > dbs.Count)
@@ -71,5 +67,9 @@ public partial class RavenTestBase
         }
 
 
+        public ManualResetEventSlim WaitForEtl(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
+        {
+            return WaitForEtl(store, predicate, count: 1);
+        }
     }
 }

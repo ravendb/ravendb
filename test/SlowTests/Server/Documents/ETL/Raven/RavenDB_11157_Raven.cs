@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
@@ -14,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_11157_Raven : EtlTestBase
+    public class RavenDB_11157_Raven : RavenTestBase
     {
         public RavenDB_11157_Raven(ITestOutputHelper output) : base(output)
         {
@@ -43,11 +44,11 @@ function loadCountersOfUsersBehavior(doc, counter)
             using (var dest = GetDocumentStore())
             {
                 if (collection == null)
-                    AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
+                    Etl.AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
                 else
-                    AddEtl(src, dest, collection, script: script);
+                    Etl.AddEtl(src, dest, collection, script: script);
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -126,10 +127,10 @@ function loadCountersOfUsersBehavior(doc, counter)
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
+                Etl.AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -166,7 +167,7 @@ function loadCountersOfUsersBehavior(doc, counter)
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 var counters = this['@metadata']['@counters'];
 
@@ -187,7 +188,7 @@ var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
 person.addCounter(loadCounter('down'));
 "
 );
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -301,7 +302,7 @@ person.addCounter(loadCounter('down'));
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 var counters = getCounters();
 
@@ -316,7 +317,7 @@ for (var i = 0; i < counters.length; i++) {
 }
 "
 );
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -356,13 +357,13 @@ for (var i = 0; i < counters.length; i++) {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 var doc = loadToUsers(this);
 doc.addCounter(loadCounter('likes'));
 "
                 );
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -403,7 +404,7 @@ doc.addCounter(loadCounter('likes'));
                     ("users/2", "likes", 1L, false)
                 });
 
-                etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -428,7 +429,7 @@ doc.addCounter(loadCounter('likes'));
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 
 var doc = loadToUsers(this);
@@ -442,7 +443,7 @@ if (hasCounter('down')) {
 }
 "
                 );
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -483,9 +484,9 @@ if (hasCounter('down')) {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: null);
+                Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = dest.OpenSession())
                 {
@@ -549,7 +550,7 @@ if (hasCounter('down')) {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -567,7 +568,7 @@ if (hasCounter('down')) {
                     session.SaveChanges();
                 }
 
-                AddEtl(src, dest, "Users", script: null);
+                Etl.AddEtl(src, dest, "Users", script: null);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -587,9 +588,9 @@ if (hasCounter('down')) {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: null);
+                Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccessesInCurrentBatch > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccessesInCurrentBatch > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -635,9 +636,9 @@ if (hasCounter('down')) {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: null);
+                Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -651,7 +652,7 @@ if (hasCounter('down')) {
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 3);
+                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 3);
 
                 using (var session = src.OpenSession())
                 {
@@ -746,11 +747,11 @@ if (hasCounter('down')) {
                 }
 
                 if (collection == null)
-                    AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
+                    Etl.AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
                 else
-                    AddEtl(src, dest, "Users", script: null);
+                    Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LastProcessedEtag >= 10);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LastProcessedEtag >= 10);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -772,7 +773,7 @@ if (hasCounter('down')) {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 if (this.Age > 20)
 {
@@ -788,7 +789,7 @@ function loadCountersOfUsersBehavior(docId, counter)
         return true;
     }
 }");
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
                 
                 using (var session = src.OpenSession())
                 {
@@ -861,11 +862,11 @@ function loadCountersOfUsersBehavior(docId, counter)
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 loadToUsers(this);");
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -933,7 +934,7 @@ loadToUsers(this);");
                     session.SaveChanges();
                 }
 
-                AddEtl(src, dest, "Users", script: @"
+                Etl.AddEtl(src, dest, "Users", script: @"
 loadToUsers(this);
 
 function loadCountersOfUsersBehavior(docId, counter)
@@ -941,7 +942,7 @@ function loadCountersOfUsersBehavior(docId, counter)
     return true;
 }");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LastProcessedEtag >= 10);
+                var etlDone = Etl.WaitForEtl(src, (n, s) => s.LastProcessedEtag >= 10);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -1004,7 +1005,7 @@ function loadCountersOfCustomersBehavior(docId, counter) // it's ok
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: @"
+                Etl.AddEtl(src, dest, "Users", script: @"
 loadToUsers(this);
 
 function loadAllCounters(){
@@ -1016,7 +1017,7 @@ function loadCountersOfUsersBehavior(docId, counter)
     return loadAllCounters();
 }");
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -1044,9 +1045,9 @@ function loadCountersOfUsersBehavior(docId, counter)
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: null);
+                Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -1096,7 +1097,7 @@ function loadCountersOfUsersBehavior(docId, counter)
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script:
+                Etl.AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script:
                     @"
 
     var collection = this['@metadata']['@collection'];
@@ -1117,7 +1118,7 @@ function loadCountersOfUsersBehavior(docId, counter)
     }
 ");
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
 
                 using (var session = src.OpenSession())
                 {

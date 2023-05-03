@@ -25,14 +25,12 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Server.Utils;
@@ -46,7 +44,6 @@ using Tests.Infrastructure.ConnectionString;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
-using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace SlowTests.Sharding.ETL
 {
@@ -54,16 +51,6 @@ namespace SlowTests.Sharding.ETL
     {
         public ShardedEtlTests(ITestOutputHelper output) : base(output)
         {
-        }
-
-        protected static readonly BackupConfiguration DefaultBackupConfiguration;
-
-        static ShardedEtlTests()
-        {
-            var configuration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database);
-            configuration.Initialize();
-
-            DefaultBackupConfiguration = configuration.Backup;
         }
 
         private const string DefaultFrequency = "* * * * *"; // every minute
@@ -103,7 +90,7 @@ loadToOrders(orderData);
 
                 SetupRavenEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 const string id = "users/1";
 
@@ -157,7 +144,7 @@ loadToOrders(orderData);
 
                 SetupRavenEtl(src, dest, "Users", script: null);
 
-                var etlsDone = WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
+                var etlsDone = Sharding.Etl.WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
                 var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
                 var shardedCtx = new ShardedDatabaseContext(Server.ServerStore, dbRecord);
                 var ids = new[] { "users/0", "users/4", "users/1" };
@@ -201,7 +188,7 @@ loadToOrders(orderData);
                     }
                 }
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -231,7 +218,7 @@ loadToOrders(orderData);
 
                 SetupRavenEtl(src, dest, "Users", script: null);
 
-                var etlsDone = WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
+                var etlsDone = Sharding.Etl.WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
                 var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
                 var shardedCtx = new ShardedDatabaseContext(Server.ServerStore, dbRecord);
                 var ids = new[] { "users/0", "users/4", "users/1" };
@@ -275,7 +262,7 @@ loadToOrders(orderData);
                     }
                 }
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -301,7 +288,7 @@ loadToOrders(orderData);
             using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                var etlsDone = WaitForEtlOnAllShards(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlsDone = Sharding.Etl.WaitForEtlOnAllShards(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 SetupRavenEtl(src, dest, "users", @"
 loadToUsers(this);
@@ -371,7 +358,7 @@ loadToAddresses(load(this.AddressId));
                 var expectedCount = count * 3;
                 Assert.Equal(expectedCount, stats.CountOfDocuments);
 
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -407,7 +394,7 @@ loadToAddresses(load(this.AddressId));
             using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                var etlsDone = WaitForEtlOnAllShards(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlsDone = Sharding.Etl.WaitForEtlOnAllShards(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 SetupRavenEtl(src, dest, "users", @"
 loadToUsers(this);
@@ -457,7 +444,7 @@ loadToPeople({Name: this.Name + ' ' + this.LastName });
 
                 Assert.Equal(10, stats.CountOfDocuments);
 
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -510,7 +497,7 @@ var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
 person.addCounter(loadCounter('down'));
 "
 );
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -616,7 +603,7 @@ person.addCounter(loadCounter('down'));
                     }
                 };
 
-                var result = AddEtl(store, configuration, new RavenConnectionString
+                var result = Etl.AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
@@ -658,7 +645,7 @@ person.addCounter(loadCounter('down'));
                     }
                 };
 
-                var result = AddEtl(store, configuration, new RavenConnectionString
+                var result = Etl.AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
@@ -695,7 +682,7 @@ person.addCounter(loadCounter('down'));
                     }
                 };
 
-                var result = AddEtl(store, configuration, new RavenConnectionString
+                var result = Etl.AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
@@ -726,9 +713,9 @@ person.addCounter(loadCounter('down'));
 
                 var runs = 0;
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
-                var resetDone = WaitForEtl(src, (n, statistics) => ++runs >= 2);
+                var resetDone = Sharding.Etl.WaitForEtl(src, (n, statistics) => ++runs >= 2);
 
                 var configuration = new RavenEtlConfiguration()
                 {
@@ -744,7 +731,7 @@ person.addCounter(loadCounter('down'));
                     }
                 };
 
-                AddEtl(src, configuration, new RavenConnectionString
+                Etl.AddEtl(src, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = dest.Urls,
@@ -787,7 +774,7 @@ person.addCounter(loadCounter('down'));
 
                 var mre = new ManualResetEvent(true);
                 var mre2 = new ManualResetEvent(false);
-                var etlDone = WaitForEtl(src, (n, s) =>
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, s) =>
                 {
                     Assert.True(mre.WaitOne(TimeSpan.FromMinutes(1)));
                     mre.Reset();
@@ -797,7 +784,7 @@ person.addCounter(loadCounter('down'));
                     return true;
                 });
 
-                AddEtl(src, configuration, new RavenConnectionString
+                Etl.AddEtl(src, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = dest.Urls,
@@ -849,7 +836,7 @@ person.addCounter(loadCounter('down'));
                     }
                 };
 
-                AddEtl(store, configuration, new RavenConnectionString
+                Etl.AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
@@ -1083,7 +1070,7 @@ person.addCounter(loadCounter('down'));
                         }
                     }
                 };
-                AddEtl(src, config,
+                Etl.AddEtl(src, config,
                     new RavenConnectionString
                     {
                         Name = connectionStringName,
@@ -1092,7 +1079,7 @@ person.addCounter(loadCounter('down'));
                     }
                 );
 
-                var etlsDone = WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
+                var etlsDone = Sharding.Etl.WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
                 var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
                 var shardedCtx = new ShardedDatabaseContext(Server.ServerStore, dbRecord);
                 var ids = new[] { "users/0", "users/4", "users/1" };
@@ -1183,7 +1170,7 @@ person.addCounter(loadCounter('down'));
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Sharding.Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     SetupSqlEtl(store, connectionString, DefaultScript);
 
@@ -1237,7 +1224,7 @@ person.addCounter(loadCounter('down'));
                         }
                     }
 
-                    var etlDone = WaitForEtl(store, (n, s) => SqlEtlTests.GetOrdersCount(connectionString) == testCount);
+                    var etlDone = Sharding.Etl.WaitForEtl(store, (n, s) => SqlEtlTests.GetOrdersCount(connectionString) == testCount);
 
                     SetupSqlEtl(store, connectionString, DefaultScript);
 
@@ -1281,7 +1268,7 @@ person.addCounter(loadCounter('down'));
                     await session.SaveChangesAsync();
                 }
 
-                var etlsDone = WaitForEtlOnAllShards(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlsDone = Sharding.Etl.WaitForEtlOnAllShards(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 var script = @"
 var o = {
@@ -1405,7 +1392,7 @@ loadToOrders(partitionBy(key), o);
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtlOnAllShards(store, (_, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Sharding.Etl.WaitForEtlOnAllShards(store, (_, statistics) => statistics.LoadSuccesses != 0);
                     
                     var script = @"
 var orderData = {
@@ -1443,7 +1430,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     var waitHandles = etlDone.Select(mre => mre.WaitHandle).ToArray();
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/Orders";
                         var forJanuary = $"{prefix}/{partitionColumn}=2020-01-01";
@@ -1487,7 +1474,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                         }
                     }
 
-                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{salesTableName}";
 
@@ -1547,7 +1534,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             using (GetElasticClient(out var client))
             {
                 SetupElasticEtl(store, DefaultScript, new List<string>() { OrderIndexName, OrderLinesIndexName });
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Sharding.Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 using (var session = store.OpenSession())
                 {
@@ -1613,7 +1600,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 var numberOfLinesPerOrder = 5;
 
                 SetupElasticEtl(store, DefaultScript, new List<string>() { OrderIndexName, OrderLinesIndexName });
-                var etlsDone = WaitForEtlOnAllShards(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
+                var etlsDone = Sharding.Etl.WaitForEtlOnAllShards(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
 
                 for (int i = 0; i < numberOfOrders; i++)
                 {
@@ -1651,7 +1638,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 Assert.Equal(numberOfOrders, ordersCount.Count);
                 Assert.Equal(numberOfOrders * numberOfLinesPerOrder, orderLinesCount.Count);
 
-                etlsDone = WaitForEtlOnAllShards(store, (n, statistics) => statistics.LastProcessedEtag >= 2 * numberOfOrders);
+                etlsDone = Sharding.Etl.WaitForEtlOnAllShards(store, (n, statistics) => statistics.LastProcessedEtag >= 2 * numberOfOrders);
 
                 for (int i = 0; i < numberOfOrders; i++)
                 {
@@ -1685,7 +1672,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             {
                 SetupRavenEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -1715,7 +1702,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 // move bucket of users/0/$eu
 
-                etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                etlDone = Sharding.Etl.WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 const string id = "users/0/$eu";
                 var originalLocation = await Sharding.GetShardNumberForAsync(src, id);
@@ -1738,7 +1725,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     }
                 }
 
-                etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                etlDone = Sharding.Etl.WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 // add new document to same bucket
                 using (var session = src.OpenSession())
@@ -1784,7 +1771,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 Assert.True(WaitForDocument<User>(dest, id, user => user.Name == "ayende", timeout: 30_000));
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 100);
+                var etlDone = Sharding.Etl.WaitForEtl(src, (n, s) => s.LoadSuccesses >= 100);
 
                 var originalLocation = await Sharding.GetShardNumberForAsync(src, id);
                 string originalShard = ShardHelper.ToShardName(src.Database, originalLocation);
@@ -1989,11 +1976,11 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             }
         }
 
-        private static AddEtlOperationResult SetupRavenEtl(IDocumentStore src, IDocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
+        private AddEtlOperationResult SetupRavenEtl(IDocumentStore src, IDocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
         {
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}";
 
-            return AddEtl(src, new RavenEtlConfiguration
+            return Etl.AddEtl(src, new RavenEtlConfiguration
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,
@@ -2049,7 +2036,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 }
             };
 
-            return AddEtl(store, configuration, connectionString);
+            return Etl.AddEtl(store, configuration, connectionString);
         }
 
         private AddEtlOperationResult SetupS3OlapEtl(IDocumentStore store, string script, S3Settings settings, string customPartitionValue = null, string transformationName = null)
@@ -2072,7 +2059,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     }
                 }
             };
-            return AddEtl(store, configuration, new OlapConnectionString
+            return Etl.AddEtl(store, configuration, new OlapConnectionString
             {
                 Name = connectionStringName,
                 S3Settings = settings
@@ -2104,7 +2091,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 MentorNode = mentor
             };
 
-            return AddEtl(store, configuration, new SqlConnectionString
+            return Etl.AddEtl(store, configuration, new SqlConnectionString
             {
                 Name = connectionStringName,
                 ConnectionString = connectionString,
@@ -2112,11 +2099,11 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             });
         }
 
-        private static void SetupElasticEtl(IDocumentStore store, string script, IEnumerable<string> collections, string mentor = null)
+        private void SetupElasticEtl(IDocumentStore store, string script, IEnumerable<string> collections, string mentor = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
 
-            AddEtl(store,
+            Etl.AddEtl(store,
                 new ElasticSearchEtlConfiguration()
                 {
                     Name = connectionStringName,
@@ -2156,53 +2143,6 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     Name = connectionStringName,
                     Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value
                 });
-        }
-
-        private static AddEtlOperationResult AddEtl<T>(IDocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
-        {
-            var putResult = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
-            Assert.NotNull(putResult.RaftCommandIndex);
-
-            var addResult = src.Maintenance.Send(new AddEtlOperation<T>(configuration));
-            return addResult;
-        }
-
-        private ManualResetEventSlim WaitForEtl(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
-        {
-            var dbs = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
-
-            var mre = new ManualResetEventSlim();
-            foreach (var task in dbs)
-            {
-                var db = task.Result;
-                db.EtlLoader.BatchCompleted += x =>
-                {
-                    if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
-                        mre.Set();
-                };
-            }
-
-            return mre;
-        }
-
-        private IEnumerable<ManualResetEventSlim> WaitForEtlOnAllShards(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
-        {
-            var dbs = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
-            var list = new List<ManualResetEventSlim>(dbs.Count);
-            foreach (var task in dbs)
-            {
-                var mre = new ManualResetEventSlim();
-                list.Add(mre);
-
-                var db = task.Result;
-                db.EtlLoader.BatchCompleted += x =>
-                {
-                    if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
-                        mre.Set();
-                };
-            }
-
-            return list;
         }
 
         private static S3Settings GetS3Settings([CallerMemberName] string caller = null)
