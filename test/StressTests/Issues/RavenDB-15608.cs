@@ -104,7 +104,7 @@ namespace StressTests.Issues
                 .Select(s => s[_random.Next(s.Length)]).ToArray());
         }
 
-        private static T RandomElement<T>(ICollection<T> collection)
+        private T RandomElement<T>(ICollection<T> collection)
         {
             return collection.ElementAt(_random.Next(0, collection.Count));
         }
