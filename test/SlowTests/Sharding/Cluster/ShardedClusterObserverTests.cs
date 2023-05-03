@@ -342,7 +342,7 @@ namespace SlowTests.Sharding.Cluster
                 store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database,
                     new Dictionary<string, string> {{RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle), "0"},}));
 
-                var db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, 0), cluster.Nodes);
+                var db = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, 0), cluster.Nodes);
                 var autoIndex = db.IndexStore.GetIndexes().First();
                 
                 //make sure the index on all shards is idle
@@ -359,7 +359,7 @@ namespace SlowTests.Sharding.Cluster
                     var idleInMem = true;
                     foreach (var shardNumber in sharding.Shards.Keys)
                     {
-                        db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shardNumber), cluster.Nodes);
+                        db = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shardNumber), cluster.Nodes);
                         autoIndex = db.IndexStore.GetIndexes().First();
                         idleInMem = idleInMem && IndexState.Idle == autoIndex.State;
                     }
@@ -388,7 +388,7 @@ namespace SlowTests.Sharding.Cluster
                     var normal = true;
                     foreach (var shardNumber in sharding.Shards.Keys)
                     {
-                        db = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shardNumber), cluster.Nodes);
+                        db = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shardNumber), cluster.Nodes);
                         autoIndex = db.IndexStore.GetIndexes().First();
                         normal = normal && (IndexState.Normal == autoIndex.State);
                     }
@@ -462,9 +462,9 @@ namespace SlowTests.Sharding.Cluster
 
                 //stall the periodic backup on 2 shards
                 var tcs = new TaskCompletionSource<object>();
-                var server1Database = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]), new List<RavenServer>() { nodes[1] });
+                var server1Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]), new List<RavenServer>() { nodes[1] });
                 server1Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
-                var server2Database = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]), new List<RavenServer>() { nodes[2] });
+                var server2Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]), new List<RavenServer>() { nodes[2] });
                 server2Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
 
                 var timeBeforeCxDeletion = DateTime.UtcNow;
@@ -614,9 +614,9 @@ namespace SlowTests.Sharding.Cluster
 
                 //stall the periodic backup on 2 shards
                 var tcs = new TaskCompletionSource<object>();
-                var server1Database = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]), new List<RavenServer>() { nodes[1] });
+                var server1Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]), new List<RavenServer>() { nodes[1] });
                 server1Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
-                var server2Database = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]), new List<RavenServer>() { nodes[2] });
+                var server2Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]), new List<RavenServer>() { nodes[2] });
                 server2Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
 
                 timeBeforeCxDeletion = DateTime.UtcNow;

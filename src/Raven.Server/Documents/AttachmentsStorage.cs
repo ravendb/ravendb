@@ -86,6 +86,23 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<string> GetAllAttachmentsStreamHashes(DocumentsOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            if (tree == null)
+                yield break;
+
+            using (var it = tree.Iterate(prefetch: false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    yield break;
+                do
+                {
+                    yield return it.CurrentKey.ToString();
+                } while (it.MoveNext());
+            }
+        }
+
         public long GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);

@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
@@ -33,6 +34,7 @@ public partial class RavenTestBase
         public readonly ShardedSubscriptionTestBase Subscriptions;
         public readonly ShardedEtlTestsBase Etl;
         public readonly ReshardingTestBase Resharding;
+        public readonly ShardedReplicationTestBase Replication;
 
         private readonly RavenTestBase _parent;
 
@@ -42,6 +44,7 @@ public partial class RavenTestBase
             Backup = new ShardedBackupTestsBase(_parent);
             Resharding = new ReshardingTestBase(_parent);
             Subscriptions = new ShardedSubscriptionTestBase(_parent);
+            Replication = new ShardedReplicationTestBase(_parent);
             Etl = new ShardedEtlTestsBase(_parent);
         }
 
@@ -104,6 +107,49 @@ public partial class RavenTestBase
             return options;
         }
 
+        public class DocIdsForShardGenerator
+        {
+            public readonly Dictionary<int, Queue<string>> DocIdsForShard;
+            private readonly ShardingConfiguration _config;
+            protected string _categoryName = "users";
+            protected int _currentIteration = 0;
+
+            public DocIdsForShardGenerator(ShardingConfiguration config, string categoryName = null)
+            {
+                _config = config;
+                if(categoryName != null)
+                    _categoryName = categoryName;
+
+                DocIdsForShard = new();
+                foreach (var shardNumber in _config.Shards.Keys)
+                {
+                    DocIdsForShard.Add(shardNumber, new());
+                }
+            }
+
+            public string GetNextIdForShard(int shardNumber)
+            {
+                //try to extract from list first
+                if (DocIdsForShard.ContainsKey(shardNumber) && DocIdsForShard[shardNumber].Count > 0)
+                    return DocIdsForShard[shardNumber].Dequeue();
+
+                int shard;
+                //look for id matching the shard
+                while (true)
+                {
+                    _currentIteration++;
+                    var id = $"{_categoryName}/{_currentIteration}";
+                    using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+                        shard = ShardHelper.GetShardNumberFor(_config, allocator, id);
+
+                    if (shard == shardNumber)
+                        return id;
+                    
+                    DocIdsForShard[shard].Enqueue(id);
+                }
+            }
+        }
+
         public static int GetNextSortedShardNumber(PrefixedShardingSetting prefixedShardingSetting, int shardNumber)
         {
             var shardsSorted = prefixedShardingSetting.Shards.OrderBy(x => x).ToArray();
@@ -140,6 +186,12 @@ public partial class RavenTestBase
                 throw new ArgumentException($"Shard number {shardNumber} doesn't exist in the database record.");
 
             return toShard;
+        }
+
+        public async ValueTask<string> GetShardDatabaseNameForDocAsync(DocumentStore store, string docId, string databaseName = null)
+        {
+            var shard = await GetShardNumberForAsync(store, docId);
+            return ShardHelper.ToShardName(databaseName ?? store.Database, shard);
         }
 
         public async Task<ShardingConfiguration> GetShardingConfigurationAsync(IDocumentStore store, string database = null)
@@ -221,20 +273,59 @@ public partial class RavenTestBase
             }
         }
 
-        public async ValueTask<ShardedDocumentDatabase> GetShardDocumentDatabaseInstanceFor(string database, List<RavenServer> servers = null)
+        public async ValueTask<ShardedDocumentDatabase> GetAnyShardDocumentDatabaseInstanceFor(string shardDatabase, List<RavenServer> servers = null)
         {
+            if (ShardHelper.IsShardName(shardDatabase) == false)
+            {
+                throw new ArgumentException($"database name {shardDatabase} has to contain $ in order to get its instance.");
+            }
+
             servers ??= _parent.GetServers();
             foreach (var server in servers)
             {
-                foreach (var task in server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database))
+                foreach (var task in server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(shardDatabase))
                 {
-                    var databaseInstance = await task;
-                    Debug.Assert(databaseInstance != null, $"The requested database '{database}' is null, probably you try to loaded sharded database without the $");
-                    return databaseInstance;
+                    if(await task == null)
+                        continue;
+
+                    return task.Result;
                 }
             }
 
             return null;
+        }
+
+        public async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(DocumentStore store, string database = null, DatabaseRecord record = null)
+        {
+            var shardingConfiguration = record != null ? record.Sharding : await GetShardingConfigurationAsync(store, database);
+            DatabaseStatistics combined = new DatabaseStatistics();
+            var essential = await store.Maintenance.SendAsync(new GetEssentialStatisticsOperation());
+
+            combined.CountOfConflicts = essential.CountOfConflicts;
+            combined.CountOfCounterEntries = essential.CountOfCounterEntries;
+            combined.CountOfDocuments = essential.CountOfDocuments;
+            combined.CountOfDocumentsConflicts = essential.CountOfDocumentsConflicts;
+            combined.CountOfRevisionDocuments = essential.CountOfRevisionDocuments;
+            combined.CountOfTimeSeriesSegments = essential.CountOfTimeSeriesSegments;
+            combined.CountOfTombstones = essential.CountOfTombstones;
+            combined.CountOfAttachments = essential.CountOfAttachments;
+
+            var uniqueAttachments = new HashSet<string>();
+            foreach (var shardNumber in shardingConfiguration.Shards.Keys)
+            {
+                var db = await GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database ?? store.Database, shardNumber));
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var hash in db.DocumentsStorage.AttachmentsStorage.GetAllAttachmentsStreamHashes(context))
+                    {
+                        uniqueAttachments.Add(hash);
+                    }
+                }
+            }
+
+            combined.CountOfUniqueAttachments = uniqueAttachments.Count;
+            return combined;
         }
 
         public bool AllShardHaveDocs(IDictionary<string, List<DocumentDatabase>> servers, long count = 1L)
