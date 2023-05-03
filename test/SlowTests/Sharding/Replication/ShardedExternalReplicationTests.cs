@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -20,7 +19,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
-using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -48,7 +46,7 @@ namespace SlowTests.Sharding.Replication
                                                   DatabaseItemType.TimeSeries;
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task EnsureCantChooseMentorNodeForShardedExternalReplication()
         {
             using (var store1 = Sharding.GetDocumentStore())
@@ -62,7 +60,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task GetReplicationActiveConnectionsShouldWork()
         {
             using (var store1 = Sharding.GetDocumentStore())
@@ -99,7 +97,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFromNonShardedToShardedShouldWork()
         {
             using (var store1 = GetDocumentStore())
@@ -125,7 +123,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFromNonShardedToShardedShouldWork2()
         {
             using (var store1 = GetDocumentStore(new Options
@@ -147,7 +145,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFromShardedToShardedShouldWork()
         {
             using (var store1 = Sharding.GetDocumentStore(new Options
@@ -179,7 +177,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFromShardedToShardedShouldWork2()
         {
             using (var store1 = Sharding.GetDocumentStore(new Options
@@ -207,7 +205,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task EnsureNoReplicationLoopInExternalReplicationBetweenTwoShardedDBs()
         {
             using (var store1 = Sharding.GetDocumentStore())
@@ -256,7 +254,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task EnsureNoReplicationLoopInExternalReplicationBetweenTwoShardedDBs2()
         {
             using (var store1 = Sharding.GetDocumentStore())
@@ -289,7 +287,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task EnsureNoReplicationLoopInExternalReplicationFromNonShardedToSharded()
         {
             using (var store1 = GetDocumentStore())
@@ -327,7 +325,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFromShardedToNonShardedShouldWork()
         {
             using (var store1 = Sharding.GetDocumentStore())
@@ -353,7 +351,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFromShardedToNonShardedShouldWork2()
         {
             using (var store1 = Sharding.GetDocumentStore(new Options
@@ -372,7 +370,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ServerWideExternalReplicationShouldWork_NonShardedToSharded()
         {
             var clusterSize = 3;
@@ -418,7 +416,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationWithRevisionTombstones_NonShardedToNonSharded()
         {
             using (var store1 = GetDocumentStore())
@@ -496,7 +494,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ServerWideExternalReplicationShouldWork_ShardedToNonSharded()
         {
             var clusterSize = 3;
@@ -542,7 +540,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFailOverFromNonShardedToShardedDatabase()
         {
             var clusterSize = 3;
@@ -644,7 +642,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFailOverFromShardedToNonShardedDatabase()
         {
             var clusterSize = 3;
@@ -756,7 +754,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFailOverWithReshardingFromShardedToNonShardedDatabase()
         {
             var clusterSize = 3;
@@ -830,7 +828,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationFailOverFromShardedToShardedDatabase()
         {
             var clusterSize = 3;
@@ -902,7 +900,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task BidirectionalReplicationWithFailOver_NonShardedAndShardedDatabases()
         {
             var clusterSize = 3;
@@ -1029,7 +1027,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task BidirectionalReplicationWithReshardingShouldWork_NonShardedAndShardedDatabases()
         {
             var clusterSize = 3;
@@ -1153,7 +1151,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task BidirectionalReplicationWithReshardingShouldWork_ShardedDatabases()
         {
             var clusterSize = 3;
@@ -1291,7 +1289,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ReplicationShouldResumeAfterDeletingAndRestartingShardDatabase()
         {
             var src = GetDocumentStore(options: new Options
@@ -1341,7 +1339,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ReplicationShouldResumeAfterDeletingAndRestartingShardDatabase2()
         {
             var src = Sharding.GetDocumentStore(options: new Options
@@ -1391,7 +1389,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ReplicationWithReshardingShouldWorkFromNonShardedToSharded()
         {
             using (var store = GetDocumentStore())
@@ -1435,7 +1433,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ShouldNotReplicateTombstonesCreatedByBucketDeletionFromShardedToSharded()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1485,7 +1483,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ShouldNotReplicateTombstonesCreatedByBucketDeletionFromShardedToSharded2()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1557,7 +1555,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ShouldNotReplicateTombstonesCreatedByBucketDeletionFromShardedToNonSharded()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1599,7 +1597,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ShouldNotReplicateTombstonesCreatedByBucketDeletionFromShardedToNonSharded2()
         {
             var record = new DatabaseRecord("dummy")
@@ -1668,7 +1666,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationWithRevisionTombstones_NonShardedToSharded()
         {
             using (var store1 = GetDocumentStore())
@@ -1719,7 +1717,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationWithRevisionTombstones_NonShardedAndSharded()
         {
             using (var store1 = GetDocumentStore())
@@ -1772,7 +1770,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationWithRevisionTombstones_ShardedToSharded()
         {
             using (var store1 = Sharding.GetDocumentStore())
@@ -1832,7 +1830,7 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationWithRevisionTombstonesAndResharding_ShardedToSharded()
         {
             using (var store1 = Sharding.GetDocumentStore())
