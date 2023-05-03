@@ -431,7 +431,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         if (_entriesToTermsTree == null)
             return null;
-        IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, name, out var longName);
+        IndexFieldsMappingBuilder.GetFieldNameForLongs(Allocator, name, out var longName);
         return _entriesToTermsTree.FixedTreeFor(longName, sizeof(long));
     }
 
