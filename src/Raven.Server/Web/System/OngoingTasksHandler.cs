@@ -358,6 +358,7 @@ namespace Raven.Server.Web.System
                     BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
                     BackupConfigurationHelper.AssertBackupConfiguration(configuration);
                     BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
+                    IsAllowedToExecuteExternalConfigurationScript(BackupDatabaseOnceTag, readerObject);
 
                     readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
                 },
@@ -453,6 +454,7 @@ namespace Raven.Server.Web.System
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
                 BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);
+                IsAllowedToExecuteExternalConfigurationScript(BackupDatabaseOnceTag, json);
 
                 var sw = Stopwatch.StartNew();
                 ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
@@ -768,7 +770,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), PutConnectionStringDebugTag, GetRaftRequestIdFromQuery());
+            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), PutConnectionStringDebugTag, GetRaftRequestIdFromQuery(),
+                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) => IsAllowedToExecuteExternalConfigurationScript(PutConnectionStringDebugTag, readerObject));
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]

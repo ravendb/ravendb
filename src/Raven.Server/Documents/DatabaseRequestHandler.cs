@@ -1,12 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
@@ -240,6 +245,42 @@ namespace Raven.Server.Documents
             }
 
             return null;
+        }
+
+        protected void IsAllowedToExecuteExternalConfigurationScript(string name, BlittableJsonReaderObject configuration)
+        {
+            X509Certificate2 clientCert = GetCurrentCertificate();
+            CertificateDefinition newCertificateDef;
+
+            if (clientCert == null)
+                return;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                BlittableJsonReaderObject certificate = ServerStore.Cluster.GetCertificateByThumbprint(ctx, clientCert.Thumbprint) ??
+                                                        ServerStore.Cluster.GetLocalStateByThumbprint(ctx, clientCert.Thumbprint);
+                newCertificateDef = JsonDeserializationServer.CertificateDefinition(certificate);
+            }
+
+            List<BackupSettings> settingsList = null;
+            if (name == OngoingTasksHandler.PutConnectionStringDebugTag && ConnectionString.GetConnectionStringType(configuration) == ConnectionStringType.Olap)
+                settingsList = JsonDeserializationClient.OlapConnectionString(configuration).GetBackupSettingsDestinations();
+
+            if (name is OngoingTasksHandler.UpdatePeriodicBackupDebugTag or OngoingTasksHandler.BackupDatabaseOnceTag)
+                settingsList = JsonDeserializationServer.BackupConfiguration(configuration).GetBackupSettingsDestinations();
+
+            if (settingsList == null) return;
+            foreach (var dest in settingsList)
+            {
+                if (dest.GetBackupConfigurationScript != null)
+                {
+                    if (newCertificateDef.SecurityClearance is SecurityClearance.UnauthenticatedClients or SecurityClearance.ValidUser)
+                        throw new AuthorizationException(
+                            $"Bad security clearance: {newCertificateDef.SecurityClearance}. The current user does not have the necessary security clearance. " +
+                            $"External script execution is only allowed for users with {SecurityClearance.Operator} or higher security clearance.");
+                }
+            }
         }
 
         protected void LogTaskToAudit(string description, long id, BlittableJsonReaderObject configuration)

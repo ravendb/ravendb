@@ -127,6 +127,28 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             return sb.ToString();
         }
 
+        public List<BackupSettings> GetBackupSettingsDestinations()
+        {
+            var backupDestinations = new List<BackupSettings>();
+
+            AddBackupDestination(LocalSettings, BackupDestination.Local);
+            AddBackupDestination(S3Settings, BackupDestination.AmazonS3);
+            AddBackupDestination(GlacierSettings, BackupDestination.AmazonGlacier);
+            AddBackupDestination(AzureSettings, BackupDestination.Azure);
+            AddBackupDestination(GoogleCloudSettings, BackupDestination.GoogleCloud);
+            AddBackupDestination(FtpSettings, BackupDestination.FTP);
+
+            void AddBackupDestination(BackupSettings backupSettings, BackupDestination backupDestination)
+            {
+                if (backupSettings == null || backupSettings.Disabled)
+                    return;
+
+                backupDestinations.Add(backupSettings);
+            }
+
+            return backupDestinations;
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
