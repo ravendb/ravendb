@@ -334,7 +334,7 @@ public unsafe class CompactKey : IDisposable
 
         // This is the current state after the setup with the encoded value.
         _decodedKeyIdx = Invalid;
-        _currentKeyIdx = (int)(_currentPtr - (long)_storage.Ptr);
+        _currentKeyIdx = 0;
         Dictionary = dictionaryId;
 
         int bucketIdx = SelectBucketForWrite();
