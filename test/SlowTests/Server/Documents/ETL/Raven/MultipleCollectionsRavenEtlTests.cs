@@ -1,4 +1,5 @@
 ﻿using System;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -6,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class MultipleCollectionsRavenEtlTests : EtlTestBase
+    public class MultipleCollectionsRavenEtlTests : RavenTestBase
     {
         public MultipleCollectionsRavenEtlTests(ITestOutputHelper output) : base(output)
         {
@@ -23,9 +24,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
-                AddEtl(src, dest, new [] { "Users", "People" }, script: @"loadToUsers({Name: this.Name});");
+                Etl.AddEtl(src, dest, new [] { "Users", "People" }, script: @"loadToUsers({Name: this.Name});");
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
 
                 using (var session = src.OpenSession())
                 {

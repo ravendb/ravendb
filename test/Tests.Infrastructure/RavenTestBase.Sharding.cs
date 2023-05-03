@@ -20,7 +20,6 @@ using Raven.Server.Web;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
-using static Lucene.Net.Documents.Field;
 
 namespace FastTests;
 

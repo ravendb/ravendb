@@ -49,6 +49,7 @@ namespace FastTests
             Indexes = new IndexesTestBase(this);
             Replication = new ReplicationTestBase2(this);
             Databases = new DatabasesTestBase(this);
+            Etl = new EtlTestBase_New(this);
         }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
@@ -718,6 +719,7 @@ namespace FastTests
 
                 exceptionAggregator.Execute(store.Dispose);
             }
+            Etl.Dispose();
             CreatedStores.Clear();
         }
 

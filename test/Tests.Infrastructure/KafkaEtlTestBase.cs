@@ -3,21 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
-using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
-using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL.Queue;
+namespace Tests.Infrastructure;
 
-public class KafkaEtlTestBase : QueueEtlTestBase
+public class KafkaEtlTestBase
 {
+    private readonly RavenTestBase.EtlTestBase_New _parent;
     private readonly HashSet<string> _definedTopics = new HashSet<string>();
 
-    protected KafkaEtlTestBase(ITestOutputHelper output) : base(output)
+    public KafkaEtlTestBase(RavenTestBase.EtlTestBase_New parent)
     {
+        _parent = parent;
         TopicSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty);
     }
 
@@ -43,7 +44,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 loadToOrders" + TopicSuffix + @"(orderData);
 ";
 
-    protected QueueEtlConfiguration SetupQueueEtlToKafka(DocumentStore store, string script,
+    public QueueEtlConfiguration SetupQueueEtlToKafka(DocumentStore store, string script,
         IEnumerable<string> collections, IEnumerable<EtlQueue> queues = null, bool applyToAllDocuments = false, string configurationName = null,
         string transformationName = null,
         Dictionary<string, string> configuration = null, string bootstrapServers = null)
@@ -74,7 +75,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
             _definedTopics.Add(queue);
         }
 
-        Etl.AddEtl(store, config,
+        _parent.AddEtl(store, config,
             new QueueConnectionString
             {
                 Name = connectionStringName,
@@ -124,9 +125,8 @@ loadToOrders" + TopicSuffix + @"(orderData);
         }
     }
 
-    public override void Dispose()
+    public void Dispose()
     {
-        base.Dispose();
         CleanupTopic();
     }
 }

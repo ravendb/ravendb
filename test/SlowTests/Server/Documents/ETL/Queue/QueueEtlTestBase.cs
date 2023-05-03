@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Threading;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Queue;
 
-public class QueueEtlTestBase : EtlTestBase
+public abstract class QueueEtlTestBase : RavenTestBase
 {
-    public QueueEtlTestBase(ITestOutputHelper output) : base(output)
+    protected QueueEtlTestBase(ITestOutputHelper output) : base(output)
     {
     }
 
@@ -16,10 +17,11 @@ public class QueueEtlTestBase : EtlTestBase
     {
         if (etlDone.Wait(timeout) == false)
         {
-            TryGetLoadError(databaseName, config, out var loadError);
-            TryGetTransformationError(databaseName, config, out var transformationError);
+            Etl.TryGetLoadError(databaseName, config, out var loadError);
+            Etl.TryGetTransformationError(databaseName, config, out var transformationError);
 
             Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
         }
     }
+
 }
