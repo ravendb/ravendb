@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -347,10 +348,12 @@ namespace Voron.Data.Containers
 
             int entryStartOffset = Header.FloorOfData;
             ref ItemMetadata item = ref MetadataFor(pos);
+            Debug.Assert(item.IsFree);
             item.SetSize(size, _page.Pointer, ref entryStartOffset);
             allocatedSpace = _page.AsSpan(entryStartOffset, size);
 
-            return Header.PageNumber * Constants.Storage.PageSize + IndexToOffset(pos);
+            long id = Header.PageNumber * Constants.Storage.PageSize + IndexToOffset(pos);
+            return id;
         }
 
         private static long IndexToOffset(int pos)
@@ -759,6 +762,7 @@ namespace Voron.Data.Containers
 
             var container = new Container(page);
             var metadata = container.MetadataFor(OffsetToIndex(offset));
+            Debug.Assert(metadata.IsFree == false);
             var pagePointer= page.Pointer;
             int size = metadata.Get(ref pagePointer);
             return new Span<byte>(pagePointer, size);
