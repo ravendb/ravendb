@@ -22,10 +22,12 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
@@ -42,7 +44,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
- using Sparrow.Logging;
  using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
@@ -358,7 +359,7 @@ namespace Raven.Server.Web.System
                     BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
                     BackupConfigurationHelper.AssertBackupConfiguration(configuration);
                     BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
-                    IsAllowedToExecuteExternalConfigurationScript(BackupDatabaseOnceTag, readerObject);
+                    AssertIsAllowedToPostExternalConfigurationScript(UpdatePeriodicBackupDebugTag, readerObject);
 
                     readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
                 },
@@ -454,7 +455,7 @@ namespace Raven.Server.Web.System
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
                 BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);
-                IsAllowedToExecuteExternalConfigurationScript(BackupDatabaseOnceTag, json);
+                AssertIsAllowedToPostExternalConfigurationScript(BackupDatabaseOnceTag, json);
 
                 var sw = Stopwatch.StartNew();
                 ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
@@ -771,7 +772,7 @@ namespace Raven.Server.Web.System
         public async Task PutConnectionString()
         {
             await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), PutConnectionStringDebugTag, GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) => IsAllowedToExecuteExternalConfigurationScript(PutConnectionStringDebugTag, readerObject));
+                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) => AssertIsAllowedToPostExternalConfigurationScript(PutConnectionStringDebugTag, readerObject));
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
@@ -848,6 +849,44 @@ namespace Raven.Server.Web.System
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
+            }
+        }
+
+        private void AssertIsAllowedToPostExternalConfigurationScript(string name, BlittableJsonReaderObject configuration)
+        {
+            X509Certificate2 clientCert = GetCurrentCertificate();
+            CertificateDefinition newCertificateDef;
+
+            if (clientCert == null)
+                return;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                BlittableJsonReaderObject certificate = ServerStore.Cluster.GetCertificateByThumbprint(ctx, clientCert.Thumbprint) ??
+                                                        ServerStore.Cluster.GetLocalStateByThumbprint(ctx, clientCert.Thumbprint);
+                newCertificateDef = JsonDeserializationServer.CertificateDefinition(certificate);
+            }
+
+            List<BackupSettings> settingsList = null;
+            if (name == PutConnectionStringDebugTag && ConnectionString.GetConnectionStringType(configuration) == ConnectionStringType.Olap)
+                settingsList = JsonDeserializationClient.OlapConnectionString(configuration).GetBackupSettingsDestinations();
+
+            if (name == UpdatePeriodicBackupDebugTag || name == BackupDatabaseOnceTag)
+                settingsList = JsonDeserializationServer.BackupConfiguration(configuration).GetBackupSettingsDestinations();
+
+            if (settingsList == null)
+                return;
+
+            foreach (var setting in settingsList)
+            {
+                if (setting.GetBackupConfigurationScript == null)
+                    continue;
+
+                if (newCertificateDef?.SecurityClearance == SecurityClearance.ValidUser)
+                    throw new AuthorizationException(
+                        $"Bad security clearance: '{newCertificateDef.SecurityClearance}'. The current user does not have the necessary security clearance. " +
+                        $"External script execution is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.");
             }
         }
 

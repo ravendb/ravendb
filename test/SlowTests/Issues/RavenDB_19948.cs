@@ -29,21 +29,23 @@ namespace SlowTests.Issues
         /* should work:
          * One Time Backup.
          * attempt to post external configuration script by overriding local conf. destination
-         * security clearance: ClusterAdmin
+         * security clearance: ClusterAdmin , Operator
          */
-        [Fact]
-        public void CanPostOneTimeBackupConfigurationScriptWithClusterAdminClearance()
+        [Theory]
+        [InlineData(SecurityClearance.ClusterAdmin)]
+        [InlineData(SecurityClearance.Operator)]
+        public void CanPostOneTimeBackupConfigurationScriptWithClusterAdminClearance(SecurityClearance sc)
         {
             var dbName = GetDatabaseName();
             var certificates = Certificates.SetupServerAuthentication();
             X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate3.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-
+                new Dictionary<string, DatabaseAccess>(), sc);
+        
             var path = NewDataPath(forceCreateDir: true);
             var scriptPath = GenerateConfigurationScript(path, out string command);
-
+        
             using (var store = GetDocumentStore(new Options() { AdminCertificate = adminCertificate, ClientCertificate = clientCertificate , ModifyDatabaseName = s => dbName }))
             {
                 using (var session = store.OpenSession(dbName))
@@ -51,7 +53,7 @@ namespace SlowTests.Issues
                     session.Store(new User() { Name = "Adeyemi" });
                     session.SaveChanges();
                 }
-
+        
                 var operation = store.Maintenance.ForDatabase(dbName).Send(new BackupOperation(new BackupConfiguration
                 {
                     LocalSettings = new LocalSettings
@@ -60,53 +62,8 @@ namespace SlowTests.Issues
                         GetBackupConfigurationScript = new GetBackupConfigurationScript { Exec = command, Arguments = scriptPath }
                     }
                 }));
-
+        
                 var backupResult = (BackupResult)operation.WaitForCompletion(TimeSpan.FromSeconds(30));
-
-
-                Assert.NotEqual(0, backupResult.Documents.ReadCount);
-                Assert.NotNull(backupResult.LocalBackup.BackupDirectory);
-            }
-        }
-
-        /* should work:
-         * One Time Backup.
-         * attempt to post external configuration script by overriding local conf. destination
-         * security clearance: Operator
-         */
-        [Fact]
-        public void CanPostOneTimeBackupConfigurationScriptWithOperatorClearance()
-        {
-            var dbName = GetDatabaseName();
-            var certificates = Certificates.SetupServerAuthentication();
-            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate3.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
-
-            var path = NewDataPath(forceCreateDir: true);
-            var scriptPath = GenerateConfigurationScript(path, out string command);
-
-            using (var store = GetDocumentStore(new Options() { AdminCertificate = adminCertificate, ClientCertificate = clientCertificate, ModifyDatabaseName = s => dbName }))
-            {
-                using (var session = store.OpenSession(dbName))
-                {
-                    session.Store(new User() { Name = "Adeyemi" });
-                    session.SaveChanges();
-                }
-
-                var operation = store.Maintenance.ForDatabase(dbName).Send(new BackupOperation(new BackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = path,
-                        GetBackupConfigurationScript = new GetBackupConfigurationScript { Exec = command, Arguments = scriptPath }
-                    }
-                }));
-
-                var backupResult = (BackupResult)operation.WaitForCompletion(TimeSpan.FromSeconds(30));
-
-
                 Assert.NotEqual(0, backupResult.Documents.ReadCount);
                 Assert.NotNull(backupResult.LocalBackup.BackupDirectory);
             }
@@ -151,7 +108,7 @@ namespace SlowTests.Issues
 
                 var exception = Assert.Throws<AuthorizationException>(act);
                 Assert.Contains(
-                    $"Bad security clearance: {SecurityClearance.ValidUser}. The current user does not have the necessary security clearance. External script execution is only allowed for users with {SecurityClearance.Operator} or higher security clearance.",
+                    $"Bad security clearance: '{SecurityClearance.ValidUser}'. The current user does not have the necessary security clearance. External script execution is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.",
                     exception.Message);
             }
 
@@ -160,17 +117,19 @@ namespace SlowTests.Issues
         /* should work:
          * Periodic Backup.
          * attempt to post external configuration script by overriding local conf. destination
-         * security clearance: ClusterAdmin
+         * security clearance: ClusterAdmin, Operator
          */
-        [Fact]
-        public void CanPostPeriodicBackupConfigurationScriptWithClusterAdminClearance()
+        [Theory]
+        [InlineData(SecurityClearance.ClusterAdmin)]
+        [InlineData(SecurityClearance.Operator)]
+        public void CanPostPeriodicBackupConfigurationScriptWithClusterAdminClearance(SecurityClearance sc)
         {
             var dbName = GetDatabaseName();
             var certificates = Certificates.SetupServerAuthentication();
             X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                new Dictionary<string, DatabaseAccess>(),sc);
 
             var path = NewDataPath(forceCreateDir: true);
             var scriptPath = GenerateConfigurationScript(path, out string command);
@@ -199,52 +158,6 @@ namespace SlowTests.Issues
 
                 Assert.NotNull(result.RaftCommandIndex);
             
-            }
-
-        }
-
-        /* should work:
-        * Periodic Backup.
-        * attempt to post external configuration script by overriding local conf. destination
-        * security clearance: Operator
-        */
-        [Fact]
-        public void CanPostPeriodicBackupConfigurationScriptWithOperatorClearance()
-        {
-            var dbName = GetDatabaseName();
-            var certificates = Certificates.SetupServerAuthentication();
-            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
-
-            var path = NewDataPath(forceCreateDir: true);
-            var scriptPath = GenerateConfigurationScript(path, out string command);
-
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCertificate,
-                ClientCertificate = clientCertificate,
-                ModifyDatabaseName = s => dbName
-            }))
-            {
-                using (var session = store.OpenSession(dbName))
-                {
-                    session.Store(new User() { Name = "Adeyemi" });
-                    session.SaveChanges();
-                }
-
-                var config = Backup.CreateBackupConfiguration(backupPath: NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", disabled: true);
-                config.LocalSettings = new LocalSettings
-                {
-                    FolderPath = path,
-                    GetBackupConfigurationScript = new GetBackupConfigurationScript { Exec = command, Arguments = scriptPath }
-                };
-
-                var result = store.Maintenance.ForDatabase(dbName).Send(new UpdatePeriodicBackupOperation(config));
-
-                Assert.NotNull(result.RaftCommandIndex);
-
             }
 
         }
@@ -290,20 +203,21 @@ namespace SlowTests.Issues
 
                 var exception = Assert.Throws<AuthorizationException>(act);
                 Assert.Contains(
-                    $"Bad security clearance: {SecurityClearance.ValidUser}. The current user does not have the necessary security clearance. External script execution is only allowed for users with {SecurityClearance.Operator} or higher security clearance.",
+                    $"Bad security clearance: '{SecurityClearance.ValidUser}'. The current user does not have the necessary security clearance. External script execution is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.",
                     exception.Message);
             }
 
         }
 
-
         /* should work:
        * Olap ETL Connection String.
        * attempt to post external connection string script by overriding local conf. destination
-       * security clearance: ClusterAdmin
+       * security clearance: ClusterAdmin, Operator
        */
-        [Fact]
-        public void CanPostOlapConnectionStringScriptWithClusterAdminClearance()
+        [Theory]
+        [InlineData(SecurityClearance.ClusterAdmin)]
+        [InlineData(SecurityClearance.Operator)]
+        public void CanPostOlapConnectionStringScriptWithClusterAdminClearance(SecurityClearance sc)
         {
 
             var dbName = GetDatabaseName();
@@ -311,7 +225,7 @@ namespace SlowTests.Issues
             X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                new Dictionary<string, DatabaseAccess>(),sc);
 
             var path = NewDataPath(forceCreateDir: true);
             var scriptPath = GenerateConfigurationScript(path, out string command);
@@ -343,55 +257,6 @@ namespace SlowTests.Issues
 
             }
         }
-
-        /* should work:
-        * Olap ETL Connection String.
-        * attempt to post external connection string script by overriding local conf. destination
-        * security clearance: Operator
-        */
-        [Fact]
-        public void CanPostOlapConnectionStringScriptWithOperatorClearance()
-        {
-
-            var dbName = GetDatabaseName();
-            TestCertificatesHolder certificates = Certificates.SetupServerAuthentication();
-            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
-
-            var path = NewDataPath(forceCreateDir: true);
-            var scriptPath = GenerateConfigurationScript(path, out string command);
-
-            using (var store = GetDocumentStore(new Options { AdminCertificate = adminCertificate, ClientCertificate = clientCertificate, ModifyDatabaseName = s => dbName }))
-            {
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User());
-                    session.SaveChanges();
-                }
-                var olapConnStr = new OlapConnectionString
-                {
-                    Name = "olap-cs",
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = path,
-                        GetBackupConfigurationScript = new GetBackupConfigurationScript { Exec = command, Arguments = scriptPath }
-                    }
-                };
-
-
-                var result0 = store.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(olapConnStr)); 
-                Assert.NotNull(result0.RaftCommandIndex);
-
-                var result = store.Maintenance.Send(new GetConnectionStringsOperation(store.Database, ConnectionStringType.Olap));
-                Assert.NotNull(result.RavenConnectionStrings);
-
-            }
-        }
-
-
 
         /* shouldn't work:
          * Olap ETL Connection String.
@@ -432,7 +297,7 @@ namespace SlowTests.Issues
                 var exception = Assert.Throws<AuthorizationException>(() =>
                     store.Maintenance.ForDatabase(dbName).Send(new PutConnectionStringOperation<OlapConnectionString>(olapConnStr)));
                 Assert.Contains(
-                    $"Bad security clearance: {SecurityClearance.ValidUser}. The current user does not have the necessary security clearance. External script execution is only allowed for users with {SecurityClearance.Operator} or higher security clearance.",
+                    $"Bad security clearance: '{SecurityClearance.ValidUser}'. The current user does not have the necessary security clearance. External script execution is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.",
                     exception.Message);
             }
         }
