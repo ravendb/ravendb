@@ -299,11 +299,11 @@ namespace Corax.Queries
 
                 if (ySlice.HasValue == false)
                 {
-                    return xSlice.HasValue == false ? 0 : 1;
+                    return xSlice.HasValue == false ? 0 : -1;
                 }
 
                 if (xSlice.HasValue == false)
-                    return -1;
+                    return 1;
 
                 long xTerm = xSlice.ReadInt64();
                 long yTerm = ySlice.ReadInt64();
@@ -344,11 +344,11 @@ namespace Corax.Queries
 
                 if (ySlice.HasValue == false)
                 {
-                    return xSlice.HasValue == false ? 0 : 1;
+                    return xSlice.HasValue == false ? 0 : -1;
                 }
 
                 if (xSlice.HasValue == false)
-                    return -1;
+                    return 1;
 
                 var xTerm = xSlice.ReadDouble();
                 var yTerm = ySlice.ReadDouble();
@@ -423,9 +423,9 @@ namespace Corax.Queries
                 var hasY = _reader.TryGetSpatialPoint(y, out var yCoords);
 
                 if (hasY == false)
-                    return hasX ? 1 : 0;
+                    return hasX == false ? 0 : -1;
                 if (hasX == false)
-                    return -1;
+                    return 1;
 
                 var xDist = SpatialUtils.GetGeoDistance(xCoords, _center, _round, _units);
                 var yDist = SpatialUtils.GetGeoDistance(yCoords, _center, _round, _units);
