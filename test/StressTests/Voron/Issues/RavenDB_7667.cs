@@ -46,8 +46,8 @@ namespace StressTests.Voron.Issues
             public string Phone { get; set; }
         }
 
-        private static readonly Random Random = new Random(1);
-        public static string RandomString(int length)
+        private readonly Random Random = new Random(1);
+        public string RandomString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             return new string(Enumerable.Repeat(chars, length)

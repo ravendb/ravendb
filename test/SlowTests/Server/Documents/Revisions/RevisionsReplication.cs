@@ -477,7 +477,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        private static async Task PutDocument(DocumentStore store)
+        private async Task PutDocument(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -611,8 +611,8 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        private static readonly Random Random = new Random(357);
-        public static string RandomString(int length)
+        private readonly Random Random = new Random(357);
+        public string RandomString(int length)
         {
             const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
             var str = new char[length];

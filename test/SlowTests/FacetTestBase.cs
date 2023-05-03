@@ -142,9 +142,9 @@ namespace SlowTests
                         "Model5"
                     };
 
-        private static readonly Random Random = new Random(1337);
+        private readonly Random Random = new Random(1337);
 
-        protected static IList<Camera> GetCameras(int numCameras)
+        protected IList<Camera> GetCameras(int numCameras)
         {
             var cameraList = new List<Camera>(numCameras);
 
