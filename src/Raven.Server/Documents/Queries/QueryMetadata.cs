@@ -36,6 +36,7 @@ using Spatial4n.Shapes;
 using Spatial4n.Shapes.Nts;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 using Circle = Raven.Server.Documents.Indexes.Spatial.Circle;
+using Raven.Server.TrafficWatch;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -408,6 +409,15 @@ function execute(doc, args){
                     if (IsCollectionQuery && OrderBy.Length > 0)
                         IsCollectionQuery = false;
                 }
+            }
+
+            if (TrafficWatchManager.HasRegisteredClients)
+            {
+                Query.Include ??= new List<QueryExpression>();
+                const string timingsKeyword = "timings";
+
+                if (Query.Include.Any(x => x is MethodExpression me && me.Name.Equals(timingsKeyword, StringComparison.OrdinalIgnoreCase)) == false)
+                    Query.Include.Add(new MethodExpression(timingsKeyword, new List<QueryExpression>()));
             }
 
             if (Query.Include != null)
