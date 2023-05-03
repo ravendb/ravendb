@@ -96,6 +96,7 @@ public partial class RavenTestBase
                         };
                     }
                 },
+                ReplicationFactor = shardReplicationFactor, // this ensures not to use the same path for the replicas
                 Server = leader
             };
 
