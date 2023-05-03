@@ -788,6 +788,7 @@ namespace Voron.Data.CompactTrees
                 // as we are going to be writing them anyways.
                 byte* entryBuffer = stackalloc byte[EncodingBufferSize];
                 //We get the encoded key and value from the sibling page
+                var originalEntrySize = GetEntrySize(ref sourceState, sourceKeysCopied);
                 var encodedKey = GetEncodedKeySpan(ref sourceState, sourceKeysCopied,srcDictionary.DictionaryId, out encodedKeyLengthInBits, out long currentKeyId, out var val);
 
                 // If they have a different dictionary, we need to re-encode the entry with the new dictionary.
@@ -812,7 +813,11 @@ namespace Voron.Data.CompactTrees
                     return false; // done moving entries
                 }
 
-                sourceMovedLength += requiredSize;
+                if (currentKeyId != 0) // now we can let go of the _old_ key, since it was re-encoded
+                {
+                    DecrementTermReferenceCount(currentKeyId);
+                }
+                sourceMovedLength += originalEntrySize;
                 
                 // We will update the entries offsets in the receiving page.
                 destinationHeader->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
@@ -1317,6 +1322,9 @@ namespace Voron.Data.CompactTrees
             Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
 
             state.Header->DictionaryId = newDictionary.DictionaryId;
+
+            VerifySizeOf(ref state);
+
             RemoveItems(deleteOnSuccess.Items);
             return;
 
