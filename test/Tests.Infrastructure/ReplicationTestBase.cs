@@ -24,6 +24,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Replication;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -39,29 +40,178 @@ namespace Tests.Infrastructure
         {
         }
 
-        public class BrokenReplication
+        public class ReplicationInstance
         {
             private readonly DocumentDatabase _database;
+            public readonly string DatabaseName;
+            private ManualResetEventSlim _replicateOnceMre;
 
-            public BrokenReplication(DocumentDatabase database)
+            protected ReplicationInstance(string databaseName)
             {
-                _database = database;
+                DatabaseName = databaseName;
             }
 
-            public void Mend()
+            public ReplicationInstance(DocumentDatabase database, string databaseName)
+            {
+                _database = database;
+                DatabaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
+            }
+
+            public virtual void Break()
+            {
+                var mre = new ManualResetEventSlim(false);
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+            }
+
+            public virtual void Mend()
             {
                 var mre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
                 Assert.NotNull(mre);
                 _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
                 mre.Set();
             }
+
+            public virtual void SetupReplicateOnce()
+            {
+                _database.Configuration.Replication.MaxItemsCount = 1;
+
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce ??= new ManualResetEventSlim(true);
+                _replicateOnceMre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
+            }
+
+            public virtual void ReplicateOnce()
+            {
+                WaitForReset(); //wait for server to block and wait
+                _replicateOnceMre.Set(); //let threads pass
+            }
+
+            //wait to reach reset and wait point in server
+            private void WaitForReset(int timeout = 15_000)
+            {
+                var sp = Stopwatch.StartNew();
+                while (sp.ElapsedMilliseconds < timeout)
+                {
+                    if (_replicateOnceMre.IsSet == false)
+                        return;
+
+                    Thread.Sleep(16);
+                }
+
+                throw new TimeoutException();
+            }
+
+            public virtual async Task EnsureNoReplicationLoopAsync()
+            {
+                using (var collector = new LiveReplicationPulsesCollector(_database))
+                {
+                    var etag1 = _database.DocumentsStorage.GenerateNextEtag();
+
+                    await Task.Delay(3000);
+
+                    var etag2 = _database.DocumentsStorage.GenerateNextEtag();
+
+                    Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
+
+                    var groups = collector.Pulses.GetAll().GroupBy(p => p.Direction);
+                    foreach (var group in groups)
+                    {
+                        var key = group.Key;
+                        var count = group.Count();
+                        Assert.True(count < 50, $"{key} seems to be excessive ({count})");
+                    }
+                }
+            }
+
+            public void Dispose()
+            {
+                WaitForReset();//TODO stav: needed?
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                _replicateOnceMre.Set();
+            }
+
+            internal static async ValueTask<ReplicationInstance> GetReplicationInstanceAsync(RavenServer server, string databaseName) //TODO stav: make private when old BreakReplication() is deleted
+            {
+                return new ReplicationInstance(await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName), databaseName);
+            }
         }
-        public async Task<BrokenReplication> BreakReplication(Raven.Server.ServerWide.ServerStore from, string database)
+
+        public class ReplicationManager : ReplicationInstance
         {
-            var deletedStorage = await from.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-            var mre = new ManualResetEventSlim(false);
-            deletedStorage.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
-            return new BrokenReplication(deletedStorage);
+            internal readonly Dictionary<string, ReplicationInstance> _instances;
+
+            public ReplicationManager(string databaseName) : base(databaseName){}
+
+            public ReplicationManager(string databaseName, Dictionary<string, ReplicationInstance> instances) : base(databaseName)
+            {
+                _instances = instances;
+            }
+
+            public override void Break()
+            {
+                foreach (var (node, replicationInstance) in _instances)
+                {
+                    replicationInstance.Break();
+                }
+            }
+
+            public override void Mend()
+            {
+                foreach (var (node, replicationInstance) in _instances)
+                {
+                    replicationInstance.Mend();
+                }
+            }
+
+            public override void SetupReplicateOnce()
+            {
+                foreach (var (node, replicationInstance) in _instances)
+                {
+                    replicationInstance.SetupReplicateOnce();
+                }
+            }
+
+            public override void ReplicateOnce()
+            {
+                foreach (var (node, replicationInstance) in _instances)
+                {
+                    replicationInstance.ReplicateOnce();
+                }
+            }
+
+            public override async Task EnsureNoReplicationLoopAsync()
+            {
+                foreach (var (node, replicationInstance) in _instances)
+                {
+                    await replicationInstance.EnsureNoReplicationLoopAsync();
+                }
+            }
+
+            internal static async ValueTask<ReplicationManager> GetReplicationManagerAsync(List<RavenServer> servers, string databaseName)
+            {
+                Dictionary<string, ReplicationInstance> instances = new();
+                foreach (var server in servers)
+                {
+                    var instance = await ReplicationInstance.GetReplicationInstanceAsync(server, databaseName);
+                    if(instance != null)
+                        instances[server.ServerStore.NodeTag] = instance; //TODO stav: assert replication destinations exist?
+                }
+                
+                return new ReplicationManager(databaseName, instances);
+            }
+        }
+
+        public async ValueTask<ReplicationManager> GetReplicationManagerAsync(DocumentStore store, string databaseName, RavenDatabaseMode mode, List<RavenServer> servers = null)
+        {
+            if (mode == RavenDatabaseMode.Single)
+                return await  ReplicationManager.GetReplicationManagerAsync(servers ?? GetServers() ,databaseName);
+
+            return await ShardedReplicationTestBase.ShardedReplicationManager.GetShardedReplicationManager(await Sharding.GetShardingConfigurationAsync(store),
+                    servers ?? GetServers(), databaseName);
+        }
+
+        public async Task<ReplicationInstance> BreakReplication(Raven.Server.ServerWide.ServerStore from, string databaseName)
+        {
+            return await ReplicationInstance.GetReplicationInstanceAsync(from.Server, databaseName);
         }
 
         protected Dictionary<string, string[]> GetConnectionFailures(DocumentStore store)

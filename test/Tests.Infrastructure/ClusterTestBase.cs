@@ -28,6 +28,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -251,7 +252,6 @@ namespace Tests.Infrastructure
         protected static async Task EnsureNoReplicationLoop(RavenServer server, string database)
         {
             var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-
             await EnsureNoReplicationLoop(storage);
         }
 

@@ -674,10 +674,12 @@ namespace Raven.Server.Web.System
                             }
 
                             if (fromNodes)
+                            {
+                                if(rawRecord.IsSharded && isShard == false)
+                                    throw new InvalidOperationException($"Deleting entire sharded database {rawRecord.DatabaseName} from a specific node is not allowed.");
+
                                 topology = isShard ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
 
-                            if (fromNodes)
-                            {
                                 foreach (var node in parameters.FromNodes)
                                 {
                                     if (topology.RelevantFor(node) == false)

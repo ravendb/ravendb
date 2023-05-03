@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -52,9 +53,34 @@ namespace FastTests
             Etl = new EtlTestBase_New(this);
         }
 
+        public async ValueTask<DatabaseRecord> GetDatabaseRecordAsync(IDocumentStore store, string database = null)
+        {
+            return await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database ?? store.Database));
+        }
+
+        public DatabaseRecord GetDatabaseRecord(DocumentStore store, string database = null)
+        {
+            return store.Maintenance.Server.Send(new GetDatabaseRecordOperation(database ?? store.Database));
+        }
+
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
         {
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
+        }
+
+        protected async ValueTask<DocumentDatabase> GetDocumentDatabaseInstanceForAsync(string database, RavenServer server = null)
+        {
+            server ??= Server;
+            return await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+        }
+
+        protected virtual async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync(DocumentStore store, string database = null, DatabaseRecord record = null)
+        {
+            var dbRecord = record ?? await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database ?? store.Database));
+            if (dbRecord.IsSharded)
+                return await Sharding.GetDatabaseStatisticsAsync(store, database ?? store.Database, dbRecord);
+
+            return await store.Maintenance.SendAsync(new GetStatisticsOperation());
         }
 
         public bool WaitForDocument<T>(IDocumentStore store,
@@ -749,12 +775,31 @@ namespace FastTests
             {
             }
 
+            public Options(Options options)
+            {
+                _frozen = options._frozen;
+                _clientCertificate = options._clientCertificate;
+                _adminCertificate = options._adminCertificate;
+                _createDatabase = options._createDatabase;
+                _deleteDatabaseOnDispose = options._deleteDatabaseOnDispose;
+                _deleteTimeout = options._deleteTimeout;
+                _server = options._server;
+                _replicationFactor = options._replicationFactor;
+                _ignoreDisabledDatabase = options._ignoreDisabledDatabase;
+                _modifyDocumentStore = options._modifyDocumentStore;
+                _modifyDatabaseRecord = options._modifyDatabaseRecord;
+                _modifyDatabaseName = options._modifyDatabaseName;
+                _path = options._path;
+                _runInMemory = options._runInMemory;
+                _encrypted = options._encrypted;
+                _descriptionBuilder = options._descriptionBuilder;
+            }
+
             public static Options ForSearchEngine(RavenSearchEngineMode mode)
             {
                 var config = new RavenTestParameters() { SearchEngine = mode };
                 return ForSearchEngine(config);
             }
-
 
             public static Options ForSearchEngine(RavenTestParameters config)
             {
