@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
@@ -140,6 +141,37 @@ namespace Voron.Data.Containers
         {
             return ref Unsafe.AsRef<ItemMetadata>(_page.DataPointer + sizeof(ItemMetadata) * pos);
         } 
+        
+        public string Dump()
+        {
+            var sb = new StringBuilder();
+            ushort numberOfOffsets = Header.NumberOfOffsets;
+            sb.Append("NumberOfOffsets: ").Append(numberOfOffsets)
+                .Append(" Free: ").Append(Header.FloorOfData - Header.CeilingOfOffsets)
+                .AppendLine();
+            
+            for (var index = 0; index < numberOfOffsets; index++)
+            {
+                ItemMetadata itemMetadata = MetadataFor(index);
+                sb.Append(itemMetadata.IsFree  ? " - " : " + ").Append(index).Append(" - ");
+                if (itemMetadata.IsFree == false)
+                {
+                    var p = _page.Pointer;
+                    var size = itemMetadata.Get(ref p);
+
+                    long offset = p - _page.Pointer ;
+                    sb.Append(size).Append(" @ ").Append(offset);
+                }
+                else
+                {
+                    sb.Append("Free");
+                }
+
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
+        }
 
         private bool HasEntries()
         {
@@ -255,7 +287,7 @@ namespace Voron.Data.Containers
             while (tmpHeader.NumberOfOffsets > 0)
             {
                 ref var tmpOffset = ref Unsafe.AsRef<ItemMetadata>(tmpOffsetsPtr);
-                if (tmpOffset.IsFree)
+                if (tmpOffset.IsFree == false)
                     break;
                 tmpOffsetsPtr -= sizeof(ItemMetadata);
                 tmpHeader.NumberOfOffsets--;
