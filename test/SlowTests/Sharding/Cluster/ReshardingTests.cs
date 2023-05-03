@@ -727,7 +727,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Replication |RavenTestCategory.Sharding)]
         public async Task ShouldNotReplicateTombstonesCreatedByBucketDeletion()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -771,7 +771,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
         public async Task IndexesShouldTakeIntoAccountArtificialTombstones()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -830,7 +830,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-19696")]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding, Skip = "RavenDB-19696")]
         public async Task EtlShouldNotSendTombstonesCreatedByBucketDeletion()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1330,7 +1330,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task GetDocuments()
         {
             using var store = Sharding.GetDocumentStore();
@@ -1380,7 +1380,7 @@ namespace SlowTests.Sharding.Cluster
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task GetDocuments2()
         {
             using var store = Sharding.GetDocumentStore();
