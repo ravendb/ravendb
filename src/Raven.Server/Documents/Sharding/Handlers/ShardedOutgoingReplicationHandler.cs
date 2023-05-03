@@ -30,7 +30,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly TaskCompletionSource<(string, long)> _firstChangeVector = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public string MissingAttachmentMessage { get; set; }
-        public bool MissingAttachmentsInLastBatch { get; set; }
 
         public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, TcpConnectionInfo connectionInfo, string sourceDatabaseId) :
             base(connectionInfo, parent.Server, parent.Context.DatabaseName, parent.Context.NotificationCenter, node, parent.Server.ContextPool, parent.Context.DatabaseShutdown)
@@ -63,8 +62,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         using (var scope = stats.CreateScope())
                         {
                             EnsureValidStats(scope);
-
-                            MissingAttachmentsInLastBatch = false;
 
                             using (_stats.Network.Start())
                             {
@@ -150,11 +147,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
             batch.LastAcceptedChangeVector = _lastAcceptedChangeVectorFromShard = reply.DatabaseChangeVector;
             batch.LastEtagAccepted = _lastSentDocumentEtag = reply.LastEtagAccepted;
 
-            if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
-            {
-                MissingAttachmentsInLastBatch = true;
-                MissingAttachmentMessage = reply?.Exception;
-            }
+            MissingAttachmentMessage = type == ReplicationMessageReply.ReplyType.MissingAttachments ?
+                reply?.Exception ?? "Unknown missing attachment message" :
+                null;
         }
 
         protected override void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
@@ -209,7 +204,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void OnSuccessfulTwoWaysCommunication()
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this");
+            MissingAttachmentsRetries = 0;
         }
 
         protected override void OnFailed(Exception e)

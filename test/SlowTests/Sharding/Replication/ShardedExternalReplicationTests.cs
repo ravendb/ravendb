@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -20,7 +19,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
-using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -1885,6 +1883,68 @@ namespace SlowTests.Sharding.Replication
 
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
+            }
+        }
+
+        // RavenDB-20369
+        [Fact]
+        public async Task ShouldNotDelayReplicationForDifferentMissingAttachments()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = Sharding.GetDocumentStore())
+            {
+                var id = "FoObAr/1";
+                await SetupReplicationAsync(source, destination);
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    await session.StoreAsync(new User { Name = "Foo" }, id);
+                    session.Advanced.Attachments.Store(id, "foo.png", fooStream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocumentWithAttachmentToReplicate<User>(destination, id, "foo.png", 10_000);
+
+                var shardedDb = Sharding.GetOrchestrator(destination.Database);
+
+                // trigger first MissingAttachmentException
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(new byte[] { 4, 5, 6 }))
+                {
+                    session.Advanced.Attachments.Store(id, "foo2.png", fooStream2, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocumentWithAttachmentToReplicate<User>(destination, id, "foo2.png", 10_000);
+
+                // trigger second MissingAttachmentException
+                // at this point, the destination recovered from the first MissingAttachmentException 
+                // 'MissingAttachmentsRetries' should be 0
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream3 = new MemoryStream(new byte[] { 7, 8, 9 }))
+                {
+                    session.Advanced.Attachments.Store(id, "foo3.png", fooStream3, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocumentWithAttachmentToReplicate<User>(destination, id, "foo3.png", 10_000);
+
+                Assert.False(shardedDb.NotificationCenter.Exists("AlertRaised/Replication"));
             }
         }
 
