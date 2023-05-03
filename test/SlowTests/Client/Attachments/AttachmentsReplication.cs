@@ -408,9 +408,9 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        private void WaitForMarker(DocumentStore store1, DocumentStore store2, string id = null)
+        private void WaitForMarker(DocumentStore store1, DocumentStore store2)
         {
-            id ??= "marker - " + Guid.NewGuid();
+            var id = "marker - " + Guid.NewGuid();
             using (var session = store1.OpenSession())
             {
                 session.Store(new Product { Name = "Marker" }, id);
@@ -747,20 +747,9 @@ namespace SlowTests.Client.Attachments
                 // Delete document should delete all the attachments
                 store1.Commands().Delete("users/1", null);
 
-                string marker1 = null, marker2 = null, marker3 = null, marker4 = null, marker5 = null;
-                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
-                {
-                    var idsGen = new ShardingTestBase.DocIdsForShardGenerator(await Sharding.GetShardingConfigurationAsync(store2), "marker");
-                    var users1shard = await Sharding.GetShardNumberForAsync(store2, "users/1");
-                    marker1 = idsGen.GetNextIdForShard(users1shard);
-                    marker2 = idsGen.GetNextIdForShard(users1shard);
-                    marker3 = idsGen.GetNextIdForShard(users1shard);
-                    marker4 = idsGen.GetNextIdForShard(users1shard);
-                    marker5 = idsGen.GetNextIdForShard(users1shard);
-                }
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
 
-                WaitForMarker(store1, store2, marker1);
-                WaitForUserToContinueTheTest(store2);
+                WaitForMarker(store1, store2);
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session, true);
@@ -775,7 +764,9 @@ namespace SlowTests.Client.Attachments
                     session.Store(new User { Name = "Fitzchak 2" }, "users/1");
                     session.SaveChanges();
                 }
-                WaitForMarker(store1, store2, marker2);
+
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                WaitForMarker(store1, store2);
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session);
@@ -789,7 +780,9 @@ namespace SlowTests.Client.Attachments
                     session.Store(new User { Name = "Fitzchak 3" }, "users/1");
                     session.SaveChanges();
                 }
-                WaitForMarker(store1, store2, marker3);
+
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                WaitForMarker(store1, store2);
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session);
@@ -803,7 +796,9 @@ namespace SlowTests.Client.Attachments
                     session.Store(new User { Name = "Fitzchak 4" }, "users/1");
                     session.SaveChanges();
                 }
-                WaitForMarker(store1, store2, marker4);
+
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                WaitForMarker(store1, store2);
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session);
@@ -817,7 +812,9 @@ namespace SlowTests.Client.Attachments
                     session.Store(new User { Name = "Fitzchak 5" }, "users/1");
                     session.SaveChanges();
                 }
-                WaitForMarker(store1, store2, marker5);
+
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                WaitForMarker(store1, store2);
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session);

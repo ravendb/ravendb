@@ -137,18 +137,18 @@ namespace Tests.Infrastructure
 
         public class ReplicationManager : ReplicationInstance
         {
-            internal readonly Dictionary<string, ReplicationInstance> _instances;
+            public readonly Dictionary<string, ReplicationInstance> Instances;
 
             public ReplicationManager(string databaseName) : base(databaseName){}
 
             public ReplicationManager(string databaseName, Dictionary<string, ReplicationInstance> instances) : base(databaseName)
             {
-                _instances = instances;
+                Instances = instances;
             }
 
             public override void Break()
             {
-                foreach (var (node, replicationInstance) in _instances)
+                foreach (var (node, replicationInstance) in Instances)
                 {
                     replicationInstance.Break();
                 }
@@ -156,7 +156,7 @@ namespace Tests.Infrastructure
 
             public override void Mend()
             {
-                foreach (var (node, replicationInstance) in _instances)
+                foreach (var (node, replicationInstance) in Instances)
                 {
                     replicationInstance.Mend();
                 }
@@ -164,7 +164,7 @@ namespace Tests.Infrastructure
 
             public override void SetupReplicateOnce()
             {
-                foreach (var (node, replicationInstance) in _instances)
+                foreach (var (node, replicationInstance) in Instances)
                 {
                     replicationInstance.SetupReplicateOnce();
                 }
@@ -172,7 +172,7 @@ namespace Tests.Infrastructure
 
             public override void ReplicateOnce()
             {
-                foreach (var (node, replicationInstance) in _instances)
+                foreach (var (node, replicationInstance) in Instances)
                 {
                     replicationInstance.ReplicateOnce();
                 }
@@ -180,7 +180,7 @@ namespace Tests.Infrastructure
 
             public override async Task EnsureNoReplicationLoopAsync()
             {
-                foreach (var (node, replicationInstance) in _instances)
+                foreach (var (node, replicationInstance) in Instances)
                 {
                     await replicationInstance.EnsureNoReplicationLoopAsync();
                 }
