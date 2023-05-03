@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
@@ -158,11 +157,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 await Task.WhenAll(tasks);
 
+                string missingAttachmentMessage = null;
                 foreach (ShardedOutgoingReplicationHandler handler in _handlers.Values)
                 {
-                    if (handler.MissingAttachmentsInLastBatch)
-                        throw new MissingAttachmentException(handler.MissingAttachmentMessage);
+                    missingAttachmentMessage ??= handler.MissingAttachmentMessage;
+                    handler.MissingAttachmentMessage = null;
                 }
+
+                if (missingAttachmentMessage != null)
+                    throw new MissingAttachmentException(missingAttachmentMessage);
 
                 var cvs = new List<string>();
                 var minEtag = long.MaxValue;
