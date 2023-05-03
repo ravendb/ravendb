@@ -1,5 +1,7 @@
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using FastTests.Corax;
 using Tests.Infrastructure;
@@ -11,6 +13,8 @@ using SlowTests.Cluster;
 using SlowTests.Issues;
 using SlowTests.Server.Documents.PeriodicBackup;
 using SlowTests.Sharding.Cluster;
+using SlowTests.SlowTests.Faceted;
+using SlowTests.Tests.Faceted;
 
 namespace Tryouts;
 
@@ -31,10 +35,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new CompactTreeTests(testOutputHelper))
+                using (var test = new FacetIndexingRepro(testOutputHelper))
                 {
+
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    test.CanHandleMerges();
+                    test.CanAddAndRemoveItems();
                 }
             }
             catch (Exception e)
