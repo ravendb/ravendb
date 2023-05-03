@@ -211,13 +211,21 @@ public partial class RavenTestBase
             return message;
         }
 
+        public string CollectLogs(RavenServer server)
+        {
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+                return CollectLogs(context, server);
+        }
+
         public string CollectLogs(ClusterOperationContext context, RavenServer server)
         {
             return
-                $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}':" +
+                $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}' (current state: {server.ServerStore.CurrentRachisState}) :" +
                 $"{Environment.NewLine}Last notified Index '{server.ServerStore.Cluster.LastNotifiedIndex}':" +
                 $"{Environment.NewLine}{context.ReadObject(server.ServerStore.GetLogDetails(context, max: int.MaxValue), "LogSummary/" + server.ServerStore.NodeTag)}" +
-                $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
+                $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}" +
+                $"{Environment.NewLine}State changes: {Environment.NewLine}{string.Join(Environment.NewLine,server.ServerStore.Engine.PrevStates)}";
         }
 
         public string GetLastStatesFromAllServersOrderedByTime()

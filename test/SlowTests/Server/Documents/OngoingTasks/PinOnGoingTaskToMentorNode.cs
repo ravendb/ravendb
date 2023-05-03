@@ -134,7 +134,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             });
 
             var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive,CancellationToken.None);
-            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(10_000)));
+            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(10)), $"{Cluster.CollectLogs(revivedServer)}");
             using (var session = src.OpenSession())
             {
                 session.Store(new User()
@@ -234,7 +234,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             });
             
             var waitForPassive = mentorNode.ServerStore.Engine.WaitForState(RachisState.Passive,CancellationToken.None);
-            Assert.True(waitForPassive.Wait(TimeSpan.FromSeconds(10_000)));
+            Assert.True(waitForPassive.Wait(TimeSpan.FromSeconds(10)), $"{Cluster.CollectLogs(mentorNode)}");
             
             var val = await WaitForValueAsync(async () =>
                 {
@@ -399,7 +399,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 DataDirectory = disposedServer.DataDirectory
             });
             var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
-            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20_000)));
+            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20)), $"{Cluster.CollectLogs(revivedServer)}");
             Assert.True(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2",30_000)); 
             Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 3));
             Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
