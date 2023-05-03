@@ -431,19 +431,18 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         if (_entriesToTermsTree == null)
             return null;
-        if (_fieldMapping.TryGetByFieldName(name, out var field) == false)
-            return null;
-        return _entriesToTermsTree.FixedTreeFor(field.FieldNameLong, sizeof(long));
+        IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, name, out var longName);
+        return _entriesToTermsTree.FixedTreeFor(longName, sizeof(long));
     }
 
     public FixedSizeTree DoubleReader(Slice name)
     {
         if (_entriesToTermsTree == null)
             return null;
-        if (_fieldMapping.TryGetByFieldName(name, out var field) == false)
-            return null;
-        return _entriesToTermsTree.FixedTreeFor(field.FieldNameDouble, sizeof(double));
+        IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, name, out var dblName);
+        return _entriesToTermsTree.FixedTreeFor(dblName, sizeof(double));
     }
+    
     public void Dispose()
     {
         if (_ownsTransaction)
