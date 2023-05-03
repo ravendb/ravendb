@@ -88,9 +88,9 @@ public class IndexFieldsMappingBuilder : IDisposable
         if (_fieldsById.TryGetValue(fieldId, out var storedAnalyzer) == false)
         {
             var clonedFieldName = fieldName.Clone(_context);
-            GetFieldNameForDoubles(clonedFieldName, out var fieldNameDouble);
-            GetFieldNameForLongs(clonedFieldName, out var fieldNameLong);
-            GetFieldForTotalSum(clonedFieldName, out var fieldForTotalSum);
+            GetFieldNameForDoubles(_context, clonedFieldName, out var fieldNameDouble);
+            GetFieldNameForLongs(_context, clonedFieldName,  out var fieldNameLong);
+            GetFieldForTotalSum(_context, clonedFieldName,  out var fieldForTotalSum);
 
             var binding = new IndexFieldBinding(fieldId, clonedFieldName, fieldNameLong, fieldNameDouble, fieldForTotalSum, _isForWriter,
                 analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
@@ -104,27 +104,12 @@ public class IndexFieldsMappingBuilder : IDisposable
 
         return this;
     }
-    
-    private void GetFieldNameForLongs(Slice fieldName, out Slice fieldNameForLongs)
-    {
-        GetFieldNameWithPostfix(_context, fieldName, LongSuffix, out fieldNameForLongs);
-    }
 
     internal static void GetFieldNameForLongs(ByteStringContext context, Slice fieldName, out Slice fieldNameForLongs)
     {
         GetFieldNameWithPostfix(context, fieldName, LongSuffix, out fieldNameForLongs);
     }
-    
-    private void GetFieldNameForDoubles(Slice fieldName, out Slice fieldNameForDoubles)
-    {
-        GetFieldNameWithPostfix(_context, fieldName, DoubleSuffix, out fieldNameForDoubles);
-    }
-    
-    private void GetFieldForTotalSum(Slice fieldName, out Slice fieldForTotalSum)
-    {
-        GetFieldNameWithPostfix(_context, fieldName, TermTotalSumField, out fieldForTotalSum);
-    }
-    
+
     internal static void GetFieldNameForDoubles(ByteStringContext context, Slice fieldName, out Slice fieldNameForDoubles)
     {
         GetFieldNameWithPostfix(context, fieldName, DoubleSuffix, out fieldNameForDoubles);
