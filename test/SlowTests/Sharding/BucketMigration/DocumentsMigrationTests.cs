@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using FastTests;
-using FastTests.Server.Replication;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -31,7 +29,7 @@ namespace SlowTests.Sharding.BucketMigration
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task DocumentsMigratorShouldWork_SimpleCase()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -75,7 +73,7 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task DocumentsMigratorShouldWork_MultipleWrongBuckets()
         {
             Server.ServerStore.Sharding.BlockPrefixedSharding = false;
@@ -148,7 +146,7 @@ namespace SlowTests.Sharding.BucketMigration
             }, true, 30_000, 333);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task DocumentsMigratorShouldWork_ClusterCase()
         {
             var dbName = GetDatabaseName();
@@ -263,7 +261,7 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task DocumentsMigratorShouldWork_ExternalReplicationShardedAndNonSharded()
         {
             using (var source = Sharding.GetDocumentStore())
@@ -314,7 +312,7 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task DocumentsMigratorShouldWork_ExternalReplicationFromShardedToSharded()
         {
             using (var source = Sharding.GetDocumentStore())
@@ -365,7 +363,7 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task DocumentsMigratorShouldWork_ExternalReplicationFromShardedToSharded2()
         {
             using (var source = Sharding.GetDocumentStore())
@@ -416,7 +414,7 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
         public async Task DocumentsMigratorShouldWork_ExternalReplicationFromShardedToShardedWithConflict()
         {
             using (var source = Sharding.GetDocumentStore())
@@ -488,7 +486,7 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task DocumentsMigrationShouldWork()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -533,24 +531,17 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        [Fact]
-        public void DocumentsMigrationCommandShouldThrowForNotShardedInstance()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void DocumentsMigrationCommandShouldThrowForNotShardedDatabase(Options options)
         {
-            using (var store = Sharding.GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-                Assert.Throws<NotSupportedInShardingException>(() =>
-                {
-                    store.Maintenance.Send(new ShardedExecuteDocumentsMigrationOperation());
-                });
-            }
-        }
+                var exceptionType = options.DatabaseMode == RavenDatabaseMode.Single ? 
+                    typeof(RavenException) : 
+                    typeof(NotSupportedInShardingException);
 
-        [Fact]
-        public void DocumentsMigrationCommandShouldThrowForNotShardedDatabase()
-        {
-            using (var store = GetDocumentStore())
-            {
-                Assert.Throws<RavenException>(() =>
+                Assert.Throws(exceptionType, () =>
                 {
                     store.Maintenance.Send(new ShardedExecuteDocumentsMigrationOperation());
                 });
