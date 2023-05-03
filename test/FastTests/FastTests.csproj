@@ -35,6 +35,8 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Corax\Bugs\Terms-2.txt.gz" />
     <EmbeddedResource Include="Corax\Bugs\3-2015-10.txt.gz" />
+    <None Remove="Corax\Bugs\index-log.bin" />
+    <EmbeddedResource Include="Corax\Bugs\index-log.bin" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Sparrow\BitVectors.cs" />

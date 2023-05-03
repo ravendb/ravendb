@@ -110,9 +110,9 @@ namespace SlowTests.Issues
         }
 
         // Used to create a random string for a name
-        private static readonly Random random = new Random(1);
+        private readonly Random random = new Random(1);
 
-        public static string RandomString(int length)
+        public string RandomString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             return new string(Enumerable.Repeat(chars, length)
