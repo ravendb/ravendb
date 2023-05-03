@@ -95,9 +95,9 @@ namespace StressTests.Issues
             }
         }
 
-        private static readonly Random _random = new Random();
+        private readonly Random _random = new Random();
 
-        private static string RandomString(int length)
+        private string RandomString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             return new string(Enumerable.Repeat(chars, length)
