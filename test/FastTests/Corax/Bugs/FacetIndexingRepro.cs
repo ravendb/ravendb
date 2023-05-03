@@ -119,10 +119,6 @@ public class FacetIndexingRepro : StorageTest
         return builder.Build();
     }
 
-    public FacetIndexingRepro(StorageEnvironmentOptions options, ITestOutputHelper output) : base(options, output)
-    {
-    }
-
     public FacetIndexingRepro(ITestOutputHelper output) : base(output)
     {
     }
