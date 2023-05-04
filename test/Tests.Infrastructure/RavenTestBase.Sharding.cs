@@ -107,49 +107,6 @@ public partial class RavenTestBase
             return options;
         }
 
-        public class DocIdsForShardGenerator
-        {
-            public readonly Dictionary<int, Queue<string>> DocIdsForShard;
-            private readonly ShardingConfiguration _config;
-            protected string _categoryName = "users";
-            protected int _currentIteration = 0;
-
-            public DocIdsForShardGenerator(ShardingConfiguration config, string categoryName = null)
-            {
-                _config = config;
-                if(categoryName != null)
-                    _categoryName = categoryName;
-
-                DocIdsForShard = new();
-                foreach (var shardNumber in _config.Shards.Keys)
-                {
-                    DocIdsForShard.Add(shardNumber, new());
-                }
-            }
-
-            public string GetNextIdForShard(int shardNumber)
-            {
-                //try to extract from list first
-                if (DocIdsForShard.ContainsKey(shardNumber) && DocIdsForShard[shardNumber].Count > 0)
-                    return DocIdsForShard[shardNumber].Dequeue();
-
-                int shard;
-                //look for id matching the shard
-                while (true)
-                {
-                    _currentIteration++;
-                    var id = $"{_categoryName}/{_currentIteration}";
-                    using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
-                        shard = ShardHelper.GetShardNumberFor(_config, allocator, id);
-
-                    if (shard == shardNumber)
-                        return id;
-                    
-                    DocIdsForShard[shard].Enqueue(id);
-                }
-            }
-        }
-
         public static int GetNextSortedShardNumber(PrefixedShardingSetting prefixedShardingSetting, int shardNumber)
         {
             var shardsSorted = prefixedShardingSetting.Shards.OrderBy(x => x).ToArray();

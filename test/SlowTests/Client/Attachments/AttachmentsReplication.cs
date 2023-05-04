@@ -15,11 +15,9 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -39,7 +37,7 @@ namespace SlowTests.Client.Attachments
         {
         }
         
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutAttachments(Options options, bool replicateDocumentFirst)
@@ -173,7 +171,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData("\r\n", null, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData("\\", "\\", DatabaseMode = RavenDatabaseMode.All)]
         [RavenData("/", "/", DatabaseMode = RavenDatabaseMode.All)]
@@ -229,7 +227,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task DeleteAttachments(Options options)
         {
@@ -314,7 +312,7 @@ namespace SlowTests.Client.Attachments
                 Assert.Equal(documentsCount.Value, statistics.CountOfDocuments);
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams(Options options)
         {
@@ -429,7 +427,7 @@ namespace SlowTests.Client.Attachments
             await AssertAttachmentCount(store2, expectedUniqueAttachments, expectedAttachments);
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task DeleteDocumentWithAttachmentsThatHaveTheSameStream(Options options)
         {
@@ -464,7 +462,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task AttachmentsRevisionsReplicationAfterEnable(Options options)
         {
@@ -576,7 +574,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task AttachmentsRevisionsReplicationAfterEnable2(Options options)
         {
@@ -693,7 +691,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Revisions)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task AttachmentsRevisionsReplication(Options options)
         {
@@ -941,7 +939,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutDifferentAttachmentsShouldNotConflict(Options options)
         {
@@ -1002,7 +1000,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutAndDeleteDifferentAttachmentsShouldNotConflict(Options options)
         {
@@ -1048,7 +1046,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutSameAttachmentsShouldNotConflict(Options options)
         {
@@ -1093,7 +1091,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutSameAttachmentsDifferentContentTypeShouldConflict(Options options)
         {
@@ -1181,7 +1179,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutDifferentAttachmentsShouldConflict(Options options)
         {
@@ -1264,7 +1262,7 @@ namespace SlowTests.Client.Attachments
             Assert.False(metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _));
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutAndDeleteAttachmentsShouldNotConflict(Options options)
         {
@@ -1310,7 +1308,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutAndDeleteAttachmentsShouldNotConflict_OnDocumentWithoutMetadata(Options options)
         {
@@ -1360,7 +1358,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RavenDB_13535(Options options)
         {
@@ -1393,11 +1391,9 @@ namespace SlowTests.Client.Attachments
                 }
 
                 var replication = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, new List<RavenServer>() {server});
-
-                replication.SetupReplicateOnce();
-
+                
                 await SetupReplicationAsync(store1, store2);
-                replication.ReplicateOnce();
+                replication.ReplicateOnce("foo");
 
                 var db2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
                     ? store2.Database
@@ -1438,86 +1434,69 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RavenDB_13963(Options options)
         {
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {
-                DocumentDatabase database1;
-                string docId1, docId2;
-                if (options.DatabaseMode == RavenDatabaseMode.Single)
+                string docId1 = "users/1", docId2 = "users/2$users/1";
+                var replication = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode);
+                
+                using (var session = store1.OpenAsyncSession())
                 {
-                    database1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
-                    docId1 = "users/1";
-                    docId2 = "users/2";
+                    await session.StoreAsync(new User { Name = "Karmel" }, docId1);
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        session.Advanced.Attachments.Store(docId1, "a1", a1, "a1/png");
+                        await session.SaveChangesAsync();
+                    }
                 }
-                else
+                
+                using (var session = store1.OpenAsyncSession())
                 {
-                    database1 = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store1.Database, 0));
-                    
-                    var idsGenerator = new ShardingTestBase.DocIdsForShardGenerator(await Sharding.GetShardingConfigurationAsync(store1));
-                    docId1 = idsGenerator.GetNextIdForShard(0);
-                    docId2 = idsGenerator.GetNextIdForShard(0);
+                    await session.StoreAsync(new User { Name = "Karmel" }, docId2);
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                    {
+                        session.Advanced.Attachments.Store(docId2, "a2", a1, "a2/png");
+                        await session.SaveChangesAsync();
+                    }
                 }
 
-                using (var controller = new ReplicationController(database1))
+                await SetupReplicationAsync(store1, store2);
+                replication.ReplicateOnce(docId1);
+                 
+                Assert.True(WaitForDocument(store2, docId1));
+
+                using (var session = store2.OpenAsyncSession())
                 {
-                    using (var session = store1.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(new User { Name = "Karmel" }, docId1);
-                        using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
-                        {
-                            session.Advanced.Attachments.Store(docId1, "a1", a1, "a1/png");
-                            await session.SaveChangesAsync();
-                        }
-                    }
+                    var user = await session.LoadAsync<User>(docId1);
+                    Assert.NotNull(user);
 
-                    using (var session = store1.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(new User { Name = "Karmel" }, docId2);
-                        using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
-                        {
-                            session.Advanced.Attachments.Store(docId2, "a2", a1, "a2/png");
-                            await session.SaveChangesAsync();
-                        }
-                    }
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    Assert.Equal(1, attachments.Length);
 
-                    await SetupReplicationAsync(store1, store2);
-                    controller.ReplicateOnce();
+                    Assert.Null(await session.LoadAsync<User>(docId2));
+                }
+                
+                replication.ReplicateOnce(docId1);
+                Assert.True(WaitForDocument(store2, docId2));
 
-                    Assert.True(WaitForDocument(store2, docId1));
-
-                    using (var session = store2.OpenAsyncSession())
-                    {
-                        var user = await session.LoadAsync<User>(docId1);
-                        Assert.NotNull(user);
-
-                        var metadata = session.Advanced.GetMetadataFor(user);
-                        Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-                        var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
-                        Assert.Equal(1, attachments.Length);
-
-                        Assert.Null(await session.LoadAsync<User>(docId2));
-                    }
-
-                    controller.ReplicateOnce();
-                    Assert.True(WaitForDocument(store2, docId2));
-
-                    using (var session = store2.OpenAsyncSession())
-                    {
-                        var user = await session.LoadAsync<User>(docId2);
-                        var metadata = session.Advanced.GetMetadataFor(user);
-                        Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-                        var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
-                        Assert.Equal(1, attachments.Length);
-                    }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(docId2);
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    Assert.Equal(1, attachments.Length);
                 }
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication | RavenTestCategory.Cluster)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RavenDB_15914(Options options)
         {
@@ -1618,7 +1597,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task AttachmentWithDifferentStreamAndSameNameShouldBeResolvedToLatestAfterConflict(Options options)
         {
@@ -1680,7 +1659,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task SameAttachmentWithDuplicateNameShouldBeNotChangeAfterConflict(Options options)
         {
@@ -1741,7 +1720,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task AttachmentWithSameStreamSameNameAndDifferentContentTypeShouldBeResolvedToLatestAfterConflict(Options options)
         {
@@ -1802,7 +1781,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ResolvedToLatestOnAttachmentConflictShouldRemoveDuplicateAttachment(Options options)
         {
@@ -1950,7 +1929,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ScriptResolver_ShouldNotRenameAttachment_ShouldRenameAllMissingAttachmentsAndMergeWithOtherAttachmentsOnResolvedDocument(Options options)
         {
@@ -2083,7 +2062,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ScriptResolver_ShouldNotRenameAttachment_ShouldRenameAndMergeAllMissingAttachmentsOnResolvedDocument(Options options)
         {
@@ -2228,7 +2207,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ScriptResolver_ShouldNotRemoveAttachment_ShouldRenameAndMergeAllMissingAttachmentsOnResolvedDocument(Options options)
         {
@@ -2412,7 +2391,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ScriptResolver_ShouldNotAddAttachment_ShouldRenameAndMergeDuplicateAttachments(Options options)
         {
@@ -2560,7 +2539,7 @@ namespace SlowTests.Client.Attachments
         }
 
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ConflictOfAttachmentAndDocument3StoresDifferentLastModifiedOrder(Options options)
         {
@@ -2710,7 +2689,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ConflictOfAttachmentAndDocument_SameMetadataDifferentAttachmentChangeVectors_RevisionsDisabled(Options options)
         {
@@ -2829,7 +2808,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ConflictOfAttachmentAndDocument(Options options)
         {
@@ -2941,7 +2920,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ConflictOfAttachmentAndDocument3Stores(Options options)
         {
@@ -3094,7 +3073,7 @@ namespace SlowTests.Client.Attachments
         }
 
         // the original issue RavenDB-19421
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ReplicationShouldSendMissingAttachments(Options options)
         {
@@ -3169,7 +3148,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ConflictOfAttachmentAndDocument3StoresDifferentLastModifiedOrder_RevisionsDisabled_MissingAttachmentLoop(Options options)
         {
