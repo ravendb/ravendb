@@ -129,8 +129,13 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         for (const ws of this.controller.getConnectedLiveClients()) {
             this.onClientConnected(ws);
         }
+        this.initTooltips();
     }
     
+    private initTooltips() {
+        $('[data-toggle="tooltip"]', this.container).tooltip();
+    }
+
     prepareUrl(item: nodeStatsItem): { url: string; openInNewTab: boolean } {
         const nodeTag = item.nodeTag;
 
