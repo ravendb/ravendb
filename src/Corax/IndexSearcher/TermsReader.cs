@@ -81,13 +81,14 @@ public readonly unsafe struct TermsReader : IDisposable
         using var _ = _fst.Read(x, out var xSlice);
         using var __ = _fst.Read(y, out var ySlice);
 
+
         if (ySlice.HasValue == false)
         {
-            return xSlice.HasValue == false ? 0 : -1;
+            return xSlice.HasValue == false ? 0 : 1;
         }
 
         if (xSlice.HasValue == false)
-            return 1;
+            return -1;
         
         long xTermId = xSlice.ReadInt64();
         long yTermId = ySlice.ReadInt64();
