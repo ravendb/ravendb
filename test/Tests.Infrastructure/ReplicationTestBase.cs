@@ -28,6 +28,7 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
+using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
@@ -40,11 +41,12 @@ namespace Tests.Infrastructure
         {
         }
 
-        public class ReplicationInstance
+        public class ReplicationInstance : IDisposable
         {
             private readonly DocumentDatabase _database;
             public readonly string DatabaseName;
             private ManualResetEventSlim _replicateOnceMre;
+            private bool _replicateOnceInitialized = false;
 
             protected ReplicationInstance(string databaseName)
             {
@@ -68,19 +70,25 @@ namespace Tests.Infrastructure
                 var mre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
                 Assert.NotNull(mre);
                 _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                _database.Configuration.Replication.MaxItemsCount = null;
                 mre.Set();
             }
 
-            public virtual void SetupReplicateOnce()
+            protected virtual void InitializeReplicateOnce()
             {
                 _database.Configuration.Replication.MaxItemsCount = 1;
 
                 _database.ReplicationLoader.DebugWaitAndRunReplicationOnce ??= new ManualResetEventSlim(true);
                 _replicateOnceMre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
+
+                _replicateOnceInitialized = true;
             }
 
-            public virtual void ReplicateOnce()
+            public virtual void ReplicateOnce(string docId)
             {
+                if(_replicateOnceInitialized == false)
+                    InitializeReplicateOnce();
+
                 WaitForReset(); //wait for server to block and wait
                 _replicateOnceMre.Set(); //let threads pass
             }
@@ -122,15 +130,17 @@ namespace Tests.Infrastructure
                 }
             }
 
-            public void Dispose()
+            public virtual void Dispose()
             {
-                WaitForReset();//TODO stav: needed?
+                WaitForReset();
                 _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                _database.Configuration.Replication.MaxItemsCount = null;
                 _replicateOnceMre.Set();
             }
 
-            internal static async ValueTask<ReplicationInstance> GetReplicationInstanceAsync(RavenServer server, string databaseName) //TODO stav: make private when old BreakReplication() is deleted
+            internal static async ValueTask<ReplicationInstance> GetReplicationInstanceAsync(RavenServer server, string databaseName)
             {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Make this func private when legacy BreakReplication() is removed");
                 return new ReplicationInstance(await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName), databaseName);
             }
         }
@@ -162,19 +172,11 @@ namespace Tests.Infrastructure
                 }
             }
 
-            public override void SetupReplicateOnce()
+            public override void ReplicateOnce(string docId)
             {
                 foreach (var (node, replicationInstance) in Instances)
                 {
-                    replicationInstance.SetupReplicateOnce();
-                }
-            }
-
-            public override void ReplicateOnce()
-            {
-                foreach (var (node, replicationInstance) in Instances)
-                {
-                    replicationInstance.ReplicateOnce();
+                    replicationInstance.ReplicateOnce(docId);
                 }
             }
 
@@ -186,6 +188,14 @@ namespace Tests.Infrastructure
                 }
             }
 
+            public override void Dispose()
+            {
+                foreach (var instance in Instances.Values)
+                {
+                    instance.Dispose();
+                }
+            }
+
             internal static async ValueTask<ReplicationManager> GetReplicationManagerAsync(List<RavenServer> servers, string databaseName)
             {
                 Dictionary<string, ReplicationInstance> instances = new();
@@ -193,7 +203,7 @@ namespace Tests.Infrastructure
                 {
                     var instance = await ReplicationInstance.GetReplicationInstanceAsync(server, databaseName);
                     if(instance != null)
-                        instances[server.ServerStore.NodeTag] = instance; //TODO stav: assert replication destinations exist?
+                        instances[server.ServerStore.NodeTag] = instance;
                 }
                 
                 return new ReplicationManager(databaseName, instances);

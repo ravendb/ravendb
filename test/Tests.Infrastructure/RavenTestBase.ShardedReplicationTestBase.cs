@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Utils;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Xunit;
 using static Tests.Infrastructure.ReplicationTestBase;
 
@@ -23,10 +25,12 @@ public partial class RavenTestBase
         public class ShardedReplicationManager : ReplicationManager //TODO stav: change to interface?
         {
             public readonly Dictionary<int, ReplicationManager> ShardReplications;
+            private readonly ShardingConfiguration _config;
 
-            protected ShardedReplicationManager(Dictionary<int, ReplicationManager> shardReplications, string databaseName) : base(databaseName)
+            protected ShardedReplicationManager(Dictionary<int, ReplicationManager> shardReplications, string databaseName, ShardingConfiguration config) : base(databaseName)
             {
                 ShardReplications = shardReplications;
+                _config = config;
             }
 
             public override void Mend()
@@ -45,20 +49,13 @@ public partial class RavenTestBase
                 }
             }
 
-            public override void SetupReplicateOnce()
+            public override void ReplicateOnce(string docId)
             {
-                foreach (var (node, replicationInstance) in ShardReplications)
-                {
-                    replicationInstance.SetupReplicateOnce();
-                }
-            }
+                int shardNumber;
+                using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+                    shardNumber = ShardHelper.GetShardNumberFor(_config, allocator, docId);
 
-            public override void ReplicateOnce()
-            {
-                foreach (var (node, replicationInstance) in ShardReplications)
-                {
-                    replicationInstance.ReplicateOnce();
-                }
+                ShardReplications[shardNumber].ReplicateOnce(docId);
             }
 
             public override async Task EnsureNoReplicationLoopAsync()
@@ -66,6 +63,14 @@ public partial class RavenTestBase
                 foreach (var (node, replicationInstance) in ShardReplications)
                 {
                     await replicationInstance.EnsureNoReplicationLoopAsync();
+                }
+            }
+
+            public override void Dispose()
+            {
+                foreach (var manager in ShardReplications.Values)
+                {
+                    manager.Dispose();
                 }
             }
 
@@ -80,7 +85,7 @@ public partial class RavenTestBase
                     Assert.True(shardReplications.ContainsKey(shardNumber), $"Couldn't find document database of shard {shardNumber} in any of the servers.");
                 }
 
-                return new ShardedReplicationManager(shardReplications, databaseName);
+                return new ShardedReplicationManager(shardReplications, databaseName, configuration);
             }
         }
     }
