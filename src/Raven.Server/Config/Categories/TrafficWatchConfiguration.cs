@@ -57,4 +57,8 @@ public class TrafficWatchConfiguration : ConfigurationCategory
     [ConfigurationEntry("TrafficWatch.ChangeTypes", ConfigurationEntryScope.ServerWideOnly)]
     public List<TrafficWatchChangeType> ChangeTypes { get; set; }
 
+    [Description("Semicolon seperated list of specific client certificate thumbprints by which the Traffic Watch logging entities will be filtered. If not specified, Traffic Watch entities with any certificate thumbprint will be included, including those without any thumbprint. Example list: \"0123456789ABCDEF0123456789ABCDEF01234567;FEDCBA9876543210FEDCBA9876543210FEDCBA98\".")]
+    [DefaultValue(null)]
+    [ConfigurationEntry("TrafficWatch.CertificateThumbprints", ConfigurationEntryScope.ServerWideOnly)]
+    public List<string> CertificateThumbprints { get; set; }
 }

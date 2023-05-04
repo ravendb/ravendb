@@ -21,12 +21,16 @@ class trafficWatchConfiguration {
 
     filterChangeTypes = ko.observable<boolean>();
     changeTypes = ko.observableArray<TrafficWatchChangeType>([]);
+
+    filterCertificateThumbprints = ko.observable<boolean>();
+    certificateThumbprints = ko.observableArray<string>();
     
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         databases: this.databases,
         statusCodes: this.statusCodes,
         httpMethods: this.httpMethods,
-        changeTypes: this.changeTypes
+        changeTypes: this.changeTypes,
+        certificateThumbprints: this.certificateThumbprints
     })
     
     constructor(dto: Raven.Client.ServerWide.Operations.TrafficWatch.PutTrafficWatchConfigurationOperation.Parameters) {
@@ -34,7 +38,7 @@ class trafficWatchConfiguration {
         
         this.filterDatabases(dto.Databases?.length > 0);
         this.databases(dto.Databases ?? []);
-        
+
         this.filterStatusCodes(dto.StatusCodes?.length > 0);
         this.statusCodes(dto.StatusCodes ?? []);
         
@@ -47,6 +51,9 @@ class trafficWatchConfiguration {
         
         this.filterChangeTypes(dto.ChangeTypes?.length > 0);
         this.changeTypes(dto.ChangeTypes ?? []);
+
+        this.filterCertificateThumbprints(dto.CertificateThumbprints?.length > 0);
+        this.certificateThumbprints(dto.CertificateThumbprints ?? []);
         
         this.initValidation();
     }
@@ -75,6 +82,12 @@ class trafficWatchConfiguration {
                 onlyIf: () => this.filterChangeTypes()
             }
         });
+
+        this.certificateThumbprints.extend({
+            required: {
+                onlyIf: () => this.filterCertificateThumbprints()
+            }
+        });
     }
     
     
@@ -87,7 +100,8 @@ class trafficWatchConfiguration {
             MinimumResponseSizeInBytes: this.minimumRequestSize(),
             MinimumDurationInMs: this.minimumDuration(),
             HttpMethods: this.filterHttpMethods() ? this.httpMethods() : null,
-            ChangeTypes: this.filterChangeTypes() ? this.changeTypes() : null
+            ChangeTypes: this.filterChangeTypes() ? this.changeTypes() : null,
+            CertificateThumbprints: this.filterCertificateThumbprints() ? this.certificateThumbprints : null
         }
     }
 }
