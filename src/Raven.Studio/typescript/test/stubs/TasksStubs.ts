@@ -15,6 +15,8 @@ import OngoingTaskSqlEtl = Raven.Client.Documents.Operations.OngoingTasks.Ongoin
 import OngoingTaskOlapEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl;
 import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskElasticSearchEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
+import collectionsStats = require("models/database/documents/collectionsStats");
+import collection = require("models/database/documents/collection");
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -422,8 +424,10 @@ export class TasksStubs {
         };
     }
 
-    static getSampleDataClasses() {
-        return `using System;
+    static getSampleDataClasses(): string {
+        return `// prism highlight does not work in Storybook
+
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Session.TimeSeries;
 
@@ -450,5 +454,17 @@ namespace Orders
     }
     // ...
 `;
+    }
+
+    static emptyCollectionsStats(): Partial<collectionsStats> {
+        return {
+            collections: [],
+        };
+    }
+
+    static notEmptyCollectionsStats(): Partial<collectionsStats> {
+        return {
+            collections: [new collection("some-collection-name", 2)],
+        };
     }
 }

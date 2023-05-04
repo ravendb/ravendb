@@ -4,6 +4,7 @@ import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import { TasksStubs } from "test/stubs/TasksStubs";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import GetPeriodicBackupStatusOperationResult = Raven.Client.Documents.Operations.Backups.GetPeriodicBackupStatusOperationResult;
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 export default class MockTasksService extends AutoMockService<TasksService> {
     constructor() {
@@ -40,5 +41,9 @@ export default class MockTasksService extends AutoMockService<TasksService> {
 
     withGetSampleDataClasses(dto?: MockedValue<string>) {
         return this.mockResolvedValue(this.mocks.getSampleDataClasses, dto, TasksStubs.getSampleDataClasses());
+    }
+
+    withFetchCollectionsStats(dto?: MockedValue<Partial<collectionsStats>>) {
+        return this.mockResolvedValue(this.mocks.fetchCollectionsStats, dto, TasksStubs.emptyCollectionsStats());
     }
 }

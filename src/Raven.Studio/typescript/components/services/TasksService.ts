@@ -12,6 +12,11 @@ import getOngoingTaskInfoCommand from "commands/database/tasks/getOngoingTaskInf
 import getSubscriptionConnectionDetailsCommand from "commands/database/tasks/getSubscriptionConnectionDetailsCommand";
 import dropSubscriptionConnectionCommand from "commands/database/tasks/dropSubscriptionConnectionCommand";
 import createSampleDataClassCommand from "commands/database/studio/createSampleDataClassCommand";
+import createSampleDataCommand from "commands/database/studio/createSampleDataCommand";
+import getCollectionsStatsCommand from "commands/database/documents/getCollectionsStatsCommand";
+import collectionsStats from "models/database/documents/collectionsStats";
+import getDatabaseForStudioCommand from "commands/resources/getDatabaseForStudioCommand";
+import collectionsTracker from "common/helpers/database/collectionsTracker";
 
 export default class TasksService {
     async getOngoingTasks(db: database, location: databaseLocationSpecifier) {
@@ -53,7 +58,24 @@ export default class TasksService {
         return new getManualBackupCommand(db.name).execute();
     }
 
-    async getSampleDataClasses(db: database) {
+    async getSampleDataClasses(db: database): Promise<string> {
         return new createSampleDataClassCommand(db).execute();
+    }
+
+    async createSampleData(db: database): Promise<void> {
+        return new createSampleDataCommand(db).execute().done(() => {
+            if (!db.hasRevisionsConfiguration()) {
+                new getDatabaseForStudioCommand(db.name).execute().done((dbInfo) => {
+                    if (dbInfo.HasRevisionsConfiguration) {
+                        db.hasRevisionsConfiguration(true);
+                        collectionsTracker.default.configureRevisions(db);
+                    }
+                });
+            }
+        });
+    }
+
+    async fetchCollectionsStats(db: database): Promise<collectionsStats> {
+        return new getCollectionsStatsCommand(db).execute();
     }
 }

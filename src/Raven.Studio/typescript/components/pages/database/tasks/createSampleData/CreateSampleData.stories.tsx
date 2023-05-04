@@ -3,17 +3,37 @@ import CreateSampleData from "./CreateSampleData";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
-
-export default {
-    title: "Pages/Database/Tasks/CreateSampleData",
-    decorators: [withStorybookContexts, withBootstrap5],
-};
+import { TasksStubs } from "test/stubs/TasksStubs";
+import MockTasksService from "test/mocks/services/MockTasksService";
+import { ComponentMeta, ComponentStory } from "@storybook/react";
 
 // prism highlight does not work in Storybook
-export function FullView() {
+export default {
+    title: "Pages/Database/Tasks/CreateSampleData",
+    component: CreateSampleData,
+    decorators: [withStorybookContexts, withBootstrap5],
+} as ComponentMeta<typeof CreateSampleData>;
+
+function commonInit(): MockTasksService {
     const { tasksService } = mockServices;
 
     tasksService.withGetSampleDataClasses();
 
-    return <CreateSampleData db={DatabasesStubs.nonShardedClusterDatabase()} />;
+    return tasksService;
 }
+
+export const DatabaseWithoutDocuments: ComponentStory<typeof CreateSampleData> = () => {
+    const tasksService = commonInit();
+
+    tasksService.withFetchCollectionsStats();
+
+    return <CreateSampleData db={DatabasesStubs.nonShardedClusterDatabase()} />;
+};
+
+export const DatabaseWithDocuments: ComponentStory<typeof CreateSampleData> = () => {
+    const tasksService = commonInit();
+
+    tasksService.withFetchCollectionsStats(TasksStubs.notEmptyCollectionsStats());
+
+    return <CreateSampleData db={DatabasesStubs.nonShardedClusterDatabase()} />;
+};

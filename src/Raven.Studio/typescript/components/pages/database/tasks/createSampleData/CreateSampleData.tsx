@@ -3,7 +3,7 @@ import { Icon } from "components/common/Icon";
 import { Button, Card, CardBody, CardHeader, Collapse, Spinner } from "reactstrap";
 import "./CreateSampleData.scss";
 import useBoolean from "components/hooks/useBoolean";
-import { useAsync } from "react-async-hook";
+import { useAsync, useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import database from "models/resources/database";
 import copyToClipboard from "common/copyToClipboard";
@@ -11,6 +11,7 @@ import appUrl from "common/appUrl";
 import Code from "components/common/Code";
 import { LoadError } from "components/common/LoadError";
 import SmokeSvg from "./CreateSampleDataSmoke";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 interface CreateSampleDataProps {
     db: database;
@@ -20,12 +21,14 @@ function CreateSampleData({ db }: CreateSampleDataProps) {
     const { tasksService } = useServices();
 
     const { value: isCodeSampleOpen, toggle: toggleCodeSample } = useBoolean(false);
-    const { value: isSampleDataCreated, toggle: toggleCreateSampleData } = useBoolean(false);
-    const { value: isDatabaseEmpty, toggle: toggleDatabaseEmpty } = useBoolean(true);
 
-    const asyncSampleDataClasses = useAsync(() => tasksService.getSampleDataClasses(db), []);
+    const asyncFetchCollectionsStats = useAsync(() => tasksService.fetchCollectionsStats(db), []);
+    const asyncGetSampleDataClasses = useAsync(() => tasksService.getSampleDataClasses(db), []);
+    const asyncCreateSampleData = useAsyncCallback(() => tasksService.createSampleData(db));
 
-    // TODO: onSave createSampleDataCommand
+    const canCreateSampleData = asyncFetchCollectionsStats.result
+        ? asyncFetchCollectionsStats.result.collections.filter((x) => x.documentCount() > 0).length === 0
+        : false;
 
     return (
         <div className="sample-data absolute-fill">
@@ -46,27 +49,32 @@ function CreateSampleData({ db }: CreateSampleDataProps) {
                             effective way to familiarize yourself with RavenDB features and experiment with the data.
                         </p>
                         <div className="margin-top margin-bottom-sm">
-                            <Button
+                            <ButtonWithSpinner
                                 size="lg"
                                 className="rounded-pill"
                                 color="primary"
-                                onClick={() => {
-                                    toggleCreateSampleData();
-                                    toggleDatabaseEmpty();
-                                }}
-                                disabled={!isDatabaseEmpty}
+                                onClick={asyncCreateSampleData.execute}
+                                isSpinning={asyncCreateSampleData.status === "loading"}
+                                icon={asyncCreateSampleData.status === "success" ? "check" : "magic-wand"}
+                                disabled={
+                                    !canCreateSampleData ||
+                                    asyncCreateSampleData.status === "loading" ||
+                                    asyncCreateSampleData.status === "success"
+                                }
                             >
-                                <Icon icon={isSampleDataCreated ? "check" : "magic-wand"} />
-                                {isSampleDataCreated ? "Sample data created" : "Create sample data"}
-                                {/* TODO: Add functionality to the button */}
-                            </Button>
-                            {!isDatabaseEmpty && !isSampleDataCreated && (
+                                {asyncCreateSampleData.status === "success"
+                                    ? "Sample data created"
+                                    : "Create sample data"}
+                            </ButtonWithSpinner>
+
+                            {asyncFetchCollectionsStats.status === "success" && !canCreateSampleData && (
                                 <div className="padding padding-xs margin-top-sm text-warning">
                                     <Icon icon="warning" />
                                     Requires an empty database
                                 </div>
                             )}
-                            {isSampleDataCreated && (
+
+                            {asyncCreateSampleData.status === "success" && (
                                 <div className="padding padding-xs margin-top-sm">
                                     <a href={appUrl.forDocuments("", db)}>
                                         <Icon icon="arrow-thin-right" />
@@ -84,12 +92,12 @@ function CreateSampleData({ db }: CreateSampleDataProps) {
                             <CardBody>
                                 <CardHeader className="sample-code-header">
                                     <h3>Sample data C# code</h3>
-                                    {asyncSampleDataClasses.result && (
+                                    {asyncGetSampleDataClasses.result && (
                                         <Button
                                             className="rounded-pill"
                                             onClick={() =>
                                                 copyToClipboard.copy(
-                                                    asyncSampleDataClasses.result,
+                                                    asyncGetSampleDataClasses.result,
                                                     "Copied C# classes to clipboard."
                                                 )
                                             }
@@ -98,19 +106,19 @@ function CreateSampleData({ db }: CreateSampleDataProps) {
                                         </Button>
                                     )}
                                 </CardHeader>
-                                {asyncSampleDataClasses.loading && (
+                                {asyncGetSampleDataClasses.loading && (
                                     <div className="d-flex justify-content-center">
                                         <Spinner className="spinner-gradient" />
                                     </div>
                                 )}
-                                {asyncSampleDataClasses.error && (
+                                {asyncGetSampleDataClasses.error && (
                                     <LoadError
                                         error="Unable to load sample data classes"
-                                        refresh={asyncSampleDataClasses.execute}
+                                        refresh={asyncGetSampleDataClasses.execute}
                                     />
                                 )}
-                                {asyncSampleDataClasses.result && (
-                                    <Code code={asyncSampleDataClasses.result} language="csharp" />
+                                {asyncGetSampleDataClasses.result && (
+                                    <Code code={asyncGetSampleDataClasses.result} language="csharp" />
                                 )}
                             </CardBody>
                         </Card>
