@@ -555,14 +555,16 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
             if (!existing.isCompleted()) {
                 const result = existing.progress() as SmugglerResult;
-                result.Messages = [result.Message];
+                result.Messages = result.Message ?  [result.Message] : [];
             }
             
         } else if (incoming.State.Status === "InProgress") { // if incoming operation is in progress, then merge messages into existing item
             const incomingResult = incoming.State.Progress as SmugglerResult;
             const existingResult = existing.progress() as SmugglerResult;
 
-            incomingResult.Messages = existingResult.Messages.concat(incomingResult.Message);
+            if (incomingResult.Message) {
+                incomingResult.Messages = existingResult.Messages.concat(incomingResult.Message);
+            }
         }
 
         if (isUpdate) {
