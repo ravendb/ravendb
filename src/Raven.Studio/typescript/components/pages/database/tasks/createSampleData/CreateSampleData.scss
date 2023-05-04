@@ -76,6 +76,7 @@
         .sample-code {
             background-color: var(--panel-bg-2);
             border-radius: sizes.$gutter-sm;
+
             .sample-code-header {
                 display: flex;
                 flex-direction: row;
@@ -84,6 +85,7 @@
                 gap: sizes.$gutter-sm;
                 padding: 0;
                 margin-bottom: sizes.$gutter;
+
                 h3 {
                     margin: 0;
                 }

@@ -2,7 +2,7 @@
 import classNames from "classnames";
 import IconName from "typings/server/icons";
 
-interface IconProps extends HTMLAttributes<HTMLDivElement> {
+export interface IconProps extends HTMLAttributes<HTMLDivElement> {
     icon: IconName;
     addon?: IconName;
     color?: string;
