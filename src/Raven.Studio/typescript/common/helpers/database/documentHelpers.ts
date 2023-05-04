@@ -9,7 +9,12 @@ class documentHelpers {
         // get initial nodes list to work with
         const documentNodesFlattenedList = initialDocumentFields.map(curField => doc[curField]);
         const guidRegex = /^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$/;
-        const serverIdRegex = /\w+\/\w+/gi;
+        
+        // examples:
+        // - products/123
+        // - Items/5-C
+        // - CloudInfo/34545-LINX
+        const serverIdRegex = /^\w+\/\w+(-[A-Z]{1,4})?$/i;
 
         const isGuid: (string: string) => boolean = string => string.length === 36 && guidRegex.test(string);
         const isMaybeServerId: (string: string) => boolean = string =>
