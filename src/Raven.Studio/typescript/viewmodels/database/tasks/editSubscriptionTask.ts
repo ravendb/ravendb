@@ -66,6 +66,8 @@ class editSubscriptionTask extends shardViewModelBase {
     includesCache = ko.observableArray<perCollectionIncludes>([]);
     
     currentTab = ko.observable<testTabName>("results");
+    
+    canUseChangeVectorAsStartingPoint: KnockoutComputed<boolean>;
 
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false)
@@ -77,6 +79,8 @@ class editSubscriptionTask extends shardViewModelBase {
         aceEditorBindingHandler.install();
         
         this.languageService = new rqlLanguageService(this.db, ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
+        
+        this.canUseChangeVectorAsStartingPoint = ko.pureComputed(() => !this.db.isSharded());
     }
 
     activate(args: any) { 
@@ -197,6 +201,10 @@ class editSubscriptionTask extends shardViewModelBase {
     }
 
     setStartingPointType(startingPointType: subscriptionStartType) {
+        if (startingPointType === "Change Vector" && !this.canUseChangeVectorAsStartingPoint()) {
+            return;
+        }
+        
         this.editedSubscription().startingPointType(startingPointType);
     }
 
