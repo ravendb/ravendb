@@ -85,6 +85,11 @@ namespace Raven.Client.ServerWide.Operations.TrafficWatch
             /// Traffic Watch change types by which the Traffic Watch logging entities will be filtered.
             /// </summary>
             public List<TrafficWatchChangeType> ChangeTypes { get; set; }
+
+            /// <summary>
+            /// Traffic Watch certificate thumbprints by which the Traffic Watch logging entities will be filtered.
+            /// </summary>
+            public List<string> CertificateThumbprints { get; set; }
         }
     }
 }
