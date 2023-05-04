@@ -211,7 +211,9 @@ namespace Tests.Infrastructure
 
         public async Task<ReplicationInstance> BreakReplication(Raven.Server.ServerWide.ServerStore from, string databaseName)
         {
-            return await ReplicationInstance.GetReplicationInstanceAsync(from.Server, databaseName);
+            var replication = await ReplicationInstance.GetReplicationInstanceAsync(from.Server, databaseName);
+            replication.Break();
+            return replication;
         }
 
         protected Dictionary<string, string[]> GetConnectionFailures(DocumentStore store)
