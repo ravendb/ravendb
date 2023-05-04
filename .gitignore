@@ -101,6 +101,7 @@ src/Raven.Studio/typings/**/*.d.ts
 src/Raven.Studio/typings/globals
 src/Raven.Studio/typings/modules
 src/Raven.Studio/wwwroot/dist/
+src/Raven.Studio/junit.xml
 !src/Raven.Studio/typings/_studio/**/*.d.ts
 
 /src/Raven.Studio/wwwroot/Content/**/*.css.map
