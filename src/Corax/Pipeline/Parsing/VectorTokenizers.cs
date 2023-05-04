@@ -7,7 +7,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Corax.Pipeline.Parsing
 {
-    public static class VectorTokenizers
+    internal static class VectorTokenizers
     {
         public static int TokenizeWhitespaceAsciiSse(ReadOnlySpan<byte> buffer, ref Span<Token> tokens)
         {

@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 
 namespace Corax.Pipeline.Parsing
 {
-    public static class ScalarParsers
+    internal static class ScalarParsers
     {
         // U+0009  character tabulation
         // U+000A  line feed
@@ -45,7 +47,7 @@ namespace Corax.Pipeline.Parsing
             1L << 0x2F;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool ValidateAscii(ReadOnlySpan<byte> buffer)
+        public static int FindFirstNonAscii(ReadOnlySpan<byte> buffer)
         {
             ref byte bufferStart = ref MemoryMarshal.GetReference(buffer);
 
@@ -53,28 +55,31 @@ namespace Corax.Pipeline.Parsing
             ulong len = (ulong)buffer.Length;
 
             // process in blocks of 16 bytes when possible
-            for (; pos + 16 < len; pos += 16)
+            for (; pos + 16 < len; )
             {
                 ulong v1 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref bufferStart, (int)pos));
                 ulong v2 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref bufferStart, (int)pos + sizeof(ulong)));
                 ulong v = v1 | v2;
 
                 if ((v & 0x8080808080808080) != 0)
-                    goto RETURN_FALSE;
+                    break;
+                
+                pos += 16;
             }
 
             // process the tail byte-by-byte
             for (; pos < len; pos++)
             {
                 if (Unsafe.Add(ref bufferStart, (int)pos) >= 0x80)
-                    goto RETURN_FALSE;
+                    return (int)pos;
             }
 
-            return true;
+            return buffer.Length;
+        }
 
-            // PERF: This is a hack to avoid the JIT from polluting the code with multiple exits. Should be fixed in .Net 8.0
-            RETURN_FALSE:
-            return false;
+        public static bool IsAscii(ReadOnlySpan<byte> buffer)
+        {
+            return FindFirstNonAscii(buffer) == buffer.Length;
         }
 
         public static int CountCodePointsFromUtf8(ReadOnlySpan<byte> buffer)
@@ -108,17 +113,14 @@ namespace Corax.Pipeline.Parsing
 
         public static int CountWhitespacesAscii(ReadOnlySpan<byte> buffer)
         {
-            const long table = 1 << '\t' | 1 << '\n'     | 1 << '\u000B' | 1 << '\f'     | 
-                               1 << '\r' | 1 << '\u001C' | 1 << '\u001D' | 1 << '\u001E' | 1 << '\u001F';
-
             int whitespaceCount = 0;
 
             foreach (byte b in buffer)
             {
-                if (b > 0x1F)
+                if (b > 0x20)
                     continue;
 
-                whitespaceCount += (int)(table >> b) & 1;
+                whitespaceCount += (int)(SingleByteTable >> b) & 1;
             }
 
             return whitespaceCount;

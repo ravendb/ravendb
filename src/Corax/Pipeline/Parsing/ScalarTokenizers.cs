@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Corax.Pipeline.Parsing
 {
-    public static class ScalarTokenizers
+    internal static class ScalarTokenizers
     {
         public static int TokenizeWhitespaceAsciiScalar(ReadOnlySpan<byte> buffer, ref Span<Token> tokens)
         {
@@ -12,7 +12,9 @@ namespace Corax.Pipeline.Parsing
 
             int size = 0;
             int tokenIdx = 0;
-            for (int idx = 0; idx < buffer.Length; idx++)
+            
+            int idx = 0;
+            for (; idx < buffer.Length; idx++)
             {
                 byte b = Unsafe.Add(ref bufferStart, idx);
 
@@ -26,7 +28,7 @@ namespace Corax.Pipeline.Parsing
                     continue;
 
                 ref var token = ref Unsafe.Add(ref MemoryMarshal.GetReference(tokens), tokenIdx);
-                token.Offset = idx - size - 1;
+                token.Offset = idx - size;
                 token.Length = (uint)size;
                 token.Type = TokenType.Ascii | TokenType.Word;
                 tokenIdx++;
@@ -37,14 +39,14 @@ namespace Corax.Pipeline.Parsing
             if (size != 0)
             {
                 ref var token = ref Unsafe.Add(ref MemoryMarshal.GetReference(tokens), tokenIdx);
-                token.Offset = buffer.Length - 1 - size;
+                token.Offset = buffer.Length - size;
                 token.Length = (uint)size;
                 token.Type = TokenType.Ascii | TokenType.Word;
                 tokenIdx++;
             }
 
             tokens = tokens.Slice(0, tokenIdx);
-            return tokenIdx;
+            return idx;
         }
 
         public static int TokenizeWhitespace(ReadOnlySpan<byte> buffer, ref Span<Token> tokens)
@@ -60,6 +62,27 @@ namespace Corax.Pipeline.Parsing
                 characterSize = 1;
 
                 byte b = Unsafe.Add(ref bufferStart, idx);
+                switch (b)
+                {
+                    //http://www.unicode.org/versions/Unicode9.0.0/ch03.pdf#page=54 
+                    case <= 0b0111_1111:
+                        /* 1 byte sequence: 0b0xxxxxxxx */
+                        // Nothing to do here.  
+                        break;
+                    case <= 0b1101_1111:
+                        /* 2 byte sequence: 0b110xxxxxx */
+                        characterSize = 2;
+                        break;
+                    case <= 0b1110_1111:
+                        /* 0b1110xxxx: 3 bytes sequence */
+                        characterSize = 3;
+                        break;
+                    case <= 0b1111_0111:
+                        /* 0b11110xxx: 4 bytes sequence */
+                        characterSize = 4;
+                        break;
+                }
+                
                 if (b > 0x20 || ((ScalarParsers.SingleByteTable >> b) & 1) == 0)
                 {
                     // U+00A0  no-break space
@@ -68,11 +91,10 @@ namespace Corax.Pipeline.Parsing
 
                     if (idx + 1 < buffer.Length)
                     {
-                        size++;
+                        size += characterSize;
                         continue;
                     }
 
-                    characterSize = 2;
                     byte bb = Unsafe.Add(ref bufferStart, idx + 1);
                     switch (b, bb)
                     {
@@ -92,7 +114,7 @@ namespace Corax.Pipeline.Parsing
                             // U+2060  word joiner
                             if (((ScalarParsers.SecondByte20Table >> bb) & 1) == 0 && bb != 0x5F && bb != 0x60)
                             {
-                                size += 2;
+                                size += characterSize;
                                 continue;
                             }
 
@@ -110,7 +132,7 @@ namespace Corax.Pipeline.Parsing
                         }
                         default:
                         {
-                            size += 2;
+                            size += characterSize;
                             continue;
                         }
                     }
@@ -120,8 +142,8 @@ namespace Corax.Pipeline.Parsing
                     continue;
 
                 ref var token = ref Unsafe.Add(ref MemoryMarshal.GetReference(tokens), tokenIdx);
-                token.Offset = idx - size - characterSize;
-                token.Length = (uint)(size - characterSize);
+                token.Offset = idx - size;
+                token.Length = (uint)size;
                 token.Type = TokenType.Word;
                 tokenIdx++;
 
@@ -131,7 +153,7 @@ namespace Corax.Pipeline.Parsing
             if (size != 0)
             {
                 ref var token = ref Unsafe.Add(ref MemoryMarshal.GetReference(tokens), tokenIdx);
-                token.Offset = buffer.Length - 1 - size;
+                token.Offset = buffer.Length - size;
                 token.Length = (uint)size;
                 token.Type = TokenType.Word;
 
