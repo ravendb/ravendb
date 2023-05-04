@@ -7,11 +7,11 @@ public class TestIndexItemEnumerator : IIndexedItemEnumerator
 {
     private readonly IIndexedItemEnumerator _inner;
     private int _count;
-    private readonly int _max;
+    private readonly int _maxOutputsPerCollection;
 
     public TestIndexItemEnumerator(IIndexedItemEnumerator inner, int collections, int maxDocumentsPerIndex)
     {
-        _max = maxDocumentsPerIndex / collections;
+        _maxOutputsPerCollection = maxDocumentsPerIndex / collections;
         _inner = inner;
         _count = 0;
     }
@@ -20,7 +20,7 @@ public class TestIndexItemEnumerator : IIndexedItemEnumerator
         
     public bool MoveNext(DocumentsOperationContext ctx, out IEnumerable resultsOfCurrentDocument, out long? etag)
     {
-        if (_count < _max)
+        if (_count < _maxOutputsPerCollection)
         {
             _count += 1;
             return _inner.MoveNext(ctx, out resultsOfCurrentDocument, out etag);

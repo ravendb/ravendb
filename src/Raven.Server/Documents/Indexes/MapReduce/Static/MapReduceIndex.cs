@@ -321,11 +321,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 .AsTask()
                 .Wait();
             
-            forcedConfiguration ??= new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
+            var configuration = forcedConfiguration ?? new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
 
-            instance.Initialize(documentDatabase,
-                forcedConfiguration,
-                documentDatabase.Configuration.PerformanceHints);
+            instance.Initialize(documentDatabase, configuration, documentDatabase.Configuration.PerformanceHints);
 
             var staticIndex = instance._compiled;
             staticIndex.CheckDepthOfStackInOutputMap(definition, documentDatabase);

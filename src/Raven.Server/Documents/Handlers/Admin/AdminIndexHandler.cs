@@ -57,19 +57,16 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var testIndexDefinition = testIndexParameters.IndexDefinition;
                 var query = testIndexParameters.Query;
                 var queryParameters = testIndexParameters.QueryParameters;
-                var maxDocumentsPerIndex = testIndexParameters.MaxDocumentsToProcess;
+                int maxDocumentsPerIndex = testIndexParameters.MaxDocumentsToProcess ?? 100;
                 
                 if (testIndexParameters.IndexDefinition is null)
                     throw new ArgumentException("Index must have an 'IndexDefinition' field");
-
-                if (testIndexParameters.MaxDocumentsToProcess == 0)
-                    maxDocumentsPerIndex = 100;
 
                 if (testIndexDefinition.Type.IsJavaScript() == false)
                 {
                     // C# index without admin authorization
                     if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature && feature.CanAccess(Database.Name, requireAdmin: true, requireWrite: true) == false)
-                        throw new UnauthorizedAccessException($"Index {testIndexDefinition.Name} is a C# index but was sent without admin authorization, this is not allowed.");
+                        throw new UnauthorizedAccessException($"Testing C# indexes requires admin privileges.");
                 }
 
                 testIndexDefinition.Name ??= Guid.NewGuid().ToString("N");

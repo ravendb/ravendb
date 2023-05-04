@@ -180,9 +180,9 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration = null)
+        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration forcedConfiguration = null)
         {
-            configuration ??= new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
+            var configuration = forcedConfiguration ?? new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
 
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
             
