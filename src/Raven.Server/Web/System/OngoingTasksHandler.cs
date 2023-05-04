@@ -359,7 +359,7 @@ namespace Raven.Server.Web.System
                     BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
                     BackupConfigurationHelper.AssertBackupConfiguration(configuration);
                     BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
-                    AssertIsAllowedToPostExternalConfigurationScript(UpdatePeriodicBackupDebugTag, readerObject);
+                    AssertSecurityClearanceForConfigurationScript(UpdatePeriodicBackupDebugTag, readerObject);
 
                     readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
                 },
@@ -455,7 +455,7 @@ namespace Raven.Server.Web.System
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
                 BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);
-                AssertIsAllowedToPostExternalConfigurationScript(BackupDatabaseOnceTag, json);
+                AssertSecurityClearanceForConfigurationScript(BackupDatabaseOnceTag, json);
 
                 var sw = Stopwatch.StartNew();
                 ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
@@ -772,7 +772,7 @@ namespace Raven.Server.Web.System
         public async Task PutConnectionString()
         {
             await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), PutConnectionStringDebugTag, GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) => AssertIsAllowedToPostExternalConfigurationScript(PutConnectionStringDebugTag, readerObject));
+                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) => AssertSecurityClearanceForConfigurationScript(PutConnectionStringDebugTag, readerObject));
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
@@ -852,7 +852,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private void AssertIsAllowedToPostExternalConfigurationScript(string name, BlittableJsonReaderObject configuration)
+        private void AssertSecurityClearanceForConfigurationScript(string name, BlittableJsonReaderObject configuration)
         {
             X509Certificate2 clientCert = GetCurrentCertificate();
             CertificateDefinition newCertificateDef =null;
@@ -877,8 +877,7 @@ namespace Raven.Server.Web.System
                     settingsList = JsonDeserializationClient.OlapConnectionString(configuration).GetBackupSettingsDestinations();
 
                 if (name == UpdatePeriodicBackupDebugTag || name == BackupDatabaseOnceTag)
-                    settingsList = JsonDeserializationServer.BackupConfiguration(configuration).GetBackupSettingsDestinations();
-
+                    settingsList = JsonDeserializationServer.BackupConfiguration(configuration).GetBackupDestinations<BackupSettings>();
                 if (settingsList == null)
                     return;
 

@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Security;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;

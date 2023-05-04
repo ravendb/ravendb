@@ -127,7 +127,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             return sb.ToString();
         }
 
-        public List<BackupSettings> GetBackupSettingsDestinations()
+        internal List<BackupSettings> GetBackupSettingsDestinations()
         {
             var backupDestinations = new List<BackupSettings>();
 

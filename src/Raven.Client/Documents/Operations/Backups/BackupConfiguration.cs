@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -46,7 +47,7 @@ namespace Raven.Client.Documents.Operations.Backups
         internal List<string> GetFullBackupDestinations()
         {
             // used for studio and generating the default task name
-            return GetBackupDestinations().Select(backupDestination =>
+            return GetBackupDestinations<Enum>().Select(backupDestination =>
             {
                 var str = backupDestination.ToString();
                 var fieldInfo = typeof(PeriodicBackupConfiguration.BackupDestination).GetField(str);
@@ -57,13 +58,12 @@ namespace Raven.Client.Documents.Operations.Backups
 
         internal List<string> GetDestinations()
         {
-            return GetBackupDestinations().Select(x => x.ToString()).ToList();
+            return GetBackupDestinations<Enum>().Select(x => x.ToString()).ToList();
         }
 
-        private List<BackupDestination> GetBackupDestinations()
+        internal List<T> GetBackupDestinations<T>() where T : class
         {
-            var backupDestinations = new List<BackupDestination>();
-
+            var backupDestinations = new List<T>();
             AddBackupDestination(LocalSettings, BackupDestination.Local);
             AddBackupDestination(S3Settings, BackupDestination.AmazonS3);
             AddBackupDestination(GlacierSettings, BackupDestination.AmazonGlacier);
@@ -76,33 +76,20 @@ namespace Raven.Client.Documents.Operations.Backups
                 if (backupSettings == null || backupSettings.Disabled)
                     return;
 
-                backupDestinations.Add(backupDestination);
+                if (typeof(T) == typeof(BackupSettings))
+                {
+                    backupDestinations.Add(backupSettings as T);
+                }
+
+                else if (typeof(T) == typeof(BackupDestination).BaseType)
+                {
+                    backupDestinations.Add(backupDestination as T);
+                }
             }
 
             return backupDestinations;
         }
 
-        public List<BackupSettings> GetBackupSettingsDestinations()
-        {
-            var backupDestinations = new List<BackupSettings>();
-
-            AddBackupDestination(LocalSettings, BackupDestination.Local);
-            AddBackupDestination(S3Settings, BackupDestination.AmazonS3);
-            AddBackupDestination(GlacierSettings, BackupDestination.AmazonGlacier);
-            AddBackupDestination(AzureSettings, BackupDestination.Azure);
-            AddBackupDestination(GoogleCloudSettings, BackupDestination.GoogleCloud);
-            AddBackupDestination(FtpSettings, BackupDestination.FTP);
-
-            void AddBackupDestination(BackupSettings backupSettings, BackupDestination backupDestination)
-            {
-                if (backupSettings == null || backupSettings.Disabled)
-                    return;
-
-                backupDestinations.Add(backupSettings);
-            }
-
-            return backupDestinations;
-        }
 
 
         internal enum BackupDestination
