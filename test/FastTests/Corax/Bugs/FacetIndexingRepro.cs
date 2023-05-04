@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using Corax;
 using Corax.Mappings;
+using Corax.Queries;
+using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -58,6 +60,97 @@ public class FacetIndexingRepro : StorageTest
     };
 
     [Fact]
+    public void ShouldNotCorrupt()
+    {
+        using var stream = typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + "index-corrupt-log.bin");
+        using var br = new BinaryReader(stream);
+
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false);
+        var fieldsCount = br.Read7BitEncodedInt();
+        for (int i = 0; i < fieldsCount; i++)
+        {
+            var name = br.ReadString();
+            builder.AddBinding(i, name);
+        }
+
+        var fields = builder.Build();
+        int txns = 0;
+        int items = 0;
+        var wtx = Env.WriteTransaction();
+        try
+        {
+            var iw = new IndexWriter(wtx, fields);
+            while (true)
+            {
+                string id;
+                try
+                {
+                    id = br.ReadString();
+                }
+                catch (EndOfStreamException)
+                {
+                    iw.Commit();
+                    iw.Dispose();
+                    wtx.Commit();
+                    wtx.Dispose();
+                    break;
+                }
+
+                if (id == "!Commit!")
+                {
+                    FlushIndexAndRenewWriteTransaction();
+                    continue;
+                }
+
+                int len = br.Read7BitEncodedInt();
+                var buffer = br.ReadBytes(len);
+                iw.Index(id, buffer);
+                items++;
+            }
+
+            using (var rtx = Env.ReadTransaction())
+                QueryAll(rtx);
+            
+            
+            void FlushIndexAndRenewWriteTransaction()
+            {
+                iw.Commit();
+                iw.Dispose();
+                wtx.Commit();
+                wtx.Dispose();
+
+                using (var rtx = Env.ReadTransaction())
+                    QueryAll(rtx);
+
+                txns++;
+                items = 0;
+                wtx = Env.WriteTransaction();
+                iw = new IndexWriter(wtx, fields);
+            }
+        }
+        finally
+        {
+            wtx.Dispose();
+        }
+
+        void QueryAll(Transaction rtx)
+        {
+            var matches = new long[1024];
+            for (int i = 0; i < fieldsCount; i++)
+            {
+                var searcher = new IndexSearcher(rtx, fields);
+                var field = FieldMetadata.Build(fields.GetByFieldId(i).FieldName, default, i, default, default);
+                var sort = searcher.OrderBy(searcher.AllEntries(), new OrderMetadata(field, true, MatchCompareFieldType.Sequence));
+                while (sort.Fill(matches) != 0)
+                {
+                }
+            }
+        }
+
+    }
+    
+    [Fact]
     public void CanSuccessfullyIndexData()
     {
         using var stream = typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + "index-log.bin");
@@ -65,9 +158,25 @@ public class FacetIndexingRepro : StorageTest
 
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
+        Slice.From(bsc, "id()", ByteStringType.Immutable, out Slice id1);
+        Slice.From(bsc, "Manufacturer", ByteStringType.Immutable, out Slice Manufacturer);
+        Slice.From(bsc, "Model", ByteStringType.Immutable, out Slice Model);
+        Slice.From(bsc, "Cost", ByteStringType.Immutable, out Slice Cost);
+        Slice.From(bsc, "DateOfListing", ByteStringType.Immutable, out Slice DateOfListing);
+        Slice.From(bsc, "Megapixels", ByteStringType.Immutable, out Slice Megapixels);
+
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(0, id1)
+            .AddBinding(1, Manufacturer)
+            .AddBinding(2, Model)
+            .AddBinding(3, Cost)
+            .AddBinding(4, DateOfListing)
+            .AddBinding(5, Megapixels);
+
+        IndexFieldsMapping indexFieldsMapping = builder.Build();
         using (var wtx = Env.WriteTransaction())
         {
-            var iw = new IndexWriter(wtx, CreateKnownFields(bsc));
+            var iw = new IndexWriter(wtx, indexFieldsMapping);
             while (true)
             {
                 string id;
@@ -87,7 +196,7 @@ public class FacetIndexingRepro : StorageTest
                 {
                     iw.Commit();
                     iw.Dispose();
-                    iw = new IndexWriter(wtx, CreateKnownFields(bsc));
+                    iw = new IndexWriter(wtx, indexFieldsMapping);
                     continue;
                 }
 
@@ -98,27 +207,6 @@ public class FacetIndexingRepro : StorageTest
             }
         }
     }
-
-    private IndexFieldsMapping CreateKnownFields(ByteStringContext bsc)
-    {
-        Slice.From(bsc, "id()", ByteStringType.Immutable, out Slice id);
-        Slice.From(bsc, "Manufacturer", ByteStringType.Immutable, out Slice Manufacturer);
-        Slice.From(bsc, "Model", ByteStringType.Immutable, out Slice Model);
-        Slice.From(bsc, "Cost", ByteStringType.Immutable, out Slice Cost);
-        Slice.From(bsc, "DateOfListing", ByteStringType.Immutable, out Slice DateOfListing);
-        Slice.From(bsc, "Megapixels", ByteStringType.Immutable, out Slice Megapixels);
-
-        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
-            .AddBinding(0, id)
-            .AddBinding(1, Manufacturer)
-            .AddBinding(2, Model)
-            .AddBinding(3, Cost)
-            .AddBinding(4, DateOfListing)
-            .AddBinding(5, Megapixels);
-
-        return builder.Build();
-    }
-
     public FacetIndexingRepro(ITestOutputHelper output) : base(output)
     {
     }

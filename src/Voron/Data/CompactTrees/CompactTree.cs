@@ -83,6 +83,7 @@ namespace Voron.Data.CompactTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long EncodeKeyToPage(ref CursorState state, long keyContainerId)
         {
+            Debug.Assert(keyContainerId >= 0);
             // we'll try to reduce the size of the container ids by subtracting
             // from the initial key in the page. In most cases, it'll lead to a 
             // value that is smaller than the original, but it shouldn't generate
@@ -1006,8 +1007,9 @@ namespace Voron.Data.CompactTrees
                 {
                     //DebugStuff.RenderAndShow(this);
                     SplitPage(key, value);
+                    // a page split may cause us to do a search and reset the existing container id
                     //DebugStuff.RenderAndShow(this);
-                    return;
+                   return;
                 }
             }
 
@@ -1083,6 +1085,9 @@ namespace Voron.Data.CompactTrees
             // We do this after in case we have been able to gain with compression.
             header->DictionaryId = state.Header->DictionaryId;
 
+            // We may call SearchInCurrentPage and it will reset it, remember it for later
+            long old = currentCauseForSplit.ContainerId;
+
             // We need to ensure that we have the correct key before we change the page. 
             var splitKey = SplitPageEncodedEntries(currentCauseForSplit, page, valueForSplit, ref state);
 
@@ -1091,6 +1096,9 @@ namespace Voron.Data.CompactTrees
             splitKey.ChangeDictionary(_internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
 
             SearchInCurrentPage(splitKey, ref _internalCursor._stk[_internalCursor._pos]);
+            
+            currentCauseForSplit.ContainerId = old;
+            
             AddToPage(splitKey, page.PageNumber);
 
             if (_internalCursor._stk[_internalCursor._pos].Header->PageFlags == CompactPageFlags.Leaf)
@@ -1591,19 +1599,16 @@ namespace Voron.Data.CompactTrees
 
             ushort* @base = state.EntriesOffsetsPtr;
             int length = state.Header->NumberOfEntries;
+            int bot = 0;
+            int match = -1;
             if (length == 0)
             {
-                key.ContainerId = -1;
-                state.LastMatch = -1;
-                state.LastSearchPosition = -1;
-                return;
+                goto NotFound;
             }
 
             byte* keyPtr = key.EncodedWithPtr(state.Header->DictionaryId, out int keyLengthInBits);
             int keyLength = Bits.ToBytes(keyLengthInBits);
 
-            int match;
-            int bot = 0;
             int top = length;
             
             while (top > 1)
@@ -1631,6 +1636,7 @@ namespace Voron.Data.CompactTrees
                 return;
             }
 
+            NotFound:
             key.ContainerId = -1;
             state.LastMatch = match > 0 ? 1 : -1;
             state.LastSearchPosition = ~(bot + (match > 0).ToInt32());
