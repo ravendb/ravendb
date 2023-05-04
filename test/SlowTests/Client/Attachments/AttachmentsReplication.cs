@@ -42,7 +42,6 @@ namespace SlowTests.Client.Attachments
         [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
-       
         public async Task PutAttachments(Options options, bool replicateDocumentFirst)
         {
             using (var store1 = GetDocumentStore(options))
@@ -92,15 +91,15 @@ namespace SlowTests.Client.Attachments
 
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User { Name = "Marker" }, "marker");
+                    session.Store(new User { Name = "Marker" }, "marker$users/1");
                     session.SaveChanges();
                 }
                 if (replicateDocumentFirst == false)
                 {
                     await SetupAttachmentReplicationAsync(store1, store2, false);
                 }
-                Assert.True(WaitForDocument(store2, "marker"));
-
+                Assert.True(WaitForDocument(store2, "marker$users/1"));
+                
                 using (var session = store2.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
@@ -408,9 +407,9 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        private void WaitForMarker(DocumentStore store1, DocumentStore store2)
+        private void WaitForMarker(DocumentStore store1, DocumentStore store2, string id = null)
         {
-            var id = "marker - " + Guid.NewGuid();
+            id ??= "marker - " + Guid.NewGuid();
             using (var session = store1.OpenSession())
             {
                 session.Store(new Product { Name = "Marker" }, id);
@@ -466,7 +465,7 @@ namespace SlowTests.Client.Attachments
         }
 
         [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task AttachmentsRevisionsReplicationAfterEnable(Options options)
         {
             using (var store1 = GetDocumentStore(options))
@@ -506,15 +505,18 @@ namespace SlowTests.Client.Attachments
                 });
                 
                 await SetupAttachmentReplicationAsync(store1, store2);
-                //await SetupAttachmentReplicationAsync(store2, store1);
+                await SetupAttachmentReplicationAsync(store2, store1);
+
+                await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
 
                 var stats1 = await GetDatabaseStatisticsAsync(store1);
                 var stats2 = await GetDatabaseStatisticsAsync(store2);
 
-                //Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
-                //Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
-                //Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
-                //Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
+                Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
+                Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
+                Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
+                Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
 
                 using (var session = store1.OpenSession())
                 {
@@ -523,16 +525,19 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                WaitForMarker(store1, store2);
-                //WaitForMarker(store2, store1);
+                WaitForMarker(store1, store2, "marker1$users/1");
+                WaitForMarker(store2, store1, "marker2$users/1");
+
+                await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
 
                 stats1 = await GetDatabaseStatisticsAsync(store1);
                 stats2 = await GetDatabaseStatisticsAsync(store2);
 
-                //Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
-                //Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
-                //Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
-                //Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
+                Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
+                Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
+                Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
+                Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
 
                 using (var session = store1.OpenSession())
                 {
@@ -547,7 +552,7 @@ namespace SlowTests.Client.Attachments
                     u.Age = 50;
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(store2);
+                
                 using (var session = store1.OpenSession())
                 {
                     var u = session.Load<User>("users/1");
@@ -555,9 +560,12 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                WaitForMarker(store1, store2);
-                //WaitForMarker(store2, store1);
-                WaitForUserToContinueTheTest(store2);
+                WaitForMarker(store1, store2, "marker3$users/1");
+                WaitForMarker(store2, store1, "marker4$users/1");
+
+                await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+
                 stats1 = await GetDatabaseStatisticsAsync(store1);
                 stats2 = await GetDatabaseStatisticsAsync(store2);
 
@@ -608,6 +616,9 @@ namespace SlowTests.Client.Attachments
                 await SetupAttachmentReplicationAsync(store1, store2);
                 await SetupAttachmentReplicationAsync(store2, store1);
 
+                await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+
                 var stats1 = await GetDatabaseStatisticsAsync(store1);
                 var stats2 = await GetDatabaseStatisticsAsync(store2);
 
@@ -625,6 +636,9 @@ namespace SlowTests.Client.Attachments
 
                 WaitForMarker(store1, store2);
                 WaitForMarker(store2, store1);
+
+                await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
 
                 stats1 = await GetDatabaseStatisticsAsync(store1);
                 stats2 = await GetDatabaseStatisticsAsync(store2);
@@ -665,6 +679,9 @@ namespace SlowTests.Client.Attachments
 
                 WaitForMarker(store1, store2);
                 WaitForMarker(store2, store1);
+
+                await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
 
                 stats1 = await GetDatabaseStatisticsAsync(store1);
                 stats2 = await GetDatabaseStatisticsAsync(store2);
@@ -1103,8 +1120,12 @@ namespace SlowTests.Client.Attachments
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
                     }
                 }
+                
                 using (var session = store2.OpenAsyncSession())
                 {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/2$users/1");
+                    await session.SaveChangesAsync();
+
                     await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
                     await session.SaveChangesAsync();
 
@@ -1121,12 +1142,14 @@ namespace SlowTests.Client.Attachments
                 Assert.Equal(2, conflicts.Length);
                 var hash = "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=";
                 var sorted = conflicts.OrderBy(x => x.ChangeVector).ToList();
+                Assert.Equal(2, sorted.Count);
                 AssertConflict(sorted[0], "a1", hash, "a1/png", 3);
                 AssertConflict(sorted[1], "a1", hash, "a2/jpeg", 3);
 
                 conflicts = WaitUntilHasConflict(store2, "users/1");
                 Assert.Equal(2, conflicts.Length);
                 sorted = conflicts.OrderBy(x => x.ChangeVector).ToList();
+                Assert.Equal(2, sorted.Count);
                 AssertConflict(sorted[0], "a1", hash, "a1/png", 3);
                 AssertConflict(sorted[1], "a1", hash, "a2/jpeg", 3);
 
