@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
                             using (context.OpenReadTransaction())
                             {
-                                state.ChangeVectorForNextBatchStartingPoint = Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, sub.Collection);
+                                state.ChangeVectorForNextBatchStartingPoint = GetLastDocumentChangeVectorForSubscription(context, sub);
                             }
                             break;
                     }
@@ -589,7 +589,7 @@ namespace Raven.Server.Documents.Handlers
                         break;
 
                     case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                        options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, sub.Collection);
+                        options.ChangeVector = GetLastDocumentChangeVectorForSubscription(context, sub);
                         break;
                 }
             }
@@ -619,6 +619,15 @@ namespace Raven.Server.Documents.Handlers
                     [nameof(CreateSubscriptionResult.Name)] = name
                 });
             }
+        }
+
+        private string GetLastDocumentChangeVectorForSubscription(DocumentsOperationContext context, SubscriptionConnection.ParsedSubscription sub)
+        {
+            long lastEtag = sub.Collection == Constants.Documents.Collections.AllDocumentsCollection 
+                ? DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction) 
+                : Database.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, sub.Collection);
+
+            return Database.DocumentsStorage.GetNewChangeVector(context, lastEtag);
         }
     }
 
