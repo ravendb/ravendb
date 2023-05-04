@@ -85,9 +85,14 @@ namespace Raven.Server.Documents.Subscriptions
                     _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection);
                 }
 
-                LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
+                InitializeLastChangeVectorSent(connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint);
                 PreviouslyRecordedChangeVector = LastChangeVectorSent;
             }
+        }
+
+        internal void InitializeLastChangeVectorSent(string changeVectorForNextBatchStartingPoint)
+        {
+            LastChangeVectorSent = changeVectorForNextBatchStartingPoint;
         }
 
         public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
