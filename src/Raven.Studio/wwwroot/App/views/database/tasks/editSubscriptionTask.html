@@ -84,7 +84,9 @@
                                                     <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Latest Document')">Latest Document</a>
                                                 </li>
                                                 <li title="Documents will be sent from the specified change vector related document">
-                                                    <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Change Vector')">Change Vector</a>
+                                                    <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Change Vector'), css: { disabled: !$root.canUseChangeVectorAsStartingPoint() }">
+                                                        Change Vector <span class="text-warning" data-bind="visible: !$root.canUseChangeVectorAsStartingPoint()">(not available for sharded database)</span>
+                                                    </a>
                                                 </li>
                                             </ul>
                                         </div>
