@@ -25,9 +25,9 @@
                         <i data-bind="attr: { class: 'icon-' + iconClass(nodeType()) }"></i>
                         <div class="small-label" data-bind="text: nodeType() ?? '-'"></div>
                     </div>
-                    <div class="node-os" title="Operating system">
+                    <div class="node-os" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { title: osName() ?? '-', 'data-original-title': osName() ?? '-' }">
                         <i data-bind="attr: { class: osIcon() }"></i>
-                        <div class="small-label" data-bind="text: osName() ?? '-'"></div>
+                        <div class="small-label" data-bind="text: osType() ?? '-'"></div>
                     </div>
                     <a class="node-url" target="_blank"
                        data-bind="attr: { href: $root.prepareUrl($data).url, title: $root.prepareUrl($data).url }, style: { 'visibility': !noData() && $root.prepareUrl($data).openInNewTab ? 'visible' : 'hidden' }">
