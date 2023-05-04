@@ -30,6 +30,7 @@ namespace Raven.Server.Documents.Handlers.Batches
     {
         internal static BatchRequestParser Instance = new BatchRequestParser();
 
+#pragma warning disable CS0659
         public class CommandData : IBatchCommandData
         {
             public CommandType Type { get; set; }
@@ -119,6 +120,8 @@ namespace Raven.Server.Documents.Handlers.Batches
             }
 
         }
+#pragma warning restore CS0659
+
 
         private static readonly int MaxSizeOfCommandsInBatchToCache = 128;
 

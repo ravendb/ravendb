@@ -63,8 +63,8 @@ public class ServerStoreTxMergerBenchTests
     }
 
 
-    private readonly MyOutputHelper? _testOutputHelper = new MyOutputHelper();
-    private ActualTests? _tests;
+    private static MyOutputHelper _testOutputHelper = new MyOutputHelper();
+    private ActualTests _tests;
 
 
     [IterationSetup(Targets = new[] { nameof(Test) })]
@@ -94,7 +94,7 @@ public class ServerStoreTxMergerBenchTests
 
 public class ActualTests : RachisConsensusTestBase
 {
-    private RachisConsensus<CountingStateMachine>? _leader;
+    private RachisConsensus<CountingStateMachine> _leader;
 
     public ActualTests(ITestOutputHelper output) : base(output)
     {
