@@ -1,27 +1,34 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
+using Sparrow;
 
 namespace Corax.Pipeline.Parsing
 {
-    public static class StandardParsers
+    internal static class StandardParsers
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool ValidateAscii(ReadOnlySpan<byte> buffer)
+        public static bool IsAscii(ReadOnlySpan<byte> buffer)
         {
-            if (Sse41.IsSupported)
-                return VectorParsers.ValidateSse41Ascii(buffer);
+            if (AdvInstructionSet.X86.IsSupportedSse)
+                return VectorParsers.FindFirstNonAsciiSse(buffer) == buffer.Length;
 
-            if (Sse2.IsSupported)
-                return VectorParsers.ValidateSse2Ascii(buffer);
+            return ScalarParsers.FindFirstNonAscii(buffer) == buffer.Length;
+        }
 
-            return ScalarParsers.ValidateAscii(buffer);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int FindFirstNonAscii(ReadOnlySpan<byte> buffer)
+        {
+            if (AdvInstructionSet.X86.IsSupportedSse)
+                return VectorParsers.FindFirstNonAsciiSse(buffer);
+
+            return ScalarParsers.FindFirstNonAscii(buffer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CountCodePointsFromUtf8(ReadOnlySpan<byte> buffer)
         {
-            if (Sse2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedSse)
                 return VectorParsers.CountCodePointsFromUtf8(buffer);
 
             return ScalarParsers.CountCodePointsFromUtf8(buffer);
@@ -30,7 +37,7 @@ namespace Corax.Pipeline.Parsing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Utf16LengthFromUtf8(ReadOnlySpan<byte> buffer)
         {
-            if (Sse2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedSse)
                 return VectorParsers.Utf16LengthFromUtf8(buffer);
 
             return ScalarParsers.Utf16LengthFromUtf8(buffer);
@@ -39,7 +46,7 @@ namespace Corax.Pipeline.Parsing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CountWhitespacesAscii(ReadOnlySpan<byte> buffer)
         {
-            if (Sse2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedSse)
                 return VectorParsers.CountWhitespacesAscii(buffer);
 
             return ScalarParsers.CountWhitespacesAscii(buffer);

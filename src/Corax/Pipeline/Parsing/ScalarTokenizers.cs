@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Corax.Pipeline.Parsing
 {
-    public static class ScalarTokenizers
+    internal static class ScalarTokenizers
     {
         public static int TokenizeWhitespaceAsciiScalar(ReadOnlySpan<byte> buffer, ref Span<Token> tokens)
         {
@@ -12,7 +12,9 @@ namespace Corax.Pipeline.Parsing
 
             int size = 0;
             int tokenIdx = 0;
-            for (int idx = 0; idx < buffer.Length; idx++)
+            
+            int idx = 0;
+            for (; idx < buffer.Length; idx++)
             {
                 byte b = Unsafe.Add(ref bufferStart, idx);
 
@@ -26,7 +28,7 @@ namespace Corax.Pipeline.Parsing
                     continue;
 
                 ref var token = ref Unsafe.Add(ref MemoryMarshal.GetReference(tokens), tokenIdx);
-                token.Offset = idx - size - 1;
+                token.Offset = idx - size;
                 token.Length = (uint)size;
                 token.Type = TokenType.Ascii | TokenType.Word;
                 tokenIdx++;
@@ -37,14 +39,14 @@ namespace Corax.Pipeline.Parsing
             if (size != 0)
             {
                 ref var token = ref Unsafe.Add(ref MemoryMarshal.GetReference(tokens), tokenIdx);
-                token.Offset = buffer.Length - 1 - size;
+                token.Offset = buffer.Length - size;
                 token.Length = (uint)size;
                 token.Type = TokenType.Ascii | TokenType.Word;
                 tokenIdx++;
             }
 
             tokens = tokens.Slice(0, tokenIdx);
-            return tokenIdx;
+            return idx;
         }
 
         public static int TokenizeWhitespace(ReadOnlySpan<byte> buffer, ref Span<Token> tokens)
