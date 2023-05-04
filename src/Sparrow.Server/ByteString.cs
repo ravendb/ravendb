@@ -266,10 +266,7 @@ namespace Sparrow.Server
             Debug.Assert(HasValue, "ByteString.HasValue");
 
             EnsureIsNotBadPointer();
-            fixed (byte* p = dest)
-            {
-                Memory.Copy(p, _pointer->Ptr, _pointer->Length);
-            }
+            new Span<byte>(_pointer->Ptr, _pointer->Length).CopyTo(dest);
         }
 
 #if VALIDATE
@@ -313,10 +310,9 @@ namespace Sparrow.Server
                 throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the buffer");
 
             EnsureIsNotBadPointer();
-            fixed (byte* p = dest)
-            {
-                Memory.Copy(p + offset, _pointer->Ptr + from, count);
-            }
+
+            new Span<byte>(_pointer->Ptr + from, count)
+                .CopyTo(dest.AsSpan(offset, count));
         }
 
         public override string ToString()
@@ -1218,6 +1214,10 @@ namespace Sparrow.Server
                 ToLowerTempBuffer = new char[Bits.PowerOf2(charCount)];
             }
 
+            // PERF: We are not removing the fixed here because GetChars will use fixed internally.
+            // When the framework removes the fixed from GetChars, we can remove the fixed here and
+            // use the span version instead.
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-20321
             fixed (char* pChars = ToLowerTempBuffer)
             {
                 charCount = Encodings.Utf8.GetChars(str._pointer->Ptr, str.Length, pChars, ToLowerTempBuffer.Length);
@@ -1561,13 +1561,9 @@ namespace Sparrow.Server
             var byteCount = Encodings.Utf8.GetMaxByteCount(value.Length) + 1;
 
             str = AllocateInternal(byteCount, type);
-            fixed (char* ptr = value)
-            {
-                int length = encoding.GetBytes(ptr, value.Length, str.Ptr, byteCount);
-
-                // We can do this because it is internal. See if it makes sense to actually give this ability. 
-                str._pointer->Length = length;
-            }
+            int length = encoding.GetBytes(value, new Span<byte>(str.Ptr, byteCount));
+            // We can do this because it is internal. See if it makes sense to actually give this ability. 
+            str._pointer->Length = length;
 
             RegisterForValidation(str);
             return new InternalScope(this, str);
@@ -1597,10 +1593,7 @@ namespace Sparrow.Server
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
             str = AllocateInternal(size, type);
-            fixed (byte* ptr = value)
-            {
-                Memory.Copy(str._pointer->Ptr, ptr, size);
-            }
+            value.Slice(0,size).CopyTo(new Span<byte>(str._pointer->Ptr, size));
 
             RegisterForValidation(str);
             return new InternalScope(this, str);
