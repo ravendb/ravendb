@@ -204,11 +204,12 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return new StaticIndexItemEnumerator<DynamicCounterEntry>(items, new CounterItemFilterBehavior(), _compiled.Maps[collection], collection, stats, type);
         }
 
-        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration configuration = null)
+        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, SingleIndexConfiguration forcedConfiguration = null)
         {
-            configuration ??= new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
+            var configuration = forcedConfiguration ?? new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration);
             
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+            
             instance.Initialize(documentDatabase,
                 configuration,
                 documentDatabase.Configuration.PerformanceHints);
