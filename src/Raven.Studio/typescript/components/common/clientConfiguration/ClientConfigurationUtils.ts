@@ -1,6 +1,7 @@
 import { ClientConfigurationFormData } from "./ClientConfigurationValidation";
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
+import LoadBalanceBehavior = Raven.Client.Http.LoadBalanceBehavior;
 import assertUnreachable from "components/utils/assertUnreachable";
 import { exhaustiveStringTuple } from "components/utils/common";
 
@@ -24,6 +25,26 @@ export default class ClientConfigurationUtils {
         return ClientConfigurationUtils.allReadBalanceBehaviors.map((value) => ({
             value,
             label: ClientConfigurationUtils.formatReadBalanceBehavior(value),
+        }));
+    }
+
+    static allLoadBalanceBehaviors = exhaustiveStringTuple<LoadBalanceBehavior>()("None", "UseSessionContext");
+
+    static formatLoadBalanceBehavior(loadBalanceBehavior: LoadBalanceBehavior) {
+        switch (loadBalanceBehavior) {
+            case "None":
+                return "None";
+            case "UseSessionContext":
+                return "Use Session Context";
+            default:
+                assertUnreachable(loadBalanceBehavior);
+        }
+    }
+
+    static getLoadBalanceBehaviorOptions(): valueAndLabelItem<LoadBalanceBehavior, string>[] {
+        return ClientConfigurationUtils.allLoadBalanceBehaviors.map((value) => ({
+            value,
+            label: ClientConfigurationUtils.formatLoadBalanceBehavior(value),
         }));
     }
 

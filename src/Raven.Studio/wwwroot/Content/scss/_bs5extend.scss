@@ -13,6 +13,14 @@
     font-weight: 600;
 }
 
+.md-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.1em;
+    font-weight: 600;
+    margin-bottom: $gutter-xs;
+}
+
 // DASHED NEW ITEM PLACEHOLDER
 .item-new {
     background-color: transparent !important;
@@ -108,7 +116,10 @@
     border-width: $spinner-border-width-xs;
 }
 
-.form-control {
+.form-control,
+.form-select {
+    min-height: 37px;
+
     &::placeholder {
         color: $text-muted-var;
         opacity: 0.5;

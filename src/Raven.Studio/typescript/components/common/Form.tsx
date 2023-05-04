@@ -13,7 +13,7 @@ type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<
 };
 
 type FormInputProps = InputProps & {
-    type: Extract<InputType, "text" | "textarea" | "number" | "password">;
+    type: Extract<InputType, "text" | "textarea" | "number" | "password" | "checkbox">;
 };
 
 type FormToggleProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = FormElementProps<
@@ -86,20 +86,23 @@ function FormInputGeneral<
     });
 
     return (
-        <div>
-            <Input
-                name={name}
-                type={type}
-                onBlur={onBlur}
-                onChange={onChange}
-                value={value == null ? "" : value}
-                invalid={invalid}
-                {...rest}
-            >
-                {children}
-            </Input>
-            {error && <div className="text-danger small">{error.message}</div>}
-        </div>
+        <>
+            <div className="d-flex flex-grow">
+                <Input
+                    name={name}
+                    type={type}
+                    onBlur={onBlur}
+                    onChange={onChange}
+                    value={value == null ? "" : value}
+                    invalid={invalid}
+                    {...rest}
+                >
+                    {children}
+                </Input>
+            </div>
+
+            {error && <div className="d-flex justify-content-end text-danger small w-100">{error.message}</div>}
+        </>
     );
 }
 
