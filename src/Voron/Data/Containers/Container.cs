@@ -783,6 +783,9 @@ namespace Voron.Data.Containers
 
         public static Span<byte> GetMutable(LowLevelTransaction llt, long id)
         {
+            if (id <= 0)
+                throw new InvalidOperationException("Got an invalid container id: " + id);
+
             var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
             var page = llt.ModifyPage(pageNum);
 
@@ -802,8 +805,8 @@ namespace Voron.Data.Containers
 
         public static Item Get(LowLevelTransaction llt, long id)
         {
-            if (id == 0)
-                throw new InvalidOperationException("Got an invalid container id: 0");
+            if (id <= 0)
+                throw new InvalidOperationException("Got an invalid container id: " + id);
             
             var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
             var page = llt.GetPage(pageNum);

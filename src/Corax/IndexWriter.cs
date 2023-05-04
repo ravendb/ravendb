@@ -412,6 +412,7 @@ namespace Corax
 
         private IndexWriter(IndexFieldsMapping fieldsMapping)
         {
+            _indexDebugDumper = new IndexOperationsDumper(fieldsMapping);
             _fieldsMapping = fieldsMapping;
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
@@ -467,6 +468,7 @@ namespace Corax
         /// <returns>Encoded id (with freq/container_type)</returns>
         public long Index(string id, Span<byte> data)
         {
+            _indexDebugDumper.Index(id, data);
             using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
             return Index(idSlice, data);
         }
@@ -872,7 +874,8 @@ namespace Corax
         }
 
         private readonly long _initialNumberOfEntries;
-        private HashSet<long> _entriesAlreadyAdded, _additionsForTerm, _removalsForTerm;
+        private readonly HashSet<long> _entriesAlreadyAdded, _additionsForTerm, _removalsForTerm;
+        private readonly IndexOperationsDumper _indexDebugDumper;
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
         private void AddSuggestions(IndexedField field, Slice slice)
@@ -1456,6 +1459,7 @@ namespace Corax
         
         public void Commit()
         {
+            _indexDebugDumper.Commit();
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
             Tree fieldsTree = Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
             Tree entriesToTermsTree = Transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
@@ -1629,6 +1633,7 @@ namespace Corax
 
                 if (indexedField.Spatial == null)
                 {
+                    Debug.Assert(termContainerId > 0);
                     InsertEntriesForTerm(entriesToTerms, termContainerId);
                 }
 
@@ -2086,6 +2091,8 @@ namespace Corax
                 Analyzer.BufferPool.Return(_utf8ConverterBufferHandler);
                 _utf8ConverterBufferHandler = null;
             }
+            
+            _indexDebugDumper.Dispose();
         }
     }
 }
