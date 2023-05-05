@@ -188,7 +188,7 @@ namespace SlowTests.Cluster
 
             if (requestExecutor.Topology != null)
             {
-                ApplyProxies(requestExecutor, new TopologyUpdatedEventArgs(requestExecutor.Topology));
+                ApplyProxies(requestExecutor, new TopologyUpdatedEventArgs(requestExecutor.Topology, "apply-proxies"));
             }
 
             requestExecutor.OnTopologyUpdated += ApplyProxies;
