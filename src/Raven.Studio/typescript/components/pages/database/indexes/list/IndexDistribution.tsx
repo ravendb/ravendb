@@ -190,86 +190,85 @@ function calculateOverallProgress(index: IndexSharedInfo) {
     return processed / total;
 }
 
+function getState(index: IndexSharedInfo) {
+    if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details?.state === "Error")) {
+        return "failed";
+    }
+    if (
+        index.nodesInfo.some(
+            (x) =>
+                x.details?.status === "Disabled" ||
+                x.details?.status === "Paused" ||
+                x.details?.status === "Pending" ||
+                x.details?.stale
+        )
+    ) {
+        return "running";
+    }
+    return "success";
+}
+
+function getIcon(index: IndexSharedInfo): IconName {
+    if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details.state === "Error")) {
+        return "cancel";
+    }
+    if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
+        return iconForState("Disabled");
+    }
+    if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
+        return iconForState("Paused");
+    }
+    if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
+        return iconForState("Pending");
+    }
+    if (index.nodesInfo.some((x) => x.details?.stale)) {
+        return null;
+    }
+    return "check";
+}
+
+function getStateText(index: IndexSharedInfo): string {
+    if (index.nodesInfo.some((x) => x.status === "failure")) {
+        return "Load errors";
+    }
+    if (index.nodesInfo.every((x) => x.details?.faulty)) {
+        return "Faulty";
+    }
+    if (index.nodesInfo.some((x) => x.details?.faulty)) {
+        return "Some faulty";
+    }
+    if (index.nodesInfo.every((x) => x.details?.state === "Error")) {
+        return "Errors";
+    }
+    if (index.nodesInfo.some((x) => x.details?.state === "Error")) {
+        return "Some errored";
+    }
+    if (index.nodesInfo.every((x) => x.details?.status === "Disabled")) {
+        return "Disabled";
+    }
+    if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
+        return "Some disabled";
+    }
+    if (index.nodesInfo.every((x) => x.details?.status === "Paused")) {
+        return "Paused";
+    }
+    if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
+        return "Some paused";
+    }
+    if (index.nodesInfo.every((x) => x.details?.status === "Pending")) {
+        return "Pending";
+    }
+    if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
+        return "Some pending";
+    }
+    if (index.nodesInfo.some((x) => x.details?.stale)) {
+        return "Running";
+    }
+    return "Up to date";
+}
+
 export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
     const { index, onClick } = props;
-    const getState = (index: IndexSharedInfo) => {
-        if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details?.state === "Error")) {
-            return "failed";
-        }
-        if (
-            index.nodesInfo.some(
-                (x) =>
-                    x.details?.status === "Disabled" ||
-                    x.details?.status === "Paused" ||
-                    x.details?.status === "Pending" ||
-                    x.details?.stale
-            )
-        ) {
-            return "running";
-        }
-        return "success";
-    };
-
-    const getIcon = (index: IndexSharedInfo): IconName => {
-        if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details.state === "Error")) {
-            return "cancel";
-        }
-        if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
-            return iconForState("Disabled");
-        }
-        if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
-            return iconForState("Paused");
-        }
-        if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
-            return iconForState("Pending");
-        }
-        if (index.nodesInfo.some((x) => x.details?.stale)) {
-            return null;
-        }
-
-        return "check";
-    };
-
-    const getStateText = (index: IndexSharedInfo) => {
-        if (index.nodesInfo.some((x) => x.status === "failure")) {
-            return "Load errors";
-        }
-        if (index.nodesInfo.every((x) => x.details?.faulty)) {
-            return "Faulty";
-        }
-        if (index.nodesInfo.some((x) => x.details?.faulty)) {
-            return "Some faulty";
-        }
-        if (index.nodesInfo.every((x) => x.details?.state === "Error")) {
-            return "Errors";
-        }
-        if (index.nodesInfo.some((x) => x.details?.state === "Error")) {
-            return "Some errored";
-        }
-        if (index.nodesInfo.every((x) => x.details?.status === "Disabled")) {
-            return "Disabled";
-        }
-        if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
-            return "Some disabled";
-        }
-        if (index.nodesInfo.every((x) => x.details?.status === "Paused")) {
-            return "Paused";
-        }
-        if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
-            return "Some paused";
-        }
-        if (index.nodesInfo.every((x) => x.details?.status === "Pending")) {
-            return "Pending";
-        }
-        if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
-            return "Some pending";
-        }
-        if (index.nodesInfo.some((x) => x.details?.stale)) {
-            return "Running";
-        }
-        return "Up to date";
-    };
-
     const overallProgress = calculateOverallProgress(index);
 
     return (
