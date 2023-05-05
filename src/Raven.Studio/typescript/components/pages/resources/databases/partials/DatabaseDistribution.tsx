@@ -8,6 +8,8 @@ import { SizeOnDisk } from "components/pages/resources/databases/partials/SizeOn
 import { DatabaseLoadError } from "components/pages/resources/databases/partials/DatabaseLoadError";
 import { Icon } from "components/common/Icon";
 import { selectDatabaseState } from "components/pages/resources/databases/store/databasesViewSelectors";
+import { NodeSetItem } from "components/common/NodeSet";
+import { DatabaseNodeSetItem } from "components/pages/resources/databases/partials/DatabaseNodeSetItem";
 
 interface DatabaseDistributionProps {
     db: DatabaseSharedInfo;
@@ -67,6 +69,8 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     </div>
                 );
 
+                const node = db.nodes.find((x) => x.tag === localState.location.nodeTag);
+
                 const uptime = localState.data ? formatUptime(localState.data.upTime) : "";
 
                 return (
@@ -76,9 +80,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     >
                         {sharded && shard}
                         <div className={classNames("node", { top: !sharded })}>
-                            {!sharded && <Icon icon="node" />}
-
-                            {localState.location.nodeTag}
+                            <DatabaseNodeSetItem node={node} />
                         </div>
                         <div className="entries">
                             {localState.data?.loadError ? (
