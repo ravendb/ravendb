@@ -42,7 +42,7 @@ export interface TopLevelDatabaseInfo {
     performanceHints: number;
 }
 
-export type DatabaseState = "Loading" | "Error" | "Offline" | "Disabled" | "Online";
+export type MergedDatabaseState = "Loading" | "Error" | "Offline" | "Disabled" | "Online" | "Partially Online";
 
 export interface DatabaseSharedInfo {
     name: string;
@@ -65,7 +65,12 @@ export interface ShardedDatabaseSharedInfo extends DatabaseSharedInfo {
     shards: DatabaseSharedInfo[];
 }
 
-export type DatabaseFilterByStateOption = DatabaseState | "Sharded" | "NonSharded" | "Local" | "Remote";
+export type DatabaseFilterByStateOption =
+    | Exclude<MergedDatabaseState, "Partially Online">
+    | "Sharded"
+    | "NonSharded"
+    | "Local"
+    | "Remote";
 
 export interface DatabaseFilterCriteria {
     name: string;
