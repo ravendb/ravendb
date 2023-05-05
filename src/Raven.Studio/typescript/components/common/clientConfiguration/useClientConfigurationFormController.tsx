@@ -15,11 +15,17 @@ export default function useClientConfigurationFormController(
         if (!formValues.maximumNumberOfRequestsEnabled && formValues.maximumNumberOfRequestsValue !== null) {
             setValue("maximumNumberOfRequestsValue", null);
         }
-        if (!formValues.useSessionContextEnabled && formValues.loadBalancerSeedEnabled !== false) {
+        if (!formValues.loadBalancerEnabled && formValues.loadBalancerValue !== "None") {
+            setValue("loadBalancerValue", "None");
+        }
+        if (!formValues.loadBalancerEnabled && formValues.loadBalancerSeedEnabled !== false) {
             setValue("loadBalancerSeedEnabled", false);
         }
         if (!formValues.loadBalancerSeedEnabled && formValues.loadBalancerSeedValue !== null) {
             setValue("loadBalancerSeedValue", null);
+        }
+        if (!formValues.readBalanceBehaviorEnabled && formValues.readBalanceBehaviorValue !== "None") {
+            setValue("readBalanceBehaviorValue", "None");
         }
     }, [formValues, setValue]);
 

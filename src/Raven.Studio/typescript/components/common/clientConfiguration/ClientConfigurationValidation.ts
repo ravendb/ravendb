@@ -25,7 +25,15 @@ const schema = yup
                 is: true,
                 then: (schema) => schema.required(),
             }),
-        useSessionContextEnabled: yup.boolean().optional(),
+        loadBalancerEnabled: yup.boolean().optional(),
+        loadBalancerValue: yup
+            .mixed<Raven.Client.Http.LoadBalanceBehavior>()
+            .oneOf(ClientConfigurationUtils.allLoadBalanceBehaviors)
+            .nullable()
+            .when("loadBalancerEnabled", {
+                is: true,
+                then: (schema) => schema.required(),
+            }),
         loadBalancerSeedEnabled: yup.boolean().optional(),
         loadBalancerSeedValue: yup
             .number()

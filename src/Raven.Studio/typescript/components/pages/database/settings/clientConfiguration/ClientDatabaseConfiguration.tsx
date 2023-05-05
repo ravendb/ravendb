@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Form, Col, Button, Card, Row, Spinner, Input, InputGroupText, InputGroup } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
@@ -20,6 +20,7 @@ import ClientConfigurationUtils from "components/common/clientConfiguration/Clie
 import useClientConfigurationFormController from "components/common/clientConfiguration/useClientConfigurationFormController";
 import { tryHandleSubmit } from "components/utils/common";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
+import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
@@ -28,8 +29,8 @@ interface ClientDatabaseConfigurationProps {
 // TODO: show modal on exit intent if is dirty
 export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfigurationProps) {
     const { manageServerService } = useServices();
-    const getClientConfigurationCallback = useAsyncCallback(manageServerService.getClientConfiguration);
-    const getClientGlobalConfigurationCallback = useAsync(manageServerService.getGlobalClientConfiguration, []);
+    const asyncGetClientConfiguration = useAsyncCallback(manageServerService.getClientConfiguration);
+    const asyncGetClientGlobalConfiguration = useAsync(manageServerService.getGlobalClientConfiguration, []);
 
     const { isClusterAdminOrClusterNode: canNavigateToServerSettings } = useAccessManager();
 
@@ -37,24 +38,19 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         resolver: clientConfigurationYupResolver,
         mode: "onChange",
         defaultValues: async () =>
-            ClientConfigurationUtils.mapToFormData(await getClientConfigurationCallback.execute(db), false),
+            ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(db), false),
     });
 
+    const popovers = useClientConfigurationPopovers();
     const formValues = useClientConfigurationFormController(control, setValue);
 
     const globalConfig = useMemo(() => {
-        const globalConfigResult = getClientGlobalConfigurationCallback.result;
+        const globalConfigResult = asyncGetClientGlobalConfiguration.result;
         if (!globalConfigResult) {
             return null;
         }
         return ClientConfigurationUtils.mapToFormData(globalConfigResult, true);
-    }, [getClientGlobalConfigurationCallback.result]);
-
-    const [identityPartsSeparatorPopover, setIdentityPartsSeparatorPopover] = useState<HTMLElement>();
-    const [maximumRequestsPerSessionPopover, setMaximumRequestsPerSessionPopover] = useState<HTMLElement>();
-    const [sessionContextPopover, setSessionContextPopover] = useState<HTMLElement>();
-    const [readBalanceBehaviorPopover, setReadBalanceBehaviorPopover] = useState<HTMLElement>();
-    const [loadBalanceSeedBehaviorPopover, setLoadBalanceSeedBehaviorPopover] = useState<HTMLElement>();
+    }, [asyncGetClientGlobalConfiguration.result]);
 
     const onSave: SubmitHandler<ClientConfigurationFormData> = async (formData) => {
         tryHandleSubmit(async () => {
@@ -64,14 +60,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     };
 
     const onRefresh = async () => {
-        reset(ClientConfigurationUtils.mapToFormData(await getClientConfigurationCallback.execute(db), false));
+        reset(ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(db), false));
     };
 
-    if (getClientConfigurationCallback.loading || getClientGlobalConfigurationCallback.loading) {
+    if (asyncGetClientConfiguration.loading || asyncGetClientGlobalConfiguration.loading) {
         return <LoadingView />;
     }
 
-    if (getClientConfigurationCallback.error) {
+    if (asyncGetClientConfiguration.error) {
         return <LoadError error="Unable to load client configuration" refresh={onRefresh} />;
     }
 
@@ -134,9 +130,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                     <div className={globalConfig ? "d-flex flex-grow-1 justify-content-center" : "d-flex flex-grow-1"}>
                         <div className="md-label">
                             Identity parts separator{" "}
-                            <i ref={setIdentityPartsSeparatorPopover} className="icon-info text-info" />
+                            <i ref={popovers.setIdentityPartsSeparator} className="icon-info text-info" />
                         </div>
-                        <PopoverWithHover target={identityPartsSeparatorPopover} placement="top">
+                        <PopoverWithHover target={popovers.identityPartsSeparator} placement="top">
                             <div className="flex-horizontal p-3">
                                 <div>
                                     Changes the default separator for automatically generated document IDs. You can use
@@ -177,9 +173,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                     <div className={globalConfig ? "d-flex flex-grow-1 justify-content-center" : "d-flex flex-grow-1"}>
                         <div className="md-label">
                             Maximum number of requests per session{" "}
-                            <i ref={setMaximumRequestsPerSessionPopover} className="icon-info text-info" />
+                            <i ref={popovers.setMaximumRequestsPerSession} className="icon-info text-info" />
                         </div>
-                        <PopoverWithHover target={maximumRequestsPerSessionPopover} placement="top">
+                        <PopoverWithHover target={popovers.maximumRequestsPerSession} placement="top">
                             <div className="flex-horizontal p-3">
                                 <div>
                                     Set this number to restrict the number of requests (<strong>Reads</strong> &{" "}
@@ -218,11 +214,11 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                 <Card className="flex-column p-3">
                     <div className={globalConfig ? "d-flex flex-grow-1 justify-content-center" : "d-flex flex-grow-1"}>
                         <div className="md-label">
-                            Load Balancing <i ref={setSessionContextPopover} className="icon-info text-info" />
-                            <PopoverWithHover target={sessionContextPopover} placement="top">
+                            Load Balancing <i ref={popovers.setSessionContext} className="icon-info text-info" />
+                            <PopoverWithHover target={popovers.sessionContext} placement="top">
                                 <div className="flex-horizontal p-3">
                                     <div>
-                                        Allow client sessions to select topology by tag, so they'd be able to
+                                        Allow client sessions to select topology by tag, so they&apos;d be able to
                                         load-balance their requests.
                                     </div>
                                 </div>
@@ -244,20 +240,20 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 <InputGroupText>
                                     <FormCheckbox
                                         control={control}
-                                        name="useSessionContextEnabled"
+                                        name="loadBalancerEnabled"
                                         disabled={!formValues.overrideConfig}
                                     />
                                 </InputGroupText>
                                 <FormSelect<LoadBalanceBehavior>
                                     control={control}
                                     name="loadBalanceBehaviorValue"
-                                    disabled={!formValues.useSessionContextEnabled || !formValues.overrideConfig}
+                                    disabled={!formValues.loadBalancerEnabled || !formValues.overrideConfig}
                                     options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
                                 />
                             </InputGroup>
                         </Col>
                     </Row>
-                    {formValues.useSessionContextEnabled && (
+                    {formValues.loadBalancerValue === "UseSessionContext" && (
                         <>
                             <div
                                 className={
@@ -266,8 +262,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             >
                                 <div className="md-label">
                                     Hash seed{" "}
-                                    <i ref={setLoadBalanceSeedBehaviorPopover} className="icon-info text-info" />
-                                    <PopoverWithHover target={loadBalanceSeedBehaviorPopover} placement="top">
+                                    <i ref={popovers.setLoadBalanceSeedBehavior} className="icon-info text-info" />
+                                    <PopoverWithHover target={popovers.loadBalanceSeedBehavior} placement="top">
                                         <div className="flex-horizontal p-3">
                                             <div>Select a hash seed to fix the topology that clients would use.</div>
                                         </div>
@@ -289,7 +285,6 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                         control={control}
                                         name="loadBalancerSeedEnabled"
                                         color="primary"
-                                        disabled={!formValues.useSessionContextEnabled || !formValues.overrideConfig}
                                         label="Seed"
                                     >
                                         Seed
@@ -310,14 +305,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                     <div className={globalConfig ? "d-flex flex-grow-1 justify-content-center" : "d-flex flex-grow-1"}>
                         <div className="md-label">
                             Read balance behavior{" "}
-                            <i ref={setReadBalanceBehaviorPopover} className="icon-info text-info" />
-                            <PopoverWithHover target={readBalanceBehaviorPopover} placement="top">
+                            <i ref={popovers.setReadBalanceBehavior} className="icon-info text-info" />
+                            <PopoverWithHover target={popovers.readBalanceBehavior} placement="top">
                                 <div className="flex-horizontal p-3">
                                     <div>
-                                        Set the load-balance method that the client will use when accessing a node with{" "}
-                                        <strong>Read</strong> requests. The method selected will also affect the
-                                        client's decision of which node to failover to in case of issues with the{" "}
-                                        <strong>Read</strong> request.
+                                        Set the load-balance method that the client will use when accessing a node with
+                                        <strong> Read</strong> requests. The method selected will also affect the
+                                        client&apos;s decision of which node to failover to in case of issues with the
+                                        <strong> Read</strong> request.
                                     </div>
                                 </div>
                             </PopoverWithHover>

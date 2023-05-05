@@ -56,7 +56,8 @@ export default class ClientConfigurationUtils {
                 identityPartsSeparatorValue: null,
                 maximumNumberOfRequestsEnabled: false,
                 maximumNumberOfRequestsValue: null,
-                useSessionContextEnabled: false,
+                loadBalancerEnabled: false,
+                loadBalancerValue: null,
                 loadBalancerSeedEnabled: false,
                 loadBalancerSeedValue: null,
                 readBalanceBehaviorEnabled: false,
@@ -70,7 +71,8 @@ export default class ClientConfigurationUtils {
             identityPartsSeparatorValue: dto.IdentityPartsSeparator,
             maximumNumberOfRequestsEnabled: !!dto.MaxNumberOfRequestsPerSession,
             maximumNumberOfRequestsValue: dto.MaxNumberOfRequestsPerSession,
-            useSessionContextEnabled: dto.LoadBalanceBehavior === "UseSessionContext",
+            loadBalancerEnabled: dto.LoadBalanceBehavior === "UseSessionContext",
+            loadBalancerValue: dto.LoadBalanceBehavior,
             loadBalancerSeedEnabled: !!dto.LoadBalancerContextSeed,
             loadBalancerSeedValue: dto.LoadBalancerContextSeed,
             readBalanceBehaviorEnabled: !!dto.ReadBalanceBehavior && dto.ReadBalanceBehavior !== "None",
@@ -88,8 +90,9 @@ export default class ClientConfigurationUtils {
 
         return {
             IdentityPartsSeparator: formData.identityPartsSeparatorValue,
-            LoadBalanceBehavior: formData.useSessionContextEnabled ? "UseSessionContext" : "None",
-            LoadBalancerContextSeed: formData.loadBalancerSeedValue,
+            LoadBalanceBehavior: formData.loadBalancerValue,
+            LoadBalancerContextSeed:
+                formData.loadBalancerValue === "UseSessionContext" ? formData.loadBalancerSeedValue : null,
             ReadBalanceBehavior: formData.readBalanceBehaviorValue,
             MaxNumberOfRequestsPerSession: formData.maximumNumberOfRequestsValue,
             Disabled: !formData.overrideConfig,
