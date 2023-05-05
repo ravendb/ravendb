@@ -425,9 +425,7 @@ export class TasksStubs {
     }
 
     static getSampleDataClasses(): string {
-        return `// prism highlight does not work in Storybook
-
-using System;
+        return `using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Session.TimeSeries;
 
