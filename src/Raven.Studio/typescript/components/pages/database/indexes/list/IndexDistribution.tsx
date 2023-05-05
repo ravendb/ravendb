@@ -171,6 +171,7 @@ function iconForState(status: Raven.Client.Documents.Indexes.IndexRunningStatus)
 
 interface JoinedIndexProgressProps {
     index: IndexSharedInfo;
+    onClick: () => void;
 }
 
 function calculateOverallProgress(index: IndexSharedInfo) {
@@ -190,68 +191,96 @@ function calculateOverallProgress(index: IndexSharedInfo) {
 }
 
 export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
-    const { index } = props;
+    const { index, onClick } = props;
+    const getState = (index: IndexSharedInfo) => {
+        if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details?.state === "Error")) {
+            return "failed";
+        }
+        if (
+            index.nodesInfo.some(
+                (x) =>
+                    x.details?.status === "Disabled" ||
+                    x.details?.status === "Paused" ||
+                    x.details?.status === "Pending" ||
+                    x.details?.stale
+            )
+        ) {
+            return "running";
+        }
+        return "success";
+    };
 
-    if (index.nodesInfo.some((x) => x.status === "failure")) {
-        return (
-            <ProgressCircle inline state="failed" icon="cancel">
-                Load error
-            </ProgressCircle>
-        );
-    }
-    if (index.nodesInfo.some((x) => x.details?.faulty)) {
-        return (
-            <ProgressCircle inline state="failed" icon="cancel">
-                Faulty
-            </ProgressCircle>
-        );
-    }
+    const getIcon = (index: IndexSharedInfo): IconName => {
+        if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details.state === "Error")) {
+            return "cancel";
+        }
+        if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
+            return iconForState("Disabled");
+        }
+        if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
+            return iconForState("Paused");
+        }
+        if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
+            return iconForState("Pending");
+        }
+        if (index.nodesInfo.some((x) => x.details?.stale)) {
+            return null;
+        }
 
-    if (index.nodesInfo.some((x) => x.details?.state === "Error")) {
-        return (
-            <ProgressCircle inline state="failed" icon="cancel">
-                Error
-            </ProgressCircle>
-        );
-    }
+        return "check";
+    };
 
-    if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
-        return (
-            <ProgressCircle inline state="running" icon={iconForState("Disabled")}>
-                Disabled
-            </ProgressCircle>
-        );
-    }
+    const getStateText = (index: IndexSharedInfo) => {
+        if (index.nodesInfo.some((x) => x.status === "failure")) {
+            return "Load errors";
+        }
+        if (index.nodesInfo.every((x) => x.details?.faulty)) {
+            return "Faulty";
+        }
+        if (index.nodesInfo.some((x) => x.details?.faulty)) {
+            return "Some faulty";
+        }
+        if (index.nodesInfo.every((x) => x.details?.state === "Error")) {
+            return "Errors";
+        }
+        if (index.nodesInfo.some((x) => x.details?.state === "Error")) {
+            return "Some errored";
+        }
+        if (index.nodesInfo.every((x) => x.details?.status === "Disabled")) {
+            return "Disabled";
+        }
+        if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
+            return "Some disabled";
+        }
+        if (index.nodesInfo.every((x) => x.details?.status === "Paused")) {
+            return "Paused";
+        }
+        if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
+            return "Some paused";
+        }
+        if (index.nodesInfo.every((x) => x.details?.status === "Pending")) {
+            return "Pending";
+        }
+        if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
+            return "Some pending";
+        }
+        if (index.nodesInfo.some((x) => x.details?.stale)) {
+            return "Running";
+        }
+        return "Up to date";
+    };
 
-    if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
-        return (
-            <ProgressCircle inline state="running" icon={iconForState("Paused")}>
-                Paused
-            </ProgressCircle>
-        );
-    }
-
-    if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
-        return (
-            <ProgressCircle inline state="running" icon={iconForState("Pending")}>
-                Pending
-            </ProgressCircle>
-        );
-    }
-
-    if (index.nodesInfo.some((x) => x.details?.stale)) {
-        const overallProgress = calculateOverallProgress(index);
-
-        return (
-            <ProgressCircle inline state="running" progress={overallProgress}>
-                Running
-            </ProgressCircle>
-        );
-    }
+    const overallProgress = calculateOverallProgress(index);
 
     return (
-        <ProgressCircle inline state="success" icon="check">
-            up to date
+        <ProgressCircle
+            inline
+            state={getState(index)}
+            icon={getIcon(index)}
+            progress={overallProgress !== 0 ? overallProgress : null}
+            onClick={onClick}
+        >
+            {getStateText(index)}
         </ProgressCircle>
     );
 }
