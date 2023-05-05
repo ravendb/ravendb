@@ -7,7 +7,6 @@ import { TasksStubs } from "test/stubs/TasksStubs";
 import MockTasksService from "test/mocks/services/MockTasksService";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 
-// prism highlight does not work in Storybook
 export default {
     title: "Pages/Database/Tasks/CreateSampleData",
     component: CreateSampleData,
