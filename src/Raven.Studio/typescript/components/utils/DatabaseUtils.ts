@@ -1,7 +1,7 @@
 ﻿import {
     DatabaseLocalInfo,
     DatabaseSharedInfo,
-    DatabaseState,
+    MergedDatabaseState,
     ShardedDatabaseSharedInfo,
 } from "components/models/databases";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
@@ -54,7 +54,7 @@ export default class DatabaseUtils {
     static getDatabaseState(
         db: DatabaseSharedInfo,
         localInfo: locationAwareLoadableData<DatabaseLocalInfo>[]
-    ): DatabaseState {
+    ): MergedDatabaseState {
         if (localInfo.every((x) => x.status === "loading" || x.status === "idle")) {
             return "Loading";
         }
@@ -64,11 +64,17 @@ export default class DatabaseUtils {
         if (db.disabled) {
             return "Disabled";
         }
-        if (localInfo.every((x) => x.status === "success" && !x.data.upTime)) {
+
+        const offLineCount = localInfo.filter((x) => x.status === "success" && !x.data.upTime).length;
+        if (offLineCount === localInfo.length) {
             return "Offline";
         }
 
-        return "Online";
+        if (offLineCount === 0) {
+            return "Online";
+        }
+
+        return "Partially Online";
     }
 
     static getLocations(db: DatabaseSharedInfo): databaseLocationSpecifier[] {

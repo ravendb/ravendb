@@ -43,6 +43,10 @@ const selectFilterByStateOptions = (store: RootState): InputItem<DatabaseFilterB
             case "Online":
                 online++;
                 break;
+            case "Partially Online":
+                online++;
+                offline++;
+                break;
             default:
                 assertUnreachable(state);
         }
@@ -87,9 +91,14 @@ const isDatabaseInFilterState = (
     const perNodeState = selectDatabaseState(db.name)(store);
     const databaseState = DatabaseUtils.getDatabaseState(db, perNodeState);
 
+    const preMatchesStatus =
+        databaseState === "Partially Online"
+            ? filterStates.some((x) => x === "Online" || x === "Offline")
+            : filterStates.includes(databaseState);
+
     const matchesStatus =
         !filterStates.some((x) => ["Online", "Offline", "Error", "Disabled"].includes(x)) ||
-        filterStates.includes(databaseState) ||
+        preMatchesStatus ||
         databaseState === "Loading";
 
     if (!matchesStatus) {

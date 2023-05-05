@@ -81,6 +81,11 @@ function badgeText(db: DatabaseSharedInfo, localInfo: locationAwareLoadableData<
         return "Loading...";
     }
 
+    if (state === "Partially Online") {
+        const onlineCount = localInfo.filter((x) => x.status === "success" && x.data.upTime).length;
+        return `Online (${onlineCount}/${localInfo.length})`;
+    }
+
     return state;
 }
 
