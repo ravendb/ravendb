@@ -223,9 +223,12 @@ namespace Raven.Client.Documents.Session
     {
         public Topology Topology { get; }
 
-        internal TopologyUpdatedEventArgs(Topology topology)
+        public string Reason { get; }
+
+        internal TopologyUpdatedEventArgs(Topology topology, string reason)
         {
             Topology = topology;
+            Reason = reason;
         }
     }
 

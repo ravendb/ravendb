@@ -223,9 +223,9 @@ namespace Raven.Client.Http
             }
         }
 
-        internal void OnTopologyUpdatedInvoke(Topology newTopology)
+        internal void OnTopologyUpdatedInvoke(Topology newTopology, string reason)
         {
-            _onTopologyUpdated?.Invoke(this, new TopologyUpdatedEventArgs(newTopology));
+            _onTopologyUpdated?.Invoke(this, new TopologyUpdatedEventArgs(newTopology, reason));
         }
 
         private HttpClient GetHttpClient()
@@ -507,6 +507,16 @@ namespace Raven.Client.Http
                     await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
+                    foreach (var node in topology.Nodes)
+                    {
+                        if (node.Database != _databaseName)
+                        {
+                            var msg = $"Expected topology for database '{_databaseName}', but got the database '{node.Database}' (reason: {parameters.DebugTag})";
+                            Debug.Assert(false, msg);
+                            throw new InvalidOperationException(msg);
+                        }
+                    }
+
                     await DatabaseTopologyLocalCache.TrySavingAsync(_databaseName, TopologyHash, topology, Conventions, context, CancellationToken.None).ConfigureAwait(false);
 
                     if (_nodeSelector == null)
@@ -532,7 +542,7 @@ namespace Raven.Client.Http
                     var urls = _nodeSelector.Topology.Nodes.Select(x => x.Url);
                     UpdateConnectionLimit(urls);
 
-                    OnTopologyUpdatedInvoke(topology);
+                    OnTopologyUpdatedInvoke(topology, parameters.DebugTag);
                 }
             }
             // we want to throw here only if we are not disposed yet
