@@ -244,9 +244,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                         disabled={!formValues.overrideConfig}
                                     />
                                 </InputGroupText>
-                                <FormSelect<LoadBalanceBehavior>
+                                <FormSelect
                                     control={control}
-                                    name="loadBalanceBehaviorValue"
+                                    name="loadBalancerValue"
                                     disabled={!formValues.loadBalancerEnabled || !formValues.overrideConfig}
                                     options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
                                 />
@@ -338,7 +338,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                         disabled={!formValues.overrideConfig}
                                     />
                                 </InputGroupText>
-                                <FormSelect<ReadBalanceBehavior>
+                                <FormSelect
                                     control={control}
                                     name="readBalanceBehaviorValue"
                                     disabled={!formValues.readBalanceBehaviorEnabled || !formValues.overrideConfig}

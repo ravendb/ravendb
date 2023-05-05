@@ -6,8 +6,6 @@ import {
     ClientConfigurationFormData,
     clientConfigurationYupResolver,
 } from "../../../../common/clientConfiguration/ClientConfigurationValidation";
-import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
-import LoadBalanceBehavior = Raven.Client.Http.LoadBalanceBehavior;
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
@@ -134,7 +132,7 @@ export default function ClientGlobalConfiguration() {
                             <PopoverWithHover target={popovers.sessionContext} placement="top">
                                 <div className="flex-horizontal p-3">
                                     <div>
-                                        Allow client sessions to select topology by tag, so they'd be able to
+                                        Allow client sessions to select topology by tag, so they&apos;d be able to
                                         load-balance their requests.
                                     </div>
                                 </div>
@@ -147,9 +145,9 @@ export default function ClientGlobalConfiguration() {
                                 <InputGroupText>
                                     <FormCheckbox control={control} name="loadBalancerEnabled" />
                                 </InputGroupText>
-                                <FormSelect<LoadBalanceBehavior>
+                                <FormSelect
                                     control={control}
-                                    name="loadBalanceBehaviorValue"
+                                    name="loadBalancerValue"
                                     disabled={!formValues.loadBalancerEnabled}
                                     options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
                                 />
@@ -214,7 +212,7 @@ export default function ClientGlobalConfiguration() {
                                 <InputGroupText>
                                     <FormCheckbox control={control} name="readBalanceBehaviorEnabled" />
                                 </InputGroupText>
-                                <FormSelect<ReadBalanceBehavior>
+                                <FormSelect
                                     control={control}
                                     name="readBalanceBehaviorValue"
                                     disabled={!formValues.readBalanceBehaviorEnabled}

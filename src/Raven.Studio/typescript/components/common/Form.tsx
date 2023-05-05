@@ -30,12 +30,11 @@ export function FormInput<
 }
 
 export function FormSelect<
-    TOption extends string | number,
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >(
     props: FormElementProps<TFieldValues, TName> &
-        Omit<InputProps, "type"> & { options: valueAndLabelItem<TOption, string>[] }
+        Omit<InputProps, "type"> & { options: valueAndLabelItem<TFieldValues[TName], string>[] }
 ) {
     const { options, ...rest } = props;
 
