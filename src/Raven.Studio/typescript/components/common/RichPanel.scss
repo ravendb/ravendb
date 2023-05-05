@@ -92,7 +92,7 @@
     .rich-panel-details {
         padding: bs5variables.$gutter-xs math.div(bs5variables.$gutter, 2);
         display: flex;
-        align-items: flex-end;
+        align-items: center;
         flex-wrap: wrap;
 
         .rich-panel-details-right {
@@ -109,6 +109,14 @@
 
         .rich-panel-detail-item {
             margin: bs5variables.$gutter-xs math.div(bs5variables.$gutter, 2);
+
+            .btn-toggle-panel {
+                width: 36px;
+                height: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
         }
 
         .rich-panel-detail-item-sm {

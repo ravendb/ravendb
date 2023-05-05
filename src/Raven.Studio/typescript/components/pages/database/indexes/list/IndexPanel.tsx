@@ -392,12 +392,18 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 </Button>
                             </ButtonGroup>
                         )}
-                        <Button color="secondary" onClick={togglePanelCollapsed} title="Toggle distribution details">
-                            <Icon icon={panelCollapsed ? "arrow-down" : "arrow-up"} margin="m-0" />
-                        </Button>
                     </RichPanelActions>
                 </RichPanelHeader>
                 <RichPanelDetails className="pb-1">
+                    <RichPanelDetailItem>
+                        <Button
+                            onClick={togglePanelCollapsed}
+                            title={panelCollapsed ? "Expand distribution details" : "Collapse distribution details"}
+                            className="btn-toggle-panel rounded-pill"
+                        >
+                            <Icon icon={panelCollapsed ? "unfold" : "fold"} margin="m-0" />
+                        </Button>
+                    </RichPanelDetailItem>
                     {(index.reduceOutputCollectionName || index.patternForReferencesToReduceOutputCollection) && (
                         <RichPanelDetailItem>
                             <div className="index-type-icon" id={reduceOutputId}>
@@ -468,7 +474,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         {index.searchEngine}
                     </RichPanelDetailItem>
 
-                    {!isFaulty && <InlineDetails index={index} />}
+                    {!isFaulty && <InlineDetails index={index} toggleLocationDetails={togglePanelCollapsed} />}
                 </RichPanelDetails>
                 <div className="px-3 pb-2">
                     <Collapse isOpen={!panelCollapsed}>
@@ -514,10 +520,11 @@ function IndexSourceTypeComponent(props: { sourceType: IndexSourceType }) {
 
 interface InlineDetailsProps {
     index: IndexSharedInfo;
+    toggleLocationDetails: () => void;
 }
 
 function InlineDetails(props: InlineDetailsProps) {
-    const { index } = props;
+    const { index, toggleLocationDetails } = props;
 
     const estimatedEntries = IndexUtils.estimateEntriesCount(index)?.toLocaleString() ?? "-";
     const errorsCount = index.nodesInfo.filter((x) => x.details).reduce((prev, x) => prev + x.details.errorCount, 0);
@@ -539,7 +546,7 @@ function InlineDetails(props: InlineDetailsProps) {
                 <div className="value">{errorsCount.toLocaleString()}</div>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
-                <JoinedIndexProgress index={index} />
+                <JoinedIndexProgress index={index} onClick={toggleLocationDetails} />
             </RichPanelDetailItem>
         </>
     );

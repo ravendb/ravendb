@@ -25,6 +25,12 @@
         }
     }
 
+    &:not(.inline) {
+        .state-desc {
+            height: 25px;
+        }
+    }
+
     .state-desc {
         font-size: 9px;
         color: colors.$text-muted-color;
@@ -32,7 +38,6 @@
         font-weight: bold;
         margin-bottom: sizes.$gutter-xxs;
         letter-spacing: 0.15em;
-        height: 25px;
         display: flex;
         align-items: flex-end;
     }
@@ -49,7 +54,7 @@
         position: relative;
 
         i {
-            font-size: 22px;
+            font-size: 1.1rem;
             position: absolute;
             z-index: 10;
         }
