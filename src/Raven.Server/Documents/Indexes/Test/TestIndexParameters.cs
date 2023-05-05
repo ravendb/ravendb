@@ -12,4 +12,6 @@ public class TestIndexParameters
     public object QueryParameters { get; set; }
     
     public int? MaxDocumentsToProcess { get; set; }
+    
+    public int? WaitForNonStaleResultsTimeout { get; set; }
 }

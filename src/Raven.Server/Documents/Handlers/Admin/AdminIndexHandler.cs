@@ -58,9 +58,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var query = testIndexParameters.Query;
                 var queryParameters = testIndexParameters.QueryParameters;
                 int maxDocumentsPerIndex = testIndexParameters.MaxDocumentsToProcess ?? 100;
+                int waitForNonStaleResultsTimeout = testIndexParameters.WaitForNonStaleResultsTimeout ?? 15;
                 
                 if (testIndexParameters.IndexDefinition is null)
                     throw new ArgumentException("Index must have an 'IndexDefinition' field");
+
+                if (maxDocumentsPerIndex > 10_000 || maxDocumentsPerIndex < 1)
+                    throw new ArgumentException("Number of documents to process cannot be bigger than 10 000 or less than 1.");
 
                 if (testIndexDefinition.Type.IsJavaScript() == false)
                 {
@@ -88,6 +92,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, queryAsBlittable, Database.QueryMetadataCache, tracker);
 
                         indexQueryServerSide.WaitForNonStaleResults = true;
+                        indexQueryServerSide.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(waitForNonStaleResultsTimeout);
 
                         var entries = await index.IndexEntries(indexQueryServerSide, queryContext, ignoreLimit: false, token);
                         var queryResults = await index.Query(indexQueryServerSide, queryContext, token);
