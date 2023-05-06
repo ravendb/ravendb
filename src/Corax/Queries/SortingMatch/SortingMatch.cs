@@ -259,7 +259,7 @@ namespace Corax.Queries
             void Init(ref SortingMatch<TInner> match);
         }
 
-        private  struct EntryComparerByTerm : IEntryComparer<long>, IComparerInit
+        private struct EntryComparerByTerm : IEntryComparer<long>, IComparerInit
         {
             private TermsReader _reader;
 
