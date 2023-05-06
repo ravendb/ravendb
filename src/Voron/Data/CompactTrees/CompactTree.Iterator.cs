@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.Diagnostics;
 
 namespace Voron.Data.CompactTrees
@@ -33,6 +34,7 @@ namespace Voron.Data.CompactTrees
 
             public void Seek(CompactKey key)
             {
+                key.ChangeDictionary(_tree.State.TreeDictionaryId);
                 _tree.FindPageFor(key, ref _cursor);
 
                 ref var state = ref _cursor._stk[_cursor._pos];
