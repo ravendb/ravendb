@@ -50,8 +50,6 @@ public class FacetIndexingRepro : StorageTest
             Assert.Equal(searcher.GetIdentityFor(entryId), termsReader.GetTermFor(entryId));
         }
         
-        // here we create new dictionary
-        idTree.TryImproveDictionaryByRandomlyScanning(3);
         // here we force it to take place
         idTree.TryRemove("missing-value", out _);
 

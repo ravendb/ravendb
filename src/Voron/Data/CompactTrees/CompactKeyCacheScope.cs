@@ -14,10 +14,11 @@ public readonly struct CompactKeyCacheScope : IDisposable
         Key = tx.AcquireCompactKey();
     }
 
-    public CompactKeyCacheScope(LowLevelTransaction tx, ReadOnlySpan<byte> key)
+    public CompactKeyCacheScope(LowLevelTransaction tx, ReadOnlySpan<byte> key, long dictionaryId)
     {
         Key = tx.AcquireCompactKey();
         Key.Set(key);
+        Key.ChangeDictionary(dictionaryId);
     }
 
     public CompactKeyCacheScope(LowLevelTransaction tx, CompactKey key)

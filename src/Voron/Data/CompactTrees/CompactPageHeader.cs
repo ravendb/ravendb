@@ -26,7 +26,7 @@ namespace Voron.Data.CompactTrees
         public ushort FreeSpace;
 
         [FieldOffset(16)]
-        public long DictionaryId;
+        public long Reserved;
         
         [FieldOffset(24)]
         public long ContainerBasePage;
