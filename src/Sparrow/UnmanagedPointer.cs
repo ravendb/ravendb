@@ -21,6 +21,8 @@ namespace Sparrow
         public readonly byte* Address;
         public readonly int Length;
 
+        public static UnmanagedSpan Empty = new UnmanagedSpan(null, 0);
+
         public UnmanagedSpan(byte* address, int length)
         {
             Address = address;
