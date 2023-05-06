@@ -23,8 +23,6 @@ namespace Voron.Data.CompactTrees
         [FieldOffset(40)]
         public long TreeDictionaryId;
         [FieldOffset(48)]
-        public long NextTrainAt;
-        [FieldOffset(56)]
         public long TermsContainerId;
 
         public override string ToString()
@@ -41,7 +39,6 @@ namespace Voron.Data.CompactTrees
             header->BranchPages = BranchPages;
             header->LeafPages = LeafPages;
             header->TreeDictionaryId = TreeDictionaryId;
-            header->NextTrainAt = NextTrainAt;
         }
     }
 }

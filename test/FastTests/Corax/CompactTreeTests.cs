@@ -85,8 +85,6 @@ public class CompactTreeTests : StorageTest
             {
                 tree.Add("A" + i, i);
             }
-
-            tree._state.NextTrainAt = 1; // force new dictionary generation
             
             wtx.Commit();
         }
@@ -99,7 +97,6 @@ public class CompactTreeTests : StorageTest
             {
                 tree.Add("B" + i, i);
             }
-            tree._state.NextTrainAt = int.MaxValue;
 
             wtx.Commit();
         }

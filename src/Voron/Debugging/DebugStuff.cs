@@ -332,9 +332,7 @@ namespace Voron.Debugging
         private static unsafe void RenderPageInternal(CompactTree tree, Page page, TextWriter sw, string text, bool open)
         {
             var header = (CompactPageHeader*)page.Pointer;
-            sw.WriteLine(
-                string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries - Dictionary: {5} - Usable space: {7} of {6} [Free Space]</label><ul>",
-                    page.PageNumber, header->PageFlags, header->NumberOfEntries, open ? "checked" : "", text, header->DictionaryId, header->FreeSpace, header->Upper - header->Lower));
+            sw.WriteLine($"<ul><li><input type='checkbox' id='page-{page.PageNumber}' {(open ? "checked" : "")} /><label for='page-{page.PageNumber}'>{text}: Page {page.PageNumber:#,#;;0} - {header->PageFlags} - {header->NumberOfEntries:#,#;;0} entries - Usable space: {header->Upper - header->Lower} / Available {header->FreeSpace}</label><ul>");
 
             var entries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
             for (int i = 0; i < header->NumberOfEntries; i++)
