@@ -5,18 +5,63 @@ using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
 using FastTests.Voron;
+using Parquet.Thrift;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
+using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
+using Encoding = System.Text.Encoding;
 
 namespace FastTests.Corax.Bugs;
 
 public class FacetIndexingRepro : StorageTest
 {
+
+    [Fact]
+    public void CanHandleRecompressionOfEntryTerms()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        Slice.From(bsc, "id()", out var id);
+        var fields = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(0, id)
+            .Build();
+
+        using var wtx = Env.WriteTransaction();
+
+        var fieldsTree = wtx.CreateTree(Constants.IndexWriter.FieldsSlice);
+        CompactTree idTree = fieldsTree.CompactTreeFor(id);
+
+        using var iw = new IndexWriter(wtx, fields);
+        using var entryWriter = new IndexEntryWriter(bsc, fields);
+        string entryKey = "users/00000001";
+        entryWriter.Write(0, Encoding.UTF8.GetBytes(entryKey));
+        entryWriter.Finish(out var s);
+        var entryIdEncoded = iw.Index(entryKey, s.ToSpan());
+        var entryId = EntryIdEncodings.Decode(entryIdEncoded).EntryId;
+        iw.Commit();
+        
+        {
+            var searcher = new IndexSearcher(wtx, fields);
+            TermsReader termsReader = searcher.TermsReaderFor(id);
+            Assert.Equal(searcher.GetIdentityFor(entryId), termsReader.GetTermFor(entryId));
+        }
+        
+        // here we create new dictionary
+        idTree.TryImproveDictionaryByRandomlyScanning(3);
+        // here we force it to take place
+        idTree.TryRemove("missing-value", out _);
+
+        {
+            var searcher = new IndexSearcher(wtx, fields);
+        
+            TermsReader termsReader = searcher.TermsReaderFor(id);
+            Assert.Equal(searcher.GetIdentityFor(entryId), termsReader.GetTermFor(entryId));
+        }
+    }
 
     [Fact]
     public void CanAddAndRemoveItems()

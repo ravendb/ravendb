@@ -29,7 +29,7 @@ public static class Program
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
 
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < 1; i++)
         {
             Console.WriteLine($"Starting to run {i}");
             try
@@ -39,7 +39,7 @@ public static class Program
                 {
 
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    test.CanAddAndRemoveItems();
+                    test.ShouldNotCorrupt();
                 }
             }
             catch (Exception e)
