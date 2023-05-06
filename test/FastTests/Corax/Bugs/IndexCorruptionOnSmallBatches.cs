@@ -42,6 +42,5 @@ public class IndexCorruptionOnSmallBatches : RavenTestBase
                 .Take(50)
                 .ToList();
         }
-        WaitForUserToContinueTheTest(store);
     }
 }
