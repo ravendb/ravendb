@@ -153,7 +153,7 @@ namespace Voron.Data.CompactTrees
             var id = Container.Allocate(_llt, _state.TermsContainerId, encodedKey.Length + 1, dictionaryId, out var allocated);
             encodedKey.CopyTo(allocated[1..]);
             var remainderBits = encodedKey.Length * 8 - encodedKeyLengthInBits;
-            Debug.Assert(remainderBits is >= 0 and < 16);
+            Debug.Assert(remainderBits is >= 0 and < 8);
             allocated[0] = (byte)(remainderBits << 4); // ref count of 0, will be incremented shortly
             return id;
         }
@@ -1251,7 +1251,9 @@ namespace Voron.Data.CompactTrees
 
         private HashSet<long> _pagesThatWeFailedToRecompress;
 
-        [SkipLocalsInit] 
+#if !DEBUG
+        [SkipLocalsInit]
+ #endif
         private void TryRecompressPage(ref CursorState state)
         {
             if (_pagesThatWeFailedToRecompress != null && // already tried and failed, let's ignore this for now
