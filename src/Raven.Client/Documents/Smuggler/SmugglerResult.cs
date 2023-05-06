@@ -202,7 +202,7 @@ namespace Raven.Client.Documents.Smuggler
                 ReplicationHubCertificates = _result?.ReplicationHubCertificates;
             }
 
-            private string Message { get; set; }
+            internal string Message { get; set; }
 
             public override DynamicJsonValue ToJson()
             {

@@ -17,6 +17,7 @@ public class ShardedSmugglerProgress : SmugglerResult.SmugglerProgress, ISharded
             return;
 
         _result = sp._result;
+        Message = sp.Message;
         DatabaseRecord = sp.DatabaseRecord;
         Documents = sp.Documents;
         RevisionDocuments = sp.RevisionDocuments;
