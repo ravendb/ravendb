@@ -398,7 +398,6 @@ namespace Raven.Server.Documents.TransactionMerger
                                 _recording.State?.TryRecord(context, TxInstruction.Commit);
                                 tx.Commit();
 
-                                // SlowWriteNotification.Notify(stats, _notificationCenter);
                                 NotifyAboutSlowWrite(stats);
                                 _recording.State?.TryRecord(context, TxInstruction.DisposeTx, tx.Disposed == false);
                                 tx.Dispose();
@@ -603,7 +602,6 @@ namespace Raven.Server.Documents.TransactionMerger
                                 _recording.State?.TryRecord(current, TxInstruction.Commit);
                                 previous.Transaction.Commit();
 
-                                // SlowWriteNotification.Notify(stats, NotificationCenter);
                                 NotifyAboutSlowWrite(stats);
                             }
                             catch (Exception e)

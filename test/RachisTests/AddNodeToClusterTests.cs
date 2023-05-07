@@ -638,8 +638,7 @@ namespace RachisTests
                     using (ctx.OpenReadTransaction())
                     {
                         var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
-                        // Assert.Equal(0, record.DeletionInProgress?.Count ?? 0);
-                        Assert.True(0 == (record.DeletionInProgress?.Count ?? 0), GetRecordFixedString(record, cluster.Leader));
+                        Assert.True((record.DeletionInProgress?.Count ?? 0) == 0, GetRecordFixedString(record, cluster.Leader));
 
                         var topology = record.Topology;
                         Assert.Equal(3, topology.ReplicationFactor);
@@ -876,15 +875,8 @@ namespace RachisTests
 
             foreach (var follower in followers)
             {
-                while (true)
-                {
-                    var r = await cluster.Leader.ServerStore.Engine.CurrentLeader.TryModifyTopologyAsync(follower.ServerStore.NodeTag, follower.ServerStore.Engine.Url, Leader.TopologyModification.NonVoter);
-
-                    if (r.Success)
-                        break;
-
-                    await r.Task;
-                }
+                await cluster.Leader.ServerStore.Engine.ModifyTopologyAsync(follower.ServerStore.NodeTag, follower.ServerStore.Engine.Url,
+                    Leader.TopologyModification.NonVoter);
             }
 
             var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);

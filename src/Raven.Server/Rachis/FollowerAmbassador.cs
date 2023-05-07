@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NetTopologySuite.Utilities;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;

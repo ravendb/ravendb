@@ -60,7 +60,7 @@ namespace RachisTests
             await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
             
             var old = GetDatabaseTopology();
-            leader.ServerStore.Engine.HardResetToNewCluster();
+            await leader.ServerStore.Engine.HardResetToNewClusterAsync();
             await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
 
             var @new = GetDatabaseTopology();

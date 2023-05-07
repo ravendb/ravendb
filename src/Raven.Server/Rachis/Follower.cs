@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Runtime.Internal.Util;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -418,7 +417,7 @@ namespace Raven.Server.Rachis
             {
                 KeepAliveAndExecuteAction(() =>
                 {
-                    onFullSnapshotInstalledTask = ReadAndCommitSnapshotAsync(context, snapshot, cts.Token).Result;
+                    onFullSnapshotInstalledTask = ReadAndCommitSnapshot(snapshot, cts.Token);
                 }, cts, "ReadAndCommitSnapshot");
             }
 
@@ -489,10 +488,10 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private async Task<Task> ReadAndCommitSnapshotAsync(ClusterOperationContext context, InstallSnapshot snapshot, CancellationToken token)
+        private Task ReadAndCommitSnapshot(InstallSnapshot snapshot, CancellationToken token)
         {
             var command = new FollowerReadAndCommitSnapshotCommand(_engine, this, snapshot, token);
-            await _engine.TxMerger.Enqueue(command);
+            _engine.TxMerger.EnqueueSync(command);
 
             return command.OnFullSnapshotInstalledTask;
         }

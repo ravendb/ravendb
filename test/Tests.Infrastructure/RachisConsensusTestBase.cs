@@ -39,7 +39,6 @@ using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
-using static FastTests.TestBase;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Tests.Infrastructure
@@ -102,9 +101,16 @@ namespace Tests.Infrastructure
                         currentState == RachisState.LeaderElect,
                 "The leader has changed while waiting for cluster to become stable, it is now " + currentState + " Beacuse: " + leader.LastStateChangeReason);
 
+            await WaitForVoters(nodeCount, watcherCluster);
+
+            return leader;
+        }
+
+        private Task WaitForVoters(int nodeCount, bool watcherCluster)
+        {
             var votersCount = watcherCluster ? 0 : nodeCount - 1;
-            if(votersCount>0)
-                await ActionWithLeader(async (leader1) =>
+            if (votersCount > 0)
+                return ActionWithLeader(async (leader1) =>
                 {
                     var sw = Stopwatch.StartNew();
                     while (leader1.CurrentLeader.CurrentVoters.Count < votersCount)
@@ -117,7 +123,7 @@ namespace Tests.Infrastructure
                     }
                 });
 
-            return leader;
+            return Task.CompletedTask;
         }
 
         protected RachisConsensus<CountingStateMachine> GetRandomFollower()

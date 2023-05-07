@@ -22,7 +22,7 @@ namespace SlowTests.Cluster
 
         const string SagaDataIdPrefix = "SampleSagaDatas";
         const int NumberOfConcurrentUpdates = 50;
-        const int MaxRetryAttempts = 150;
+        const int MaxRetryAttempts = 50;
 
         [Fact]
         public async Task ConcurrentArrayUpdate()

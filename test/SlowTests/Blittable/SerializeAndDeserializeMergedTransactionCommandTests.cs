@@ -530,13 +530,54 @@ namespace SlowTests.Blittable
                 {
                     return;
                 }
-                Assert.Equal(expectedValue, actualValue);
+
+                if (type == typeof(BatchRequestParser.CommandData[]))
+                {
+                    var a1 = (BatchRequestParser.CommandData[])expectedValue;
+                    var a2 = (BatchRequestParser.CommandData[])actualValue;
+
+                    Assert.Equal(a1.Length, a2.Length);
+                    for (int i = 0; i < a1.Length; i++)
+                    {
+                        Assert.True(ObjectsAreEquals(a1[i], a2[i]));
+                    }
+                }
+                else
+                    Assert.Equal(expectedValue, actualValue);
             }
 
             public int GetHashCode(TRecordableCommand parameterValue)
             {
                 return Tuple.Create(parameterValue).GetHashCode();
             }
+
+
+            private static bool ObjectsAreEquals(object d1, object d2)
+            {
+                if ((d1 == null) || d1.GetType().Equals(d2.GetType()) == false)
+                {
+                    return false;
+                }
+
+                if (d1 != null && d2 != null)
+                {
+                    Type type = d1.GetType();
+                    foreach (System.Reflection.PropertyInfo pi in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                    {
+                        object selfValue = type.GetProperty(pi.Name).GetValue(d1, null);
+                        object toValue = type.GetProperty(pi.Name).GetValue(d2, null);
+
+                        if (selfValue != toValue && (selfValue == null || !selfValue.Equals(toValue)))
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+                return d1 == d2;
+            }
+
         }
     }
 }
