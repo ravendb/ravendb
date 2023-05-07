@@ -102,10 +102,14 @@ namespace Tests.Infrastructure
 
         public virtual void Dispose()
         {
-            WaitForReset();
+            if (_replicateOnceInitialized)
+            {
+                WaitForReset();
+                _replicateOnceMre.Set();
+            }
+
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
             _database.Configuration.Replication.MaxItemsCount = null;
-            _replicateOnceMre.Set();
         }
 
         internal static async ValueTask<ReplicationInstance> GetReplicationInstanceAsync(RavenServer server, string databaseName)

@@ -2,11 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Issues
@@ -17,11 +15,12 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
-        public async Task CanIndexSegmentsWithADocument()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanIndexSegmentsWithADocument(Options options)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
                 await new TimeSeriesIndex().ExecuteAsync(slave);
 
@@ -51,12 +50,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.TimeSeriesFor("users/karmel", "Heartrate3").Append(baseline, new[] { 2d }, "watches/fitbit");
                     session.SaveChanges();
                 }
-
-                var masterDb = await Databases.GetDocumentDatabaseInstanceFor(master);
-                using (var controller = new ReplicationController(masterDb))
+                
+                using (var replication = await GetReplicationManagerAsync(master, master.Database, options.DatabaseMode))
                 {
                     await SetupReplicationAsync(master, slave);
-                    controller.ReplicateOnce();
+                    replication.ReplicateOnce("users/karmel");
 
                     Indexes.WaitForIndexing(slave);
                     RavenTestHelper.AssertNoIndexErrors(slave);
@@ -64,16 +62,15 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public async Task CanIndexSegmentsWithoutTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanIndexSegmentsWithoutTimeSeries(Options options)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
-                var masterDb = await Databases.GetDocumentDatabaseInstanceFor(master);
-                using (var controller = new ReplicationController(masterDb))
+                using (var replication = await GetReplicationManagerAsync(master, master.Database, options.DatabaseMode))
                 {
-                    
                     await SetupReplicationAsync(master, slave);
                     
                     var baseline = DateTime.UtcNow;
@@ -84,8 +81,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         session.SaveChanges();
                     }
 
-                    controller.ReplicateOnce();
-
+                    replication.ReplicateOnce("users/karmel");
 
                     using (var session = master.OpenSession())
                     {
@@ -106,7 +102,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         session.SaveChanges();
                     }
 
-                    controller.ReplicateOnce();
+                    replication.ReplicateOnce("users/karmel");
 
                     await new TimeSeriesIndex().ExecuteAsync(slave);
                     Indexes.WaitForIndexing(slave);
