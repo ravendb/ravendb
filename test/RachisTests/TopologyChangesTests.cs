@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ namespace RachisTests
             var followers = GetFollowers();
             var newServer = SetupServer();
             DisconnectFromNode(leader);
-            await leader.AddToClusterAsync(newServer.Url);
+            await Assert.ThrowsAnyAsync<Exception>(() => leader.AddToClusterAsync(newServer.Url));
             var newLeader = WaitForAnyToBecomeLeader(followers);
 
             Assert.NotNull(newLeader);

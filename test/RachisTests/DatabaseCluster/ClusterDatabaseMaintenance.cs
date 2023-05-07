@@ -1648,21 +1648,34 @@ namespace RachisTests.DatabaseCluster
                 var rehab = await WaitForValueAsync(() => GetRehabCount(store, name), 1);
                 Assert.Equal(1, rehab);
 
+                var leaderNodeTag = cluster.Leader.ServerStore.NodeTag;
                 cluster.Leader.ServerStore.Engine.CurrentLeader.StepDown();
 
                 await Task.Delay(3_000);
 
-                var members = await GetMembersCount(store, name);
-                Assert.Equal(1, members);
+                var res = await GetTopologyAndMembersCount(store, name);
+                Assert.True(1 == res.MembersCount, $"leader: {leaderNodeTag}, members: {res.MembersCount}, [ {string.Join(',', res.Topology.Members)} ]");
 
                 rehab = await GetRehabCount(store, name);
                 Assert.Equal(1, rehab);
 
                 await Task.Delay(7_000);
 
-                members = await GetMembersCount(store, name);
-                Assert.Equal(2, members);
+                var members1 = await GetMembersCount(store, name);
+                Assert.Equal(2, members1);
             }
+        }
+
+        protected static async Task<(DatabaseTopology Topology, int MembersCount)> GetTopologyAndMembersCount(IDocumentStore store, string databaseName = null)
+        {
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName ?? store.Database));
+            if (res == null)
+            {
+                return (null, -1);
+            }
+            var topology = res.IsSharded ? res.Sharding.Orchestrator.Topology : res.Topology;
+            var count = topology.Members.Count;
+            return (topology, count);
         }
 
         [Fact]
