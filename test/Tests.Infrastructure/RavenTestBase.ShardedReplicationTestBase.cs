@@ -6,8 +6,8 @@ using Raven.Server;
 using Raven.Server.Utils;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
-using static Tests.Infrastructure.ReplicationTestBase;
 
 namespace FastTests;
 
@@ -22,18 +22,20 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
-        public class ShardedReplicationManager : ReplicationManager
+        public class ShardedReplicationManager : IReplicationManager
         {
             public readonly Dictionary<int, ReplicationManager> ShardReplications;
+            public readonly string DatabaseName;
             private readonly ShardingConfiguration _config;
 
-            protected ShardedReplicationManager(Dictionary<int, ReplicationManager> shardReplications, string databaseName, ShardingConfiguration config) : base(databaseName)
+            protected ShardedReplicationManager(Dictionary<int, ReplicationManager> shardReplications, string databaseName, ShardingConfiguration config)
             {
                 ShardReplications = shardReplications;
+                DatabaseName = databaseName;
                 _config = config;
             }
 
-            public override void Mend()
+            public void Mend()
             {
                 foreach (var (shardNumber, brokenReplication) in ShardReplications)
                 {
@@ -41,7 +43,7 @@ public partial class RavenTestBase
                 }
             }
 
-            public override void Break()
+            public void Break()
             {
                 foreach (var (shardNumber, shardReplication) in ShardReplications)
                 {
@@ -49,7 +51,7 @@ public partial class RavenTestBase
                 }
             }
 
-            public override void ReplicateOnce(string docId)
+            public void ReplicateOnce(string docId)
             {
                 int shardNumber;
                 using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
@@ -58,7 +60,7 @@ public partial class RavenTestBase
                 ShardReplications[shardNumber].ReplicateOnce(docId);
             }
 
-            public override async Task EnsureNoReplicationLoopAsync()
+            public async Task EnsureNoReplicationLoopAsync()
             {
                 foreach (var (node, replicationInstance) in ShardReplications)
                 {
@@ -66,7 +68,7 @@ public partial class RavenTestBase
                 }
             }
 
-            public override void Dispose()
+            public void Dispose()
             {
                 foreach (var manager in ShardReplications.Values)
                 {
