@@ -42,19 +42,18 @@ namespace Voron.Data.Lookups
             var v = ZigZag(val - header->ValuesBase);
             var keyLen = 8 - BitOperations.LeadingZeroCount((ulong)k) / 8;
             var valLen = 8 - BitOperations.LeadingZeroCount((ulong)v) / 8;
-            
             Debug.Assert(keyLen <= 8 && valLen <= 8);
             buffer[0] = (byte)(keyLen << 4 | valLen);
             Memory.Copy(buffer + 1, &k, keyLen);
             Memory.Copy(buffer + 1 + keyLen, &v, valLen);
             return 1 + keyLen + valLen;
 
-            long ZigZag(long diff)
-            {
-                // the diff may be *negative*, so we use zig/zag encoding to handle this
-                return (diff << 1) ^ (diff >> 63);
-            }
+          
         }
+        
+        // the diff may be *negative*, so we use zig/zag encoding to handle this
+        private static long ZigZag(long diff) => (diff << 1) ^ (diff >> 63);
+        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int DecodeEntry(ref CursorState state, int pos, out TKey key, out long val)
@@ -77,9 +76,11 @@ namespace Voron.Data.Lookups
 
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long Unzag(long l, long baseline)
         {
-            return (l & 1) == 0 ? baseline + (l >>> 1) : baseline + ((l >>> 1) ^ -1);
+            long unzag = (l & 1) == 0 ? l >>> 1 :(l >>> 1) ^ -1;
+            return unzag + baseline;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -109,12 +110,29 @@ namespace Voron.Data.Lookups
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static TKey GetKey(ref CursorState state, int pos)
         {
-            var    buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
+            var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
+            return GetKey(state.Header, buffer);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static TKey GetKey(LookupPageHeader* header, byte* buffer)
+        {
             var keyLen = buffer[0] >> 4;
-            long k = 0;
-            Memory.Copy(&k, buffer+1, keyLen);
-            k = Unzag(k, state.Header->KeysBase);
+            long k = ReadBackward(buffer + 1, keyLen); 
+            
+            k = Unzag(k, header->KeysBase);
             return ToKey(k);
+        }
+           
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static long ReadBackward(byte* b, int len)
+        {
+            if (len == 0) return 0;
+            var shift = 8 - len;
+            // this is safe to do, we are always *at least* 64 bytes from the page header
+            var l = Unsafe.ReadUnaligned<long>(ref b[-shift]);
+            l >>>= shift * 8;
+            return l;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -144,8 +162,8 @@ namespace Voron.Data.Lookups
             var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
             var keyLen = buffer[0] >> 4;
             var valLen = buffer[0] & 0xF;
-            long v = 0;
-            Memory.Copy(&v, buffer+1 + keyLen, valLen);
+            long v = ReadBackward(buffer + 1 + keyLen, valLen);
+            
             return Unzag(v, state.Header->ValuesBase);
         }
         
@@ -155,10 +173,9 @@ namespace Voron.Data.Lookups
             var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
             var keyLen = buffer[0] >> 4;
             var valLen = buffer[0] & 0xF;
-            long k = 0, v = 0;
-            Memory.Copy(&k, buffer+1, keyLen);
+            long k = ReadBackward(buffer + 1, keyLen);
+            long v = ReadBackward(buffer + 1 + keyLen, valLen); 
             key = ToKey(Unzag(k, state.Header->KeysBase));
-            Memory.Copy(&v, buffer+1 + keyLen, valLen);
             value = Unzag(v, state.Header->ValuesBase);
         }
 
@@ -989,6 +1006,8 @@ namespace Voron.Data.Lookups
             Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
 
             ushort* @base = state.EntriesOffsetsPtr;
+            byte* pagePtr = state.Page.Pointer;
+            var header = state.Header;
             int length = state.Header->NumberOfEntries;
             TKey curKey;
             int bot = 0;
@@ -1003,7 +1022,7 @@ namespace Voron.Data.Lookups
             {
                 int mid = top / 2;
 
-                curKey = GetKey(ref state, bot + mid);
+                curKey = GetKey(header, pagePtr + @base[bot + mid]);
 
                 match = key.CompareTo(curKey); 
 
@@ -1013,7 +1032,7 @@ namespace Voron.Data.Lookups
                 top -= mid;
             }
 
-            curKey = GetKey(ref state, bot);
+            curKey = GetKey(header, pagePtr + @base[bot]);
 
             match = key.CompareTo(curKey); 
 
