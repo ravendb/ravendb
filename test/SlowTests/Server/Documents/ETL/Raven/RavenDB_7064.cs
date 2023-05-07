@@ -1,27 +1,30 @@
 ﻿using System;
 using System.IO;
+using FastTests;
 using FastTests.Voron.Util;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_7064 : EtlTestBase
+    public class RavenDB_7064 : RavenTestBase
     {
         public RavenDB_7064(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void Should_handle_attachments()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_handle_attachments(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 var attachments = this['@metadata']['@attachments'];
 
@@ -42,7 +45,7 @@ var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
 person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
 "
 );
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -74,7 +77,7 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                     personId = session.Advanced.LoadStartingWith<Person>("users/1/people/")[0].Id;
                 }
 
-                etlDone.Reset();
+                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -104,7 +107,7 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                     ("users/1/people/", "photo2.jpg-etl", new byte[] {2}, true)
                 });
 
-                etlDone.Reset();
+                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -163,13 +166,14 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
             }
         }
 
-        [Fact]
-        public void Can_use_get_attachments()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_use_get_attachments(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 var attachments = getAttachments();
 
@@ -184,7 +188,7 @@ for (var i = 0; i < attachments.length; i++) {
 }
 "
 );
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -217,13 +221,14 @@ for (var i = 0; i < attachments.length; i++) {
             }
         }
 
-        [Fact]
-        public void Can_use_has_attachment()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_use_has_attachment(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 
 var doc = loadToUsers(this);
@@ -238,7 +243,7 @@ if (hasAttachment('photo2.jpg')) {
 
 "
                 );
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {

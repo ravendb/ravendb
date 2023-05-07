@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Extensions.Streams;
 using Raven.Tests.Core.Utils.Entities;
@@ -9,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_10308 : EtlTestBase
+    public class RavenDB_10308 : RavenTestBase
     {
         public RavenDB_10308(ITestOutputHelper output) : base(output)
         {
@@ -22,9 +23,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: null);
+                Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -87,10 +88,10 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
+                Etl.AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
 
-                var etlDone = WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {

@@ -130,22 +130,12 @@ namespace FastTests
                 return (_src, dest, result);
             }
 
-            public ManualResetEventSlim WaitForEtlToComplete(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, int numOfBatches = 1)
+            public ManualResetEventSlim WaitForEtlToComplete(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, int numOfProcessesToWaitFor = 1)
             {
                 var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                 return record.IsSharded
-                    ? _parent.Sharding.Etl.WaitForEtl(store, predicate, numOfBatches)
+                    ? _parent.Sharding.Etl.WaitForEtl(store, predicate, numOfProcessesToWaitFor)
                     : WaitForEtl(store, predicate);
-                /*
-                switch (dbMode)
-                {
-                    case RavenDatabaseMode.Single:
-                        return WaitForEtl(store, predicate);
-                    case RavenDatabaseMode.Sharded:
-                        return Sharding.Etl.WaitForEtl(store, predicate, count);
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(dbMode), dbMode, null);
-                }*/
             }
 
             public ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)

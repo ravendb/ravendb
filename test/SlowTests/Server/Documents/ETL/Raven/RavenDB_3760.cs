@@ -5,27 +5,30 @@
 // -----------------------------------------------------------------------
 
 using System;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_3760 : EtlTestBase
+    public class RavenDB_3760 : RavenTestBase
     {
         public RavenDB_3760(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void Can_use_metadata_in_transform_script()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_use_metadata_in_transform_script(Options options)
         {
-            using (var master = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
             {
-                var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(master, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                AddEtl(master, slave, "Users", @"
+                Etl.AddEtl(master, slave, "Users", @"
                         this.Name =  this['@metadata']['User'];
                         loadToUsers(this);");
 
@@ -53,15 +56,16 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void Null_returned_from_script_means_that_document_is_filtered_out()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Null_returned_from_script_means_that_document_is_filtered_out(Options options)
         {
-            using (var master = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
             {
-                var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(master, (n, statistics) => statistics.LoadSuccesses != 0, numOfProcessesToWaitFor: 3);
 
-                AddEtl(master, slave, "users", @"
+                Etl.AddEtl(master, slave, "users", @"
 if (this.Age % 2 == 0) 
     return;
 else 
@@ -104,15 +108,16 @@ loadToUsers(this);");
             }
         }
 
-        [Fact]
-        public void Null_script_means_no_transformation_nor_filtering_within_specified_collection()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Null_script_means_no_transformation_nor_filtering_within_specified_collection(Options options)
         {
-            using (var master = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
             {
-                var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(master, (n, statistics) => statistics.LoadSuccesses != 0, numOfProcessesToWaitFor: 2);
 
-                AddEtl(master, slave, "Users", null);
+                Etl.AddEtl(master, slave, "Users", null);
 
                 using (var session = master.OpenSession())
                 {

@@ -1,28 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Xunit;
 using Xunit.Abstractions;
 using Raven.Tests.Core.Utils.Entities;
-using System.IO;
+using FastTests;
+using Tests.Infrastructure;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_14707 : EtlTestBase
+    public class RavenDB_14707 : RavenTestBase
     {
         public RavenDB_14707(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void Should_delete_existing_document_when_filtered_by_script()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_delete_existing_document_when_filtered_by_script(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: @"if (this.Name == 'Joe Doe') loadToUsers(this);");
+                Etl.AddEtl(src, dest, "Users", script: @"if (this.Name == 'Joe Doe') loadToUsers(this);");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {

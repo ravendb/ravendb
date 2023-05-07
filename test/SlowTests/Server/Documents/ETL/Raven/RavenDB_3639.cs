@@ -5,27 +5,30 @@
 // -----------------------------------------------------------------------
 
 using System;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_3639 : EtlTestBase
+    public class RavenDB_3639 : RavenTestBase
     {
         public RavenDB_3639(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void Docs_are_transformed_according_to_provided_collection_specific_scripts()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Docs_are_transformed_according_to_provided_collection_specific_scripts(Options options)
         {
-            using (var master = GetDocumentStore())
+            using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
             {
-                var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(master, (n, statistics) => statistics.LoadSuccesses != 0, numOfProcessesToWaitFor: 2);
 
-                AddEtl(master, slave, "users",
+                Etl.AddEtl(master, slave, "users",
                     @"this.Name = 'patched ' + this.Name;
                       loadToUsers(this)");
 

@@ -8,7 +8,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
-using Raven.Server.Documents.ETL.Test;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
