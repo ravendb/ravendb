@@ -11,12 +11,15 @@ namespace Raven.Server.Documents.Sharding.Changes;
 
 internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseConnectionState>, IShardedDatabaseChanges
 {
+    private readonly ShardedChangesClientConnection _shardedChangesClientConnection;
     private readonly ServerStore _server;
 
-    public ShardedDatabaseChanges(ServerStore server, RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag,
+    public ShardedDatabaseChanges(ShardedChangesClientConnection shardedChangesClientConnection, ServerStore server, RequestExecutor requestExecutor, string databaseName,
+        Action onDispose, string nodeTag,
         bool throttleConnection)
         : base(requestExecutor, databaseName, onDispose, nodeTag, throttleConnection)
     {
+        _shardedChangesClientConnection = shardedChangesClientConnection;
         _server = server;
     }
 
@@ -246,9 +249,31 @@ internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseC
 
     protected override void ProcessNotification(string type, BlittableJsonReaderObject change)
     {
-        foreach (var state in States.ForceEnumerateInThreadSafeManner())
+        switch (type)
         {
-            state.Value.Send(change);
+            case nameof(TopologyChange):
+                var topologyChange = TopologyChange.FromJson(change);
+                var requestExecutor = RequestExecutor;
+                if (requestExecutor != null)
+                {
+                    var node = new ServerNode
+                    {
+                        Url = topologyChange.Url,
+                        Database = topologyChange.Database
+                    };
+
+                    requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(node)
+                    {
+                        TimeoutInMs = 0,
+                        ForceUpdate = true,
+                        DebugTag = "topology-change-notification"
+                    }).ConfigureAwait(false);
+                }
+                break;
+
+            default:
+                _shardedChangesClientConnection.OnNext(change);
+                break;
         }
     }
 }

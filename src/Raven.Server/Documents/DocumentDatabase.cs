@@ -7,6 +7,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Smuggler;
@@ -1495,7 +1496,16 @@ namespace Raven.Server.Documents
                 }
 
                 if (_lastTopologyIndex < record.Topology.Stamp.Index)
+                {
                     _lastTopologyIndex = record.Topology.Stamp.Index;
+
+                    var clusterTopology = ServerStore.GetClusterTopology();
+                    Changes.RaiseNotifications(new TopologyChange
+                    {
+                        Url = clusterTopology.GetUrlFromTag(ServerStore.NodeTag),
+                        Database = Name
+                    });
+                }
 
                 ClientConfiguration = record.Client;
                 IdentityPartsSeparator = record.Client is { Disabled: false }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
@@ -79,7 +80,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         _changes = new Dictionary<int, ShardedDatabaseChanges>();
         foreach (var shardToTopology in _context.ShardsTopology)
         {
-            _changes[shardToTopology.Key] = new ShardedDatabaseChanges(_context.ServerStore, _context.ShardExecutor.GetRequestExecutorAt(shardToTopology.Key), ShardHelper.ToShardName(_context.DatabaseName, shardToTopology.Key), onDispose: null, nodeTag: null, _throttleConnection);
+            _changes[shardToTopology.Key] = new ShardedDatabaseChanges(this, _context.ServerStore, _context.ShardExecutor.GetRequestExecutorAt(shardToTopology.Key), ShardHelper.ToShardName(_context.DatabaseName, shardToTopology.Key), onDispose: null, nodeTag: null, _throttleConnection);
             tasks.Add(_changes[shardToTopology.Key].EnsureConnectedNow());
         }
 

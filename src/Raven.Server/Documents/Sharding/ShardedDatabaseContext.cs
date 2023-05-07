@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -51,6 +52,7 @@ namespace Raven.Server.Documents.Sharding
 
         private readonly DatabasesLandlord.StateChange _orchestratorStateChange;
         private readonly DatabasesLandlord.StateChange _urlUpdateStateChange;
+        private long _lastTopologyChangeEtag = 0;
 
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
@@ -128,6 +130,19 @@ namespace Raven.Server.Documents.Sharding
             Indexes.Update(record, index);
 
             SubscriptionsStorage.Update(record);
+
+            var topologyChange = record.Sharding.Orchestrator.Topology.Stamp?.Index ?? 0;
+            if (topologyChange > _lastTopologyChangeEtag)
+            {
+                _lastTopologyChangeEtag = topologyChange;
+
+                var clusterTopology = ServerStore.GetClusterTopology();
+                Changes.RaiseNotifications(new TopologyChange
+                {
+                    Url = clusterTopology.GetUrlFromTag(ServerStore.NodeTag),
+                    Database = DatabaseName
+                });
+            }
 
             Interlocked.Exchange(ref _record, record);
         }
