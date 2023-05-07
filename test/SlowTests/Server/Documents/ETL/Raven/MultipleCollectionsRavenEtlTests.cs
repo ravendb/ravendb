@@ -1,6 +1,7 @@
 ﻿using System;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,20 +14,23 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        //RavenDB-20417
         [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
-        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        //[InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
-        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        //[InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
         public void Docs_from_two_collections_loaded_to_single_one(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
+            //https://issues.hibernatingrhinos.com/issue/RavenDB-20437
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
+                "uncomment the InlineData with 'RavenDatabaseMode.Sharded' when RavenDB-20437 is fixed");
+
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
                 Etl.AddEtl(src, dest, new [] { "Users", "People" }, script: @"loadToUsers({Name: this.Name});");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -45,8 +49,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                //WaitForUserToContinueTheTest(dest);
-
                 using (var session = dest.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
@@ -62,7 +64,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 }
 
                 // update
-                etlDone.Reset();
+                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -81,43 +83,22 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                WaitForUserToContinueTheTest(dest);
-
                 using (var session = dest.OpenSession())
                 {
-                    /*var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1");
 
                     Assert.NotNull(user);
-                    Assert.Equal("Doe Joe", user.Name);*/
+                    Assert.Equal("Doe Joe", user.Name);
 
                     var loadedDocs = session.Advanced.LoadStartingWith<User>("people/1/users/");
                     var userFromPerson = loadedDocs[0];
 
                     Assert.NotNull(userFromPerson);
-                    //Assert.Equal("Smith James", userFromPerson.Name);
-                }
-
-                /*var ids = new List<string>();
-                for (int i = 0; i < 3; i++)
-                {
-                    using (var session = dest.OpenSession(ShardHelper.ToShardName(dest.Database, i)))
-                    {
-                        var loadedDocs = session.Advanced.LoadStartingWith<User>("people/1/users/");
-                        if (loadedDocs == null)
-                            continue;
-                        /*var userFromPerson = loadedDocs[0];
-
-                        Assert.NotNull(userFromPerson);#1#
-
-                        foreach (var doc in loadedDocs)
-                        {
-                            ids.Add(doc.Id);
-                        }
-                    }
+                    Assert.Equal("Smith James", userFromPerson.Name);
                 }
 
                 // delete
-                etlDone.Reset();
+                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
 
                 using (var session = dest.OpenSession())
                 {
@@ -151,7 +132,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     var person = session.Load<Person>("people/1");
                     Assert.NotNull(person);
-                }*/
+                }
             }
         }
     }

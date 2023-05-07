@@ -363,7 +363,7 @@ var doc = loadToUsers(this);
 doc.addCounter(loadCounter('likes'));
 "
                 );
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -443,7 +443,7 @@ if (hasCounter('down')) {
 }
 "
                 );
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -638,7 +638,7 @@ if (hasCounter('down')) {
             {
                 Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -652,7 +652,7 @@ if (hasCounter('down')) {
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 3);
+                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 3);
 
                 using (var session = src.OpenSession())
                 {
@@ -904,7 +904,6 @@ loadToUsers(this);");
             }
         }
 
-        //todo
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set(Options options)
@@ -1118,7 +1117,7 @@ function loadCountersOfUsersBehavior(docId, counter)
     }
 ");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfBatches: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {

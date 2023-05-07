@@ -760,11 +760,6 @@ namespace Raven.Server.Documents.ETL
 
                 try
                 {
-                    if (ShardHelper.TryGetShardNumberFromDatabaseName(Database.Name, out var number) && number == 1)
-                    {
-
-                    }
-
                     _waitForChanges.Reset();
 
                     var startTime = Database.Time.GetUtcNow();

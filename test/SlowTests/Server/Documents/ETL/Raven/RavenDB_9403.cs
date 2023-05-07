@@ -1,25 +1,28 @@
 ﻿using System;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_9403 : EtlTestBase
+    public class RavenDB_9403 : RavenTestBase
     {
         public RavenDB_9403(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void Identifier_of_loaded_doc_should_not_be_created_using_cluster_identities()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Identifier_of_loaded_doc_should_not_be_created_using_cluster_identities(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", "loadToPeople(this);");
+                Etl.AddEtl(src, dest, "Users", "loadToPeople(this);");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {

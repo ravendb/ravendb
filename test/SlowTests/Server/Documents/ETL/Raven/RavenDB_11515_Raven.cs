@@ -1,23 +1,26 @@
 ﻿using System;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_11515_Raven : EtlTestBase
+    public class RavenDB_11515_Raven : RavenTestBase
     {
         public RavenDB_11515_Raven(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void Can_filter_out_deletions_of_documents()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_filter_out_deletions_of_documents(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
 @"
     loadToUsers(this);
 
@@ -26,7 +29,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
     }
 ");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -62,13 +65,14 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void Can_define_multiple_delete_behavior_functions()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_define_multiple_delete_behavior_functions(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: new []{ "Users", "Employees"}, script:
+                Etl.AddEtl(src, dest, collections: new []{ "Users", "Employees"}, script:
                     @"
     loadToUsers(this);
 
@@ -81,7 +85,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
     }
 ");
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -106,8 +110,8 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     Assert.NotEmpty(session.Advanced.LoadStartingWith<User>("employees/1"));
                 }
 
-                etlDone.Reset();
-
+                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
+                
                 using (var session = src.OpenSession())
                 {
                     session.Delete("users/1");

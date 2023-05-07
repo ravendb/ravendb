@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -46,13 +44,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     {
                         if (string.IsNullOrEmpty(state.StartsWith) == false)
                         {
-                            var documentsStartingWith = RequestHandler.Database.DocumentsStorage.GetDocumentsStartingWith(context, state.StartsWith, state.Matches, state.Excludes,
+                            return RequestHandler.Database.DocumentsStorage.GetDocumentsStartingWith(context, state.StartsWith, state.Matches, state.Excludes, 
                                 state.StartAfter,
                                 state.LastIteratedEtag == null ? state.Start : 0, // if we iterated already some docs then we pass 0 as Start and rely on state.Skip
                                 state.Take,
                                 state.Skip);
-                            var asList = documentsStartingWith.ToList();
-                            return asList;
                         }
 
                         if (state.LastIteratedEtag != null)
