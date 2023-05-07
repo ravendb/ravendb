@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -23,10 +25,11 @@ public class BasicChangesDocumentsTests : RavenTestBase
         {
             using (var changes = store.Changes())
             {
+
                 await changes.EnsureConnectedNow();
 
                 const int numberOfDocuments = 10;
-
+                var count = 0L;
                 var cde = new CountdownEvent(numberOfDocuments);
 
                 for (var i = 0; i < numberOfDocuments; i++)
@@ -34,7 +37,11 @@ public class BasicChangesDocumentsTests : RavenTestBase
                     var forDocument = changes
                         .ForDocument($"orders/{i}");
 
-                    forDocument.Subscribe(x => cde.Signal());
+                    forDocument.Subscribe(x =>
+                    {
+                        Interlocked.Increment(ref count);
+                        cde.Signal();
+                    });
 
                     await forDocument.EnsureSubscribedNow();
                 }
@@ -49,6 +56,7 @@ public class BasicChangesDocumentsTests : RavenTestBase
                 }
 
                 Assert.True(cde.Wait(TimeSpan.FromSeconds(60)), $"Missed {cde.CurrentCount} events.");
+                Assert.Equal(numberOfDocuments, count);
             }
         }
     }

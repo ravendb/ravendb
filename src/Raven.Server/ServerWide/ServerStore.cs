@@ -1195,37 +1195,6 @@ namespace Raven.Server.ServerWide
             NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
                 NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
 
-            NotifyDatabases(DatabasesLandlord.DatabasesCache, database => database.Changes.RaiseNotifications(new TopologyChange
-            {
-                Url = topology.GetUrlFromTag(NodeTag),
-                Database = database.Name
-            }));
-
-            NotifyDatabases(DatabasesLandlord.ShardedDatabasesCache, context => context.Changes.RaiseNotifications(new TopologyChange
-            {
-                Url = topology.GetUrlFromTag(NodeTag),
-                Database = context.DatabaseName
-            }));
-
-            static void NotifyDatabases<TItem>(ResourceCache<TItem> cache, Action<TItem> action)
-            {
-                foreach (var kvp in cache)
-                {
-                    TItem item;
-                    try
-                    {
-                        if (kvp.Value.IsCompletedSuccessfully == false)
-                            continue;
-                        item = kvp.Value.Result;
-                    }
-                    catch (Exception)
-                    {
-                        continue;
-                    }
-
-                    action(item);
-                }
-            }
         }
 
         private Task OnDatabaseChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType _, object state)
