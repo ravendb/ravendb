@@ -13,6 +13,7 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Fixed;
+using Voron.Data.Lookups;
 
 namespace Corax.Queries
 {
@@ -128,25 +129,18 @@ namespace Corax.Queries
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly TVal _low, _high;
-        private readonly CompactTree _tree;
-        private readonly FixedSizeTree<TVal> _set;
-        private readonly FixedSizeTree<TVal>.IFixedSizeIterator _iterator;
+        private Lookup<TVal>.Iterator _iterator;
         private bool _first;
 
-        private const int TermBufferSize = 32;
-        private fixed byte _termsBuffer[TermBufferSize];
-
-        public TermNumericRangeProvider(IndexSearcher searcher, FixedSizeTree<TVal> set,
-            CompactTree tree, FieldMetadata field, TVal low, TVal high)
+        public TermNumericRangeProvider(IndexSearcher searcher, Lookup<TVal> set, FieldMetadata field, TVal low, TVal high)
         {
             _searcher = searcher;
             _field = field;
             _iterator = set.Iterate();
             _low = low;
             _high = high;
-            _set = set;
-            _tree = tree;
             _first = true;
+
         }
 
         public void Reset()
@@ -160,36 +154,32 @@ namespace Corax.Queries
             bool hasNext;
             if (_first)
             {
-                hasNext = _iterator.Seek(_low);
+                _iterator.Seek(_low);
                 _first = false;
                 wasFirst = true;
             }
-            else
-            {
-                hasNext = _iterator.MoveNext();
-            }
+
+            hasNext = _iterator.MoveNext(out var key, out var termId);
 
             if (hasNext == false)
                 goto Empty;
             
-            var curVal = _iterator.CurrentKey;
             if (typeof(TLow) == typeof(Range.Exclusive))
             {
-                if (wasFirst && curVal == _low)
+                if (wasFirst && key == _low)
                 {
                     return Next(out term);
                 }
             }     
 
 
-            var cmp = _high.CompareTo(curVal);
+            var cmp = _high.CompareTo(key);
             if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 || 
                 typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
             {
                 goto Empty;
             }
             
-            var termId = _iterator.CreateReaderForCurrent().ReadLittleEndianInt64();
             // Ratio will be always 1 (sizeof(T)/sizeof(T))
             term = _searcher.TermQuery(_field, termId, 1);
             return true;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data.Compression;
@@ -14,6 +15,7 @@ using Voron.Impl.Paging;
 using Sparrow.Collections;
 using Sparrow.Server;
 using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees
@@ -32,7 +34,7 @@ namespace Voron.Data.BTrees
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private Dictionary<Slice, FixedSizeTree<double>> _fixedSizeTreesForDouble;
 
-        private SliceSmallSet<CompactTree> _compactTreesLocator;
+        private SliceSmallSet<IPrepareForCommit> _prepareLocator;
 
         public event Action<long, PageFlags> PageModified;
         public event Action<long, PageFlags> PageFreed;
@@ -1285,11 +1287,9 @@ namespace Voron.Data.BTrees
 
         internal void PrepareForCommit()
         {
-            if (_compactTreesLocator != null)
-            {
-                foreach (var ct in _compactTreesLocator.Values)
-                    ct.PrepareForCommit();
-            }
+            if (_prepareLocator == null) return;
+            foreach (var ct in _prepareLocator.Values)
+                ct.PrepareForCommit();
         }
 
         public void Dispose()
@@ -1311,7 +1311,7 @@ namespace Voron.Data.BTrees
             }
 
             DecompressionsCache?.Dispose();
-            _compactTreesLocator?.Dispose();
+            _prepareLocator?.Dispose();
         }
 
         private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, int len, out byte* pos)
@@ -1388,22 +1388,53 @@ namespace Voron.Data.BTrees
         
         public CompactTree CompactTreeFor(Slice key)
         {
-            if (_compactTreesLocator == null)
-                _compactTreesLocator = new SliceSmallSet<CompactTree>(128);
+            if (_prepareLocator == null)
+                _prepareLocator = new SliceSmallSet<IPrepareForCommit>(128);
 
-            if (_compactTreesLocator.TryGetValue(key, out var compactTree) == false)
+            if (_prepareLocator.TryGetValue(key, out var prep) == false)
             {
-                compactTree = CompactTree.InternalCreate(this, key);
+                var compactTree = CompactTree.InternalCreate(this, key);
                 if (compactTree == null) // missing value on read transaction
                     return null;
 
                 var keyClone = key.Clone(_llt.Allocator);
-                _compactTreesLocator.Add(keyClone, compactTree);
+                _prepareLocator.Add(keyClone, compactTree);
+                return compactTree;
             }
 
             State.Flags |= TreeFlags.CompactTrees;
 
-            return compactTree;
+            return (CompactTree)prep;
+        }
+
+        
+        public Lookup<TKey> LookupFor<TKey>(string key)
+            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+        {
+            using var _ = Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out var keySlice);
+            return LookupFor<TKey>(keySlice);
+        }
+        
+        public Lookup<TKey> LookupFor<TKey>(Slice key)
+            where TKey : unmanaged, IComparable<TKey>, IMinMaxValue<TKey>
+        {
+            if (_prepareLocator == null)
+                _prepareLocator = new SliceSmallSet<IPrepareForCommit>(128);
+
+            if (_prepareLocator.TryGetValue(key, out var prep) == false)
+            {
+                var lookup = Lookup<TKey>.InternalCreate(this, key);
+                if (lookup == null) // missing value on read transaction
+                    return null;
+
+                var keyClone = key.Clone(_llt.Allocator);
+                _prepareLocator.Add(keyClone, lookup);
+                return lookup;
+            }
+
+            State.Flags |= TreeFlags.Lookups;
+
+            return (Lookup<TKey>)prep;
         }
 
         public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)

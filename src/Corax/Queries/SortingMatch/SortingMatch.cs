@@ -8,6 +8,7 @@ using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
 using Voron.Data.Fixed;
+using Voron.Data.Lookups;
 
 namespace Corax.Queries
 {
@@ -287,26 +288,21 @@ namespace Corax.Queries
         
         private struct EntryComparerByLong : IEntryComparer<long>, IComparerInit
         {
-            private FixedSizeTree _fst;
+            private Lookup<long> _lookup;
 
             public int Compare(long x, long y)
             {
-                if (_fst == null)
+                if (_lookup  == null)
                     return 0; // nothing to figure out _by_
-                
-                using var _ = _fst.Read(x, out var xSlice);
-                using var __ = _fst.Read(y, out var ySlice);
 
-                if (ySlice.HasValue == false)
+                var hasX = _lookup.TryGetValue(x, out var xTerm);
+                if (_lookup.TryGetValue(y, out var yTerm) == false)
                 {
-                    return xSlice.HasValue == false ? 0 : 1;
+                    return hasX == false ? 0 : 1;
                 }
 
-                if (xSlice.HasValue == false)
+                if (hasX == false)
                     return -1;
-
-                long xTerm = xSlice.ReadInt64();
-                long yTerm = ySlice.ReadInt64();
 
                 var cmp = xTerm.CompareTo(yTerm);
                 return cmp == 0 ? x.CompareTo(y) : cmp;
@@ -319,41 +315,37 @@ namespace Corax.Queries
 
             public void Init(ref SortingMatch<TInner> match)
             {
-                _fst = match._searcher.LongReader(match._orderMetadata.Field.FieldName);
+                _lookup = match._searcher.LongReader(match._orderMetadata.Field.FieldName);
             }
             
             public string GetEntryText(long x)
             {
-                using var _ = _fst.Read(x, out var xSlice);
-                return xSlice.HasValue == false ? "n/a" : xSlice.ReadInt64().ToString(CultureInfo.InvariantCulture);
+                return _lookup.TryGetValue(x, out var xTerm) ? xTerm.ToString() : "n/a";
             }
 
         }
         
         private struct EntryComparerByDouble : IEntryComparer<long>, IComparerInit
         {
-            private FixedSizeTree _fst;
+            private Lookup<long> _lookup;
 
             public int Compare(long x, long y)
             {
-                if (_fst == null)
+                if (_lookup  == null)
                     return 0; // nothing to figure out _by_
-                
-                using var _ = _fst.Read(x, out var xSlice);
-                using var __ = _fst.Read(y, out var ySlice);
 
-                if (ySlice.HasValue == false)
+                var hasX = _lookup.TryGetValue(x, out var xTerm);
+                if (_lookup.TryGetValue(y, out var yTerm) == false)
                 {
-                    return xSlice.HasValue == false ? 0 : 1;
+                    return hasX == false ? 0 : 1;
                 }
 
-                if (xSlice.HasValue == false)
+                if (hasX == false)
                     return -1;
 
-                var xTerm = xSlice.ReadDouble();
-                var yTerm = ySlice.ReadDouble();
-
-                var cmp = xTerm.CompareTo(yTerm);
+                double xDouble = BitConverter.Int64BitsToDouble(xTerm);
+                double yDouble = BitConverter.Int64BitsToDouble(yTerm);
+                var cmp = xDouble.CompareTo(yDouble);
                 return cmp == 0 ? x.CompareTo(y) : cmp;
             }
 
@@ -364,13 +356,12 @@ namespace Corax.Queries
 
             public string GetEntryText(long x)
             {
-                using var _ = _fst.Read(x, out var xSlice);
-                return xSlice.HasValue == false ? "n/a" : xSlice.ReadDouble().ToString(CultureInfo.InvariantCulture);
+                return _lookup.TryGetValue(x, out var xTerm) ? xTerm.ToString() : "n/a";
             }
 
             public void Init(ref SortingMatch<TInner> match)
             {
-                _fst = match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
+                _lookup = match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
             }
         }
 
