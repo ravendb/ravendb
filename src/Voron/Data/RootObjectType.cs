@@ -11,6 +11,7 @@
         CompactTree = 6,
         Set = 7,
         Container = 8,
-        PersistentDictionary = 9
+        PersistentDictionary = 9,
+        Lookup = 10
     }
 }

@@ -18,6 +18,7 @@ using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
+using Voron.Data.Lookups;
 
 namespace Corax;
 
@@ -427,20 +428,20 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new SpatialReader(_transaction.LowLevelTransaction, _entriesToSpatialTree, name);
     }
     
-    public FixedSizeTree LongReader(Slice name)
+    public Lookup<long> LongReader(Slice name)
     {
         if (_entriesToTermsTree == null)
             return null;
         IndexFieldsMappingBuilder.GetFieldNameForLongs(Allocator, name, out var longName);
-        return _entriesToTermsTree.FixedTreeFor(longName, sizeof(long));
+        return _entriesToTermsTree.LookupFor<long>(longName);
     }
 
-    public FixedSizeTree DoubleReader(Slice name)
+    public Lookup<long> DoubleReader(Slice name)
     {
         if (_entriesToTermsTree == null)
             return null;
         IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, name, out var dblName);
-        return _entriesToTermsTree.FixedTreeFor(dblName, sizeof(double));
+        return _entriesToTermsTree.LookupFor<long>(dblName);
     }
     
     public void Dispose()

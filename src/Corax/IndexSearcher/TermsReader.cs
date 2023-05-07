@@ -8,6 +8,7 @@ using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
+using Voron.Data.Lookups;
 using Voron.Impl;
 
 namespace Corax;
@@ -15,7 +16,7 @@ namespace Corax;
 public unsafe struct TermsReader : IDisposable
 {
     private readonly LowLevelTransaction _llt;
-    private readonly FixedSizeTree _fst;
+    private readonly Lookup<long> _lookup;
     private readonly CompactKeyCacheScope _xKeyScope, _yKeyScope;
 
     private const int CacheSize = 64;
@@ -30,7 +31,7 @@ public unsafe struct TermsReader : IDisposable
         bs.Clear();
         _lastPage = new();
         _cache = ((long, UnmanagedSpan)*)bs.Ptr;
-        _fst = entriesToTermsTree.FixedTreeFor(name, sizeof(long));
+        _lookup = entriesToTermsTree.LookupFor<long>(name);
         _xKeyScope = new CompactKeyCacheScope(_llt);
         _yKeyScope = new CompactKeyCacheScope(_llt);
     }
@@ -43,14 +44,12 @@ public unsafe struct TermsReader : IDisposable
     
     public bool TryGetTermFor(long id, out string term)
     {
-        using var _ = _fst.Read(id, out var termId);
-        if (termId.HasValue == false)
+        if (_lookup.TryGetValue(id, out var termContainerId) == false)
         {
             term = null;
             return false;
         }
 
-        long termContainerId = termId.ReadInt64();
         var item = Container.Get(_llt, termContainerId);
         int remainderBits = item.Address[0] >> 4;
         int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
@@ -69,10 +68,8 @@ public unsafe struct TermsReader : IDisposable
     
     private void ReadTerm(long id, out ReadOnlySpan<byte> term, CompactKeyCacheScope scope)
     {
-        using var _ = _fst.Read(id, out var termId);
-        if (termId.HasValue)
+        if (_lookup.TryGetValue(id, out var termContainerId) )
         {
-            long termContainerId = termId.ReadInt64();
             var item = Container.Get(_llt, termContainerId);
             int remainderBits = item.Address[0] >> 4;
             int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
@@ -96,11 +93,10 @@ public unsafe struct TermsReader : IDisposable
             return cache.Value;
         }
 
-        using var _ = _fst.Read(entryId, out var s);
+        var hasValue = _lookup.TryGetValue(entryId, out var termId);
         UnmanagedSpan term = UnmanagedSpan.Empty;
-        if (s.HasValue)
+        if (hasValue)
         {
-            long termId = s.ReadInt64();
             var item = Container.MaybeGetFromSamePage(_llt, ref _lastPage, termId);
             term = item.ToUnmanagedSpan();
         }
@@ -116,7 +112,15 @@ public unsafe struct TermsReader : IDisposable
     {
         var xItem = GetTerm(x);
         var yItem = GetTerm(y);
-        
+
+        if (yItem.Address == null)
+        {
+            return xItem.Address == null ? 0 : 1;
+        }
+
+        if (xItem.Address == null)
+            return -1;
+
         var match = AdvMemory.Compare(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
         if (match != 0)
             return match;
@@ -130,6 +134,5 @@ public unsafe struct TermsReader : IDisposable
         _cacheScope.Dispose();
         _yKeyScope.Dispose();
         _xKeyScope .Dispose();
-        _fst.Dispose();
     }
 }
