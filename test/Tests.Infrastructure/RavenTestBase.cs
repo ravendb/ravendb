@@ -777,22 +777,23 @@ namespace FastTests
 
             public Options(Options options)
             {
+                AdminCertificate = options.AdminCertificate;
+                ClientCertificate = options.ClientCertificate;
+                CreateDatabase = options.CreateDatabase;
+                DeleteDatabaseOnDispose = options.DeleteDatabaseOnDispose;
+                DeleteTimeout = options.DeleteTimeout;
+                Encrypted = options.Encrypted;
+                IgnoreDisabledDatabase = options.IgnoreDisabledDatabase;
+                ModifyDatabaseName = options.ModifyDatabaseName;
+                ModifyDatabaseRecord = options.ModifyDatabaseRecord;
+                ModifyDocumentStore = options.ModifyDocumentStore;
+                Path = options.Path;
+                ReplicationFactor = options.ReplicationFactor;
+                RunInMemory = options.RunInMemory;
+                Server = options.Server;
+                DatabaseMode = options.DatabaseMode;
+                _descriptionBuilder = new StringBuilder(options._descriptionBuilder.ToString());
                 _frozen = options._frozen;
-                _clientCertificate = options._clientCertificate;
-                _adminCertificate = options._adminCertificate;
-                _createDatabase = options._createDatabase;
-                _deleteDatabaseOnDispose = options._deleteDatabaseOnDispose;
-                _deleteTimeout = options._deleteTimeout;
-                _server = options._server;
-                _replicationFactor = options._replicationFactor;
-                _ignoreDisabledDatabase = options._ignoreDisabledDatabase;
-                _modifyDocumentStore = options._modifyDocumentStore;
-                _modifyDatabaseRecord = options._modifyDatabaseRecord;
-                _modifyDatabaseName = options._modifyDatabaseName;
-                _path = options._path;
-                _runInMemory = options._runInMemory;
-                _encrypted = options._encrypted;
-                _descriptionBuilder = options._descriptionBuilder;
             }
 
             public static Options ForSearchEngine(RavenSearchEngineMode mode)
@@ -1037,25 +1038,7 @@ namespace FastTests
 
             public Options Clone()
             {
-                return new Options
-                {
-                    AdminCertificate = AdminCertificate,
-                    ClientCertificate = ClientCertificate,
-                    CreateDatabase = CreateDatabase,
-                    DeleteDatabaseOnDispose = DeleteDatabaseOnDispose,
-                    DeleteTimeout = DeleteTimeout,
-                    Encrypted = Encrypted,
-                    IgnoreDisabledDatabase = IgnoreDisabledDatabase,
-                    ModifyDatabaseName = ModifyDatabaseName,
-                    ModifyDatabaseRecord = ModifyDatabaseRecord,
-                    ModifyDocumentStore = ModifyDocumentStore,
-                    Path = Path,
-                    ReplicationFactor = ReplicationFactor,
-                    RunInMemory = RunInMemory,
-                    Server = Server,
-                    DatabaseMode = DatabaseMode,
-                    _descriptionBuilder = new StringBuilder(_descriptionBuilder.ToString())
-                };
+                return new Options(this);
             }
         }
 

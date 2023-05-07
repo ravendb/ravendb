@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -26,11 +25,12 @@ namespace SlowTests.Client.TimeSeries.Policies
         public TimeSeriesConfigurationTests(ITestOutputHelper output) : base(output)
         {
         }
-
-        [Fact]
-        public async Task CanConfigureTimeSeries()
+        
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanConfigureTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var config = new TimeSeriesConfiguration();
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
@@ -82,10 +82,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task TimeSeriesConfigurationNotChanged()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TimeSeriesConfigurationNotChanged(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var config = new TimeSeriesConfiguration
                 {
@@ -103,9 +104,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                     },
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var db = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/1"));
                 var runner = db.TimeSeriesPolicyRunner;
-
 
                 config = new TimeSeriesConfiguration
                 {
@@ -128,11 +128,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                 var runner2 = db.TimeSeriesPolicyRunner;
 
                 Assert.Equal(runner, runner2);
-
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanConfigureTimeSeries2(Options options)
         {
@@ -200,7 +199,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanConfigureTimeSeries3(Options options)
         {
@@ -279,10 +278,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task NotValidConfigureShouldThrow()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task NotValidConfigureShouldThrow(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new MyRawPolicy(TimeValue.FromMinutes(0));
                 var config = new TimeSeriesConfiguration
@@ -357,11 +357,14 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanExecuteRollupInTheCluster()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExecuteRollupInTheCluster(Options options)
         {
             var cluster = await CreateRaftCluster(3);
-            using (var store = GetDocumentStore(new Options
+            options.Server = cluster.Leader;
+            options.ReplicationFactor = 3;
+            using (var store = GetDocumentStore(new Options(options)
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3
@@ -448,10 +451,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             [TimeSeriesValue(0)] public double Measure1 { get; set; }
         }
 
-        [Fact]
-        public async Task RollupWithMoreThan5ValuesShouldRaiseAlert()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RollupWithMoreThan5ValuesShouldRaiseAlert(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var p1 = new TimeSeriesPolicy("ByMinute", TimeValue.FromMinutes(1));
 
@@ -495,8 +499,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                     }
                     session.SaveChanges();
                 }
-
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/KARMEL"));
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
@@ -515,10 +519,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task RollupWithMoreThan5ValuesShouldHalt()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RollupWithMoreThan5ValuesShouldHalt(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var p1 = new TimeSeriesPolicy("ByMinute", TimeValue.FromMinutes(1));
 
@@ -563,7 +568,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await TimeSeries.WaitForPolicyRunnerAsync(database);
 
                 using (var session = store.OpenSession())
@@ -626,10 +631,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanExecuteSimpleRollup()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExecuteSimpleRollup(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var p1 = new TimeSeriesPolicy("BySecond", TimeValue.FromSeconds(1));
                 var p2 = new TimeSeriesPolicy("By2Seconds", TimeValue.FromSeconds(2));
@@ -664,7 +670,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
@@ -685,10 +691,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanExecuteRawRetention()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExecuteRawRetention(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var retention = TimeValue.FromHours(96);
                 var config = new TimeSeriesConfiguration
@@ -717,7 +724,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await TimeSeries.WaitForPolicyRunnerAsync(database);
 
                 using (var session = store.OpenSession())
@@ -728,10 +735,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanReExecuteRollupWhenOldValuesChanged()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReExecuteRollupWhenOldValuesChanged(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var p1 = new TimeSeriesPolicy("BySecond", TimeValue.FromSeconds(1));
                 var p2 = new TimeSeriesPolicy("By2Seconds", TimeValue.FromSeconds(2));
@@ -767,7 +775,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
@@ -799,10 +807,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task RemoveConfigurationWillKeepData()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RemoveConfigurationWillKeepData(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
@@ -839,7 +848,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
@@ -894,10 +903,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanRemoveConfigurationEntirely()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRemoveConfigurationEntirely(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
@@ -934,7 +944,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
@@ -960,10 +970,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanAddConfiguration()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanAddConfiguration(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
@@ -999,7 +1010,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
 
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
@@ -1021,10 +1032,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanRetainAndRollup()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRetainAndRollup(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now = DateTime.UtcNow;
                 var baseline = now.AddMinutes(-120);
@@ -1059,7 +1071,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1078,10 +1090,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanRetainAndRollup2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRetainAndRollup2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now = DateTime.UtcNow;
                 var minutes = 1440;
@@ -1118,11 +1131,11 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
-                WaitForUserToContinueTheTest(store);
+                
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/karmel", "Heartrate")?
@@ -1139,10 +1152,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanRetainAndRollupForMonths()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRetainAndRollupForMonths(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now = DateTime.UtcNow;
                 var baseline = now.AddMonths(-48);
@@ -1179,7 +1193,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1199,8 +1213,9 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanRecordAndReplay()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CanRecordAndReplay(Options options)
         {
             var recordFilePath = NewDataPath();
 
@@ -1215,7 +1230,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             };
 
             int count1, count2;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now = DateTime.UtcNow;
                 var baseline = now.AddHours(-2);
@@ -1253,7 +1268,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
@@ -1273,10 +1288,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task FullRetentionAndRollup()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task FullRetentionAndRollup(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var raw = new RawTimeSeriesPolicy(TimeValue.FromHours(24));
 
@@ -1316,10 +1332,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                     }
                     session.SaveChanges();
                 }
-
-                WaitForUserToContinueTheTest(store);
-
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1327,11 +1341,12 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task SkipRollupDeadSegmentAfterCleanup()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SkipRollupDeadSegmentAfterCleanup(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1370,18 +1385,19 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 EnsureReplicating(storeA, storeB);
-                var b = await Databases.GetDocumentDatabaseInstanceFor(storeB);
+                var b = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
                 await b.TombstoneCleaner.ExecuteCleanup();
                 await b.TimeSeriesPolicyRunner.RunRollups();
             }
         }
 
 
-        [Fact]
-        public async Task FullRetentionAndRollupInACluster()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task FullRetentionAndRollupInACluster(Options options)
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(new Options(options)
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3
@@ -1435,11 +1451,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 await Task.Delay(config.PolicyCheckFrequency.Value * 3);
-                WaitForUserToContinueTheTest(store);
-
+                
                 foreach (var node in cluster.Nodes)
                 {
-                    using (var nodeStore = GetDocumentStore(new Options
+                    using (var nodeStore = GetDocumentStore(new Options(options)
                     {
                         Server = node,
                         CreateDatabase = false,
@@ -1457,11 +1472,12 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task FullRetentionAndRollupInAClusterLargeTimeSpan()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task FullRetentionAndRollupInAClusterLargeTimeSpan(Options options)
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(new Options(options)
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3
@@ -1512,11 +1528,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 await Task.Delay(config.PolicyCheckFrequency.Value * 3);
-                WaitForUserToContinueTheTest(store);
-
+                
                 foreach (var node in cluster.Nodes)
                 {
-                    using (var nodeStore = GetDocumentStore(new Options
+                    using (var nodeStore = GetDocumentStore(new Options(options)
                     {
                         Server = node,
                         CreateDatabase = false,
@@ -1562,12 +1577,12 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task RollupLargeTime()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RollupLargeTime(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-
                 var p = new TimeSeriesPolicy("ByDay", TimeValue.FromDays(1));
 
                 var config = new TimeSeriesConfiguration
@@ -1599,7 +1614,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1615,12 +1630,12 @@ namespace SlowTests.Client.TimeSeries.Policies
         }
 
 
-        [Fact]
-        public async Task CanAddNewPolicyForExistingTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanAddNewPolicyForExistingTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Karmel" }, "users/karmel");
@@ -1661,7 +1676,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1674,10 +1689,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanReRollAfterRemoval()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReRollAfterRemoval(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var t = DateTime.UtcNow.AddYears(-1);
                 using (var session = store.OpenSession())
@@ -1707,7 +1723,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "companies/1"));
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1748,10 +1764,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanReRollAfterUpdate()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReRollAfterUpdate(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var t = DateTime.UtcNow.AddYears(-1);
                 using (var session = store.OpenSession())
@@ -1781,7 +1798,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "companies/1"));
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1819,10 +1836,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task RollupNamesShouldKeepOriginalCasing()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RollupNamesShouldKeepOriginalCasing(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var p1 = new TimeSeriesPolicy("By10Seconds", TimeValue.FromSeconds(10));
                 var p2 = new TimeSeriesPolicy("By1Minutes", TimeValue.FromMinutes(1));
@@ -1859,7 +1877,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store.Database : await Sharding.GetShardDatabaseNameForDocAsync(store, "users/karmel"));
                 await TimeSeries.WaitForPolicyRunnerAsync(database);
 
                 List<string> tsNames = default;
@@ -1883,12 +1901,13 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task IgnoreFromRollupNotRelevantDeadSegment()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Configuration | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task IgnoreFromRollupNotRelevantDeadSegment(Options options)
         {
             var baseline = RavenTestHelper.UtcToday.AddDays(-35);
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 var config = new TimeSeriesConfiguration
                 {
@@ -1931,11 +1950,9 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await SetupReplicationAsync(store1, store2);
                 await EnsureReplicatingAsync(store1, store2);
 
-                var storage2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
+                var storage2 = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? store2.Database : await Sharding.GetShardDatabaseNameForDocAsync(store2, "foo/bar"));
                 await storage2.TimeSeriesPolicyRunner.RunRollups(propagateException: true);
                 await storage2.TimeSeriesPolicyRunner.DoRetention(propagateException: true);
-
-                WaitForUserToContinueTheTest(store2);
             }
         }
     }
