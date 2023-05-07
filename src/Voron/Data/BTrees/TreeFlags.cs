@@ -12,5 +12,6 @@ namespace Voron.Data.BTrees
         LeafsCompressed = 8,
         Streams = 16,
         CompactTrees = 32,
+        Lookups = 64,
     }
 }

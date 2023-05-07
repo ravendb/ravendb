@@ -12,7 +12,6 @@ using Sparrow.Compression;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
-using Voron.Data.Fixed;
 using Voron.Data.PostingLists;
 
 namespace Corax;
@@ -27,38 +26,24 @@ public partial class IndexSearcher
     public TermMatch TermQuery(Slice field, Slice term, bool hasBoost = false) => TermQuery(FieldMetadata.Build(field, default, default, default, default, hasBoost: hasBoost), term);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private unsafe long GetContainerIdOfNumericalTerm<TNumeric>(in FieldMetadata field, out FieldMetadata numericalField, TNumeric term)
+    private long GetContainerIdOfNumericalTerm<TNumeric>(in FieldMetadata field, out FieldMetadata numericalField, TNumeric term)
     {
         long containerId = default;
         numericalField = default;
         if (typeof(TNumeric) == typeof(long))
         {
             numericalField = field.GetNumericFieldMetadata<long>(_transaction.Allocator);
-            using var set = _fieldsTree?.FixedTreeFor(numericalField.FieldName, sizeof(long));
-            if (set != null)
-            {
-                var ptr = set.ReadPtr((long)(object)term, out var length);
-                if (ptr != null)
-                {
-                    containerId = *(long*)ptr;
-                    Debug.Assert(length == sizeof(long));
-                }
-            }
+            _fieldsTree
+                ?.LookupFor<long>(numericalField.FieldName)
+                ?.TryGetValue((long)(object)term, out containerId);
 
         }
         else if (typeof(TNumeric) == typeof(double))
         {
             numericalField = field.GetNumericFieldMetadata<double>(_transaction.Allocator);
-            using var set = _fieldsTree?.FixedTreeForDouble(numericalField.FieldName, sizeof(double));
-            if (set != null)
-            {
-                var ptr = set.ReadPtr((double)(object)term, out var length);
-                if (ptr != null)
-                {
-                    containerId = *(long*)ptr;
-                    Debug.Assert(length == sizeof(double));
-                }
-            }
+             _fieldsTree
+                 ?.LookupFor<double>(numericalField.FieldName)
+                ?.TryGetValue((double)(object)term, out containerId);
         }
 
         return containerId;

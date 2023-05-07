@@ -2,39 +2,23 @@ using System;
 using System.Data;
 using System.Diagnostics;
 
-namespace Voron.Data.CompactTrees
+namespace Voron.Data.Lookups
 {
-    partial class CompactTree
+    unsafe partial class Lookup<TKey>
     {
-        public unsafe struct Iterator
+        public struct Iterator
         {
-            private readonly CompactTree _tree;
+            private readonly Lookup<TKey> _tree;
             private IteratorCursorState _cursor;
 
-            public Iterator(CompactTree tree)
+            public Iterator(Lookup<TKey> tree)
             {
                 _tree = tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
             }
 
-            public void Seek(string key)
+            public void Seek(TKey key)
             {
-                using var _ = Slice.From(_tree._llt.Allocator, key, out var slice);
-                Seek(slice);
-            }
-
-            public void Seek(ReadOnlySpan<byte> key)
-            {
-                _tree.FindPageFor(key, ref _cursor);
-
-                ref var state = ref _cursor._stk[_cursor._pos];
-                if (state.LastSearchPosition < 0)
-                    state.LastSearchPosition = ~state.LastSearchPosition;
-            }
-
-            public void Seek(CompactKey key)
-            {
-                key.ChangeDictionary(_tree.State.TreeDictionaryId);
                 _tree.FindPageFor(key, ref _cursor);
 
                 ref var state = ref _cursor._stk[_cursor._pos];
@@ -58,26 +42,21 @@ namespace Voron.Data.CompactTrees
                 }
             }
 
-            public bool MoveNext(out CompactKeyCacheScope scope, out long value)
+            public bool MoveNext(out TKey key, out long value)
             {
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)
                 {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
+                    Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
                     if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
                     {
-                        if (GetEntry(_tree, ref  state, state.LastSearchPosition, out scope, out value) == false)
-                        {
-                            scope.Dispose();
-                            return false;
-                        }
-
+                        GetKeyAndValue(ref  state, state.LastSearchPosition, out key, out value);
                         state.LastSearchPosition++;
                         return true;
                     }
                     if (_tree.GoToNextPage(ref _cursor) == false)
                     {
-                        scope = default;
+                        key = default;
                         value = default;
                         return false;
                     }
@@ -88,6 +67,29 @@ namespace Voron.Data.CompactTrees
         public Iterator Iterate()
         {
             return new Iterator(this);
-        }        
+        } 
+        
+        private bool GoToNextPage(ref IteratorCursorState cstate)
+        {
+            while (true)
+            {
+                PopPage(ref cstate); // go to parent
+                if (cstate._pos < 0)
+                    return false;
+
+                ref var state = ref cstate._stk[cstate._pos];
+                Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Branch));
+                if (++state.LastSearchPosition >= state.Header->NumberOfEntries)
+                    continue; // go up
+                do
+                {
+                    var next = GetValue(ref state, state.LastSearchPosition);
+                    PushPage(next, ref cstate);
+                    state = ref cstate._stk[cstate._pos];
+                } 
+                while (state.Header->IsBranch);
+                return true;
+            }
+        }
     }
 }

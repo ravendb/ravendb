@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
@@ -20,6 +21,7 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
+using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Impl;
 using InvalidOperationException = System.InvalidOperationException;
@@ -1546,7 +1548,7 @@ namespace Corax
             var fieldTree = fieldsTree.CompactTreeFor(indexedField.Name);
             var currentFieldTerms = indexedField.Textual;
             int termsCount = currentFieldTerms.Count;
-            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.Name, sizeof(long)); 
+            var entriesToTerms = entriesToTermsTree.LookupFor<long>(indexedField.Name); 
 
             _entriesAlreadyAdded.Clear();
          
@@ -1860,8 +1862,8 @@ namespace Corax
 
         private unsafe void InsertNumericFieldLongs(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
-            FixedSizeTree fieldTree = fieldsTree.FixedTreeFor(indexedField.NameLong, sizeof(long));
-            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.NameLong, sizeof(long)); 
+            var fieldTree = fieldsTree.LookupFor<long>(indexedField.NameLong);
+            var entriesToTerms = entriesToTermsTree.LookupFor<long>(indexedField.NameLong); 
 
             _entriesAlreadyAdded.Clear();
             
@@ -1877,8 +1879,8 @@ namespace Corax
                 UpdateEntriesForTerm(entries, entriesToTerms, term);
 
                 long termId;
-                using var _ = fieldTree.Read(term, out var result);
-                if (localEntry.TotalAdditions > 0 && result.HasValue == false)
+                var hasTerm = fieldTree.TryGetValue(term, out var existing);
+                if (localEntry.TotalAdditions > 0 && hasTerm == false)
                 {
                     Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(ref localEntry, tmpBuf, out termId);
@@ -1887,20 +1889,19 @@ namespace Corax
                     continue;
                 }
 
-                var existing = *((long*)result.Content.Ptr);
                 switch (AddEntriesToTerm(tmpBuf, existing, ref localEntry, out termId))
                 {
                     case AddEntriesToTermResult.UpdateTermId:
                         fieldTree.Add(term, termId);
                         break;
                     case AddEntriesToTermResult.RemoveTermId:
-                        fieldTree.Delete(term);
+                        fieldTree.TryRemove(term);
                         break;
                 }
             }
         }
 
-        private void UpdateEntriesForTerm(EntriesModifications entries, FixedSizeTree entriesToTerms, long term)
+        private void UpdateEntriesForTerm(EntriesModifications entries, Lookup<long> entriesToTerms, long term)
         {
             AddRange(_additionsForTerm, entries.Additions);
             AddRange(_removalsForTerm, entries.Removals);
@@ -1908,14 +1909,14 @@ namespace Corax
             InsertEntriesForTerm(entriesToTerms, term);
         }
 
-        private void InsertEntriesForTerm(FixedSizeTree entriesToTerms, long term)
+        private void InsertEntriesForTerm(Lookup<long> entriesToTerms, long term) 
         {
             foreach (long removal in _removalsForTerm)
             {
                 // if already added, we don't need to remove it in this batch
                 if (_entriesAlreadyAdded.Contains(removal))
                     continue;
-                entriesToTerms.Delete(removal);
+                entriesToTerms.TryRemove(removal);
             }
 
             foreach (long addition in _additionsForTerm)
@@ -1926,10 +1927,10 @@ namespace Corax
             }
         }
 
-        private unsafe void InsertNumericFieldDoubles(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        private void InsertNumericFieldDoubles(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
-            var fieldTree = fieldsTree.FixedTreeForDouble(indexedField.NameDouble, sizeof(long));
-            var entriesToTerms = entriesToTermsTree.FixedTreeFor(indexedField.NameDouble, sizeof(double)); 
+            var fieldTree = fieldsTree.LookupFor<long>(indexedField.NameDouble);
+            var entriesToTerms = entriesToTermsTree.LookupFor<long>(indexedField.NameDouble); 
 
             _entriesAlreadyAdded.Clear();
             foreach (var (term, entries) in indexedField.Doubles)
@@ -1941,27 +1942,27 @@ namespace Corax
                 if (localEntry.HasChanges() == false)
                     continue;
 
-                UpdateEntriesForTerm(entries, entriesToTerms, BitConverter.DoubleToInt64Bits(term));
+                long termAsLong = BitConverter.DoubleToInt64Bits(term);
+                UpdateEntriesForTerm(entries, entriesToTerms, termAsLong);
                 
-                using var _ = fieldTree.Read(term, out var result);
+                var hasTerm = fieldTree.TryGetValue(termAsLong, out var existing);
 
                 long termId;
-                if (localEntry.TotalAdditions > 0 && result.Size == 0) // no existing value
+                if (localEntry.TotalAdditions > 0 && hasTerm == false) // no existing value
                 {
                     Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(ref localEntry, tmpBuf, out termId);
-                    fieldTree.Add(term, termId);
+                    fieldTree.Add(termAsLong, termId);
                     continue;
                 }
 
-                var existing = *((long*)result.Content.Ptr);
                 switch (AddEntriesToTerm(tmpBuf, existing, ref localEntry, out termId))
                 {
                     case AddEntriesToTermResult.UpdateTermId:
-                        fieldTree.Add(term, termId);
+                        fieldTree.Add(termAsLong, termId);
                         break;
                     case AddEntriesToTermResult.RemoveTermId:
-                        fieldTree.Delete(term);
+                        fieldTree.TryRemove(termAsLong);
                         break;
                 }
             }

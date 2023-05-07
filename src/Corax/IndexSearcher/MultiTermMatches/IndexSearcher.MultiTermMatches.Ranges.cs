@@ -164,9 +164,9 @@ public partial class IndexSearcher
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        var set = _fieldsTree?.FixedTreeFor(fieldLong, sizeof(long));
+        var set = _fieldsTree?.LookupFor<long>(fieldLong);
 
-        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, long>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, long>(this, set, terms, field, low, high)));
+        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, long>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, long>(this, set, field, low, high)));
     }
 
     private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, double low, double high, bool isNegated)
@@ -178,8 +178,8 @@ public partial class IndexSearcher
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
         field = field.GetNumericFieldMetadata<double>(Allocator);
-        var set = _fieldsTree?.FixedTreeForDouble(field.FieldName, sizeof(long));
+        var set = _fieldsTree?.LookupFor<double>(field.FieldName);
             
-        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, double>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, double>(this, set, terms, field, low, high)));
+        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, double>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, double>(this, set, field, low, high)));
     }
 }
