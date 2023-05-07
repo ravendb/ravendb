@@ -11,6 +11,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Exception = System.Exception;
 
 namespace Raven.Server.Rachis;
 
@@ -137,10 +138,23 @@ public partial class Leader
         {
             var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
             _leader._entries[index] = new Leader.CommandState { TaskCompletionSource = tcs, CommandIndex = index };
-
             tcs.Task.ContinueWith(t =>
             {
-                Interlocked.Exchange(ref _leader._topologyModification, null)?.TrySetResult(null);
+                var current = Interlocked.Exchange(ref _leader._topologyModification, null);
+
+                try
+                {
+                    t.GetAwaiter().GetResult(); // this task is already completed here
+                    current?.TrySetResult(null);
+                }
+                catch (OperationCanceledException)
+                {
+                    current?.TrySetCanceled();
+                }
+                catch (Exception e)
+                {
+                    current?.TrySetException(e);
+                }
             });
         }
 
