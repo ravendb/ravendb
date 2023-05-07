@@ -22,7 +22,7 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
-        public class ShardedReplicationManager : ReplicationManager //TODO stav: change to interface?
+        public class ShardedReplicationManager : ReplicationManager
         {
             public readonly Dictionary<int, ReplicationManager> ShardReplications;
             private readonly ShardingConfiguration _config;
