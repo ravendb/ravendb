@@ -86,12 +86,6 @@ namespace Raven.Server.ServerWide
 
         public void ClearPublishedUrls()
         {
-            // using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-            // using (var tx = ctx.OpenWriteTransaction())
-            // {
-            //     PublishedServerUrls.Clear(ctx);
-            //     tx.Commit();
-            // }
             _serverStore.Engine.TxMerger.EnqueueSync(ctx =>
             {
                 PublishedServerUrls.Clear(ctx);

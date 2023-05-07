@@ -26,7 +26,10 @@ public class CandidateCastVoteInTermCommand : MergedTransactionCommand<ClusterOp
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
         _engine.CastVoteInTerm(context, _electionTerm, _engine.Tag, _reason);
-        _candidate.ElectionTerm = _candidate.RunRealElectionAtTerm = _electionTerm;
+        context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
+        {
+            _candidate.ElectionTerm = _candidate.RunRealElectionAtTerm = _electionTerm;
+        };
         return 1;
     }
 

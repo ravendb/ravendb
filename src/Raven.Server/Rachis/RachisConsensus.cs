@@ -9,7 +9,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using CsvHelper.Configuration.Attributes;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -1429,24 +1428,6 @@ namespace Raven.Server.Rachis
                 throw new RachisApplyException($"Failed to remove entry number {index} from raft log", e);
             }
         }
-
-        // public long AppendToLog(CommandBase cmd, long term)
-        // {
-        //     using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-        //     {
-        //         var djv = cmd.ToJson(context);
-        //         var cmdJson = context.ReadObject(djv, "raft/command");
-        //
-        //         using (var tx = context.OpenWriteTransaction())
-        //         {
-        //             var index = InsertToLeaderLog(context, term, cmdJson, RachisEntryFlags.StateMachineCommand);
-        //             tx.Commit();
-        //      
-        //             return index;
-        //         }
-        //     }
-        // }
-
 
         public unsafe long InsertToLeaderLog(ClusterOperationContext context, long term, BlittableJsonReaderObject cmd,
             RachisEntryFlags flags)

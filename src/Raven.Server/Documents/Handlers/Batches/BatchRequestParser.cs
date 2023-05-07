@@ -30,7 +30,6 @@ namespace Raven.Server.Documents.Handlers.Batches
     {
         internal static BatchRequestParser Instance = new BatchRequestParser();
 
-#pragma warning disable CS0659
         public class CommandData : IBatchCommandData
         {
             public CommandType Type { get; set; }
@@ -93,34 +92,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
             #endregion ravendata
 
-            public override bool Equals(object obj)
-            {
-                if ((obj == null) || this.GetType().Equals(obj.GetType()) == false )
-                {
-                    return false;
-                }
-
-                if (this != null && obj != null)
-                {
-                    Type type = this.GetType();
-                    foreach (System.Reflection.PropertyInfo pi in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
-                    {
-                        object selfValue = type.GetProperty(pi.Name).GetValue(this, null);
-                        object toValue = type.GetProperty(pi.Name).GetValue(obj, null);
-
-                        if (selfValue != toValue && (selfValue == null || !selfValue.Equals(toValue)))
-                        {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                }
-                return this == obj;
-            }
-
         }
-#pragma warning restore CS0659
 
 
         private static readonly int MaxSizeOfCommandsInBatchToCache = 128;

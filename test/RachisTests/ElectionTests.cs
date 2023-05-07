@@ -528,19 +528,35 @@ namespace RachisTests
 
         public long AppendToLog(RachisConsensus<CountingStateMachine> engine, CommandBase cmd, long term)
         {
-            using (engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            // using (engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            // {
+            //     var djv = cmd.ToJson(context);
+            //     var cmdJson = context.ReadObject(djv, "raft/command");
+            //
+            //     using (var tx = context.OpenWriteTransaction())
+            //     {
+            //         var index = engine.InsertToLeaderLog(context, term, cmdJson, RachisEntryFlags.StateMachineCommand);
+            //         tx.Commit();
+            //
+            //         return index;
+            //     }
+            // }
+
+            var index = -1L;
+
+            engine.TxMerger.EnqueueSync((context) =>
             {
+
                 var djv = cmd.ToJson(context);
                 var cmdJson = context.ReadObject(djv, "raft/command");
 
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    var index = engine.InsertToLeaderLog(context, term, cmdJson, RachisEntryFlags.StateMachineCommand);
-                    tx.Commit();
 
-                    return index;
-                }
-            }
+                index = engine.InsertToLeaderLog(context, term, cmdJson, RachisEntryFlags.StateMachineCommand);
+
+                return 1;
+            });
+
+            return index;
         }
     }
 }
