@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Batches;
 
@@ -143,6 +144,31 @@ public class ShardedBatchCommand : IBatchCommand
             }
 
             var commandStream = bufferedCommand.CommandStream;
+            if (cmd.Type == CommandType.DELETE && cmd.IdPrefixed)
+            {
+                if (behavior == ShardedBatchBehavior.TransactionalSingleBucketOnly)
+                    throw new ShardedBatchBehaviorViolationException($"Batch command '{nameof(DeletePrefixedCommandData)}' (prefixed id : '{cmd.Id}') does not operate on a single bucket as this is a multi-sharded operation," +
+                                                                     "which violates the requested sharded batch behavior to operate on a single bucket only.");
+                // send delete-prefixed-command to all shards
+                var keys = _databaseContext.DatabaseRecord.Sharding.Shards.Keys;
+                foreach (var key in keys)
+                {
+                    shardNumber = _databaseContext.ForTestingPurposes?.ModifyShardNumber(key) ?? key;
+                    yield return new SingleShardedCommand
+                    {
+                        Id = cmd.Id,
+                        ShardNumber = shardNumber,
+                        CommandStream = commandStream,
+                        PositionInResponse = positionInResponse++
+                    };
+                }
+
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
+                    "if we have prefixed sharding configured we might not need to send the command to all of the shards");
+
+                continue;
+            }
+
             if (bufferedCommand.ModifyIdentityStreamRequired)
             {
                 ModifyId(ref cmd, bufferedCommand.IsServerSideIdentity);
