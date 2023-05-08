@@ -684,11 +684,15 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (removed)
                 nodeList.Add(ServerStore.NodeTag);
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
                 if (first)
                 {
-                    foreach (var node in ServerStore.GetClusterTopology(context).AllNodes)
+                    Dictionary<string, string> allNodes = null;
+                    using (context.OpenReadTransaction())
+                    {
+                        allNodes = ServerStore.GetClusterTopology(context).AllNodes;
+                    }
+                    foreach (var node in allNodes)
                     {
                         if (node.Value == Server.WebUrl)
                         {
