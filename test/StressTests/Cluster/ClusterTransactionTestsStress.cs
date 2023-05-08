@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -23,7 +24,10 @@ public class ClusterTransactionTestsStress : ClusterTestBase
     public async Task CanCreateClusterTransactionRequest2(Options options)
     {
         DebuggerAttachedTimeout.DisableLongTimespan = true;
-        var (_, leader) = await CreateRaftCluster(2);
+        var (_, leader) = await CreateRaftCluster(2, customSettings: new Dictionary<string, string>
+        {
+            [RavenConfiguration.GetKey(x => x.Cluster.LogHistoryMaxEntries)] = "4096"
+        });
         options.Server = leader;
         options.ReplicationFactor = 2;
 
