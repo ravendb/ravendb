@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
@@ -23,208 +20,342 @@ namespace SlowTests.Smuggler
         {
         }
 
-        private string _file;
-        private DocumentStore _store1, _store2;
-
-        public void Initialize([CallerMemberName] string caller = null)
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExportAndImportWithConflicts_ToTheSameDatabase(Options options)
         {
-            _file = GetTempFileName();
-
-            _store1 = GetDocumentStore(new Options
+            var file = GetTempFileName();
+            try
             {
-                ModifyDatabaseName = s => $"{s}_store1",
-                ModifyDatabaseRecord = record =>
+                var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+                using (var store1 = GetDocumentStore(new Options
                 {
-                    record.ConflictSolverConfig = new ConflictSolver
+                    ModifyDatabaseName = s => $"{s}_store1",
+                    ModifyDatabaseRecord = record =>
                     {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            },caller: caller);
-            _store2 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => $"{s}_store2",
-                ModifyDatabaseRecord = record =>
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                using (var store2 = GetDocumentStore(new Options
                 {
-                    record.ConflictSolverConfig = new ConflictSolver
+                    ModifyDatabaseName = s => $"{s}_store2",
+                    ModifyDatabaseRecord = record =>
                     {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                {
+                    await GenerateConflict(store1, store2);
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store1.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    await AssertImport(store1);
                 }
-            }, caller: caller);
-        }
-        public override void Dispose()
-        {
-            _store1.Dispose();
-            _store2.Dispose();
-            File.Delete(_file);
-            base.Dispose();
-        }
-
-        [Fact]
-        public async Task CanExportAndImportWithConflicts_ToTheSameDatabase()
-        {
-            Initialize();
-            await GenerateConflict(_store1, _store2);
-
-            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
-            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-            await AssertImport(_store1);
-        }
-
-        [Fact]
-        public async Task CanExportAndImportWithConflicts_ToNewDatabase()
-        {
-            Initialize();
-            await GenerateConflict(_store1, _store2);
-
-            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
-            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-            using (var store3 = GetDocumentStore(new Options
+            }
+            finally
             {
-                ModifyDatabaseName = s => $"{s}_store3"
-            }))
-            {
-                await AssertImport(store3);
+                File.Delete(file);
             }
         }
 
-        [Fact]
-        public async Task CanExportAndImportWithConflicts_ToNewDatabase_JustOneCollection()
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExportAndImportWithConflicts_ToNewDatabase(Options options)
         {
-            Initialize();
-            await GenerateConflict(_store1, _store2);
-
-            var exportOperation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
-            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-            using (var store3 = GetDocumentStore(new Options
+            var file = GetTempFileName();
+            try
             {
-                ModifyDatabaseName = s => $"{s}_store3"
-            }))
-            {
-                var importOptions = new DatabaseSmugglerImportOptions { Collections = new List<string> { "Users" } };
-
-                for (int i = 0; i < 3; i++)
+                var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+                using (var store1 = GetDocumentStore(new Options
                 {
-                    var importOperation = await store3.Smuggler.ImportAsync(importOptions, _file);
-                    await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    var stats = await store3.Maintenance.SendAsync(new GetStatisticsOperation());
-                    Assert.Equal(0, stats.CountOfDocuments);          // Should be 0 Documents of 3 exported
-                    Assert.Equal(1, stats.CountOfDocumentsConflicts); // only 1 DocumentConflict of 4
-                    Assert.Equal(2, stats.CountOfConflicts);          // and only 2 Conflicts of 8
-
-                    var conflicts = (await store3.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
-                    Assert.Equal(2, conflicts.Count);
-
-                    Assert.Equal("A:3-EREREREREREREREREREREQ", conflicts[0].ChangeVector);
-                    Assert.True(conflicts[0].Doc.TryGet(nameof(User.Name), out string name));
-                    Assert.Equal("Fitzchak 1", name);
-
-                    Assert.Equal("A:3-IiIiIiIiIiIiIiIiIiIiIg", conflicts[1].ChangeVector);
-                    Assert.True(conflicts[1].Doc.TryGet(nameof(User.Name), out name));
-                    Assert.Equal("Fitzchak 2", name);
-                }
-            }
-        }
-
-        [Fact]
-        public async Task ToDatabaseWithSameDocumentWithoutConflicts_DeleteTheDocumentAndGenerateTheSameConflicts()
-        {
-            Initialize();
-            await GenerateConflict(_store1, _store2);
-
-            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
-            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-            using (var store3 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => $"{s}_store3"
-            }))
-            {
-                await SetupReplicationAsync(_store2, store3);
-                WaitForDocument(store3, "people/1-A");
-
-                var stats = await store3.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(7, stats.CountOfDocuments);
-                Assert.Equal(0, stats.CountOfDocumentsConflicts);
-                Assert.Equal(0, stats.CountOfConflicts);
-                Assert.Equal(0, stats.CountOfTombstones);
-
-                await AssertImport(store3);
-            }
-        }
-
-        [Fact]
-        public async Task CanExportAndImportWithConflicts_ToDatabaseWithDifferentDocument_DeleteTheDocumentWithoutCreatingConflictForIt()
-        {
-            Initialize();
-            await GenerateConflict(_store1, _store2);
-
-            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
-            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-            using (var session = _store2.OpenAsyncSession())
-            {
-                var user = await session.LoadAsync<User>("users/fitzchak");
-                user.LastName = "Update to generate another conflict.";
-                user.Name = "Fitzchak 3";
-                await session.SaveChangesAsync();
-            }
-
-            await AssertImport(_store2);
-        }
-
-        [Fact]
-        public async Task ToDatabaseWithDifferentConflicts_AndTheImportedConflictsInAdditionToTheExistingConflicts()
-        {
-            Initialize();
-            await GenerateConflict(_store1, _store2);
-
-            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
-            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-            using (var store3 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => $"{s}_store3",
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
+                    ModifyDatabaseName = s => $"{s}_store1",
+                    ModifyDatabaseRecord = record =>
                     {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var store4 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => $"{s}_store4",
-                ModifyDatabaseRecord = record =>
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                using (var store2 = GetDocumentStore(new Options
                 {
-                    record.ConflictSolverConfig = new ConflictSolver
+                    ModifyDatabaseName = s => $"{s}_store2",
+                    ModifyDatabaseRecord = record =>
                     {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            {
-                await GenerateConflict2(store3, store4);
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                {
+                    await GenerateConflict(store1, store2);
 
-                await AssertImport2(store3);
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    using (var store3 = GetDocumentStore(new Options(options)
+                    {
+                        ModifyDatabaseName = s => $"{s}_store3"
+                    }))
+                    {
+                        operation = await store3.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                        await AssertImport(store3);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExportAndImportWithConflicts_ToNewDatabase_JustOneCollection(Options options)
+        {
+            var file = GetTempFileName();
+            try
+            {
+                var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1",
+                    ModifyDatabaseRecord = record =>
+                    {
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store2",
+                    ModifyDatabaseRecord = record =>
+                    {
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                {
+                    await GenerateConflict(store1, store2);
+
+                    var exportOperation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    using (var store3 = GetDocumentStore(new Options
+                    {
+                        ModifyDatabaseName = s => $"{s}_store3"
+                    }))
+                    {
+                        var importOptions = new DatabaseSmugglerImportOptions { Collections = new List<string> { "Users" } };
+
+                        var importOperation = await store3.Smuggler.ImportAsync(importOptions, file);
+                        await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                        var stats = await GetDatabaseStatisticsAsync(store3);
+                        Assert.Equal(0, stats.CountOfDocuments);          // Should be 0 Documents of 3 exported
+                        Assert.Equal(1, stats.CountOfDocumentsConflicts); // only 1 DocumentConflict of 4
+                        Assert.Equal(2, stats.CountOfConflicts);          // and only 2 Conflicts of 8
+
+                        await AssertConflicts(store3);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ToDatabaseWithSameDocumentWithoutConflicts_DeleteTheDocumentAndGenerateTheSameConflicts(Options options)
+        {
+            var file = GetTempFileName();
+            try
+            {
+                var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1",
+                    ModifyDatabaseRecord = record =>
+                    {
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store2",
+                    ModifyDatabaseRecord = record =>
+                    {
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                {
+                    await GenerateConflict(store1, store2);
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    using (var store3 = GetDocumentStore(new Options
+                    {
+                        ModifyDatabaseName = s => $"{s}_store3"
+                    }))
+                    {
+                        await SetupReplicationAsync(store2, store3);
+                        WaitForDocument(store3, "people/1-A");
+
+                        var stats = await GetDatabaseStatisticsAsync(store3);
+                        Assert.Equal(7, stats.CountOfDocuments);
+                        Assert.Equal(0, stats.CountOfDocumentsConflicts);
+                        Assert.Equal(0, stats.CountOfConflicts);
+                        Assert.Equal(0, stats.CountOfTombstones);
+
+                        operation = await store3.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                        await AssertImport(store3);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExportAndImportWithConflicts_ToDatabaseWithDifferentDocument_DeleteTheDocumentWithoutCreatingConflictForIt(Options options)
+        {
+            var file = GetTempFileName();
+            try
+            {
+                var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1",
+                    ModifyDatabaseRecord = record =>
+                    {
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store2",
+                    ModifyDatabaseRecord = record =>
+                    {
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                {
+                    await GenerateConflict(store1, store2);
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>("users/fitzchak");
+                        user.LastName = "Update to generate another conflict.";
+                        user.Name = "Fitzchak 3";
+                        await session.SaveChangesAsync();
+                    }
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    await AssertImport(store2);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ToDatabaseWithDifferentConflicts_AndTheImportedConflictsInAdditionToTheExistingConflicts(Options options)
+        {
+            var file = GetTempFileName();
+            try
+            {
+                var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store1",
+                    ModifyDatabaseRecord = record =>
+                    {
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_store2",
+                    ModifyDatabaseRecord = record =>
+                    {
+                        modifyDatabaseRecord(record);
+                        record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
+                    }
+                }))
+                {
+                    await GenerateConflict(store1, store2);
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    using (var store3 = GetDocumentStore(new Options
+                    {
+                        ModifyDatabaseName = s => $"{s}_store3",
+                        ModifyDatabaseRecord = record =>
+                        {
+                            record.ConflictSolverConfig = new ConflictSolver
+                            {
+                                ResolveToLatest = false,
+                                ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                            };
+                        }
+                    }))
+                    using (var store4 = GetDocumentStore(new Options
+                    {
+                        ModifyDatabaseName = s => $"{s}_store4",
+                        ModifyDatabaseRecord = record =>
+                        {
+                            record.ConflictSolverConfig = new ConflictSolver
+                            {
+                                ResolveToLatest = false,
+                                ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                            };
+                        }
+                    }))
+                    {
+                        await GenerateConflict2(store3, store4);
+
+                        operation = await store3.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                        await AssertImport2(store3);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
             }
         }
 
         private async Task GenerateConflict(DocumentStore store1, DocumentStore store2)
         {
-            await Databases.SetDatabaseId(store1, new Guid("11111111-1111-1111-1111-111111111111"));
-            await Databases.SetDatabaseId(store2, new Guid("22222222-2222-2222-2222-222222222222"));
-
             using (var session = store1.OpenAsyncSession())
             {
                 await session.StoreAsync(new User { Name = "Fitzchak 1", Id = "users/fitzchak" });
@@ -271,13 +402,13 @@ namespace SlowTests.Smuggler
 
             Assert.Equal(2, WaitUntilHasConflict(store1, "users/fitzchak").Length);
 
-            var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+            var stats = await GetDatabaseStatisticsAsync(store1);
             Assert.Equal(3, stats.CountOfDocuments);
             Assert.Equal(4, stats.CountOfDocumentsConflicts);
             Assert.Equal(8, stats.CountOfConflicts);
             Assert.Equal(0, stats.CountOfTombstones);
 
-            stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+            stats = await GetDatabaseStatisticsAsync(store2);
             Assert.Equal(7, stats.CountOfDocuments);
             Assert.Equal(0, stats.CountOfDocumentsConflicts);
             Assert.Equal(0, stats.CountOfConflicts);
@@ -286,9 +417,6 @@ namespace SlowTests.Smuggler
 
         private async Task GenerateConflict2(DocumentStore store3, DocumentStore store4)
         {
-            await Databases.SetDatabaseId(store3, new Guid("33333333-3333-3333-3333-333333333333"));
-            await Databases.SetDatabaseId(store4, new Guid("44444444-4444-4444-4444-444444444444"));
-
             using (var session = store3.OpenAsyncSession())
             {
                 await session.StoreAsync(new User { Name = "Fitzchak 3", Id = "users/fitzchak" });
@@ -335,77 +463,77 @@ namespace SlowTests.Smuggler
 
             Assert.Equal(2, WaitUntilHasConflict(store3, "users/fitzchak").Length);
 
-            var stats = await store3.Maintenance.SendAsync(new GetStatisticsOperation());
+            var stats = await GetDatabaseStatisticsAsync(store3);
             Assert.Equal(3, stats.CountOfDocuments);
             Assert.Equal(4, stats.CountOfDocumentsConflicts);
             Assert.Equal(8, stats.CountOfConflicts);
             Assert.Equal(0, stats.CountOfTombstones);
 
-            stats = await store4.Maintenance.SendAsync(new GetStatisticsOperation());
+            stats = await GetDatabaseStatisticsAsync(store4);
             Assert.Equal(7, stats.CountOfDocuments);
             Assert.Equal(0, stats.CountOfDocumentsConflicts);
             Assert.Equal(0, stats.CountOfConflicts);
             Assert.Equal(0, stats.CountOfTombstones);
         }
 
+        private async Task AssertConflicts(DocumentStore store)
+        {
+            var conflicts = (await store.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
+            Assert.Equal(2, conflicts.Count);
+
+            var names = new string[2];
+
+            for (var i = 0; i < conflicts.Count; i++)
+            {
+                Assert.True(conflicts[i].Doc.TryGet(nameof(User.Name), out string name));
+                names[i] = name;
+            }
+
+            Array.Sort(names);
+            Assert.Equal("Fitzchak 1", names[0]);
+            Assert.Equal("Fitzchak 2", names[1]);
+        }
+
+        private async Task AssertConflicts2(DocumentStore store)
+        {
+            var conflicts = (await store.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
+            Assert.Equal(4, conflicts.Count);
+
+            var names = new string[4];
+
+            for (var i = 0; i < conflicts.Count; i++)
+            {
+                Assert.True(conflicts[i].Doc.TryGet(nameof(User.Name), out string name));
+                names[i] = name;
+            }
+
+            Array.Sort(names);
+            Assert.Equal("Fitzchak 1", names[0]);
+            Assert.Equal("Fitzchak 2", names[1]);
+            Assert.Equal("Fitzchak 3", names[2]);
+            Assert.Equal("Fitzchak 4", names[3]);
+        }
+
         private async Task AssertImport(DocumentStore store)
         {
-            for (int i = 0; i < 3; i++)
-            {
-                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            var stats = await GetDatabaseStatisticsAsync(store);
+            Assert.Equal(3, stats.CountOfDocuments);
+            Assert.Equal(4, stats.CountOfDocumentsConflicts);
+            Assert.Equal(8, stats.CountOfConflicts);
+            Assert.Equal(0, stats.CountOfTombstones);
 
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(3, stats.CountOfDocuments);
-                Assert.Equal(4, stats.CountOfDocumentsConflicts);
-                Assert.Equal(8, stats.CountOfConflicts);
-                Assert.Equal(0, stats.CountOfTombstones);
-
-                var conflicts = (await store.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
-                Assert.Equal(2, conflicts.Count);
-
-                Assert.Equal("A:3-EREREREREREREREREREREQ", conflicts[0].ChangeVector);
-                Assert.True(conflicts[0].Doc.TryGet(nameof(User.Name), out string name));
-                Assert.Equal("Fitzchak 1", name);
-
-                Assert.Equal("A:3-IiIiIiIiIiIiIiIiIiIiIg", conflicts[1].ChangeVector);
-                Assert.True(conflicts[1].Doc.TryGet(nameof(User.Name), out name));
-                Assert.Equal("Fitzchak 2", name);
-            }
+            await AssertConflicts(store);
         }
 
         private async Task AssertImport2(DocumentStore store)
         {
-            for (int i = 0; i < 3; i++)
-            {
-                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            var stats = await GetDatabaseStatisticsAsync(store);
+            Assert.Equal(3, stats.CountOfDocuments);
+            Assert.Equal(4, stats.CountOfDocumentsConflicts);
+            Assert.Equal(13, stats.CountOfConflicts);
+            Assert.Equal(0, stats.CountOfTombstones);
 
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(3, stats.CountOfDocuments);
-                Assert.Equal(4, stats.CountOfDocumentsConflicts);
-                Assert.Equal(13, stats.CountOfConflicts);
-                Assert.Equal(0, stats.CountOfTombstones);
-
-                var conflicts = (await store.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
-                Assert.Equal(4, conflicts.Count);
-
-                Assert.Equal("A:3-EREREREREREREREREREREQ", conflicts[0].ChangeVector);
-                Assert.True(conflicts[0].Doc.TryGet(nameof(User.Name), out string name));
-                Assert.Equal("Fitzchak 1", name);
-
-                Assert.Equal("A:3-IiIiIiIiIiIiIiIiIiIiIg", conflicts[1].ChangeVector);
-                Assert.True(conflicts[1].Doc.TryGet(nameof(User.Name), out name));
-                Assert.Equal("Fitzchak 2", name);
-
-                Assert.Equal("A:3-MzMzMzMzMzMzMzMzMzMzMw", conflicts[2].ChangeVector);
-                Assert.True(conflicts[2].Doc.TryGet(nameof(User.Name), out name));
-                Assert.Equal("Fitzchak 3", name);
-
-                Assert.Equal("A:3-RERERERERERERERERERERA", conflicts[3].ChangeVector);
-                Assert.True(conflicts[3].Doc.TryGet(nameof(User.Name), out name));
-                Assert.Equal("Fitzchak 4", name);
-            }
+            await AssertConflicts2(store);
         }
     }
 }
