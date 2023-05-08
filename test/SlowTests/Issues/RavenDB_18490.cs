@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,14 +16,21 @@ public class RavenDB_18490 : RavenTestBase
     {
     }
 
-    [Fact]
-    public void CanProvideMultiplePhrasesToSearchQuery()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanProvideMultiplePhrasesToSearchQuery_Corax(Options options) => CanProvideMultiplePhrasesToSearchQuery<CompanyCandidateSearchIndexCorax>(options);
+
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void CanProvideMultiplePhrasesToSearchQuery_Lucene(Options options) => CanProvideMultiplePhrasesToSearchQuery<CompanyCandidateSearchIndex>(options);
+
+    private void CanProvideMultiplePhrasesToSearchQuery<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
-                new CompanyCandidateSearchIndex().Execute(store);
+                new TIndex().Execute(store);
 
                 CompanyCandidateDocument entity = new CompanyCandidateDocument
                 {
@@ -47,15 +55,16 @@ public class RavenDB_18490 : RavenTestBase
 
                 Indexes.WaitForIndexing(store);
 
-                var results = session.Query<CompanyCandidateSearchIndex.Result, CompanyCandidateSearchIndex>()
+                var results = session.Query<CompanyCandidateSearchIndex.Result, TIndex>()
                     .Search(c => c.TextQuery, "\"Software Engineer\"", @operator: SearchOperator.And)
                     .Search(c => c.TextQuery, "\".NET Framework\"", options: SearchOptions.And, @operator: SearchOperator.And)
                     .OfType<CompanyCandidateDocument>()
                     .ToArray();
 
+                WaitForUserToContinueTheTest(store);
                 Assert.Equal(1, results.Length);
 
-                results = session.Query<CompanyCandidateSearchIndex.Result, CompanyCandidateSearchIndex>()
+                results = session.Query<CompanyCandidateSearchIndex.Result, TIndex>()
                     .Search(c => c.TextQuery, "\"Software Engineer\" \".NET Framework\"", @operator: SearchOperator.And)
                     .OfType<CompanyCandidateDocument>()
                     .ToArray();
@@ -81,6 +90,20 @@ public class RavenDB_18490 : RavenTestBase
                                };
 
             Index(nameof(Result.TextQuery), FieldIndexing.Search);
+        }
+    }
+    
+    private class CompanyCandidateSearchIndexCorax : AbstractIndexCreationTask<CompanyCandidateDocument>
+    {
+        public CompanyCandidateSearchIndexCorax()
+        {
+            Map = documents => from doc in documents
+                select new CompanyCandidateSearchIndex.Result()
+                {
+                    TextQuery = doc.ActiveRoles.Select(x => x.RoleTitle).Concat(new []{doc.ProfileTitle}).ToArray()
+                };
+
+            Index(nameof(CompanyCandidateSearchIndex.Result.TextQuery), FieldIndexing.Search);
         }
     }
 
