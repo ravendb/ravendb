@@ -1,7 +1,6 @@
 ﻿using System;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,15 +15,11 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
         [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
-        //[InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
-        //[InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
         public void Docs_from_two_collections_loaded_to_single_one(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            //https://issues.hibernatingrhinos.com/issue/RavenDB-20437
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
-                "uncomment the InlineData with 'RavenDatabaseMode.Sharded' when RavenDB-20437 is fixed");
-
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {

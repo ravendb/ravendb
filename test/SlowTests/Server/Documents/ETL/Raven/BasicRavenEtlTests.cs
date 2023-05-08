@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Utils;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -81,15 +80,11 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
         [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
-        //[InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
-        //[InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
         public void WithDocumentPrefix(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            //https://issues.hibernatingrhinos.com/issue/RavenDB-20437
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
-                "uncomment the InlineData with 'RavenDatabaseMode.Sharded' when RavenDB-20437 is fixed");
-
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
@@ -395,13 +390,9 @@ loadToUsers(
         }
 
         [RavenTheory(RavenTestCategory.Etl)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        //[RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Loading_to_different_collections(Options dstOptions)
         {
-            //https://issues.hibernatingrhinos.com/issue/RavenDB-20437
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "change to DatabaseMode = RavenDatabaseMode.All when RavenDB-20437 is fixed");
-
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore(dstOptions))
             {
@@ -499,14 +490,11 @@ loadToAddresses(load(this.AddressId));
 
         [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
-        //[InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
-        //[InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
         public void Loading_to_different_collections_using_this(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            //https://issues.hibernatingrhinos.com/issue/RavenDB-20437
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "uncomment the InlineData with 'RavenDatabaseMode.Sharded' when RavenDB-20437 is fixed");
-
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
@@ -636,15 +624,11 @@ loadToUsers({Name: this.Name + ' ' + this.LastName });
 
         [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Single)]
-        //[InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
-        //[InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
+        [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
         public void Update_of_disassembled_document(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
-            //https://issues.hibernatingrhinos.com/issue/RavenDB-20437
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, 
-                "uncomment the InlineData with 'RavenDatabaseMode.Sharded' when RavenDB-20437 is fixed");
-
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
