@@ -4,13 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
-using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -50,13 +49,14 @@ namespace SlowTests.Client.TimeSeries
             return entryA.IsRollup == entryB.IsRollup;
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task ReplicationShouldWorkWithMultipleIncrementOperations()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationShouldWorkWithMultipleIncrementOperations(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -96,14 +96,17 @@ namespace SlowTests.Client.TimeSeries
                     }
                 }
 
+                var replicationA = await GetReplicationManagerAsync(storeA, storeA.Database, options.DatabaseMode);
+                var replicationB = await GetReplicationManagerAsync(storeB, storeB.Database, options.DatabaseMode);
+
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -121,13 +124,14 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task ReplicationShouldWorkWithMultipleIncrementOperations2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationShouldWorkWithMultipleIncrementOperations2(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -162,14 +166,14 @@ namespace SlowTests.Client.TimeSeries
                     session.SaveChanges();
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -187,13 +191,14 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task ReplicationShouldWorkWithMultipleIncrementOperations3()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationShouldWorkWithMultipleIncrementOperations3(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -227,14 +232,14 @@ namespace SlowTests.Client.TimeSeries
                     }
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -497,7 +502,7 @@ namespace SlowTests.Client.TimeSeries
                     ts.Increment(baseline, new double[] { 0, 0, 0, 0 });
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(store);
+                
                 using (var session = store.OpenSession())
                 {
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName).Get();
@@ -647,13 +652,14 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task ShouldTakeLowerValueOnReplicationConflictWhenDecrementOperation()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldTakeLowerValueOnReplicationConflictWhenDecrementOperation(Options options)
         {
             var baseline = RavenTestHelper.UtcToday;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -668,7 +674,7 @@ namespace SlowTests.Client.TimeSeries
 
                 using (storeA.OpenSession())
                 {
-                    var dbA = await Databases.GetDocumentDatabaseInstanceFor(storeA);
+                    var dbA = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
                     using (dbA.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext contextA))
                     {
 
@@ -693,7 +699,7 @@ namespace SlowTests.Client.TimeSeries
 
                 using (storeB.OpenSession())
                 {
-                    var dbB = await Databases.GetDocumentDatabaseInstanceFor(storeB);
+                    var dbB = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
                     using (dbB.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext contextB))
                     {
                         var incrementOperations = new List<SingleResult>();
@@ -716,14 +722,14 @@ namespace SlowTests.Client.TimeSeries
                     }
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -739,13 +745,14 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task ShouldTakeHigherValueOnReplicationConflictWhenIncrementOperation()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldTakeHigherValueOnReplicationConflictWhenIncrementOperation(Options options)
         {
             var baseline = RavenTestHelper.UtcToday;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -761,7 +768,7 @@ namespace SlowTests.Client.TimeSeries
 
                 using (storeA.OpenSession())
                 {
-                    var dbA = await Databases.GetDocumentDatabaseInstanceFor(storeA);
+                    var dbA = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
                     using (dbA.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext contextA))
                     {
                         var incrementOperations = new List<SingleResult>();
@@ -786,7 +793,7 @@ namespace SlowTests.Client.TimeSeries
 
                 using (storeB.OpenSession())
                 {
-                    var dbB = await Databases.GetDocumentDatabaseInstanceFor(storeB);
+                    var dbB = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
                     using (dbB.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext contextB))
                     {
                         var incrementOperations = new List<SingleResult>();
@@ -809,14 +816,14 @@ namespace SlowTests.Client.TimeSeries
                     }
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -832,13 +839,14 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [Fact(Skip = "RavenDB-17557")]
-        public async Task ReplicationShouldNotCollapseWhenSegmentReachedCapacity()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, Skip = "RavenDB-17557")]
+        public async Task ReplicationShouldNotCollapseWhenSegmentReachedCapacity(Options options)
         {
             var baseline = RavenTestHelper.UtcToday;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -854,7 +862,7 @@ namespace SlowTests.Client.TimeSeries
 
                 using (storeA.OpenSession())
                 {
-                    var dbA = await Databases.GetDocumentDatabaseInstanceFor(storeA);
+                    var dbA = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
                     using (dbA.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext contextA))
                     {
                         var incrementOperations = new List<SingleResult>();
@@ -882,7 +890,7 @@ namespace SlowTests.Client.TimeSeries
 
                 using (storeB.OpenSession())
                 {
-                    var dbB = await Databases.GetDocumentDatabaseInstanceFor(storeB);
+                    var dbB = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
                     using (dbB.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext contextB))
                     {
                         var incrementOperations = new List<SingleResult>();
@@ -908,14 +916,14 @@ namespace SlowTests.Client.TimeSeries
                     }
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
                 await EnsureReplicatingAsync(storeA, storeB);
 
-                await SetupReplicationAsync(storeB, storeA);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -927,7 +935,7 @@ namespace SlowTests.Client.TimeSeries
                     for (int i = 0; i < tsA.Length; i++)
                         Assert.True(Equals(tsA[i], tsB[i]),$"{tsA[i]} vs {tsB[i]}");
 
-                    var dbA = await Databases.GetDocumentDatabaseInstanceFor(storeA);
+                    var dbA = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
                     var count = dbA.NotificationCenter.GetAlertCount();
                     if (count > 0)
                     {
@@ -940,7 +948,7 @@ namespace SlowTests.Client.TimeSeries
                         }
                     }
 
-                    var dbB = await Databases.GetDocumentDatabaseInstanceFor(storeB);
+                    var dbB = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
                     var keyB = AlertRaised.GetKey(AlertType.Replication, null);
                     var alertB = dbB.NotificationCenter.GetStoredMessage(keyB);
 
@@ -1224,13 +1232,14 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task GetIncrementalTimeSeriesFullResultsShouldWork2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task GetIncrementalTimeSeriesFullResultsShouldWork2(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -1264,14 +1273,14 @@ namespace SlowTests.Client.TimeSeries
                     session.SaveChanges();
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 var stores = new[] { storeA, storeB };
 
@@ -1298,13 +1307,14 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task GetIncrementalTimeSeriesFullResultsShouldWork3()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task GetIncrementalTimeSeriesFullResultsShouldWork3(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -1338,14 +1348,14 @@ namespace SlowTests.Client.TimeSeries
                     session.SaveChanges();
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 var stores = new[] { storeA, storeB };
 
@@ -1411,13 +1421,14 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task CheckSkippedResultsCalculation()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CheckSkippedResultsCalculation(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -1451,14 +1462,14 @@ namespace SlowTests.Client.TimeSeries
                     session.SaveChanges();
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 var pageSize = 100;
                 var values = storeA.Operations
@@ -1476,15 +1487,16 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task CheckSkippedResultsCalculationWithLargeTimeSeries()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CheckSkippedResultsCalculationWithLargeTimeSeries(Options options)
         {
             var baseline = DateTime.UtcNow;
             var size = 1000;
             var pageSize = size / 10;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -1519,14 +1531,14 @@ namespace SlowTests.Client.TimeSeries
                     session.SaveChanges();
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 for (int start = 0; start < size; start += pageSize)
                 {
@@ -1567,13 +1579,14 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task ReplicationShouldWorkWithMultipleIncrementAndDeleteOperations()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicationShouldWorkWithMultipleIncrementAndDeleteOperations(Options options)
         {
             var baseline = DateTime.UtcNow;
 
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -1614,16 +1627,14 @@ namespace SlowTests.Client.TimeSeries
                     session.SaveChanges();
                 }
 
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
-
-                WaitForUserToContinueTheTest(storeB);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
 
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
@@ -1692,10 +1703,7 @@ namespace SlowTests.Client.TimeSeries
                         await session.SaveChangesAsync();
                     }
                 }
-
-
-                WaitForUserToContinueTheTest(store);
-
+                
                 using (var session = store.OpenSession())
                 {
                     IRavenQueryable<TimeSeriesAggregationResult> query = session.Query<User>()
@@ -1711,11 +1719,12 @@ namespace SlowTests.Client.TimeSeries
         }
 
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task IncrementalTimeSeriesQueryShouldWorkInACluster()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task IncrementalTimeSeriesQueryShouldWorkInACluster(Options options)
         {
             var cluster = await CreateRaftCluster(numberOfNodes: 3, watcherCluster: true);
-            using (var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(new Options(options)
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3
@@ -1741,8 +1750,7 @@ namespace SlowTests.Client.TimeSeries
                         await session.SaveChangesAsync();
                     }
                 }
-
-                WaitForUserToContinueTheTest(store);
+                
                 var stores = GetDocumentStores(cluster.Nodes, store.Database, disableTopologyUpdates: true);
                 using (var sessionA = stores[0].OpenSession())
                 using (var sessionB = stores[1].OpenSession())

@@ -720,7 +720,7 @@ namespace SlowTests.Client.TimeSeries.Replication
         }
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanReplicateDeadSegment(Options options)
         {
             using (var storeA = GetDocumentStore(options))
