@@ -886,5 +886,38 @@ namespace Voron.Data.Containers
                 return new Item(_page, _ptr + offset, Length - offset);
             }
         }
+
+        /// <summary>
+        /// Assumes that ids is sorted 
+        /// </summary>
+        public static void GetAll(LowLevelTransaction llt, Span<long> ids, Span<UnmanagedSpan> spans, long missingValue)
+        {
+         
+            var container = new Container();
+            for (int i = 0; i < ids.Length; i++)
+            {
+                if (ids[i]== missingValue)
+                {
+                    spans[i] = default;
+                    continue;
+                }
+                var (pageNum, offset) = Math.DivRem(ids[i], Constants.Storage.PageSize);
+                if (container._page.IsValid == false ||
+                    pageNum != container._page.PageNumber)
+                    container = new Container(llt.GetPage(pageNum));
+                
+                if (container._page.IsOverflow)
+                {
+                    spans[i] = new(container._page.DataPointer, container._page.OverflowSize);
+                    continue;
+                }
+
+                var metadata = container.MetadataFor(OffsetToIndex(offset));
+                Debug.Assert(metadata.IsFree == false);
+                var p = container._page.Pointer;
+                int size = metadata.Get(ref p);
+                spans[i] = new(p, size);
+            }
+        }
     }
 }

@@ -428,6 +428,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new SpatialReader(_transaction.LowLevelTransaction, _entriesToSpatialTree, name);
     }
     
+    public Lookup<long> TermsIdReaderFor(Slice name)
+    {
+        return _entriesToTermsTree?.LookupFor<long>(name);
+    }
+
     public Lookup<long> LongReader(Slice name)
     {
         if (_entriesToTermsTree == null)

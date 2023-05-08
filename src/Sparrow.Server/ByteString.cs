@@ -900,7 +900,7 @@ namespace Sparrow.Server
         public int GrowAllocation(ref ByteString str, ref InternalScope scope, int additionalSize)
         {
             var newScope = Allocate(str.Length + additionalSize, out var newStr);
-            Memory.Compare(newStr.Ptr, str.Ptr, str.Length);
+            Memory.Copy(newStr.Ptr, str.Ptr, str.Length);
             scope.Dispose();
             str = newStr;
             scope = newScope;

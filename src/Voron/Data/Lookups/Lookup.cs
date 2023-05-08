@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
@@ -10,6 +11,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
@@ -168,7 +170,7 @@ namespace Voron.Data.Lookups
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void GetKeyAndValue(ref CursorState state, int pos, out TKey key, out long value)
+        public static void GetKeyAndValue(ref CursorState state, int pos, out TKey key, out long value)
         {
             var buffer = state.Page.Pointer + state.EntriesOffsetsPtr[pos];
             var keyLen = buffer[0] >> 4;
@@ -238,6 +240,8 @@ namespace Voron.Data.Lookups
         private readonly Tree _parent;
 
         public long NumberOfEntries => _state.NumberOfEntries;
+        public LookupState State => _state;
+        public LowLevelTransaction Llt => _llt;
 
         public static Lookup<TKey> InternalCreate(Tree parent, Slice name)
         {
@@ -1000,7 +1004,7 @@ namespace Voron.Data.Lookups
             cstate._len++;
         }
         
-        private void SearchInCurrentPage(TKey key, ref CursorState state)
+        private void SearchInCurrentPage(TKey key, ref CursorState state, int bot = 0)
         {
             Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
             Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
@@ -1010,7 +1014,6 @@ namespace Voron.Data.Lookups
             var header = state.Header;
             int length = state.Header->NumberOfEntries;
             TKey curKey;
-            int bot = 0;
             int match = -1;
             if (length == 0)
             {
@@ -1086,6 +1089,69 @@ namespace Voron.Data.Lookups
                 return -1;
 
             return 1;
+        }
+
+        [Conditional("DEBUG")]
+        public void Render()
+        {
+            DebugStuff.RenderAndShow((Lookup<long>)(object)this);
+        }
+
+        
+        /// <summary>
+        /// Optimized to reduce the cost of traversing the tree
+        /// Assumes that matches are sorted 
+        /// </summary>
+        public void GetFor(Span<TKey> keys, Span<long> terms, long missingValue)
+        {
+            FindPageFor(keys[0], ref _internalCursor);
+            ref var state = ref _internalCursor._stk[_internalCursor._pos];
+            state.LastSearchPosition = 0;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                SearchInCurrentPage(keys[i], ref state);
+                if (state.LastMatch == 0) // found the value
+                {
+                    terms[i] = GetValue(ref state, 
+                        // limit the search on the _next_ call on this page
+                        state.LastSearchPosition);
+                    continue;
+                }
+                
+                // didn't find the value, need to check if this is on this page by
+                // checking if this is meant to go *after* the last value in the page
+                if (~state.LastSearchPosition < state.Header->NumberOfEntries)
+                {
+                    // it *should be* on this page, but isn't, we have a missing value
+                    terms[i] = missingValue;
+                    continue;
+                }
+                
+                while (_internalCursor._pos > 0)
+                {
+                    PopPage(ref _internalCursor);
+                    state = ref _internalCursor._stk[_internalCursor._pos];
+                    var previousSearchPosition = state.LastSearchPosition;
+
+                    SearchInCurrentPage(keys[i], ref state);
+
+                    if (state.LastSearchPosition < 0)
+                        state.LastSearchPosition = ~state.LastSearchPosition;
+        
+                    
+                    if (state.LastSearchPosition <= previousSearchPosition ||
+                        state.LastSearchPosition >= state.Header->NumberOfEntries) 
+                        continue; // not here, need to go up
+                    
+                    // is this points to a different page, just search there normally
+                    FindPageFor(ref _internalCursor, ref state, keys[i]);
+                    state = ref _internalCursor._stk[_internalCursor._pos];
+                    terms[i] = state.LastMatch == 0 ? 
+                        GetValue(ref state, state.LastSearchPosition) :
+                        missingValue;
+                    break;
+                }
+            }
         }
     }
 }

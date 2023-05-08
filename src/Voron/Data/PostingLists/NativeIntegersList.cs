@@ -14,13 +14,14 @@ public unsafe struct NativeIntegersList : IDisposable
     public long* RawItems;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseItems;
 
-    public NativeIntegersList(ByteStringContext ctx)
+    public NativeIntegersList(ByteStringContext ctx, int initialCapacity = 0)
     {
         _ctx = ctx;
         RawItems = null;
         _releaseItems = default;
         Count = 0;
         Capacity = 0;
+        GrowListUnlikely(initialCapacity);
     }
 
     public void Add(ReadOnlySpan<long> values)
