@@ -14,11 +14,14 @@
 }
 
 .md-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-size: 0.875em;
+    color: var(--text-color);
     line-height: 1.1em;
     font-weight: 600;
     margin-bottom: $gutter-xs;
+    i {
+        margin-left: $gutter-xxs/2;
+    }
 }
 
 // DASHED NEW ITEM PLACEHOLDER
