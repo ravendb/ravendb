@@ -16,6 +16,7 @@ const initialState: ClusterState = {
 
 const selectClusterNodeTags = (store: RootState) => store.cluster.nodeTags;
 const selectLocalNodeTag = (store: RootState) => store.cluster.localNodeTag;
+// TODO: kalczur - id: nodeTag, object {}
 
 export const clusterSlice = createSlice({
     initialState,

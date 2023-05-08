@@ -18,6 +18,7 @@ import {
 import { openNotificationCenterForDatabase } from "components/pages/resources/databases/store/databasesViewActions";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import "./DatabasesPage.scss";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
@@ -42,9 +43,10 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const topLevelState = useAppSelector(selectTopLevelState(db.name));
 
     const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
-    const remoteNodeTags = useAppSelector(clusterSelectors.clusterNodeTags);
+    const isCurrentNodeRelevant = db.currentNode.relevant;
 
     const dispatch = useAppDispatch();
+    const { appUrl } = useAppUrls();
 
     const nonEmptyDbState = dbState
         .filter((x) => x.status === "success" && !x.data.loadError)
@@ -64,6 +66,8 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     const localPerformanceHints = nonEmptyTopLevelState.find((x) => x.nodeTag === localNodeTag)?.performanceHints ?? 0;
     const localAlerts = nonEmptyTopLevelState.find((x) => x.nodeTag === localNodeTag)?.alerts ?? 0;
+
+    const remoteTopLevelStates = nonEmptyTopLevelState.filter((x) => x.nodeTag !== localNodeTag);
 
     const maxSizes = genUtils.maxByShard(
         nonEmptyDbState,
@@ -115,116 +119,137 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     const alertSection = (
         <React.Fragment>
-            <Icon icon="warning" /> {localAlerts} {localAlerts === 1 && "alert"}
-            {localAlerts > 1 && "alerts"}
+            <Icon icon="warning" />
+            {!isCurrentNodeRelevant ? "Alerts" : `${localAlerts} ${localAlerts === 1 ? "Alert" : "Alerts"}`}
         </React.Fragment>
     );
 
     const performanceHintsSection = (
         <React.Fragment>
-            <Icon icon="rocket" /> {localPerformanceHints} Performance {localPerformanceHints === 1 && "hint"}{" "}
-            {localPerformanceHints > 1 && "hints"}
+            <Icon icon="rocket" />
+            {!isCurrentNodeRelevant
+                ? "Performance hints"
+                : `${localPerformanceHints} Performance ${localPerformanceHints === 1 ? " hint" : "hints"}`}
         </React.Fragment>
     );
 
     function PerfHintsPopover() {
-        if (performanceHints > 0) {
-            return (
-                <div className="p-3 notifications-popover">
-                    <strong className="d-block mb-1">Local</strong>
-                    <div className="notifications-popover-grid">
-                        <span>
-                            <Icon icon="node" color="node" /> {localNodeTag}
-                        </span>
-                        <span>
-                            <strong>{localPerformanceHints}</strong> {localPerformanceHints === 1 && "hint"}{" "}
-                            {localPerformanceHints > 1 && "hints"}
-                        </span>
-                        <Button
-                            size="xs"
-                            color="info"
-                            className="rounded-pill"
-                            onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
-                        >
-                            <Icon icon="rocket" />
-                            See {performanceHints === 1 && "hint"} {performanceHints > 1 && "hints"}
-                        </Button>
-                    </div>
-                    <hr className="my-2" />
-                    {remoteNodeTags != null && (
-                        <>
-                            <strong className="d-block mb-1">Remote</strong>
-                            {remoteNodeTags
-                                .filter((tag) => tag !== localNodeTag)
-                                .map((tag) => (
-                                    <div key={tag} className="notifications-popover-grid mb-1">
-                                        <span>
-                                            <Icon icon="node" color="node" /> {tag}
-                                        </span>
-                                        <span>
-                                            <strong>{performanceHints}</strong> {performanceHints === 1 && "hint"}{" "}
-                                            {performanceHints > 1 && "hints"}
-                                        </span>
-                                        <Button size="xs" color="node" className="rounded-pill">
-                                            <Icon icon="newtab" />
-                                            Open node
-                                        </Button>
-                                    </div>
-                                ))}
-                        </>
-                    )}
-                </div>
-            );
-        }
+        return (
+            <div className="p-3 notifications-popover">
+                {isCurrentNodeRelevant && (
+                    <>
+                        <strong className="d-block mb-1">Local</strong>
+                        <div className="notifications-popover-grid">
+                            <span>
+                                <Icon icon="node" color="node" /> {localNodeTag}
+                            </span>
+                            <span>
+                                <strong>{localPerformanceHints} </strong>
+                                {localPerformanceHints === 1 ? "hint" : "hints"}
+                            </span>
+                            <Button
+                                type="button"
+                                size="xs"
+                                color="info"
+                                className="rounded-pill"
+                                onClick={() => dispatch(openNotificationCenterForDatabase(db))}
+                            >
+                                <Icon icon="rocket" />
+                                See {localPerformanceHints === 1 ? "hint" : "hints"}
+                            </Button>
+                        </div>
+                    </>
+                )}
+
+                {remoteTopLevelStates.some((x) => !!x.performanceHints) && (
+                    <>
+                        {isCurrentNodeRelevant && <hr className="my-2" />}
+                        <strong className="d-block mb-1">Remote</strong>
+
+                        {remoteTopLevelStates.map((x) => {
+                            if (!x.performanceHints) {
+                                return null;
+                            }
+
+                            return (
+                                <div key={x.nodeTag} className="notifications-popover-grid mb-1">
+                                    <span>
+                                        <Icon icon="node" color="node" /> {x.nodeTag}
+                                    </span>
+                                    <span>
+                                        <strong>{x.performanceHints} </strong>
+                                        {x.performanceHints === 1 ? "hint" : "hints"}
+                                    </span>
+                                    <Button type="button" size="xs" color="node" className="rounded-pill">
+                                        <Icon icon="newtab" />
+                                        Open node
+                                    </Button>
+                                </div>
+                            );
+                        })}
+                    </>
+                )}
+            </div>
+        );
     }
+
     function AlertsPopover() {
-        if (alerts > 0) {
-            return (
-                <div className="p-3 notifications-popover">
-                    <strong className="d-block mb-1">Local</strong>
-                    <div className="notifications-popover-grid">
-                        <span>
-                            <Icon icon="node" color="node" /> {localNodeTag}
-                        </span>
-                        <span>
-                            <strong>{localAlerts}</strong> {localAlerts === 1 && "alert"}
-                            {localAlerts > 1 && "alerts"}
-                        </span>
-                        <Button
-                            size="xs"
-                            color="warning"
-                            className="rounded-pill"
-                            onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
-                        >
-                            <Icon icon="alert" />
-                            See {localAlerts === 1 && "alert"} {localAlerts > 1 && "alerts"}
-                        </Button>
-                    </div>
-                    {remoteNodeTags != null && (
-                        <>
-                            <hr className="my-2" />
-                            <strong className="d-block mb-1">Remote</strong>
-                            {remoteNodeTags
-                                .filter((tag) => tag !== localNodeTag)
-                                .map((tag) => (
-                                    <div key={tag} className="notifications-popover-grid mb-1">
-                                        <span>
-                                            <Icon icon="node" color="node" /> {tag}
-                                        </span>
-                                        <span>
-                                            <strong>{alerts}</strong> {alerts === 1 && "alert"} {alerts > 1 && "alerts"}
-                                        </span>
-                                        <Button size="xs" color="node" className="rounded-pill">
-                                            <Icon icon="newtab" />
-                                            Open node
-                                        </Button>
-                                    </div>
-                                ))}
-                        </>
-                    )}
-                </div>
-            );
-        }
+        return (
+            <div className="p-3 notifications-popover">
+                {isCurrentNodeRelevant && (
+                    <>
+                        <strong className="d-block mb-1">Local</strong>
+                        <div className="notifications-popover-grid">
+                            <span>
+                                <Icon icon="node" color="node" /> {localNodeTag}
+                            </span>
+                            <span>
+                                <strong>{localAlerts} </strong>
+                                {localAlerts === 1 ? "alert" : "alerts"}
+                            </span>
+                            <Button
+                                type="button"
+                                size="xs"
+                                color="warning"
+                                className="rounded-pill"
+                                onClick={() => dispatch(openNotificationCenterForDatabase(db))}
+                            >
+                                <Icon icon="alert" />
+                                See {localAlerts === 1 ? "alert" : "alerts"}
+                            </Button>
+                        </div>
+                    </>
+                )}
+
+                {remoteTopLevelStates.some((x) => !!x.performanceHints) && (
+                    <>
+                        {isCurrentNodeRelevant && <hr className="my-2" />}
+                        <strong className="d-block mb-1">Remote</strong>
+
+                        {remoteTopLevelStates.map((x) => {
+                            if (!x.alerts) {
+                                return null;
+                            }
+
+                            return (
+                                <div key={x.nodeTag} className="notifications-popover-grid mb-1">
+                                    <span>
+                                        <Icon icon="node" color="node" /> {x.nodeTag}
+                                    </span>
+                                    <span>
+                                        <strong>{x.alerts}</strong> {x.alerts === 1 ? "alert" : "alerts"}
+                                    </span>
+                                    <Button type="button" size="xs" color="node" className="rounded-pill">
+                                        <Icon icon="newtab" />
+                                        Open node
+                                    </Button>
+                                </div>
+                            );
+                        })}
+                    </>
+                )}
+            </div>
+        );
     }
 
     return (
@@ -302,25 +327,23 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                 {alerts > 0 && (
                     <>
                         <RichPanelDetailItem key="alerts" title="Click to view alerts in Notification Center">
-                            {db.currentNode.relevant ? (
-                                <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
-                                    <a
-                                        href="#"
-                                        onClick={withPreventDefault(() =>
-                                            dispatch(openNotificationCenterForDatabase(db))
-                                        )}
-                                        className="no-decor"
-                                        ref={setAlertsPopoverElement}
-                                    >
-                                        {alertSection}
-                                        <div className="vr bg-warning"></div>
-                                        <Icon icon="global" />
-                                        {alerts}
-                                    </a>
-                                </Badge>
-                            ) : (
-                                alertSection
-                            )}
+                            <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
+                                <a
+                                    href="#"
+                                    onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
+                                    className="no-decor"
+                                    ref={setAlertsPopoverElement}
+                                >
+                                    {alertSection}
+                                    {!(isCurrentNodeRelevant && db.nodes.length === 1) && (
+                                        <>
+                                            <div className="vr bg-warning"></div>
+                                            <Icon icon="global" />
+                                            {alerts}
+                                        </>
+                                    )}
+                                </a>
+                            </Badge>
                         </RichPanelDetailItem>
                         <PopoverWithHover target={alertsPopoverElement}>
                             <AlertsPopover />
@@ -333,25 +356,23 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                             key="performance-hints"
                             title="Click to view performance hints in Notification Center"
                         >
-                            {db.currentNode.relevant ? (
-                                <Badge color="faded-info" className="d-flex align-items-center lh-base rounded-pill">
-                                    <a
-                                        href="#"
-                                        onClick={withPreventDefault(() =>
-                                            dispatch(openNotificationCenterForDatabase(db))
-                                        )}
-                                        className="no-decor"
-                                        ref={setPerfHintsPopoverElement}
-                                    >
-                                        {performanceHintsSection}
-                                        <div className="vr bg-info"></div>
-                                        <Icon icon="global" />
-                                        {performanceHints}
-                                    </a>
-                                </Badge>
-                            ) : (
-                                performanceHintsSection
-                            )}
+                            <Badge color="faded-info" className="d-flex align-items-center lh-base rounded-pill">
+                                <a
+                                    href="#"
+                                    onClick={withPreventDefault(() => dispatch(openNotificationCenterForDatabase(db)))}
+                                    className="no-decor"
+                                    ref={setPerfHintsPopoverElement}
+                                >
+                                    {performanceHintsSection}
+                                    {!(isCurrentNodeRelevant && db.nodes.length === 1) && (
+                                        <>
+                                            <div className="vr bg-info"></div>
+                                            <Icon icon="global" />
+                                            {performanceHints}
+                                        </>
+                                    )}
+                                </a>
+                            </Badge>
                         </RichPanelDetailItem>
                         <PopoverWithHover target={perfHintsPopoverElement}>
                             <PerfHintsPopover />
