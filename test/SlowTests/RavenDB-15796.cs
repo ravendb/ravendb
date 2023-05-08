@@ -1,9 +1,7 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Attachments;
@@ -23,13 +21,16 @@ namespace SlowTests
         {
         }
 
-        [Fact]
-        public async Task PutDifferentAttachmentsShouldConflict()
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task PutDifferentAttachmentsShouldConflict(Options options)
         {
+            var modifyDatabaseRecord = options.ModifyDatabaseRecord;
             using (var store1 = GetDocumentStore(options: new Options
             {
                 ModifyDatabaseRecord = record =>
                 {
+                    modifyDatabaseRecord(record);
                     record.ConflictSolverConfig = new ConflictSolver();
                 }
             }))
@@ -37,13 +38,11 @@ namespace SlowTests
             {
                 ModifyDatabaseRecord = record =>
                 {
+                    modifyDatabaseRecord(record);
                     record.ConflictSolverConfig = new ConflictSolver();
                 }
             }))
             {
-                await Databases.SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
-                await Databases.SetDatabaseId(store2, new Guid("99999999-48c4-421e-9466-999999999999"));
-
                 using (var session = store1.OpenAsyncSession())
                 {
                     var x = new User { Name = "Fitzchak" };
