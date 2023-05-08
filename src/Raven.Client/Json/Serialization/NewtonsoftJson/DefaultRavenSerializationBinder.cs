@@ -101,6 +101,22 @@ public class DefaultRavenSerializationBinder : DefaultSerializationBinder
             ThrowForbiddenType(type);
         }
 
+        if (type.IsGenericType)
+        {
+            foreach (var g in type.GetGenericArguments())
+            {
+                try
+                {
+                    AssertType(g);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Generic type: " + type.FullName + ", contains a generic argument "+ g.FullName + " that is blocked from serialization", e);
+                }
+            }
+            // if all are okay, we can move on
+        }
+
         UpdateCache(ref _safeTypesCache, type);
     }
 
