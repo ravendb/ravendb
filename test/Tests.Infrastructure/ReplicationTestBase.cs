@@ -39,7 +39,7 @@ namespace Tests.Infrastructure
         {
         }
 
-        public async ValueTask<IReplicationManager> GetReplicationManagerAsync(DocumentStore store, string databaseName, RavenDatabaseMode mode, bool breakReplication = false, List<RavenServer> servers = null)
+        public async ValueTask<IReplicationManager> GetReplicationManagerAsync(IDocumentStore store, string databaseName, RavenDatabaseMode mode, bool breakReplication = false, List<RavenServer> servers = null)
         {
             if (mode == RavenDatabaseMode.Single)
                 return await  ReplicationManager.GetReplicationManagerAsync(servers ?? GetServers() , databaseName, breakReplication);
@@ -276,6 +276,13 @@ namespace Tests.Infrastructure
         {
             var op = new ModifyConflictSolverOperation(store.Database, collectionByScript, resolveToLatest);
             return await store.Maintenance.Server.SendAsync(op);
+        }
+
+        public async ValueTask<IReplicationManager> SetupReplicationAndGetManagerAsync(IDocumentStore fromStore, RavenDatabaseMode mode, bool breakReplication = false, List<RavenServer> servers = null, params IDocumentStore[] toStores)
+        {
+            var replication = await GetReplicationManagerAsync(fromStore, fromStore.Database, mode, breakReplication, servers);
+            await SetupReplicationAsync(fromStore, responsibleNode: null, toStores);
+            return replication;
         }
 
         public Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(IDocumentStore fromStore, params IDocumentStore[] toStores)
