@@ -62,7 +62,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     
     public abstract ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext, out LazyStringValue id,
+        object doc, JsonOperationContext indexContext, object sourceDocument, out LazyStringValue id,
         out ByteString output, out float? documentBoost, out int fields);
 
     public ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocument(
@@ -70,7 +70,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
         out ByteString output, out float? documentBoost, out bool shouldSkip)
     {
-        var scope = SetDocumentFields(key, sourceDocumentId, doc, indexContext, out id, out output, out documentBoost, out var fields);
+        var currentIndexingScope = CurrentIndexingScope.Current;
+        var scope = SetDocumentFields(key, sourceDocumentId, doc, indexContext, currentIndexingScope?.Source, out id, out output, out documentBoost, out var fields);
         if (_fields.Count > 0)
         {
             shouldSkip = _indexEmptyEntries == false && fields <= _numberOfBaseFields; // there is always a key field, but we want to filter-out empty documents, some indexes (e.g. TS indexes contain more than 1 field by default)
@@ -145,7 +146,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         return KnownFieldsForWriter ?? CreateKnownFieldsForWriter();
     }
     
-    protected void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
+    protected void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter, object sourceDocument,
         IWriterScope scope, out bool shouldSkip, bool nestedArray = false)
     {
         if (_index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No && (_complexFields is null || _complexFields.Contains(field) == false))
@@ -304,7 +305,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                
                 foreach (var item in iterator)
                 {
-                    InsertRegularField(field, item, indexContext, ref entryWriter, enumerableWriterScope, out var _, nestedArray);
+                    InsertRegularField(field, item, indexContext, ref entryWriter, sourceDocument, enumerableWriterScope, out var _, nestedArray);
                 }
                 
                 if (canFinishEnumerableWriting)
@@ -318,6 +319,11 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 if (field.Indexing is not FieldIndexing.No) 
                     AssertOrAdjustIndexingOptionForComplexObject(field);
 
+                if (_index.SourceDocumentIncludedInOutput == false && sourceDocument == value)
+                {
+                    _index.SourceDocumentIncludedInOutput = true;
+                }
+                
                 var dynamicJson = (DynamicBlittableJson)value;
                 scope.Write(path, fieldId, dynamicJson.BlittableJson, ref entryWriter);
                 break;
@@ -326,8 +332,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (val is not DynamicJsonValue json)
                 {
-                    InsertRegularField(field, val, indexContext, ref entryWriter, scope, out shouldSkip, nestedArray);
-                    break;
+                    InsertRegularField(field, val, indexContext, ref entryWriter, sourceDocument, scope, out shouldSkip, nestedArray);
+                    return;
                 }
 
                 if (field.Indexing is not FieldIndexing.No)
@@ -341,8 +347,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
 
             case ValueType.BlittableJsonObject:
-                HandleObject((BlittableJsonReaderObject)value, field, indexContext, ref entryWriter, scope, out shouldSkip, nestedArray);
-                break;
+                HandleObject((BlittableJsonReaderObject)value, field, indexContext, ref entryWriter, sourceDocument, scope, out shouldSkip, nestedArray);
+                return;
 
             case ValueType.DynamicNull:       
                 var dynamicNull = (DynamicNullObject)value;
@@ -368,7 +374,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var cdi = value as CoraxDynamicItem;
                 (scope as EnumerableWriterScope)?.SetAsDynamic();
             //we want to unpack item here.
-                InsertRegularField(cdi!.Field, cdi.Value, indexContext, ref entryWriter, scope, out shouldSkip, nestedArray);
+                InsertRegularField(cdi!.Field, cdi.Value, indexContext, ref entryWriter, sourceDocument, scope, out shouldSkip, nestedArray);
                 break;
             case ValueType.Stream:
                 throw new NotImplementedInCoraxException($"Streams are not implemented in Corax yet");
@@ -401,13 +407,13 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
+    void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter, object sourceDocument,
         IWriterScope scope, out bool shouldSkip, bool nestedArray = false)
     {
         if (val.TryGetMember(RavenConstants.Json.Fields.Values, out var values) &&
             IsArrayOfTypeValueObject(val))
         {
-            InsertRegularField(field, (IEnumerable)values, indexContext, ref entryWriter, scope, out shouldSkip, nestedArray);
+            InsertRegularField(field, (IEnumerable)values, indexContext, ref entryWriter, sourceDocument, scope, out shouldSkip, nestedArray);
             return;
         }
         

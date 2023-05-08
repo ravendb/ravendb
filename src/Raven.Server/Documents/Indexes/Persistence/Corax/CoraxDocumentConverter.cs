@@ -26,7 +26,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
 
     public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext, out LazyStringValue id,
+        object doc, JsonOperationContext indexContext, object sourceDocument, out LazyStringValue id,
         out ByteString output, out float? documentBoost, out int fields)
     {
         documentBoost = null; // documents in autoindexes cannot have document boost
@@ -68,11 +68,11 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                             throw new ArgumentOutOfRangeException($"{spatialOptions.MethodType} is not implemented.");
                     }
 
-                    InsertRegularField(indexField, value, indexContext, ref entryWriter, scope, out var _);
+                    InsertRegularField(indexField, value, indexContext, ref entryWriter, sourceDocument, scope, out var _);
                 }
                 else if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value))
                 {
-                    InsertRegularField(indexField, value, indexContext, ref entryWriter, scope, out var _);
+                    InsertRegularField(indexField, value, indexContext, ref entryWriter, sourceDocument, scope, out var _);
                 }
             }
 
