@@ -42,6 +42,7 @@ using SlowTests.Server.Documents.Migration;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Tests.Infrastructure.Entities;
+using Employee = Orders.Employee;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1973,6 +1974,79 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 });
 
                 Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        public void RavenDB_20437()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = Sharding.GetDocumentStore())
+            {
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                SetupRavenEtl(src, dest, "Employees", @"
+loadToPeople(this);
+loadToAddresses(this.Address);
+");
+                const string id = "employees/1-A";
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "James",
+                        Address = new Orders.Address
+                        {
+                            City = "New York"
+                        }
+                    }, id);
+                    session.SaveChanges();
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+
+                using (var session = dest.OpenSession())
+                {
+                    var people = session.Advanced.LoadStartingWith<Employee>($"{id}/people/");
+                    Assert.Equal(1, people.Length);
+
+                    var person = people[0];
+                    Assert.NotNull(person);
+                    Assert.Equal("James", person.FirstName);
+
+                    var metadata = session.Advanced.GetMetadataFor(person);
+                    Assert.Equal("People", metadata[Constants.Documents.Metadata.Collection]);
+
+                    var addresses = session.Advanced.LoadStartingWith<Address>($"{id}/addresses/");
+                    Assert.Equal(1, addresses.Length);
+
+                    var address = addresses[0];
+                    Assert.NotNull(address);
+                    Assert.Equal("New York", address.City);
+
+                    metadata = session.Advanced.GetMetadataFor(address);
+                    Assert.Equal("Addresses", metadata[Constants.Documents.Metadata.Collection]);
+                }
+
+                etlDone = Etl.WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+
+                using (var session = dest.OpenSession())
+                {
+                    var people = session.Advanced.LoadStartingWith<Employee>($"{id}/people/");
+                    Assert.Equal(0, people.Length);
+
+                    var addresses = session.Advanced.LoadStartingWith<Address>($"{id}/addresses/");
+                    Assert.Equal(0, addresses.Length);
+                }
             }
         }
 
