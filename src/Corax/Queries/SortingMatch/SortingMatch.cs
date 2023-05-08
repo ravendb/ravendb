@@ -2,12 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
 using Corax.Utils.Spatial;
+using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Server;
-using Voron.Data.Fixed;
+using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.VxSort;
+using Voron.Data.Containers;
 using Voron.Data.Lookups;
 
 namespace Corax.Queries
@@ -24,11 +29,162 @@ namespace Corax.Queries
 
         private const int NotStarted = -1;
 
-        private byte* _entriesBuffer;
-        private int _entriesCount;
-        private int _bufferUsedCount;
+        private struct Results : IDisposable
+        {
+            private long* _matches;
+            private ByteString _matchesBuffer;
+            private ByteString _termsBuffer;
+            public int Count;
+            private readonly ByteStringContext _allocator;
+            private readonly int _max;
+            private ByteStringContext<ByteStringMemoryCache>.InternalScope _matchesScope;
+            private ByteStringContext<ByteStringMemoryCache>.InternalScope _termsScope;
+            private int _capacity;
+            private readonly UnmanagedSpan* _terms;
+
+            public Results(ByteStringContext allocator, int max)
+            {
+                _allocator = allocator;
+                _max = max;
+                Count = NotStarted;
+
+                _capacity = Math.Max(128, max);
+                _matchesScope = allocator.Allocate(sizeof(long) * _capacity, out _matchesBuffer);
+                _termsScope = allocator.Allocate(sizeof(UnmanagedSpan) * _capacity, out _termsBuffer);
+                _matches = (long*)_matchesBuffer.Ptr;
+                _terms = (UnmanagedSpan*)_termsBuffer.Ptr;
+            }
+
+            public int Prune<TEntryComparer>(TEntryComparer comparer, Span<UnmanagedSpan> unsortedTerms)
+                  where TEntryComparer : struct, IComparer<UnmanagedSpan>
+            {
+                if (Count < _max)
+                    return unsortedTerms.Length; // we cannot filter anything
+
+                var pos = 0;
+                var bottomTerm = _terms[Count - 1];
+                for (int i = 0; i < unsortedTerms.Length; i++)
+                {
+                    if(comparer.Compare(bottomTerm, unsortedTerms[i]) > 0)
+                    {
+                        unsortedTerms[pos++] = unsortedTerms[i];
+                    }
+                }
+                return pos;
+            }
+
+            public void Merge<TEntryComparer>(TEntryComparer comparer, Span<long> matches, Span<UnmanagedSpan> terms)
+                where TEntryComparer : struct, IComparer<UnmanagedSpan>
+            {
+                Debug.Assert(matches.Length == terms.Length);
+                
+                if (_max == -1 || // no limit
+                    Count + matches.Length < _max) // *after* the batch, we are still below the limit
+                {
+                    FullyMergeWith(comparer, matches, terms);
+                    return;
+                }
+                 
+                if(Count < _max)
+                {
+                    // fill up to maximum size
+                    int sizeToFull = _max - Count;
+                    FullyMergeWith(comparer, matches[..sizeToFull], terms[..sizeToFull]);
+                    matches = matches[sizeToFull..];
+                    terms = terms[sizeToFull..];
+                }
+                
+                if(terms.Length > _max)
+                {
+                    terms = terms[.._max];
+                }
+
+                var b = terms.BinarySearch(_terms[Count - 1], comparer);
+                if (b < 0)
+                    b = ~b - 1;
+
+                var d = Count - 1;
+                while (b >= 0)
+                {
+                    int cmp = comparer.Compare(_terms[d], terms[b]);
+                    if (cmp < 0)
+                    {
+                        _matches[d] = matches[b];
+                        _terms[d] = terms[b];
+                    }
+
+                    d--;
+                    b--;
+                }
+            }
+
+
+            private void FullyMergeWith<TComparer>(TComparer comparer, Span<long> matches, Span<UnmanagedSpan> terms)
+                where TComparer : struct, IComparer<UnmanagedSpan>
+            {
+                if (matches.Length + Count > _capacity)
+                {
+                    EnsureCapacity(matches.Length + Count );
+                }
+
+                var b = matches.Length - 1;
+                var d = Count - 1;
+                var k = b + Count;
+                while (d >= 0 && b >= 0)
+                {
+                    int cmp = comparer.Compare(_terms[d], terms[b]);
+                    if (cmp < 0)
+                    {
+                        _terms[k] = terms[b];
+                        _matches[k] = matches[b];
+                        b--;
+                    }
+                    else
+                    {
+                        d--;
+                    }
+                    k--;
+                }
+                matches[..(b+1)].CopyTo(new(_matches, _capacity));
+                terms[..(b+1)].CopyTo(new(_terms, _capacity));
+                Count += matches.Length;
+            }
+            private void EnsureCapacity(int req)
+            {
+                Debug.Assert(req > _capacity);
+
+                var oldCapacity = _capacity;
+                _capacity = (int)BitOperations.RoundUpToPowerOf2((uint)req);
+                var additionalSize = _capacity - oldCapacity;
+                _allocator.GrowAllocation(ref _matchesBuffer, ref _matchesScope, additionalSize * sizeof(long));
+                _allocator.GrowAllocation(ref _termsBuffer, ref _termsScope, additionalSize * sizeof(UnmanagedSpan));
+            }
+
+            public void Dispose()
+            {
+                _termsScope.Dispose();
+                _matchesScope.Dispose();
+            }
+
+            public int CopyTo(Span<long> matches)
+            {
+                var copy = Math.Min(matches.Length, Count);
+                new Span<long>(_matches, copy).CopyTo(matches);
+                _matches += copy;
+                Count -= copy;
+                return copy;
+            }
+
+            internal void Init()
+            {
+                Count = 0;
+            }
+        }
+        
+      
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesBufferScope;
 
+        private Results _results;
         public long TotalResults;
 
         public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, int take = -1)
@@ -37,23 +193,23 @@ namespace Corax.Queries
             _inner = inner;
             _orderMetadata = orderMetadata;
             _take = take;
-            _bufferUsedCount = NotStarted;
+            _results = new Results(searcher.Allocator, take);
 
             TotalResults = 0;
 
-            if (_orderMetadata.HasBoost)
-            {
-                _fillFunc = SortBy<BoostingScorer, (long, float), EntryComparerByScore>(orderMetadata);
-            }
-            else
+            // if (_orderMetadata.HasBoost)
+            // {
+            //     _fillFunc = SortBy<BoostingScorer, (long, float), EntryComparerByScore>(orderMetadata);
+            // }
+            // else
             {
                 _fillFunc = _orderMetadata.FieldType switch
                 {
                     MatchCompareFieldType.Sequence => SortBy<TermsScorer, long, EntryComparerByTerm>(orderMetadata),
-                    MatchCompareFieldType.Alphanumeric => SortBy<TermsScorer, long, EntryComparerByTermAlphaNumeric>(orderMetadata),
-                    MatchCompareFieldType.Integer => SortBy<TermsScorer, long, EntryComparerByLong>(orderMetadata),
-                    MatchCompareFieldType.Floating => SortBy<TermsScorer, long, EntryComparerByDouble>(orderMetadata),
-                    MatchCompareFieldType.Spatial => SortBy<TermsScorer, long, EntryComparerBySpatial>(orderMetadata),
+                    // MatchCompareFieldType.Alphanumeric => SortBy<TermsScorer, long, EntryComparerByTermAlphaNumeric>(orderMetadata),
+                    // MatchCompareFieldType.Integer => SortBy<TermsScorer, long, EntryComparerByLong>(orderMetadata),
+                    // MatchCompareFieldType.Floating => SortBy<TermsScorer, long, EntryComparerByDouble>(orderMetadata),
+                    // MatchCompareFieldType.Spatial => SortBy<TermsScorer, long, EntryComparerBySpatial>(orderMetadata),
                     _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
                 };
             }
@@ -158,7 +314,7 @@ namespace Corax.Queries
         private static delegate*<ref SortingMatch<TInner>, Span<long>, int> SortBy<TScorer, TItem, TEntryComparer>(OrderMetadata metadata)
             where TScorer : struct, IScorer<TItem>, IDisposable
             where TItem : unmanaged
-            where TEntryComparer : struct, IEntryComparer<TItem>, IComparerInit
+            where TEntryComparer : struct, IEntryComparer<TItem>, IComparerInit, IComparer<UnmanagedSpan>
         {
             if (metadata.Ascending)
             {
@@ -172,31 +328,28 @@ namespace Corax.Queries
         private static int Fill<TScorer,TItem, TEntryComparer>(ref SortingMatch<TInner> match, Span<long> matches)
             where TScorer : struct, IScorer<TItem>, IDisposable
             where TItem : unmanaged
-            where TEntryComparer : struct, IEntryComparer<TItem>, IComparerInit
+            where TEntryComparer : struct, IEntryComparer<TItem>, IComparerInit, IComparer<UnmanagedSpan>
         {
             // This method should also be re-entrant for the case where we have already pre-sorted everything and 
             // we will just need to acquire via pages the totality of the results. 
-            if (match._bufferUsedCount == NotStarted)
+            if (match._results.Count == NotStarted)
             {
-                FillAndSortResults<TScorer, TItem,TEntryComparer>(ref match, matches);
-                return match._bufferUsedCount;
+                FillAndSortResults<TScorer, TItem,TEntryComparer>(ref match);
             }
 
-            if (match._entriesCount == match._bufferUsedCount)
-            {
-                match._entriesBufferScope.Dispose();
-                return 0;
-            }
+            var read = match._results.CopyTo(matches);
 
-            var persistedMatches = new Span<long>(match._entriesBuffer +  match._bufferUsedCount * sizeof(long), match._entriesCount - match._bufferUsedCount);
-            var matchesToReturn = Math.Min(persistedMatches.Length, matches.Length);
-            match._bufferUsedCount += matchesToReturn;
-            persistedMatches[..matchesToReturn].CopyTo(matches);
-            return matchesToReturn;
+            if (read != 0) 
+                return read;
+            
+            match._results.Dispose();
+            match._entriesBufferScope.Dispose();
+
+            return 0;
         }
 
-        private struct Descending<TInnerCmp, TItem> : IEntryComparer<TItem>, IComparerInit
-            where TInnerCmp : struct, IEntryComparer<TItem>, IComparerInit
+        private struct Descending<TInnerCmp, TItem> : IEntryComparer<TItem>, IComparerInit, IComparer<UnmanagedSpan> 
+            where TInnerCmp : struct, IEntryComparer<TItem>, IComparerInit, IComparer<UnmanagedSpan>
             where TItem : unmanaged
         {
             private TInnerCmp cmp;
@@ -206,6 +359,7 @@ namespace Corax.Queries
                 cmp = new();
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(TItem x, TItem y)
             {
                 return cmp.Compare(y, x); // note: reversed
@@ -221,9 +375,15 @@ namespace Corax.Queries
                 return cmp.GetEntryText(x);
             }
 
-            public void Init(ref SortingMatch<TInner> match)
+            public Lookup<long> Init(ref SortingMatch<TInner> match)
             {
-                cmp.Init(ref match);
+                return cmp.Init(ref match);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(UnmanagedSpan x, UnmanagedSpan y)
+            {
+                return cmp.Compare(y, x); // note the revered args
             }
         }
 
@@ -249,21 +409,22 @@ namespace Corax.Queries
                 return x.Item2.ToString(CultureInfo.InvariantCulture);
             }
 
-            public void Init(ref SortingMatch<TInner> match)
+            public Lookup<long> Init(ref SortingMatch<TInner> match)
             {
-                
+                return default;
             }
         }
 
         private interface IComparerInit
         {
-            void Init(ref SortingMatch<TInner> match);
+            Lookup<long> Init(ref SortingMatch<TInner> match);
         }
 
-        private struct EntryComparerByTerm : IEntryComparer<long>, IComparerInit
+        private struct EntryComparerByTerm : IEntryComparer<long>, IComparerInit, IComparer<UnmanagedSpan>
         {
             private TermsReader _reader;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(long x, long y)
             {
                 var cmp = _reader.Compare(x, y);
@@ -280,9 +441,29 @@ namespace Corax.Queries
                 return _reader.GetTermFor(x);
             }
 
-            public void Init(ref SortingMatch<TInner> match)
+            public Lookup<long> Init(ref SortingMatch<TInner> match)
             {
                 _reader = match._searcher.TermsReaderFor(match._orderMetadata.Field.FieldName);
+                return match._searcher.TermsIdReaderFor(match._orderMetadata.Field.FieldName);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(UnmanagedSpan xItem, UnmanagedSpan yItem)
+            {
+                if (yItem.Address == null)
+                {
+                    return xItem.Address == null ? 0 : 1;
+                }
+
+                if (xItem.Address == null)
+                    return -1;
+                var match = AdvMemory.Compare(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
+                if (match != 0)
+                    return match;
+                
+                var xItemLengthInBits = (xItem.Length - 1) * 8 - (xItem.Address[0] >> 4);
+                var yItemLengthInBits = (yItem.Length - 1) * 8 - (yItem.Address[0] >> 4);
+                return xItemLengthInBits - yItemLengthInBits;
             }
         }
         
@@ -313,9 +494,9 @@ namespace Corax.Queries
                 return x;
             }
 
-            public void Init(ref SortingMatch<TInner> match)
+            public Lookup<long> Init(ref SortingMatch<TInner> match)
             {
-                _lookup = match._searcher.LongReader(match._orderMetadata.Field.FieldName);
+                return _lookup = match._searcher.LongReader(match._orderMetadata.Field.FieldName);
             }
             
             public string GetEntryText(long x)
@@ -359,9 +540,9 @@ namespace Corax.Queries
                 return _lookup.TryGetValue(x, out var xTerm) ? xTerm.ToString() : "n/a";
             }
 
-            public void Init(ref SortingMatch<TInner> match)
+            public Lookup<long> Init(ref SortingMatch<TInner> match)
             {
-                _lookup = match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
+                return _lookup = match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
             }
         }
 
@@ -369,9 +550,11 @@ namespace Corax.Queries
         {
             private TermsReader _reader;
 
-            public void Init(ref SortingMatch<TInner> match)
+            public Lookup<long> Init(ref SortingMatch<TInner> match)
             {
                 _reader = match._searcher.TermsReaderFor(match._orderMetadata.Field.FieldName);
+                return match._searcher.TermsIdReaderFor(match._orderMetadata.Field.FieldName);
+
             }
 
             public int Compare(long x, long y)
@@ -400,12 +583,13 @@ namespace Corax.Queries
             private SpatialUnits _units;
             private double _round;
 
-            public void Init(ref SortingMatch<TInner> match)
+            public Lookup<long> Init(ref SortingMatch<TInner> match)
             {
                 _center = (match._orderMetadata.Point.X, match._orderMetadata.Point.Y);
                 _units = match._orderMetadata.Units;
                 _round = match._orderMetadata.Round;
                 _reader = match._searcher.SpatialReader(match._orderMetadata.Field.FieldName);
+                return null;
             }
 
             public int Compare(long x, long y)
@@ -437,76 +621,66 @@ namespace Corax.Queries
             }
         }
 
-        private static void FillAndSortResults<TScorer, TItem, TEntryComparer>(ref SortingMatch<TInner> match, Span<long> matches) 
+        private const int SortBatchSize = 4096;
+        
+        private static void FillAndSortResults<TScorer, TItem, TEntryComparer>(ref SortingMatch<TInner> match) 
             where TScorer : struct, IScorer<TItem>, IDisposable
             where TItem : unmanaged
-            where TEntryComparer : struct, IEntryComparer<TItem>, IComparerInit
+            where TEntryComparer : struct, IEntryComparer<TItem>, IComparerInit, IComparer<UnmanagedSpan>
         {
-            TScorer scorer = new();
-            Debug.Assert(matches.Length > 1);
+            var llt = match._searcher.Transaction.LowLevelTransaction;
 
-            var bufferSize = match._take == -1
-                ? Math.Max(128, matches.Length) // no limit specified, we'll guess on the size and rely on growing as needed
-                : match._take;
+            var allocator = match._searcher.Allocator;
             
-            var bufferScope = match._searcher.Allocator.Allocate(bufferSize * sizeof(TItem), out ByteString bs);
-
-            scorer.Init(ref match, matches.Length);
+            var matchesScope = allocator.Allocate( SortBatchSize * sizeof(long), out ByteString bs);
+            Span<long> matches = new(bs.Ptr, SortBatchSize);
+            var termsIdScope = allocator.Allocate(SortBatchSize * sizeof(long), out bs);
+            Span<long> termIds = new(bs.Ptr, SortBatchSize);
+            var termsScope = allocator.Allocate(SortBatchSize * sizeof(UnmanagedSpan), out bs);
+            Span<UnmanagedSpan> terms = new(bs.Ptr, SortBatchSize);
 
             // Initialize the important infrastructure for the sorting.
             TEntryComparer entryComparer = new();
-            entryComparer.Init(ref match);
-            var heap = new SortingMatchHeap<TEntryComparer, TItem>(entryComparer);
-            heap.Set(bs);
+            var lookup = entryComparer.Init(ref match);
+            match._results.Init();
+
+            //var longSorters = default(Sorter<long, long, NumericComparer>);
+            //var termsSorter = default(Sorter<UnmanagedSpan, long, TEntryComparer>);
+
             while (true)
             {
                 var read = match._inner.Fill(matches);
                 match.TotalResults += read;
                 if (read == 0)
                     break;
+                Span<long> batchResults = matches[..read];
+                Span<long> batchTerms = termIds[..read];
+                
+                Sort.Run(batchResults);
+                
+                lookup.GetFor(batchResults, batchTerms, long.MinValue);
 
-                // Since we are doing boosting, we need to score the matches so we can use them later. 
-                scorer.ComputeMatchScores(ref match, matches, read);
+                batchTerms.Sort(batchResults);
+                //longSorters.Sort(batchTerms, batchResults);
+                
+                Container.GetAll(llt, batchTerms, terms, long.MinValue);
+                var curTerms = terms[..read];
 
-                // PERF: We perform this at the end to avoid this check if we are not really adding elements. 
-                if (match._take == -1 && heap.CapacityIncreaseNeeded(read))
-                {
-                    // we don't have a limit to the number of results returned
-                    // so we have to ensure that we keep *all* the results in memory, as such,
-                    // we cannot limit the size of the sorting heap and need to grow it
-                    match._searcher.Allocator.GrowAllocation(ref bs, ref bufferScope, bs.Length);
-                    heap.Set(bs);
-                }
+                read = match._results.Prune(entryComparer, curTerms);
+                if (read == 0)
+                    continue;
+                batchResults = batchResults[..read];
+                curTerms = curTerms[..read];
 
-                for (int i = 0; i < read; i++)
-                {
-                    var entry = scorer.GetItemFor(matches[i], i);
-                    heap.Add(entry);
-                }
+                //termsSorter.Sort(curTerms, batchResults);
+                curTerms.Sort(batchResults, entryComparer);
+                
+                match._results.Merge(entryComparer, batchResults, curTerms);
             }
 
-            match._entriesCount = heap.Count;
-            match._bufferUsedCount = heap.Count;
-            var matchesToUse = matches;
-            if (heap.Count > matches.Length)
-            {
-                // we need to sort the values, we do that once, in a _new_ buffer that will be persisted for the next call
-                // (note that we dispose the former buffer in the using above) and then we use this buffer till the end
-                match._entriesBufferScope = match._searcher.Allocator.Allocate(heap.Count * sizeof(long), out bs);
-                match._entriesBuffer = bs.Ptr;
-                matchesToUse = new Span<long>(bs.Ptr, heap.Count);
-            }
-            
-            heap.Complete(matchesToUse);
-
-            if (matchesToUse.Length > matches.Length)
-            {
-                matchesToUse[..matches.Length].CopyTo(matches);
-                match._bufferUsedCount = matches.Length;
-            }
-
-            scorer.Dispose();
-            bufferScope.Dispose();   
+            termsScope.Dispose();
+            termsIdScope.Dispose();
+            matchesScope.Dispose();
         }
 
         public long Count => _inner.Count;

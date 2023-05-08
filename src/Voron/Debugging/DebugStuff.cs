@@ -14,6 +14,7 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
+using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
@@ -358,6 +359,56 @@ namespace Voron.Debugging
 
             sw.WriteLine("</ul></li></ul>");
         }
+        
+        
+        [Conditional("DEBUG")]
+        public static void RenderAndShow(Lookup<long> tree, string message = null)
+        {
+            var headerData = $"{tree.State}";
+            if (!string.IsNullOrWhiteSpace(message))
+                headerData = $"{message}-{headerData}";
+
+            RenderAndShowTCompactTree(tree, tree.State.RootPage, $"<p>{headerData}</p>");
+        }
+        
+        [Conditional("DEBUG")]
+        public static void RenderAndShowTCompactTree(Lookup<long>  tree, long startPageNumber, string headerData = null)
+        {
+            RenderHtmlTreeView(writer =>
+            {
+                if (headerData != null)
+                    writer.WriteLine(headerData);
+                writer.WriteLine("<div class='css-treeview'><ul>");
+                               RenderPageInternal(tree, tree.Llt.GetPage(startPageNumber), writer, "Root", true);
+
+                writer.WriteLine("</ul></div>");
+            });
+        }
+        
+        private static unsafe void RenderPageInternal(Lookup<long>  tree, Page page, TextWriter sw, string text, bool open)
+        {
+            var header = (CompactPageHeader*)page.Pointer;
+            sw.WriteLine($"<ul><li><input type='checkbox' id='page-{page.PageNumber}' {(open ? "checked" : "")} /><label for='page-{page.PageNumber}'>{text}: Page {page.PageNumber:#,#;;0} - {header->PageFlags} - {header->NumberOfEntries:#,#;;0} entries - Usable space: {header->Upper - header->Lower} / Available {header->FreeSpace}</label><ul>");
+
+            var entries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
+            for (int i = 0; i < header->NumberOfEntries; i++)
+            {
+                var state = new Lookup<long>.CursorState { Page = page };
+                Lookup<long>.GetKeyAndValue(ref state, i, out var key, out var val);
+
+                if (header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+                {
+                    sw.Write($"<li>{key} {val}</li>");
+                }
+                else
+                {
+                    RenderPageInternal(tree, tree.Llt.GetPage(val), sw, key.ToString(), false);
+                }
+            }
+
+            sw.WriteLine("</ul></li></ul>");
+        }
+
 
         private static unsafe long GetFixedSizeTreeKey<TVal>(FixedSizeTreePage<TVal> page, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, int i)
             where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>

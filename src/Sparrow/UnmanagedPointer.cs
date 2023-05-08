@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Sparrow
 {
@@ -28,7 +29,7 @@ namespace Sparrow
             Address = address;
             Length = length;
         }
-
+        
         public UnmanagedSpan(UnmanagedPointer pointer, int length)
         {
             Address = pointer.Address;

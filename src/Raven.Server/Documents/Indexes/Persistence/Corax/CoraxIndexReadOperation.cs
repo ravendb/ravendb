@@ -594,8 +594,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             continue;
                         }
 
-                    // Now we know this is a new candidate document to be return therefore, we are going to be getting the
-                    // actual data and apply the rest of the filters. 
+                        // Now we know this is a new candidate document to be return therefore, we are going to be getting the
+                        // actual data and apply the rest of the filters. 
                     Include:
                         var retrieverInput = new RetrieverInput(_indexSearcher, _fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key,
                             _index.IndexFieldsPersistence);
