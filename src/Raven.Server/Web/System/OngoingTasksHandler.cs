@@ -855,7 +855,7 @@ namespace Raven.Server.Web.System
         private void AssertSecurityClearanceForConfigurationScript(string name, BlittableJsonReaderObject configuration)
         {
             X509Certificate2 clientCert = GetCurrentCertificate();
-            CertificateDefinition newCertificateDef =null;
+            CertificateDefinition newCertificateDef = null;
 
             if (clientCert == null)
                 return;
@@ -871,26 +871,20 @@ namespace Raven.Server.Web.System
 
             if (newCertificateDef != null)
             {
-
-                List<BackupSettings> settingsList = null;
-                if (name == PutConnectionStringDebugTag && ConnectionString.GetConnectionStringType(configuration) == ConnectionStringType.Olap)
-                    settingsList = JsonDeserializationClient.OlapConnectionString(configuration).GetBackupSettingsDestinations();
-
-                if (name == UpdatePeriodicBackupDebugTag || name == BackupDatabaseOnceTag)
-                    settingsList = JsonDeserializationServer.BackupConfiguration(configuration).GetBackupDestinations<BackupSettings>();
-                if (settingsList == null)
+                if (newCertificateDef.SecurityClearance != SecurityClearance.ValidUser)
                     return;
 
-                foreach (var setting in settingsList)
-                {
-                    if (setting.GetBackupConfigurationScript == null)
-                        continue;
+                List<string> settingsList = null;
+                if (name == PutConnectionStringDebugTag && ConnectionString.GetConnectionStringType(configuration) == ConnectionStringType.Olap)
+                    settingsList = JsonDeserializationClient.OlapConnectionString(configuration).GetBackupDestinations();
+                
+                if (name == UpdatePeriodicBackupDebugTag || name == BackupDatabaseOnceTag)
+                    settingsList = JsonDeserializationServer.BackupConfiguration(configuration).GetBackupDestinations(BackupConfiguration.AddBackupSettings);
 
-                    if (newCertificateDef.SecurityClearance == SecurityClearance.ValidUser)
-                        throw new AuthorizationException(
-                            $"Bad security clearance: '{newCertificateDef.SecurityClearance}'. The current user does not have the necessary security clearance. " +
-                            $"External script execution is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.");
-                }
+                if (settingsList?.Count > 0)
+                    throw new AuthorizationException(
+                        $"Bad security clearance: '{newCertificateDef.SecurityClearance}'. The current user does not have the necessary security clearance. " +
+                        $"External script execution is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.");
             }
         }
 

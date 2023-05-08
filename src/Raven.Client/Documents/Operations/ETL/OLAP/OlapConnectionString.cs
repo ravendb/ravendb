@@ -127,9 +127,9 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             return sb.ToString();
         }
 
-        internal List<BackupSettings> GetBackupSettingsDestinations()
+        internal List<string> GetBackupDestinations()
         {
-            var backupDestinations = new List<BackupSettings>();
+            var backupDestinations = new List<string>();
 
             AddBackupDestination(LocalSettings, BackupDestination.Local);
             AddBackupDestination(S3Settings, BackupDestination.AmazonS3);
@@ -140,10 +140,11 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
             void AddBackupDestination(BackupSettings backupSettings, BackupDestination backupDestination)
             {
-                if (backupSettings == null || backupSettings.Disabled)
+                if (backupSettings == null)
                     return;
-
-                backupDestinations.Add(backupSettings);
+                if (backupSettings.GetBackupConfigurationScript == null)
+                    return;
+                backupDestinations.Add(backupDestination.ToString());
             }
 
             return backupDestinations;

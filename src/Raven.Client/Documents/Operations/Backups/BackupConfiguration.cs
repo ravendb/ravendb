@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Sparrow.Json.Parsing;
+using static Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
@@ -47,50 +48,51 @@ namespace Raven.Client.Documents.Operations.Backups
         internal List<string> GetFullBackupDestinations()
         {
             // used for studio and generating the default task name
-            return GetBackupDestinations<Enum>().Select(backupDestination =>
+            return GetBackupDestinations(AddBackupDestination).Select(str =>
             {
-                var str = backupDestination.ToString();
                 var fieldInfo = typeof(PeriodicBackupConfiguration.BackupDestination).GetField(str);
                 var attributes = (DescriptionAttribute[])fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), false);
                 return attributes.Length > 0 ? attributes[0].Description : str;
             }).ToList();
         }
-
+        
         internal List<string> GetDestinations()
         {
-            return GetBackupDestinations<Enum>().Select(x => x.ToString()).ToList();
+            return GetBackupDestinations(AddBackupDestination);
         }
 
-        internal List<T> GetBackupDestinations<T>() where T : class
+        internal delegate void AddBackupDestinationDel(BackupSettings backupSettings, BackupDestination backupDestination,List<string> destList);
+        
+        private static void AddBackupDestination(BackupSettings backupSettings, BackupDestination backupDestination, List<string> destList)
         {
-            var backupDestinations = new List<T>();
-            AddBackupDestination(LocalSettings, BackupDestination.Local);
-            AddBackupDestination(S3Settings, BackupDestination.AmazonS3);
-            AddBackupDestination(GlacierSettings, BackupDestination.AmazonGlacier);
-            AddBackupDestination(AzureSettings, BackupDestination.Azure);
-            AddBackupDestination(GoogleCloudSettings, BackupDestination.GoogleCloud);
-            AddBackupDestination(FtpSettings, BackupDestination.FTP);
+            if (backupSettings == null || backupSettings.Disabled)
+                return;
+        
+            destList.Add(backupDestination.ToString());
+        }
 
-            void AddBackupDestination(BackupSettings backupSettings, BackupDestination backupDestination)
-            {
-                if (backupSettings == null || backupSettings.Disabled)
-                    return;
+        internal static void AddBackupSettings(BackupSettings backupSettings, BackupDestination backupDestination, List<string> destList)
+        {
+            if (backupSettings == null)
+                return;
+            if (backupSettings.GetBackupConfigurationScript == null)
+                return;
+            destList.Add(backupDestination.ToString());
+        }
 
-                if (typeof(T) == typeof(BackupSettings))
-                {
-                    backupDestinations.Add(backupSettings as T);
-                }
+        internal List<string> GetBackupDestinations(AddBackupDestinationDel addBackupDestination)
+        {
+            var backupDestinations = new List<string>();
 
-                else if (typeof(T) == typeof(BackupDestination).BaseType)
-                {
-                    backupDestinations.Add(backupDestination as T);
-                }
-            }
+            addBackupDestination(LocalSettings, BackupDestination.Local, backupDestinations);
+            addBackupDestination(S3Settings, BackupDestination.AmazonS3, backupDestinations);
+            addBackupDestination(GlacierSettings, BackupDestination.AmazonGlacier, backupDestinations);
+            addBackupDestination(AzureSettings, BackupDestination.Azure, backupDestinations);
+            addBackupDestination(GoogleCloudSettings, BackupDestination.GoogleCloud, backupDestinations);
+            addBackupDestination(FtpSettings, BackupDestination.FTP, backupDestinations);
 
             return backupDestinations;
         }
-
-
 
         internal enum BackupDestination
         {
