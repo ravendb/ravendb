@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static Raven.Server.Documents.Indexes.IndexStorage;
@@ -18,10 +19,10 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public async Task WillGetIndexStatsFromStorageOrReader()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Lucene)]
+        public async Task WillGetIndexStatsFromStorageOrReader(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new StopIndexingOperation());
 

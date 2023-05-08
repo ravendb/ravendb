@@ -36,7 +36,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanUseCustomSorter(Options options)
         {
             var sorterName = GetDatabaseName();
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanOverrideCustomSorter(Options options)
         {
             var sorterName = GetDatabaseName();
@@ -145,8 +145,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Querying)]
-        public void CanUseCustomSorter_Restart()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseCustomSorter_Restart(Options options)
         {
             var serverPath = NewDataPath();
             var databasePath = NewDataPath();
@@ -164,6 +165,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = _ => sorterName,
+                ModifyDatabaseRecord = options.ModifyDatabaseRecord,
                 Path = databasePath,
                 RunInMemory = false,
                 Server = server,
@@ -206,6 +208,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = _ => sorterName,
+                ModifyDatabaseRecord = options.ModifyDatabaseRecord,
                 Path = databasePath,
                 RunInMemory = false,
                 Server = server,
@@ -216,8 +219,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Querying)]
-        public void CanUseCustomSorter_Restart_Faulty()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseCustomSorter_Restart_Faulty(Options options)
         {
             var serverPath = NewDataPath();
             var databasePath = NewDataPath();
@@ -235,6 +239,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = _ => sorterName,
+                ModifyDatabaseRecord = options.ModifyDatabaseRecord,
                 Path = databasePath,
                 RunInMemory = false,
                 Server = server,
@@ -291,6 +296,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = _ => sorterName,
+                ModifyDatabaseRecord = options.ModifyDatabaseRecord,
                 Path = databasePath,
                 RunInMemory = false,
                 Server = server,
@@ -325,13 +331,15 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Querying)]
-        public void CanGetCustomSorterDiagnostics()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetCustomSorterDiagnostics(Options options)
         {
             var sorterName = GetDatabaseName();
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = _ => sorterName
+                ModifyDatabaseName = _ => sorterName,
+                ModifyDatabaseRecord = options.ModifyDatabaseRecord
             }))
             {
                 using (var session = store.OpenSession())

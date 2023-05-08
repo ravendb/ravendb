@@ -1,5 +1,7 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -55,10 +57,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TestProjectingNullProperty2()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TestProjectingNullProperty2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -85,7 +88,10 @@ namespace SlowTests.Issues
                     Assert.Equal(1, results.Count);
                     Assert.Null(results[0].SomeProp);
                     Assert.Null(results[0].HasValue);
-                    Assert.Equal("MyDocs/1", results[0].DocId);
+                    if (options.SearchEngineMode is RavenSearchEngineMode.Corax)
+                        Assert.Equal("MyDocs/1", results[0].DocId, StringComparer.InvariantCultureIgnoreCase);
+                    else
+                        Assert.Equal("MyDocs/1", results[0].DocId);
                 }
             }
         }
