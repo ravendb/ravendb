@@ -31,16 +31,12 @@ function loadCountersOfUsersBehavior(doc, counter)
 ";
 
         [RavenTheory(RavenTestCategory.Etl)]
-        [InlineData(RavenDatabaseMode.Single, "Users", null)]
-        [InlineData(RavenDatabaseMode.Single, null, null)]
-        [InlineData(RavenDatabaseMode.Single, "Users", BasicScript)]
-        [InlineData(RavenDatabaseMode.Sharded, "Users", null)]
-        [InlineData(RavenDatabaseMode.Sharded, null, null)]
-        [InlineData(RavenDatabaseMode.Sharded, "Users", BasicScript)]
-
-        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting_internal(RavenDatabaseMode dbMode, string collection, string script)
+        [RavenData("Users", null, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(null, null, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("Users", BasicScript, DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting_internal(Options options, string collection, string script)
         {
-            using (var src = GetDocumentStore(Options.ForMode(dbMode)))
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 if (collection == null)
@@ -713,14 +709,11 @@ if (hasCounter('down')) {
             }
         }
 
-        [Theory]
-        [InlineData("Users", RavenDatabaseMode.Single)]
-        [InlineData("Users", RavenDatabaseMode.Sharded)]
-        [InlineData(null, RavenDatabaseMode.Single)]
-        [InlineData(null, RavenDatabaseMode.Sharded)]
-        public void Should_send_all_counters_on_doc_update(string collection, RavenDatabaseMode dbMode)
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData("Users", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(null, DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_send_all_counters_on_doc_update(Options options, string collection)
         {
-            var options = Options.ForMode(dbMode);
             options.ModifyDatabaseRecord +=
                 x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2";
 
@@ -767,7 +760,7 @@ if (hasCounter('down')) {
         }
 
         [RavenTheory(RavenTestCategory.Etl)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Should_handle_counters_according_to_behavior_defined_in_script(Options options)
         {
             using (var src = GetDocumentStore(options))
@@ -856,7 +849,7 @@ function loadCountersOfUsersBehavior(docId, counter)
         }
 
         [RavenTheory(RavenTestCategory.Etl)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Should_not_send_counters_if_load_counters_behavior_isnt_defined(Options options)
         {
             using (var src = GetDocumentStore(options))
@@ -905,7 +898,7 @@ loadToUsers(this);");
         }
 
         [RavenTheory(RavenTestCategory.Etl)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set(Options options)
         {
             using (var src = GetDocumentStore(new Options()
@@ -998,7 +991,7 @@ function loadCountersOfCustomersBehavior(docId, counter) // it's ok
         }
 
         [RavenTheory(RavenTestCategory.Etl)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Load_counters_behavior_function_can_use_other_function_defined_in_script(Options options)
         {
             using (var src = GetDocumentStore(options))
@@ -1038,7 +1031,7 @@ function loadCountersOfUsersBehavior(docId, counter)
         }
 
         [RavenTheory(RavenTestCategory.Etl)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Should_override_counter_value(Options options)
         {
             using (var src = GetDocumentStore())
@@ -1090,7 +1083,7 @@ function loadCountersOfUsersBehavior(docId, counter)
         }
 
         [RavenTheory(RavenTestCategory.Etl)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_define_multiple_load_counter_behavior_functions(Options options)
         {
             using (var src = GetDocumentStore(options))
