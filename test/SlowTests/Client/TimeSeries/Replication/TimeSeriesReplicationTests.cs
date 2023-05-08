@@ -726,7 +726,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore(options))
             using (var storeB = GetDocumentStore(options))
             {
-                var baseline = DateTime.UtcNow;//RavenTestHelper.UtcToday;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
@@ -982,18 +982,19 @@ namespace SlowTests.Client.TimeSeries.Replication
                     session.TimeSeriesFor("users/ayende", "Heartrate").Delete(baseline);
                     session.SaveChanges();
                 }
-                await SetupReplicationAsync(storeB, storeA);
-                await SetupReplicationAsync(storeA, storeB);
                 
+                var replicationB = await SetupReplicationAndGetManagerAsync(storeB, options.DatabaseMode, toStores: storeA);
+                var replicationA = await SetupReplicationAndGetManagerAsync(storeA, options.DatabaseMode, toStores: storeB);
+
                 EnsureReplicating(storeA, storeB);
                 EnsureReplicating(storeB, storeA);
 
                 AssertValues(storeA);
                 AssertValues(storeB);
 
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
-                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
-
+                await replicationA.EnsureNoReplicationLoopAsync();
+                await replicationB.EnsureNoReplicationLoopAsync();
+                
                 void AssertValues(IDocumentStore store)
                 {
                     using (var session = store.OpenSession())
