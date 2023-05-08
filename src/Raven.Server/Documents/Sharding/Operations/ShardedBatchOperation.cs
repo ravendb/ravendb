@@ -6,6 +6,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
+using Raven.Server.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                     continue;
                 }
 
-                _command.MarkShardAsComplete(_resultContext, c.ShardNumber);
+                _command.MarkShardAsComplete(_resultContext, c.ShardNumber, HttpRequest.IsFromStudio());
             }
 
             if (lastMismatchException != null)
