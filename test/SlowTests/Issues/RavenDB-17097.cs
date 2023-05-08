@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,10 @@ public class RavenDB_17097 : RavenTestBase
     {
     }
 
-    private async Task NotificationTest<TIndex>()
+    private async Task NotificationTest<TIndex>(Options options)
         where TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         var db = await GetDatabase(store.Database);
         var notificationsQueue = new AsyncQueue<DynamicJsonValue>();
         using var _ = db.NotificationCenter.TrackActions(notificationsQueue, null);
@@ -36,7 +37,7 @@ public class RavenDB_17097 : RavenTestBase
 
         var index = new TIndex();
         await index.ExecuteAsync(store);
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         Tuple<bool, DynamicJsonValue> performanceHint;
 
@@ -58,16 +59,18 @@ public class RavenDB_17097 : RavenTestBase
         WaitForUserToContinueTheTest(store);
     }
 
-    [Fact]
-    public Task FanOutIndexWithIncludedSourceDocumentWillSendNotification()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public Task FanOutIndexWithIncludedSourceDocumentWillSendNotification(Options options)
     {
-        return NotificationTest<FanOutIndexWithSourceDocument>();
+        return NotificationTest<FanOutIndexWithSourceDocument>(options);
     }
     
-    [Fact]
-    public Task IncludeDocumentDynamicField()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public Task IncludeDocumentDynamicField(Options options)
     {
-        return NotificationTest<IncludeDocumentDynamicFieldIndex>();
+        return NotificationTest<IncludeDocumentDynamicFieldIndex>(options);
     }
     
     private class IncludeDocumentDynamicFieldIndex : AbstractIndexCreationTask<CollectionDocument>

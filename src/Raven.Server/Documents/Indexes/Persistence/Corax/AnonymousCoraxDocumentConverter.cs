@@ -31,7 +31,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
     public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
-        object doc, JsonOperationContext indexContext, out LazyStringValue id,
+        object doc, JsonOperationContext indexContext, object sourceDocument, out LazyStringValue id,
         out ByteString output, out float? documentBoost, out int fields)
     {
         var boostedValue = doc as BoostedValue;
@@ -67,7 +67,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                     throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
 
                 
-                InsertRegularField(field, value, indexContext, ref entryWriter, scope, out var innerShouldSkip);
+                InsertRegularField(field, value, indexContext, ref entryWriter, sourceDocument, scope, out var innerShouldSkip);
                 shouldSkip &= innerShouldSkip;
                 
                 

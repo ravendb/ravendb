@@ -43,7 +43,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
     }
 
-    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, out LazyStringValue id, out ByteString output, out float? documentBoost, out int fields)
+    public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, object sourceDocument, out LazyStringValue id, out ByteString output, out float? documentBoost, out int fields)
     {
         documentBoost = null;
         // We prepare for the next entry.
@@ -131,7 +131,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         {
             var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                 context: indexContext);
-            InsertRegularField(field, value, indexContext, ref entryWriter, writerScope, out shouldSkip);
+            InsertRegularField(field, value, indexContext, ref entryWriter, sourceDocument, writerScope, out shouldSkip);
         }
 
         static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, out float? boost)
@@ -187,7 +187,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                         value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                             context: indexContext);
 
-                        InsertRegularField(field, value, indexContext, ref entryWriter, writerScope, out shouldSkip);
+                        InsertRegularField(field, value, indexContext, ref entryWriter, sourceDocument, writerScope, out shouldSkip);
 
                         if (value is IDisposable toDispose1)
                         {
@@ -231,7 +231,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                         return; //Ignoring bad spatial field
                     }
 
-                    InsertRegularField(field, spatial, indexContext, ref entryWriter, writerScope, out shouldSkip);
+                    InsertRegularField(field, spatial, indexContext, ref entryWriter, sourceDocument, writerScope, out shouldSkip);
 
                     shouldProcessAsBlittable = false;
                     return;

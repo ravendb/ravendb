@@ -4694,7 +4694,7 @@ namespace Raven.Server.Documents.Indexes
         public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, bool shouldSkipOptimization, CancellationToken token)
         {
             if (IndexPersistence is CoraxIndexPersistence)
-                throw new NotSupportedException($"{nameof(Compact)} is supported for Corax indexes.");
+                throw new NotSupportedException($"{nameof(Compact)} is not supported for Corax indexes.");
 
             AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Compact));
 
