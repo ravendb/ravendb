@@ -147,7 +147,7 @@ public class ShardedBatchCommand : IBatchCommand
             if (cmd.Type == CommandType.DELETE && cmd.IdPrefixed)
             {
                 if (behavior == ShardedBatchBehavior.TransactionalSingleBucketOnly)
-                    throw new ShardedBatchBehaviorViolationException($"Batch command '{nameof(DeletePrefixedCommandData)}' (prefixed id : '{cmd.Id}') does not operate on a single bucket as this is a multi-sharded operation," +
+                    throw new ShardedBatchBehaviorViolationException($"Batch command '{nameof(DeletePrefixedCommandData)}' (prefixed id : '{cmd.Id}') does not operate on a single bucket as this is a multi-shard operation," +
                                                                      "which violates the requested sharded batch behavior to operate on a single bucket only.");
                 // send delete-prefixed-command to all shards
                 var keys = _databaseContext.DatabaseRecord.Sharding.Shards.Keys;
