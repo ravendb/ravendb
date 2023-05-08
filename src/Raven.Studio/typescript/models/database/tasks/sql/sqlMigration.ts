@@ -333,7 +333,8 @@ class sqlMigration {
     toSourceDto(): Raven.Server.SqlMigration.Model.SourceSqlDatabase {
         return {
             ConnectionString: this.getConnectionString(),
-            Provider: this.databaseType()
+            Provider: this.databaseType(),
+            Schemas: null //TODO
         }
     }
     
