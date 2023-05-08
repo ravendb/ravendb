@@ -1951,7 +1951,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
                     JavaScriptUtils.Clear();
-                    throw CreateFullError(e);
+                    throw CreateFullError(documentId, e);
                 }
                 catch (Exception)
                 {
@@ -1992,17 +1992,17 @@ namespace Raven.Server.Documents.Patch
                 throw new ArgumentNullException("jsonCtx");
             }
 
-            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(JavaScriptException e)
+            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(string documentId, JavaScriptException e)
             {
-                string msg;
+                string msg = $"Script failed for document id '{documentId}'. ";
                 if (e.Error.IsString())
-                    msg = e.Error.AsString();
+                    msg += e.Error.AsString();
                 else if (e.Error.IsObject())
-                    msg = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, e.Error.AsObject()).ToString();
+                    msg += JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, e.Error.AsObject()).ToString();
                 else
-                    msg = e.Error.ToString();
+                    msg += e.Error.ToString();
 
-                msg = "At " + e.Column + ":" + e.LineNumber + " " + msg;
+                msg += " At " + e.Column + ":" + e.LineNumber + " " + msg;
                 var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
                 return javaScriptException;
             }
