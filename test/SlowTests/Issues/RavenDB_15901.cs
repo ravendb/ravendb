@@ -53,10 +53,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanGetBoostedValues()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)] 
+        public void CanGetBoostedValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UsersByName().Execute(store);
 

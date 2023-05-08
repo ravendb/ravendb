@@ -154,7 +154,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanSortByDistanceWOFilteringWDocQueryBySpecifiedField(Options options)
         {
             using (var store = GetDocumentStore(options))

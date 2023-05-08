@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,14 +16,34 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void SelectManySimplePredicate()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void SelectManySimplePredicate(Options options)
         {
-            TestCase<SelectManySimplePredicateIndex>();
+            if (options.SearchEngineMode is RavenSearchEngineMode.Corax)
+                TestCase<SelectManySimplePredicateIndexCorax>(options);
+            else
+                TestCase<SelectManySimplePredicateIndexLucene>(options);
         }
-        private class SelectManySimplePredicateIndex : AbstractIndexCreationTask<TestObj>
+        private class SelectManySimplePredicateIndexCorax : AbstractIndexCreationTask<TestObj>
         {
-            public SelectManySimplePredicateIndex()
+            public SelectManySimplePredicateIndexCorax()
+            {
+                Map = taggables =>
+                    from taggable in taggables
+                    select new
+                    {
+                        TagsResult = taggable.Tags
+                            .SelectMany((v => v.Value))
+                    };
+                Store("TagsResult", FieldStorage.Yes);
+                Index("TagsResult", FieldIndexing.No);
+            }
+        }
+
+        private class SelectManySimplePredicateIndexLucene : AbstractIndexCreationTask<TestObj>
+        {
+            public SelectManySimplePredicateIndexLucene()
             {
                 Map = taggables =>
                     from taggable in taggables
@@ -35,14 +56,19 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void SelectManyComplexPredicate()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void SelectManyComplexPredicate(Options options)
         {
-            TestCase<SelectManyComplexPredicateIndex>();
+            if (options.SearchEngineMode is RavenSearchEngineMode.Corax)
+                TestCase<SelectManyComplexPredicateIndexCorax>(options);
+            else
+                TestCase<SelectManyComplexPredicateIndexLucene>(options);
         }
-        private class SelectManyComplexPredicateIndex : AbstractIndexCreationTask<TestObj>
+        
+        private class SelectManyComplexPredicateIndexLucene : AbstractIndexCreationTask<TestObj>
         {
-            public SelectManyComplexPredicateIndex()
+            public SelectManyComplexPredicateIndexLucene()
             {
                 Map = taggables =>
                     from taggable in taggables
@@ -54,15 +80,35 @@ namespace SlowTests.Issues
                 Store("TagsResult", FieldStorage.Yes);
             }
         }
-
-        [Fact]
-        public void SelectManyComplexPredicate2Args()
+        
+        private class SelectManyComplexPredicateIndexCorax : AbstractIndexCreationTask<TestObj>
         {
-            TestCase<SelectManyComplexPredicate2ArgsIndex>();
+            public SelectManyComplexPredicateIndexCorax()
+            {
+                Map = taggables =>
+                    from taggable in taggables
+                    select new
+                    {
+                        TagsResult = taggable.Tags
+                            .SelectMany((v,i) => v.Value)
+                    };
+                Store("TagsResult", FieldStorage.Yes);
+                Index("TagsResult", FieldIndexing.No);
+            }
         }
-        private class SelectManyComplexPredicate2ArgsIndex : AbstractIndexCreationTask<TestObj>
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void SelectManyComplexPredicate2Args(Options options)
         {
-            public SelectManyComplexPredicate2ArgsIndex()
+            if (options.SearchEngineMode is RavenSearchEngineMode.Corax)
+                TestCase<SelectManyComplexPredicate2ArgsIndexCorax>(options);
+            else
+                TestCase<SelectManyComplexPredicate2ArgsIndexLucene>(options);
+        }
+        private class SelectManyComplexPredicate2ArgsIndexLucene : AbstractIndexCreationTask<TestObj>
+        {
+            public SelectManyComplexPredicate2ArgsIndexLucene()
             {
                 Map = taggables =>
                     from taggable in taggables
@@ -74,16 +120,36 @@ namespace SlowTests.Issues
                 Store("TagsResult", FieldStorage.Yes);
             }
         }
-
-        [Fact]
-        public void SelectManySimplePredicate2Args()
+        
+        private class SelectManyComplexPredicate2ArgsIndexCorax : AbstractIndexCreationTask<TestObj>
         {
-            TestCase<SelectManySimplePredicate2ArgsIndex>();
+            public SelectManyComplexPredicate2ArgsIndexCorax()
+            {
+                Map = taggables =>
+                    from taggable in taggables
+                    select new
+                    {
+                        TagsResult = taggable.Tags
+                            .SelectMany((v, i) => v.Value, (pair, valuePair) => valuePair)
+                    };
+                Store("TagsResult", FieldStorage.Yes);
+                Index("TagsResult", FieldIndexing.No);
+            }
         }
 
-        private class SelectManySimplePredicate2ArgsIndex : AbstractIndexCreationTask<TestObj>
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void SelectManySimplePredicate2Args(Options options)
         {
-            public SelectManySimplePredicate2ArgsIndex()
+            if (options.SearchEngineMode is RavenSearchEngineMode.Corax) 
+                TestCase<SelectManySimplePredicate2ArgsIndexCorax>(options);
+            else
+                TestCase<SelectManySimplePredicate2ArgsIndexLucene>(options);
+        }
+
+        private class SelectManySimplePredicate2ArgsIndexLucene : AbstractIndexCreationTask<TestObj>
+        {
+            public SelectManySimplePredicate2ArgsIndexLucene()
             {
                 Map = taggables =>
                     from taggable in taggables
@@ -95,10 +161,26 @@ namespace SlowTests.Issues
                 Store("TagsResult", FieldStorage.Yes);
             }
         }
-
-        private void TestCase<T>() where T : AbstractIndexCreationTask<TestObj>, new()
+        
+        private class SelectManySimplePredicate2ArgsIndexCorax : AbstractIndexCreationTask<TestObj>
         {
-            using var store = GetDocumentStore();
+            public SelectManySimplePredicate2ArgsIndexCorax()
+            {
+                Map = taggables =>
+                    from taggable in taggables
+                    select new
+                    {
+                        TagsResult = taggable.Tags
+                            .SelectMany(v => v.Value, (pair, valuePair) => valuePair)
+                    };
+                Store("TagsResult", FieldStorage.Yes);
+                Index("TagsResult", FieldIndexing.No);
+            }
+        }
+
+        private void TestCase<T>(Options options) where T : AbstractIndexCreationTask<TestObj>, new()
+        {
+            using var store = GetDocumentStore(options);
             var index = new T();
             index.Execute(store);
 
@@ -147,6 +229,8 @@ namespace SlowTests.Issues
                     Assert.Equal("value1", query[0]["key2"]);
                 }
             }
+            
+            WaitForUserToContinueTheTest(store);
         }
 
         private class TestObj
@@ -161,10 +245,11 @@ namespace SlowTests.Issues
 #pragma warning restore 649
         }
 
-        [Fact]
-        public void UserTest()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void UserTest(Options options)
         {
-            TestCase<TestIndex>();
+            TestCase<TestIndex>(options);
         }
 
         private class TestIndex : AbstractIndexCreationTask<TestObj>

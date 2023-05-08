@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using TShirt = SlowTests.Core.Utils.Entities.TShirt;
@@ -16,10 +17,11 @@ public class RavenDB_17973 : RavenTestBase
     {
     }
 
-    [Fact]
-    public void CanPerformIntersectQueryWithFilter()
+    [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanPerformIntersectQueryWithFilter(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             new TShirtIndex().Execute(store);
 

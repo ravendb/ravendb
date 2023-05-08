@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,11 +18,13 @@ public class RavenDB_17998 : RavenTestBase
     {
     }
 
-    [Fact]
-    public void Can_Compact_Index_With_NGram_Analyzer()
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void Can_Compact_Index_With_NGram_Analyzer(Options options)
     {
         using (var store = GetDocumentStore(new Options
         {
+            ModifyDatabaseRecord = options.ModifyDatabaseRecord,
             RunInMemory = false
         }))
         {
