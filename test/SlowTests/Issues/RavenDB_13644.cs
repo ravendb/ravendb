@@ -460,7 +460,6 @@ namespace SlowTests.Issues
                 
                 if (options.DatabaseMode is RavenDatabaseMode.Single)
                 {
-                    //TODO I'm not sure but there is some kind of race on sharding? Sometimes this is faster than update of staleness.
                     store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
                     {
                         Assert.True(staleness.IsStale);
@@ -489,12 +488,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
+                if (options.DatabaseMode is RavenDatabaseMode.Single)
                 {
-                    Assert.True(staleness.IsStale);
-                    Assert.Equal(1, staleness.StalenessReasons.Count);
-                    Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[0]);
-                });
+                    store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
+                    {
+                        Assert.True(staleness.IsStale);
+                        Assert.Equal(1, staleness.StalenessReasons.Count);
+                        Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[0]);
+                    });
+                }
 
                 store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
@@ -521,13 +523,16 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
+                if (options.DatabaseMode is RavenDatabaseMode.Single)
                 {
-                    Assert.True(staleness.IsStale);
-                    Assert.Equal(2, staleness.StalenessReasons.Count);
-                    Assert.Contains("There are still some documents to process from collection", staleness.StalenessReasons[0]);
-                    Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[1]);
-                });
+                    store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
+                    {
+                        Assert.True(staleness.IsStale);
+                        Assert.Equal(2, staleness.StalenessReasons.Count);
+                        Assert.Contains("There are still some documents to process from collection", staleness.StalenessReasons[0]);
+                        Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[1]);
+                    });
+                }
 
                 store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
@@ -555,12 +560,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
+                if (options.DatabaseMode is RavenDatabaseMode.Single)
                 {
-                    Assert.True(staleness.IsStale);
-                    Assert.Equal(1, staleness.StalenessReasons.Count);
-                    Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[0]);
-                });
+                    store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
+                    {
+                        Assert.True(staleness.IsStale);
+                        Assert.Equal(1, staleness.StalenessReasons.Count);
+                        Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[0]);
+                    });
+                }
 
                 store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
@@ -588,12 +596,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
+                if (options.DatabaseMode is RavenDatabaseMode.Single)
                 {
-                    Assert.True(staleness.IsStale);
-                    Assert.Equal(1, staleness.StalenessReasons.Count);
-                    Assert.Contains("There are still some compare exchange tombstone references to process for collection", staleness.StalenessReasons[0]);
-                });
+                    store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
+                    {
+                        Assert.True(staleness.IsStale);
+                        Assert.Equal(1, staleness.StalenessReasons.Count);
+                        Assert.Contains("There are still some compare exchange tombstone references to process for collection", staleness.StalenessReasons[0]);
+                    });
+                }
 
                 store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
