@@ -51,7 +51,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
                 
-                using (var replication = await GetReplicationManagerAsync(master, master.Database, options.DatabaseMode))
+                using (var replication = await GetReplicationManagerAsync(master, master.Database, options.DatabaseMode, breakReplication: true))
                 {
                     await SetupReplicationAsync(master, slave);
                     replication.ReplicateOnce("users/karmel");
@@ -69,7 +69,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore(options))
             {
-                using (var replication = await GetReplicationManagerAsync(master, master.Database, options.DatabaseMode))
+                using (var replication = await GetReplicationManagerAsync(master, master.Database, options.DatabaseMode, breakReplication: true))
                 {
                     await SetupReplicationAsync(master, slave);
                     

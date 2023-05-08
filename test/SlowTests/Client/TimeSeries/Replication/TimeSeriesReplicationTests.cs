@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -24,11 +23,12 @@ namespace SlowTests.Client.TimeSeries.Replication
         {
         }
 
-        [Fact]
-        public async Task CanReplicate()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicate(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -41,9 +41,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-
-                WaitForUserToContinueTheTest(storeA);
-
+                
                 EnsureReplicating(storeA, storeB);
 
                 using (var session = storeB.OpenSession())
@@ -58,11 +56,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task CanSplitAndMergeLargeRange()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanSplitAndMergeLargeRange(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -78,7 +77,6 @@ namespace SlowTests.Client.TimeSeries.Replication
                     session.SaveChanges();
                 }
 
-
                 using (var session = storeB.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
@@ -92,9 +90,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-
-                WaitForUserToContinueTheTest(storeB);
-
+                
                 EnsureReplicating(storeA, storeB);
 
                 using (var session = storeB.OpenSession())
@@ -107,11 +103,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task TimeSeriesShouldBeCaseInsensitiveAndKeepOriginalCasing()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TimeSeriesShouldBeCaseInsensitiveAndKeepOriginalCasing(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(storeA, storeB);
 
@@ -193,7 +190,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     Assert.Equal("HeArtRate", session.Advanced.GetTimeSeriesFor(user).Single());
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(storeA);
+                var database = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -203,11 +200,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task CanReplicateValuesOutOfOrder()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateValuesOutOfOrder(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -258,9 +256,7 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
-
-                WaitForUserToContinueTheTest(storeA);
-
+                
                 EnsureReplicating(storeA, storeB);
                 EnsureReplicating(storeB, storeA);
 
@@ -314,11 +310,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task CanReplicateFullSegment()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateFullSegment(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -413,11 +410,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task CanReplicateFullSegment2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateFullSegment2(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -441,7 +439,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                         .Append(baseline.AddMinutes(fullSegment), new double[] {fullSegment *2, fullSegment*2, fullSegment*2, fullSegment*2, fullSegment*2}, "watches/fitbit");
                     session.SaveChanges();
 
-                    var stats = storeA.Maintenance.Send(new GetStatisticsOperation());
+                    var stats = await GetDatabaseStatisticsAsync(storeA);
                     Assert.Equal(2, stats.CountOfTimeSeriesSegments);
                 }
 
@@ -463,7 +461,7 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                     session.SaveChanges();
 
-                    var stats = storeB.Maintenance.Send(new GetStatisticsOperation());
+                    var stats = await GetDatabaseStatisticsAsync(storeB);
                     Assert.Equal(1, stats.CountOfTimeSeriesSegments);
                 }
 
@@ -484,11 +482,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task CanReplicateMany()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateMany(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -557,11 +556,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task CanReplicateManyWithDeletions()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateManyWithDeletions(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -636,16 +636,17 @@ namespace SlowTests.Client.TimeSeries.Replication
                     }
                 }
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
             }
         }
 
-        [Fact]
-        public async Task CanReplicateDeletions()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateDeletions(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -675,8 +676,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 await SetupReplicationAsync(storeA, storeB);
                 EnsureReplicating(storeA, storeB);
 
-                var stats1 = await storeA.Maintenance.ForDatabase(storeA.Database).SendAsync(new GetStatisticsOperation("test"));
-                var stats2 = await storeB.Maintenance.ForDatabase(storeB.Database).SendAsync(new GetStatisticsOperation("test"));
+                var stats1 = await GetDatabaseStatisticsAsync(storeA);
+                var stats2 = await GetDatabaseStatisticsAsync(storeB);
 
                 Assert.Equal(1, stats1.CountOfTimeSeriesSegments);
                 Assert.Equal(2, stats2.CountOfTimeSeriesSegments);
@@ -718,24 +719,25 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task CanReplicateDeadSegment()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task CanReplicateDeadSegment(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
-                var baseline = RavenTestHelper.UtcToday;
+                var baseline = DateTime.UtcNow;//RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User() { Name = "Oren" }, "users/ayende");
                     session.TimeSeriesFor("users/ayende", "Heartrate")
                         .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
                     session.SaveChanges();
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                EnsureReplicating(storeA, storeB, "marker1$users/ayende");
 
                 using (var session = storeA.OpenSession())
                 {
@@ -743,21 +745,22 @@ namespace SlowTests.Client.TimeSeries.Replication
                     session.SaveChanges();
                 }
 
-                EnsureReplicating(storeA, storeB);
-                
-                var a = await Databases.GetDocumentDatabaseInstanceFor(storeA);
+                EnsureReplicating(storeA, storeB, "marker2$users/ayende");
+
+                var a = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
                 await AssertNoLeftOvers(a);
 
-                var b = await Databases.GetDocumentDatabaseInstanceFor(storeB);
+                var b = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
                 await AssertNoLeftOvers(b);
             }
         }
 
-        [Fact]
-        public async Task CanReplicateDeadSegment2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateDeadSegment2(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -791,11 +794,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task ReplicatingDeletedDocumentShouldRemoveTimeseries()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReplicatingDeletedDocumentShouldRemoveTimeseries(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -818,10 +822,10 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 EnsureReplicating(storeA, storeB);
                 
-                var a = await Databases.GetDocumentDatabaseInstanceFor(storeA);
+                var a = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
                 await AssertNoLeftOvers(a);
 
-                var b = await Databases.GetDocumentDatabaseInstanceFor(storeB);
+                var b = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
                 await AssertNoLeftOvers(b);
             }
         }
@@ -832,16 +836,17 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                Assert.Equal(0, db.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(ctx));
-                Assert.Equal(0, db.DocumentsStorage.TimeSeriesStorage.Stats.GetNumberOfEntries(ctx));
+                 Assert.Equal(0, db.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(ctx));
+                 Assert.Equal(0, db.DocumentsStorage.TimeSeriesStorage.Stats.GetNumberOfEntries(ctx));
             }
         }
 
-        [Fact]
-        public async Task PreferDeletedValues()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task PreferDeletedValues(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
@@ -875,8 +880,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 AssertValues(storeA);
                 AssertValues(storeB);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
 
                 void AssertValues(IDocumentStore store)
                 {
@@ -892,11 +897,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task PreferDeletedValues2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task PreferDeletedValues2(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
@@ -930,8 +936,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 AssertValues(storeA);
                 AssertValues(storeB);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
 
                 void AssertValues(IDocumentStore store)
                 {
@@ -947,11 +953,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task PreferDeletedValues3()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task PreferDeletedValues3(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
                 
@@ -984,8 +991,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 AssertValues(storeA);
                 AssertValues(storeB);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeA.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeA, "users/ayende"));
+                await EnsureNoReplicationLoop(Server, options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
 
                 void AssertValues(IDocumentStore store)
                 {
@@ -1002,11 +1009,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task MergeValues()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MergeValues(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1056,11 +1064,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task HigherValueWins()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task HigherValueWins(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1102,15 +1111,15 @@ namespace SlowTests.Client.TimeSeries.Replication
                         Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                     }
                 }
-
             }
         }
 
-        [Fact]
-        public async Task MergeTimeSeriesOnConflict()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MergeTimeSeriesOnConflict(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenAsyncSession())
                 {
@@ -1140,11 +1149,12 @@ namespace SlowTests.Client.TimeSeries.Replication
             }
         }
 
-        [Fact]
-        public async Task MergeTimeSeriesWithCountersOnConflict()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MergeTimeSeriesWithCountersOnConflict(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 using (var session = storeA.OpenAsyncSession())
                 {
