@@ -171,7 +171,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 var minEtag = long.MaxValue;
                 foreach (ReplicationBatch replicationBatch in batches.Values)
                 {
-                    cvs.Add(replicationBatch.LastAcceptedChangeVector);
+                    // ignore change vectors from heartbeat
+                    if (replicationBatch.Items.Count > 0)
+                        cvs.Add(replicationBatch.LastAcceptedChangeVector);
+
                     minEtag = Math.Min(minEtag, replicationBatch.LastEtagAccepted);
                 }
 
