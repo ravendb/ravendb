@@ -39,13 +39,13 @@ namespace Tests.Infrastructure
         {
         }
 
-        public async ValueTask<IReplicationManager> GetReplicationManagerAsync(DocumentStore store, string databaseName, RavenDatabaseMode mode, List<RavenServer> servers = null)
+        public async ValueTask<IReplicationManager> GetReplicationManagerAsync(DocumentStore store, string databaseName, RavenDatabaseMode mode, bool breakReplication = false, List<RavenServer> servers = null)
         {
             if (mode == RavenDatabaseMode.Single)
-                return await  ReplicationManager.GetReplicationManagerAsync(servers ?? GetServers() ,databaseName);
+                return await  ReplicationManager.GetReplicationManagerAsync(servers ?? GetServers() , databaseName, breakReplication);
 
             return await ShardedReplicationTestBase.ShardedReplicationManager.GetShardedReplicationManager(await Sharding.GetShardingConfigurationAsync(store),
-                    servers ?? GetServers(), databaseName);
+                    servers ?? GetServers(), databaseName, breakReplication);
         }
 
         public async Task<ReplicationInstance> BreakReplication(Raven.Server.ServerWide.ServerStore from, string databaseName)

@@ -77,12 +77,12 @@ public partial class RavenTestBase
             }
 
             internal static async ValueTask<ShardedReplicationManager> GetShardedReplicationManager(ShardingConfiguration configuration, List<RavenServer> servers,
-                string databaseName)
+                string databaseName, bool breakReplication)
             {
                 Dictionary<int, ReplicationManager> shardReplications = new();
                 foreach (var shardNumber in configuration.Shards.Keys)
                 {
-                    shardReplications.Add(shardNumber, await ReplicationManager.GetReplicationManagerAsync(servers, ShardHelper.ToShardName(databaseName, shardNumber)));
+                    shardReplications.Add(shardNumber, await ReplicationManager.GetReplicationManagerAsync(servers, ShardHelper.ToShardName(databaseName, shardNumber), breakReplication));
 
                     Assert.True(shardReplications.ContainsKey(shardNumber), $"Couldn't find document database of shard {shardNumber} in any of the servers.");
                 }

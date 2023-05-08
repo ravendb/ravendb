@@ -23,19 +23,25 @@ namespace Tests.Infrastructure
             DatabaseName = databaseName;
         }
 
-        public ReplicationInstance(DocumentDatabase database, string databaseName)
+        public ReplicationInstance(DocumentDatabase database, string databaseName, bool breakReplication)
         {
             _database = database;
             DatabaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
+
+            if (breakReplication)
+            {
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce ??= new ManualResetEventSlim(true);
+                _replicateOnceMre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
+            }
         }
 
-        public virtual void Break()
+        public void Break()
         {
             var mre = new ManualResetEventSlim(false);
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
         }
 
-        public virtual void Mend()
+        public void Mend()
         {
             var mre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
             Assert.NotNull(mre);
@@ -44,7 +50,7 @@ namespace Tests.Infrastructure
             mre.Set();
         }
 
-        protected virtual void InitializeReplicateOnce()
+        private void InitializeReplicateOnce()
         {
             _database.Configuration.Replication.MaxItemsCount = 1;
 
@@ -54,7 +60,7 @@ namespace Tests.Infrastructure
             _replicateOnceInitialized = true;
         }
 
-        public virtual void ReplicateOnce(string docId)
+        public void ReplicateOnce(string docId)
         {
             if (_replicateOnceInitialized == false)
                 InitializeReplicateOnce();
@@ -112,10 +118,10 @@ namespace Tests.Infrastructure
             _database.Configuration.Replication.MaxItemsCount = null;
         }
 
-        internal static async ValueTask<ReplicationInstance> GetReplicationInstanceAsync(RavenServer server, string databaseName)
+        internal static async ValueTask<ReplicationInstance> GetReplicationInstanceAsync(RavenServer server, string databaseName, bool breakReplication = false)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Make this func private when legacy BreakReplication() is removed");
-            return new ReplicationInstance(await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName), databaseName);
+            return new ReplicationInstance(await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName), databaseName, breakReplication);
         }
     }
 }

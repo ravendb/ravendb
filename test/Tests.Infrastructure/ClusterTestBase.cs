@@ -114,9 +114,9 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
+        protected void EnsureReplicating(DocumentStore src, DocumentStore dst, string id = null)
         {
-            var id = "marker/" + Guid.NewGuid();
+            id ??= "marker/" + Guid.NewGuid();
             using (var s = src.OpenSession())
             {
                 s.Store(new { }, id);
@@ -251,8 +251,8 @@ namespace Tests.Infrastructure
 
         protected static async Task EnsureNoReplicationLoop(RavenServer server, string database)
         {
-            var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-            await EnsureNoReplicationLoop(storage);
+            var replication = await ReplicationInstance.GetReplicationInstanceAsync(server, database);
+            await replication.EnsureNoReplicationLoopAsync();
         }
 
         protected static async Task EnsureNoReplicationLoop(DocumentDatabase storage)

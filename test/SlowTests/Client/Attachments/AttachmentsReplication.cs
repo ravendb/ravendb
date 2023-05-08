@@ -760,11 +760,15 @@ namespace SlowTests.Client.Attachments
                 }, 9);
 
                 // Delete document should delete all the attachments
-                store1.Commands().Delete("users/1", null);
-
+                using (var session = store1.OpenAsyncSession())
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
+                
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                WaitForMarker(store1, store2, "marker1$users/1");
 
-                WaitForMarker(store1, store2);
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session, true);
@@ -781,7 +785,8 @@ namespace SlowTests.Client.Attachments
                 }
 
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                WaitForMarker(store1, store2);
+                WaitForMarker(store1, store2, "marker2$users/1");
+
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session);
@@ -797,7 +802,8 @@ namespace SlowTests.Client.Attachments
                 }
 
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                WaitForMarker(store1, store2);
+                WaitForMarker(store1, store2, "marker3$users/1");
+
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session);
@@ -813,7 +819,8 @@ namespace SlowTests.Client.Attachments
                 }
 
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                WaitForMarker(store1, store2);
+                WaitForMarker(store1, store2, "marker4$users/1");
+
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session);
@@ -829,7 +836,8 @@ namespace SlowTests.Client.Attachments
                 }
 
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                WaitForMarker(store1, store2);
+                WaitForMarker(store1, store2, "marker5$users/1");
+
                 await AssertRevisionsAsync(store2, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session);
@@ -1390,7 +1398,7 @@ namespace SlowTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
 
-                var replication = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, new List<RavenServer>() {server});
+                var replication = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, breakReplication: true, new List<RavenServer>() {server});
                 
                 await SetupReplicationAsync(store1, store2);
                 replication.ReplicateOnce("foo");
@@ -1442,7 +1450,7 @@ namespace SlowTests.Client.Attachments
             using (var store2 = GetDocumentStore(options))
             {
                 string docId1 = "users/1", docId2 = "users/2$users/1";
-                var replication = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode);
+                var replication = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, breakReplication: true);
                 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -1553,7 +1561,7 @@ namespace SlowTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
 
-                var replication = await GetReplicationManagerAsync(store, databaseName, options.DatabaseMode, cluster.Nodes);
+                var replication = await GetReplicationManagerAsync(store, databaseName, options.DatabaseMode, servers: cluster.Nodes);
                 
                 await replication.EnsureNoReplicationLoopAsync();
                 
@@ -2961,9 +2969,9 @@ namespace SlowTests.Client.Attachments
                 await EnsureReplicatingAsync(store3, store1);
                 await EnsureReplicatingAsync(store3, store2);
 
-                var replication1 = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, new List<RavenServer>() { Server });
-                var replication2 = await GetReplicationManagerAsync(store2, store2.Database, options.DatabaseMode, new List<RavenServer>() { Server });
-                var replication3 = await GetReplicationManagerAsync(store3, store3.Database, options.DatabaseMode, new List<RavenServer>() { Server });
+                var replication1 = await GetReplicationManagerAsync(store1, store1.Database, options.DatabaseMode, servers: new List<RavenServer>() { Server });
+                var replication2 = await GetReplicationManagerAsync(store2, store2.Database, options.DatabaseMode, servers: new List<RavenServer>() { Server });
+                var replication3 = await GetReplicationManagerAsync(store3, store3.Database, options.DatabaseMode, servers: new List<RavenServer>() { Server });
 
                 replication1.Break();
                 replication2.Break();

@@ -58,12 +58,12 @@ public partial class RavenTestBase
             }
         }
 
-        internal static async ValueTask<ReplicationManager> GetReplicationManagerAsync(List<RavenServer> servers, string databaseName)
+        internal static async ValueTask<ReplicationManager> GetReplicationManagerAsync(List<RavenServer> servers, string databaseName, bool breakReplication)
         {
             Dictionary<string, ReplicationInstance> instances = new();
             foreach (var server in servers)
             {
-                var instance = await ReplicationInstance.GetReplicationInstanceAsync(server, databaseName);
+                var instance = await ReplicationInstance.GetReplicationInstanceAsync(server, databaseName, breakReplication);
                 if (instance != null)
                     instances[server.ServerStore.NodeTag] = instance;
             }
