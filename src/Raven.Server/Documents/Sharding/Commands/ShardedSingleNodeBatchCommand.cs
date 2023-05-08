@@ -3,12 +3,14 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Commands;
 
@@ -53,7 +55,7 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
         }
     }
 
-    public void AssembleShardedReply(JsonOperationContext context, object[] reply)
+    public void AssembleShardedReply(JsonOperationContext context, object[] reply, int? shardNumber)
     {
         Result.TryGet(nameof(BatchCommandResult.Results), out BlittableJsonReaderArray partialResult);
         var count = 0;
@@ -62,6 +64,14 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
             var positionInResult = PositionInResponse[count++];
             if (o is BlittableJsonReaderObject blittable)
             {
+                if (shardNumber.HasValue)
+                {
+                    blittable.Modifications = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Sharding.ShardNumber] = shardNumber.Value
+                    };
+                }
+                
                 reply[positionInResult] = blittable.Clone(context);
                 continue;
             }

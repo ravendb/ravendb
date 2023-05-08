@@ -65,10 +65,10 @@ public class ShardedBatchCommand : IBatchCommand
         return _batchPerShard;
     }
 
-    public void MarkShardAsComplete(JsonOperationContext context, int shardNumber)
+    public void MarkShardAsComplete(JsonOperationContext context, int shardNumber, bool isFromStudio)
     {
         _batchPerShard.Remove(shardNumber, out var command);
-        command!.AssembleShardedReply(context, _result);
+        command!.AssembleShardedReply(context, _result, isFromStudio ? shardNumber : null);
         command.Dispose();
     }
 
