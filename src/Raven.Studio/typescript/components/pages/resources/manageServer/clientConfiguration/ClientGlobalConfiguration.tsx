@@ -16,6 +16,7 @@ import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
+import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "components/common/PropSummary";
 
 // TODO: show modal on exit intent if is dirty
 export default function ClientGlobalConfiguration() {
@@ -53,7 +54,7 @@ export default function ClientGlobalConfiguration() {
 
     return (
         <Form onSubmit={handleSubmit(onSave)}>
-            <Col md="6" lg="4" className="content-margin">
+            <Col md="9" lg="6" className="content-margin">
                 <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
                     {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <Icon icon="save" />}
                     Save
@@ -74,7 +75,7 @@ export default function ClientGlobalConfiguration() {
                             </div>
                         </PopoverWithHover>
                     </div>
-                    <Row className="flex-grow-1 mt-1">
+                    <Row className="flex-grow-1">
                         <Col className="d-flex">
                             <InputGroup>
                                 <InputGroupText>
@@ -108,7 +109,7 @@ export default function ClientGlobalConfiguration() {
                             </div>
                         </PopoverWithHover>
                     </div>
-                    <Row className="flex-grow-1 mt-1">
+                    <Row className="flex-grow-1">
                         <Col className="d-flex">
                             <InputGroup>
                                 <InputGroupText>
@@ -125,10 +126,11 @@ export default function ClientGlobalConfiguration() {
                         </Col>
                     </Row>
                 </Card>
+                <h4 className="mt-4">Load Balancing Client Requests</h4>
                 <Card className="flex-column mt-1 p-3">
                     <div className="d-flex flex-grow-1">
                         <div className="md-label">
-                            Load Balancing <i ref={popovers.setSessionContext} className="icon-info text-info" />
+                            Load Balance Behavior <i ref={popovers.setSessionContext} className="icon-info text-info" />
                             <PopoverWithHover target={popovers.sessionContext} placement="top">
                                 <div className="flex-horizontal p-3">
                                     <div>
@@ -139,7 +141,7 @@ export default function ClientGlobalConfiguration() {
                             </PopoverWithHover>
                         </div>
                     </div>
-                    <Row className="mt-1 mb-4">
+                    <Row className="mb-4">
                         <Col className="d-flex align-items-center gap-3">
                             <InputGroup>
                                 <InputGroupText>
@@ -156,26 +158,28 @@ export default function ClientGlobalConfiguration() {
                     </Row>
                     {formValues.loadBalancerValue === "UseSessionContext" && (
                         <>
-                            <div className="d-flex flex-grow-1">
-                                <div className="md-label">
-                                    Hash seed{" "}
-                                    <i ref={popovers.setLoadBalanceSeedBehavior} className="icon-info text-info" />
-                                    <PopoverWithHover target={popovers.loadBalanceSeedBehavior} placement="top">
-                                        <div className="flex-horizontal p-3">
-                                            <div>Select a hash seed to fix the topology that clients would use.</div>
-                                        </div>
-                                    </PopoverWithHover>
-                                </div>
-                            </div>
-                            <Row className="mt-1 mb-4">
+                            <div className="d-flex flex-grow-1"></div>
+                            <Row className="mb-4">
                                 <Col className="d-flex align-items-center gap-3">
                                     <FormSwitch
                                         control={control}
                                         name="loadBalancerSeedEnabled"
                                         color="primary"
                                         label="Seed"
+                                        className="small"
                                     >
                                         Seed
+                                        <i
+                                            ref={popovers.setLoadBalanceSeedBehavior}
+                                            className="icon-info text-info margin-left-xxs"
+                                        />
+                                        <PopoverWithHover target={popovers.loadBalanceSeedBehavior} placement="top">
+                                            <div className="flex-horizontal p-3">
+                                                <div>
+                                                    Select a hash seed to fix the topology that clients would use.
+                                                </div>
+                                            </div>
+                                        </PopoverWithHover>
                                     </FormSwitch>
                                     <InputGroup>
                                         <FormInput
@@ -192,7 +196,7 @@ export default function ClientGlobalConfiguration() {
                     )}
                     <div className="d-flex flex-grow-1">
                         <div className="md-label">
-                            Read balance behavior{" "}
+                            Read Balance Behavior{" "}
                             <i ref={popovers.setReadBalanceBehavior} className="icon-info text-info" />
                             <PopoverWithHover target={popovers.readBalanceBehavior} placement="top">
                                 <div className="flex-horizontal p-3">
@@ -206,7 +210,7 @@ export default function ClientGlobalConfiguration() {
                             </PopoverWithHover>
                         </div>
                     </div>
-                    <Row className="mt-1">
+                    <Row>
                         <Col className="d-flex">
                             <InputGroup>
                                 <InputGroupText>

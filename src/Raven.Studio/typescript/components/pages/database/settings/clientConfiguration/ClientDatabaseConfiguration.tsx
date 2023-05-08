@@ -2,8 +2,6 @@ import React, { useMemo } from "react";
 import { Form, Col, Button, Card, Row, Spinner, Input, InputGroupText, InputGroup } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
-import ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior;
-import LoadBalanceBehavior = Raven.Client.Http.LoadBalanceBehavior;
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
@@ -21,6 +19,7 @@ import useClientConfigurationFormController from "components/common/clientConfig
 import { tryHandleSubmit } from "components/utils/common";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
+import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "components/common/PropSummary";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
@@ -71,18 +70,66 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         return <LoadError error="Unable to load client configuration" refresh={onRefresh} />;
     }
 
+    function GlobalSettingsSeparator() {
+        return (
+            <>
+                <div className="align-self-center col-sm-auto d-flex">
+                    <Icon icon="arrow-right" margin="m-0" />
+                </div>
+            </>
+        );
+    }
+
     return (
         <Form onSubmit={handleSubmit(onSave)}>
-            <Col md="9" lg={globalConfig ? 6 : 4} className="content-margin">
-                <div className="d-flex align-items-center justify-content-between mb-3">
-                    <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
-                        {formState.isSubmitting ? (
-                            <Spinner size="sm" className="me-1" />
-                        ) : (
-                            <i className="icon-save me-1" />
+            <Col md="12" lg={globalConfig ? 9 : 6} className="content-margin">
+                <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+                    <div>
+                        <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
+                            {formState.isSubmitting ? (
+                                <Spinner size="sm" className="me-1" />
+                            ) : (
+                                <i className="icon-save me-1" />
+                            )}
+                            Save
+                        </Button>
+                        {formState.isDirty && globalConfig && (
+                            <span ref={popovers.setEffectiveConfiguration} className="ms-3 cursor-pointer text-info">
+                                <Icon icon="config" />
+                                See effective configuration
+                            </span>
                         )}
-                        Save
-                    </Button>
+
+                        <PopoverWithHover target={popovers.effectiveConfiguration} placement="right">
+                            <div className="flex-horizontal p-1">
+                                <PropSummary>
+                                    <PropSummaryItem className="mb-1">
+                                        <strong>Effective configuration for dbname</strong>
+                                    </PropSummaryItem>
+                                    <PropSummaryItem className="border-0">
+                                        <PropSummaryName>Identity parts separator</PropSummaryName>
+                                        <PropSummaryValue color="info">a</PropSummaryValue>
+                                    </PropSummaryItem>
+                                    <PropSummaryItem>
+                                        <PropSummaryName>Max number of requests per session</PropSummaryName>
+                                        <PropSummaryValue color="info">b</PropSummaryValue>
+                                    </PropSummaryItem>
+                                    <PropSummaryItem>
+                                        <PropSummaryName>Load Balance Behavior</PropSummaryName>
+                                        <PropSummaryValue color="info">c</PropSummaryValue>
+                                    </PropSummaryItem>
+                                    <PropSummaryItem>
+                                        <PropSummaryName>Seed</PropSummaryName>
+                                        <PropSummaryValue color="info">d</PropSummaryValue>
+                                    </PropSummaryItem>
+                                    <PropSummaryItem>
+                                        <PropSummaryName>Read Balance Behavior</PropSummaryName>
+                                        <PropSummaryValue color="info">e</PropSummaryValue>
+                                    </PropSummaryItem>
+                                </PropSummary>
+                            </div>
+                        </PopoverWithHover>
+                    </div>
 
                     {canNavigateToServerSettings() && (
                         <small title="Navigate to the server-wide Client Configuration View">
@@ -95,9 +142,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                 </div>
 
                 {globalConfig && (
-                    <Row className="flex-grow-1 mt-3 mb-3">
+                    <Row className="flex-grow-1 mt-4 mb-3">
                         <FormSwitch control={control} name="overrideConfig" color="primary" className="mt-1 mb-3">
-                            Override default values
+                            Override server configuration
                         </FormSwitch>
                         <Col>
                             <div className="flex-horizontal gap-1">
@@ -143,9 +190,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                     </div>
                     <Row className="flex-grow-1 align-items-start">
                         {globalConfig && (
-                            <Col className="d-flex">
-                                <Input defaultValue={globalConfig.identityPartsSeparatorValue} disabled />
-                            </Col>
+                            <>
+                                <Col className="d-flex">
+                                    <Input defaultValue={globalConfig.identityPartsSeparatorValue} disabled />
+                                </Col>
+                                {formValues.overrideConfig && formValues.identityPartsSeparatorEnabled && (
+                                    <GlobalSettingsSeparator />
+                                )}
+                            </>
                         )}
                         <Col className="d-flex">
                             <InputGroup>
@@ -186,9 +238,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                     </div>
                     <Row className="flex-grow-1 align-items-start">
                         {globalConfig && (
-                            <Col className="d-flex">
-                                <Input defaultValue={globalConfig.maximumNumberOfRequestsValue} disabled />
-                            </Col>
+                            <>
+                                <Col className="d-flex">
+                                    <Input defaultValue={globalConfig.maximumNumberOfRequestsValue} disabled />
+                                </Col>
+                                {formValues.overrideConfig && formValues.maximumNumberOfRequestsEnabled && (
+                                    <GlobalSettingsSeparator />
+                                )}
+                            </>
                         )}
                         <Col className="d-flex">
                             <InputGroup>
@@ -210,11 +267,11 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         </Col>
                     </Row>
                 </Card>
-
+                <h4 className={globalConfig ? "mt-4 text-center" : "mt-4"}>Load Balancing Client Requests</h4>
                 <Card className="flex-column p-3">
                     <div className={globalConfig ? "d-flex flex-grow-1 justify-content-center" : "d-flex flex-grow-1"}>
                         <div className="md-label">
-                            Load Balancing <i ref={popovers.setSessionContext} className="icon-info text-info" />
+                            Load Balance Behavior <i ref={popovers.setSessionContext} className="icon-info text-info" />
                             <PopoverWithHover target={popovers.sessionContext} placement="top">
                                 <div className="flex-horizontal p-3">
                                     <div>
@@ -227,13 +284,18 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                     </div>
                     <Row className="mb-4 align-items-start">
                         {globalConfig && (
-                            <Col className="d-flex">
-                                <Input
-                                    defaultValue={globalConfig.loadBalancerSeedValue}
-                                    disabled
-                                    placeholder="Undefined"
-                                />
-                            </Col>
+                            <>
+                                <Col className="d-flex">
+                                    <Input
+                                        defaultValue={globalConfig.loadBalancerSeedValue}
+                                        disabled
+                                        placeholder="None"
+                                    />
+                                </Col>
+                                {formValues.overrideConfig && formValues.loadBalancerEnabled && (
+                                    <GlobalSettingsSeparator />
+                                )}
+                            </>
                         )}
                         <Col className="d-flex align-items-center gap-3">
                             <InputGroup>
@@ -259,26 +321,21 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 className={
                                     globalConfig ? "d-flex flex-grow-1 justify-content-center" : "d-flex flex-grow-1"
                                 }
-                            >
-                                <div className="md-label">
-                                    Hash seed{" "}
-                                    <i ref={popovers.setLoadBalanceSeedBehavior} className="icon-info text-info" />
-                                    <PopoverWithHover target={popovers.loadBalanceSeedBehavior} placement="top">
-                                        <div className="flex-horizontal p-3">
-                                            <div>Select a hash seed to fix the topology that clients would use.</div>
-                                        </div>
-                                    </PopoverWithHover>
-                                </div>
-                            </div>
+                            ></div>
                             <Row className="mb-4 align-items-start">
                                 {globalConfig && (
-                                    <Col className="d-flex">
-                                        <Input
-                                            defaultValue={globalConfig.loadBalancerSeedValue}
-                                            disabled
-                                            placeholder="Undefined"
-                                        />
-                                    </Col>
+                                    <>
+                                        <Col className="d-flex">
+                                            <Input
+                                                defaultValue={globalConfig.loadBalancerSeedValue}
+                                                disabled
+                                                placeholder="0"
+                                            />
+                                        </Col>
+                                        {formValues.overrideConfig && formValues.loadBalancerSeedEnabled && (
+                                            <GlobalSettingsSeparator />
+                                        )}
+                                    </>
                                 )}
                                 <Col className="d-flex align-items-center gap-3">
                                     <FormSwitch
@@ -286,8 +343,24 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                         name="loadBalancerSeedEnabled"
                                         color="primary"
                                         label="Seed"
+                                        disabled={
+                                            formValues.loadBalancerValue !== "UseSessionContext" ||
+                                            !formValues.overrideConfig
+                                        }
+                                        className="small"
                                     >
                                         Seed
+                                        <i
+                                            ref={popovers.setLoadBalanceSeedBehavior}
+                                            className="icon-info text-info margin-left-xxs"
+                                        />
+                                        <PopoverWithHover target={popovers.loadBalanceSeedBehavior} placement="top">
+                                            <div className="flex-horizontal p-3">
+                                                <div>
+                                                    Select a hash seed to fix the topology that clients would use.
+                                                </div>
+                                            </div>
+                                        </PopoverWithHover>
                                     </FormSwitch>
                                     <InputGroup>
                                         <FormInput
@@ -304,7 +377,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                     )}
                     <div className={globalConfig ? "d-flex flex-grow-1 justify-content-center" : "d-flex flex-grow-1"}>
                         <div className="md-label">
-                            Read balance behavior{" "}
+                            Read Balance Behavior{" "}
                             <i ref={popovers.setReadBalanceBehavior} className="icon-info text-info" />
                             <PopoverWithHover target={popovers.readBalanceBehavior} placement="top">
                                 <div className="flex-horizontal p-3">
@@ -320,13 +393,18 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                     </div>
                     <Row className="align-items-start">
                         {globalConfig && (
-                            <Col className="d-flex">
-                                <Input
-                                    defaultValue={globalConfig.readBalanceBehaviorValue}
-                                    placeholder="Undefined"
-                                    disabled
-                                />
-                            </Col>
+                            <>
+                                <Col className="d-flex">
+                                    <Input
+                                        defaultValue={globalConfig.readBalanceBehaviorValue}
+                                        placeholder="None"
+                                        disabled
+                                    />
+                                </Col>
+                                {formValues.overrideConfig && formValues.readBalanceBehaviorEnabled && (
+                                    <GlobalSettingsSeparator />
+                                )}
+                            </>
                         )}
 
                         <Col className="d-flex">

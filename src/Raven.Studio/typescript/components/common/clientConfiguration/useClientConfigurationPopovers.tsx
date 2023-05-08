@@ -6,6 +6,7 @@ export default function useClientConfigurationPopovers() {
     const [sessionContext, setSessionContext] = useState<HTMLElement>();
     const [readBalanceBehavior, setReadBalanceBehavior] = useState<HTMLElement>();
     const [loadBalanceSeedBehavior, setLoadBalanceSeedBehavior] = useState<HTMLElement>();
+    const [effectiveConfiguration, setEffectiveConfiguration] = useState<HTMLElement>();
 
     return {
         identityPartsSeparator,
@@ -18,5 +19,7 @@ export default function useClientConfigurationPopovers() {
         setReadBalanceBehavior,
         loadBalanceSeedBehavior,
         setLoadBalanceSeedBehavior,
+        effectiveConfiguration,
+        setEffectiveConfiguration,
     };
 }
