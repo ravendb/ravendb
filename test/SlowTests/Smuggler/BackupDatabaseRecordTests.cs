@@ -27,7 +27,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Smuggler.Migration;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Tests.Infrastructure;
@@ -42,7 +41,7 @@ namespace SlowTests.Smuggler
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImportDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -248,7 +247,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanMigrateDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -483,7 +482,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImportMergedDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -778,7 +777,7 @@ namespace SlowTests.Smuggler
                         AllowEtlOnNonEncryptedChannel = true,
                         Transforms = new List<Transformation> { new() { Script = "", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     };
-                    WaitForUserToContinueTheTest(store1);
+                
                     await store1.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
                     await store1.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration2));
                     await store2.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration3));
@@ -889,8 +888,6 @@ namespace SlowTests.Smuggler
 
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    WaitForUserToContinueTheTest(store2);
 
                     int disabled = 0;
 
@@ -1004,7 +1001,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1200,7 +1197,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.BackupExportImport)]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions)]
         public async Task CanRestoreSubscriptionsFromBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
