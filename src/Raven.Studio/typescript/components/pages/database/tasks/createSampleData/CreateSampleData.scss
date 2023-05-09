@@ -26,9 +26,11 @@
         }
         .smoke-color {
             fill: var(--bs-body-bg);
+            opacity: 0.66;
         }
         .smoke-color-2 {
             fill: var(--panel-bg-1);
+            opacity: 0.85;
         }
     }
 
