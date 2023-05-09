@@ -87,7 +87,12 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected virtual void SetLastChangeVectorSent(SubscriptionConnection connection) => LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
+        protected virtual void SetLastChangeVectorSent(SubscriptionConnection connection) => InitializeLastChangeVectorSent(connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+
+        internal void InitializeLastChangeVectorSent(string changeVectorForNextBatchStartingPoint)
+        {
+            LastChangeVectorSent = changeVectorForNextBatchStartingPoint;
+        }
 
         public HashSet<long> GetActiveBatches()
         {

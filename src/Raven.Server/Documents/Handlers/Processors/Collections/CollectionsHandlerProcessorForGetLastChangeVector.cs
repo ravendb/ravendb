@@ -22,7 +22,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var result = RequestHandler.Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, collection);
+                var result = RequestHandler.Database.SubscriptionStorage.GetLastDocumentChangeVectorForSubscription(context, collection);
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();

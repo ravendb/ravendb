@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                     case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
                         using (context.OpenReadTransaction())
                         {
-                            state.ChangeVectorForNextBatchStartingPoint = RequestHandler.Database.SubscriptionStorage.GetLastDocumentChangeVectorForSubscription(context, subscription);
+                            state.ChangeVectorForNextBatchStartingPoint = RequestHandler.Database.SubscriptionStorage.GetLastDocumentChangeVectorForSubscription(context, subscription.Collection);
                         }
                         break;
                 }
