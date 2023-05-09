@@ -177,6 +177,16 @@
                                         <label for="includeUnsupported">Include <strong>unsupported</strong> data types</label>
                                     </div>
                                 </div>
+                                <div class="form-group" data-bind="visible: databaseType() === 'NpgSQL'">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="toggle">
+                                        <input id="includeSchemaList" type="checkbox" data-bind="checked: npgSql.includeSchemas">
+                                        <label for="includeSchemaList">
+                                            Specify schemas to use <small>(comma separated)</small>
+                                            <input class="form-control" placeholder="public" data-bind="textInput: npgSql.schemas, enable: npgSql.includeSchemas" />
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div data-bind="with: testConnectionResult">
@@ -272,6 +282,7 @@
                                 <label data-bind="attr: { for: 'table_' + $index() }">&nbsp;</label>
                             </div>
                             <div class="flex-horizontal flex-wrap table-header">
+                                <span class="with-top-label" data-label="Schema" data-bind="text: tableSchema"></span>
                                 <span class="with-top-label js-sql-table-name" data-label="Table" data-bind="text: tableName"></span>
                                 <i class="icon-arrow-filled-right"></i>
                                 <div class="with-top-label raven-property-name inline-edit" data-bind="css: { 'edit-disabled': !checked() }" data-label="Collection">
@@ -331,7 +342,7 @@
                 <div class="padding">
                     <div>
                         <label>
-                            <strong>SQL Table:</strong> <span data-bind="text: tableName"></span>
+                            <strong>SQL Table:</strong> <span data-bind="text: tableSchema"></span> / <span data-bind="text: tableName"></span>
                         </label>
                     </div>
                     <div class="toggle">
