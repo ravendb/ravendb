@@ -1,15 +1,14 @@
-﻿import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
+﻿import { DatabaseLocalInfo, DatabaseSharedInfo, TopLevelDatabaseInfo } from "components/models/databases";
 import { RichPanelDetailItem, RichPanelDetails } from "components/common/RichPanel";
 import React, { useState } from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { sumBy } from "lodash";
 import genUtils from "common/generalUtils";
-import appUrl from "common/appUrl";
 import { withPreventDefault } from "components/utils/common";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import { clusterSelectors } from "components/common/shell/clusterSlice";
-import { Badge, Button } from "reactstrap";
+import { Badge } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import {
     selectDatabaseState,
@@ -17,8 +16,19 @@ import {
 } from "components/pages/resources/databases/store/databasesViewSelectors";
 import { openNotificationCenterForDatabase } from "components/pages/resources/databases/store/databasesViewActions";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
-import "./DatabasesPage.scss";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import AlertsPopover from "./ValidDatabasePropertiesPanelAlertsPopover";
+import PerfHintsPopover from "./ValidDatabasePropertiesPanelPerfHintsPopover";
+import "./ValidDatabasePropertiesPanel.scss";
+
+export interface ValidDatabasePropertiesPanelPopoverProps {
+    isCurrentNodeRelevant: boolean;
+    localNodeTag: string;
+    localTotal: number;
+    remoteTopLevelStates: TopLevelDatabaseInfo[];
+    getServerNodeUrl: (nodeTag: string) => string;
+    openNotificationCenter: () => void;
+}
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
@@ -65,8 +75,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const indexingPaused = nonEmptyDbState.some((x) => x?.indexingStatus === "Paused");
     const indexingDisabled = nonEmptyDbState.some((x) => x?.indexingStatus === "Disabled");
 
-    const localPerformanceHints = nonEmptyTopLevelState.find((x) => x.nodeTag === localNodeTag)?.performanceHints ?? 0;
-    const localAlerts = nonEmptyTopLevelState.find((x) => x.nodeTag === localNodeTag)?.alerts ?? 0;
+    const localAlertsCount = nonEmptyTopLevelState.find((x) => x.nodeTag === localNodeTag)?.alerts ?? 0;
+    const localPerformanceHintsCount =
+        nonEmptyTopLevelState.find((x) => x.nodeTag === localNodeTag)?.performanceHints ?? 0;
 
     const remoteTopLevelStates = nonEmptyTopLevelState.filter((x) => x.nodeTag !== localNodeTag);
 
@@ -129,7 +140,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const alertSection = (
         <React.Fragment>
             <Icon icon="warning" />
-            {!isCurrentNodeRelevant ? "Alerts" : `${localAlerts} ${localAlerts === 1 ? "Alert" : "Alerts"}`}
+            {!isCurrentNodeRelevant ? "Alerts" : `${localAlertsCount} ${localAlertsCount === 1 ? "Alert" : "Alerts"}`}
         </React.Fragment>
     );
 
@@ -138,128 +149,9 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
             <Icon icon="rocket" />
             {!isCurrentNodeRelevant
                 ? "Performance hints"
-                : `${localPerformanceHints} Performance ${localPerformanceHints === 1 ? " hint" : "hints"}`}
+                : `${localPerformanceHintsCount} Performance ${localPerformanceHintsCount === 1 ? " hint" : "hints"}`}
         </React.Fragment>
     );
-
-    function PerfHintsPopover() {
-        return (
-            <div className="p-3 notifications-popover">
-                {isCurrentNodeRelevant && (
-                    <>
-                        <strong className="d-block mb-1">Local</strong>
-                        <div className="notifications-popover-grid">
-                            <span>
-                                <Icon icon="node" color="node" /> {localNodeTag}
-                            </span>
-                            <span>
-                                <strong>{localPerformanceHints} </strong>
-                                {localPerformanceHints === 1 ? "hint" : "hints"}
-                            </span>
-                            <Button
-                                type="button"
-                                size="xs"
-                                color="info"
-                                className="rounded-pill"
-                                onClick={() => dispatch(openNotificationCenterForDatabase(db))}
-                            >
-                                <Icon icon="rocket" />
-                                See {localPerformanceHints === 1 ? "hint" : "hints"}
-                            </Button>
-                        </div>
-                    </>
-                )}
-
-                {remoteTopLevelStates.some((x) => !!x.performanceHints) && (
-                    <>
-                        {isCurrentNodeRelevant && <hr className="my-2" />}
-                        <strong className="d-block mb-1">Remote</strong>
-
-                        {remoteTopLevelStates.map((x) => {
-                            if (!x.performanceHints) {
-                                return null;
-                            }
-
-                            return (
-                                <div key={x.nodeTag} className="notifications-popover-grid mb-1">
-                                    <span>
-                                        <Icon icon="node" color="node" /> {x.nodeTag}
-                                    </span>
-                                    <span>
-                                        <strong>{x.performanceHints} </strong>
-                                        {x.performanceHints === 1 ? "hint" : "hints"}
-                                    </span>
-                                    <a href={getServerNodeUrl(x.nodeTag)} color="node" className="rounded-pill">
-                                        <Icon icon="newtab" />
-                                        Open node
-                                    </a>
-                                </div>
-                            );
-                        })}
-                    </>
-                )}
-            </div>
-        );
-    }
-
-    function AlertsPopover() {
-        return (
-            <div className="p-3 notifications-popover">
-                {isCurrentNodeRelevant && (
-                    <>
-                        <strong className="d-block mb-1">Local</strong>
-                        <div className="notifications-popover-grid">
-                            <span>
-                                <Icon icon="node" color="node" /> {localNodeTag}
-                            </span>
-                            <span>
-                                <strong>{localAlerts} </strong>
-                                {localAlerts === 1 ? "alert" : "alerts"}
-                            </span>
-                            <Button
-                                type="button"
-                                size="xs"
-                                color="warning"
-                                className="rounded-pill"
-                                onClick={() => dispatch(openNotificationCenterForDatabase(db))}
-                            >
-                                <Icon icon="alert" />
-                                See {localAlerts === 1 ? "alert" : "alerts"}
-                            </Button>
-                        </div>
-                    </>
-                )}
-
-                {remoteTopLevelStates.some((x) => !!x.performanceHints) && (
-                    <>
-                        {isCurrentNodeRelevant && <hr className="my-2" />}
-                        <strong className="d-block mb-1">Remote</strong>
-
-                        {remoteTopLevelStates.map((x) => {
-                            if (!x.alerts) {
-                                return null;
-                            }
-
-                            return (
-                                <div key={x.nodeTag} className="notifications-popover-grid mb-1">
-                                    <span>
-                                        <Icon icon="node" color="node" /> {x.nodeTag}
-                                    </span>
-                                    <span>
-                                        <strong>{x.alerts}</strong> {x.alerts === 1 ? "alert" : "alerts"}
-                                    </span>
-                                    <Button type="button" size="xs" color="node" className="rounded-pill">
-                                        <Icon icon="newtab" />
-                                        Open node
-                                    </Button>
-                                </div>
-                            );
-                        })}
-                    </>
-                )}
-            </div>
-        );
-    }
 
     return (
         <RichPanelDetails className="flex-wrap pb-1">
@@ -355,7 +247,14 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                             </Badge>
                         </RichPanelDetailItem>
                         <PopoverWithHover target={alertsPopoverElement}>
-                            <AlertsPopover />
+                            <AlertsPopover
+                                isCurrentNodeRelevant={isCurrentNodeRelevant}
+                                localNodeTag={localNodeTag}
+                                localTotal={localAlertsCount}
+                                getServerNodeUrl={getServerNodeUrl}
+                                openNotificationCenter={() => dispatch(openNotificationCenterForDatabase(db))}
+                                remoteTopLevelStates={remoteTopLevelStates}
+                            />
                         </PopoverWithHover>
                     </>
                 )}
@@ -384,7 +283,14 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                             </Badge>
                         </RichPanelDetailItem>
                         <PopoverWithHover target={perfHintsPopoverElement}>
-                            <PerfHintsPopover />
+                            <PerfHintsPopover
+                                isCurrentNodeRelevant={isCurrentNodeRelevant}
+                                localNodeTag={localNodeTag}
+                                localTotal={localPerformanceHintsCount}
+                                getServerNodeUrl={getServerNodeUrl}
+                                openNotificationCenter={() => dispatch(openNotificationCenterForDatabase(db))}
+                                remoteTopLevelStates={remoteTopLevelStates}
+                            />
                         </PopoverWithHover>
                     </>
                 )}
