@@ -36,7 +36,7 @@ namespace SlowTests.Sharding.Cluster
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                var bucket = await Sharding.GetBucketAsync(store,"users/1/$abc");
+                var bucket = await Sharding.GetBucketAsync(store, "users/1/$abc");
 
                 var before = DateTime.UtcNow;
                 using (var session = store.OpenAsyncSession())
@@ -128,8 +128,8 @@ namespace SlowTests.Sharding.Cluster
 
                 var buckets = new Dictionary<int, (int NumOfDocs, int Size)>
                 {
-                    [bucket1] = (10, 2771), 
-                    [bucket2] = (20, 5611), 
+                    [bucket1] = (10, 2771),
+                    [bucket2] = (20, 5611),
                     [bucket3] = (30, 8431)
                 };
 
@@ -465,7 +465,7 @@ namespace SlowTests.Sharding.Cluster
                 var bucket2 = Sharding.GetBucket(config, id2);
 
                 var shard = ShardHelper.GetShardNumberFor(config, bucket1);
-                var shardDatabase = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shard));
+                var shardDatabase = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shard));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -756,7 +756,7 @@ namespace SlowTests.Sharding.Cluster
                 Assert.Equal(100_000, total);
             }
         }
-        
+
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanGetBucketStatsForSampleData()
         {
@@ -768,7 +768,7 @@ namespace SlowTests.Sharding.Cluster
                 long docsSize = 0;
 
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
-                
+
                 foreach (var shardNumber in sharding.Shards.Keys)
                 {
                     var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shardNumber));
