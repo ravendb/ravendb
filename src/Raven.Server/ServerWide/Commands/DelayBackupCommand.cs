@@ -9,6 +9,7 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
 {
     public long TaskId;
     public DateTime DelayUntil;
+    public DateTime OriginalBackupTime;
 
     // ReSharper disable once UnusedMember.Local
     private DelayBackupCommand()
@@ -29,6 +30,7 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
     {
         json[nameof(TaskId)] = TaskId;
         json[nameof(DelayUntil)] = DelayUntil;
+        json[nameof(OriginalBackupTime)] = OriginalBackupTime;
     }
 
     protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
@@ -37,14 +39,16 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
         {
             existingValue.Modifications = new DynamicJsonValue
             {
-                [nameof(DelayUntil)] = DelayUntil
+                [nameof(DelayUntil)] = DelayUntil,
+                [nameof(OriginalBackupTime)] = OriginalBackupTime
             };
             return context.ReadObject(existingValue, GetItemId());
         }
 
         var status = new PeriodicBackupStatus
         {
-            DelayUntil = DelayUntil
+            DelayUntil = DelayUntil,
+            OriginalBackupTime = OriginalBackupTime
         };
         return context.ReadObject(status.ToJson(), GetItemId());
     }
@@ -54,7 +58,8 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
         return new DelayBackupCommandState
         {
             TaskId = TaskId,
-            DelayUntil = DelayUntil
+            DelayUntil = DelayUntil,
+            OriginalBackupTime = OriginalBackupTime
         };
     }
 
@@ -62,5 +67,6 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
     {
         public long TaskId;
         public DateTime DelayUntil;
+        public DateTime OriginalBackupTime;
     }
 }

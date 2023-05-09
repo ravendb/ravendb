@@ -62,6 +62,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 while (hasMore)
                 {
+                    CancellationToken.ThrowIfCancellationRequested();
+
                     var foldersResult = GetSortedFolders();
                     var resultType = foldersResult.HasMore ? "partial " : string.Empty;
                     _onProgress.Invoke($"Got {resultType}{foldersResult.List.Count:#,#} potential backups to check.");

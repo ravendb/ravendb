@@ -23,6 +23,7 @@ public class RavenDB_20202 : ClusterTestBase
     {
     }
 
+    [Fact]
     public async Task ShouldGettingBackToTheNodeAfterExperiencingTimeoutAndTopologyUpdateSimultaneously()
     {
         const string databaseName = "testDb";
