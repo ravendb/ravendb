@@ -1,14 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -23,9 +28,15 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Smuggler.Migration;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Utils;
+using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -64,10 +75,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                 const int documentsPerIndexLowerLimit = 1;
                 
                 if (testIndexParameters.IndexDefinition is null)
-                    throw new ArgumentException($"Index must have an {nameof(TestIndexParameters.IndexDefinition)} field");
+                    throw new BadRequestException($"Index must have an {nameof(TestIndexParameters.IndexDefinition)} field");
 
                 if (maxDocumentsPerIndex > documentsPerIndexUpperLimit || maxDocumentsPerIndex < documentsPerIndexLowerLimit)
-                    throw new ArgumentException($"Number of documents to process cannot be bigger than {documentsPerIndexUpperLimit} or less than {documentsPerIndexLowerLimit}.");
+                    throw new BadRequestException($"Number of documents to process cannot be bigger than {documentsPerIndexUpperLimit} or less than {documentsPerIndexLowerLimit}.");
 
                 if (testIndexDefinition.Type.IsJavaScript() == false)
                 {
