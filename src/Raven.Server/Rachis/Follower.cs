@@ -417,7 +417,7 @@ namespace Raven.Server.Rachis
             {
                 KeepAliveAndExecuteAction(() =>
                 {
-                    onFullSnapshotInstalledTask = ReadAndCommitSnapshot(snapshot, cts.Token);
+                    onFullSnapshotInstalledTask = ReadAndCommitSnapshotAsync(snapshot, cts.Token);
                 }, cts, "ReadAndCommitSnapshot");
             }
 
@@ -488,12 +488,12 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private Task ReadAndCommitSnapshot(InstallSnapshot snapshot, CancellationToken token)
+        private async Task ReadAndCommitSnapshotAsync(InstallSnapshot snapshot, CancellationToken token)
         {
             var command = new FollowerReadAndCommitSnapshotCommand(_engine, this, snapshot, token);
-            _engine.TxMerger.EnqueueSync(command);
+            await _engine.TxMerger.Enqueue(command);
 
-            return command.OnFullSnapshotInstalledTask;
+            await command.OnFullSnapshotInstalledTask;
         }
 
         private bool InstallSnapshot(ClusterOperationContext context, CancellationToken token)
