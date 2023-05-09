@@ -627,10 +627,7 @@ namespace RachisTests
                     Name = db
                 });
 
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
-                    await store.GetRequestExecutor().ExecuteAsync(new WaitForRaftIndexCommand(res.Index), context);
-                }
+                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(res.Index, cluster.Nodes);
 
                 await WaitForAssertionAsync(() =>
                 {
