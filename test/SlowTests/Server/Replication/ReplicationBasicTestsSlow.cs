@@ -4,8 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -25,10 +23,10 @@ namespace SlowTests.Server.Replication
 
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Master_master_replication_from_etag_zero_without_conflict_should_work(bool useSsl)
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Master_master_replication_from_etag_zero_without_conflict_should_work(Options options, bool useSsl)
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
@@ -42,13 +40,13 @@ namespace SlowTests.Server.Replication
                 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             }
 
-            using (var store1 = GetDocumentStore(new Options
+            using (var store1 = GetDocumentStore(new Options(options)
             {
                 AdminCertificate = adminCertificate,
                 ClientCertificate = clientCertificate,
                 ModifyDatabaseName = s => dbName1
             }))
-            using (var store2 = GetDocumentStore(new Options
+            using (var store2 = GetDocumentStore(new Options(options)
             {
                 AdminCertificate = adminCertificate,
                 ClientCertificate = clientCertificate,
@@ -101,11 +99,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task DisableExternalReplication()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DisableExternalReplication(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 var externalList = await SetupReplicationAsync(store1, store2);
                 using (var session = store1.OpenSession())
@@ -123,8 +122,9 @@ namespace SlowTests.Server.Replication
                 Assert.Equal("John Dow", replicated1.Name);
                 Assert.Equal(30, replicated1.Age);
 
-                var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
-                var db2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
+                var db1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
+                  ? store1.Database
+                  : await Sharding.GetShardDatabaseNameForDocAsync(store1, "users/1"));
                 var replicationConnection = db1.ReplicationLoader.OutgoingHandlers.First();
 
                 var external = new ExternalReplication(store1.Database, $"ConnectionString-{store2.Identifier}")
@@ -137,8 +137,7 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(externalList.First().TaskId, res.TaskId);
 
                 //make sure the command is processed
-                await db1.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
-                await db2.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
+                await Server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
 
                 var connectionDropped = await WaitForValueAsync(() => replicationConnection.IsConnectionDisposed, true);
                 Assert.True(connectionDropped);
@@ -157,21 +156,29 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task Update_LastWork_With_Replication()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Update_LastWork_With_Replication(Options options)
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
-                var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
-                var db2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
+                var db2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
+                    ? store2.Database
+                    : await Sharding.GetShardDatabaseNameForDocAsync(store2, "users/1"));
 
                 await SetupReplicationAsync(store1, store2);
 
-                EnsureReplicating(store1, store2);
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User(), "users/2$users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(store2, "users/2$users/1"));
 
                 var lastAccessTime = db2.LastAccessTime;
-                
+
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User
@@ -196,16 +203,17 @@ namespace SlowTests.Server.Replication
         }
 
         // RavenDB-15081
-        [Fact]
-        public async Task CanReplicateExpiredRevisionsWithAttachment()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanReplicateExpiredRevisionsWithAttachment(Options options)
         {
             var rnd = new Random();
             var b = new byte[16 * 1024];
             rnd.NextBytes(b);
             using (var stream = new MemoryStream(b))
             {
-                using (var store1 = GetDocumentStore())
-                using (var store2 = GetDocumentStore())
+                using (var store1 = GetDocumentStore(options))
+                using (var store2 = GetDocumentStore(options))
                 {
                     // Define revisions settings
                     var configuration = new RevisionsConfiguration
@@ -222,10 +230,14 @@ namespace SlowTests.Server.Replication
                         }
                     };
 
-                    var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
-                    db1.Time.UtcDateTime = () => DateTime.UtcNow.Add(TimeSpan.FromDays(-60));
                     const string id = "users/1";
                     const string attachmentName = "Typical attachment name";
+
+                    var db1 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
+                        ? store1.Database
+                        : await Sharding.GetShardDatabaseNameForDocAsync(store1, id));
+                    db1.Time.UtcDateTime = () => DateTime.UtcNow.Add(TimeSpan.FromDays(-60));
+
                     using (var session = store1.OpenSession())
                     {
                         var user = new User { Name = "su" };
@@ -253,16 +265,21 @@ namespace SlowTests.Server.Replication
                     }
                     await SetupReplicationAsync(store1, store2);
 
-                    var db2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
+                    var db2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
+                        ? store2.Database
+                        : await Sharding.GetShardDatabaseNameForDocAsync(store2, id));
+
                     Assert.Equal(1, WaitForValue(() => db1.ReplicationLoader.OutgoingHandlers.Count(), 1));
-                    Assert.Equal(1, WaitForValue(() => db2.ReplicationLoader.IncomingHandlers.Count(), 1));
+
+                    var expectedIncomingCount = options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 3; // for sharding we have 3 incoming connections (one for each shard in source)
+                    Assert.Equal(expectedIncomingCount, WaitForValue(() => db2.ReplicationLoader.IncomingHandlers.Count(), expectedIncomingCount));
                     var outgoingReplicationConnection = db1.ReplicationLoader.OutgoingHandlers.First();
-                    var incomingReplicationConnection = db2.ReplicationLoader.IncomingHandlers.First();
+                    var incomingReplicationConnection = db2.ReplicationLoader.IncomingHandlers.Single(i => string.Equals(db1.DbId.ToString(), i.ConnectionInfo.SourceDatabaseId, StringComparison.OrdinalIgnoreCase));
                     Assert.Equal(20, WaitForValue(() => outgoingReplicationConnection.LastSentDocumentEtag, 20));
                     Assert.Equal(20, WaitForValue(() => incomingReplicationConnection.LastDocumentEtag, 20));
 
-                    var stats1 = store1.Maintenance.Send(new GetStatisticsOperation());
-                    var stats2 = store2.Maintenance.Send(new GetStatisticsOperation());
+                    var stats1 = await GetDatabaseStatisticsAsync(store1);
+                    var stats2 = await GetDatabaseStatisticsAsync(store2);
                     Assert.Equal(stats1.DatabaseChangeVector, stats2.DatabaseChangeVector);
                     Assert.Equal(2, stats2.CountOfTombstones);
                 }
