@@ -24,6 +24,8 @@ class trafficWatchConfiguration {
 
     filterCertificateThumbprints = ko.observable<boolean>();
     certificateThumbprints = ko.observableArray<string>();
+
+    certificateThumbprintInput = ko.observable<string>();
     
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         databases: this.databases,
@@ -56,6 +58,8 @@ class trafficWatchConfiguration {
         this.certificateThumbprints(dto.CertificateThumbprints ?? []);
         
         this.initValidation();
+        
+        _.bindAll(this, "removeCertificateThumbprint", "addCertificateThumbprint");
     }
     
     private initValidation() {
@@ -89,6 +93,15 @@ class trafficWatchConfiguration {
             }
         });
     }
+
+    addCertificateThumbprint() {
+        this.certificateThumbprints.push(this.certificateThumbprintInput());
+        this.certificateThumbprintInput("");
+    }
+
+    removeCertificateThumbprint(thumbprint: string) {
+        this.certificateThumbprints.remove(thumbprint);
+    }
     
     
     toDto(): Raven.Client.ServerWide.Operations.TrafficWatch.PutTrafficWatchConfigurationOperation.Parameters {
@@ -101,7 +114,7 @@ class trafficWatchConfiguration {
             MinimumDurationInMs: this.minimumDuration(),
             HttpMethods: this.filterHttpMethods() ? this.httpMethods() : null,
             ChangeTypes: this.filterChangeTypes() ? this.changeTypes() : null,
-            CertificateThumbprints: this.filterCertificateThumbprints() ? this.certificateThumbprints : null
+            CertificateThumbprints: this.filterCertificateThumbprints() ? this.certificateThumbprints() : null
         }
     }
 }
