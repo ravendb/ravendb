@@ -1,19 +1,15 @@
 ﻿using System;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Configuration;
 using Raven.Server.Web;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -62,59 +58,6 @@ namespace Raven.Server.Documents
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
 
             return Task.CompletedTask;
-        }
-
-        protected async Task DatabaseConfigurations(SetupFunc<BlittableJsonReaderObject> setupConfigurationFunc,
-           string debug,
-           string raftRequestId,
-           RefAction<BlittableJsonReaderObject> beforeSetupConfiguration = null,
-           Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
-           HttpStatusCode statusCode = HttpStatusCode.OK)
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                var result = await DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, Database.Name, configurationJson, beforeSetupConfiguration);
-
-                if (result.Configuration == null)
-                    return;
-
-                HttpContext.Response.StatusCode = (int)statusCode;
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var json = new DynamicJsonValue
-                    {
-                        ["RaftCommandIndex"] = result.Index
-                    };
-                    fillJson?.Invoke(json, result.Configuration, result.Index);
-                    context.Write(writer, json);
-                }
-            }
-        }
-
-        private async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc,
-            TransactionOperationContext context,
-            string raftRequestId,
-            string databaseName,
-            T configurationJson,
-            RefAction<T> beforeSetupConfiguration = null)
-        {
-            if (await CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
-                return (-1, default);
-
-            if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            await ServerStore.EnsureNotPassiveAsync();
-
-            beforeSetupConfiguration?.Invoke(databaseName, ref configurationJson, context);
-
-            var (index, _) = await setupConfigurationFunc(context, databaseName, configurationJson, raftRequestId);
-
-            await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
-
-            return (index, configurationJson);
         }
 
         public override async Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)

@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         private long _key;
+        private string _desc;
 
         protected AbstractOngoingTasksHandlerProcessorForToggleTaskState([NotNull] TRequestHandler requestHandler)
             : base(requestHandler)
@@ -23,6 +24,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected override void OnBeforeResponseWrite(TransactionOperationContext context, DynamicJsonValue responseJson, object _, long index)
         {
             responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _key;
+        }
+
+        protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, object configuration, string raftRequestId)
+        {
+            RequestHandler.LogTaskToAudit(_desc, _key, configuration: null);
+            return ValueTask.CompletedTask;
         }
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, object _, string raftRequestId)
@@ -35,6 +42,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", nameof(type));
+
+            _desc = (disable) ? "disable" : "enable";
+            _desc += $"-{typeStr}-Task {(string.IsNullOrEmpty(taskName) ? string.Empty : $" with task name: '{taskName}'")}";
 
             return RequestHandler.ServerStore.ToggleTaskState(_key, taskName, type, disable, RequestHandler.DatabaseName, raftRequestId);
         }

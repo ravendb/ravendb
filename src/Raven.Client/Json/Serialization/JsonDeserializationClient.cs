@@ -14,6 +14,10 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -279,5 +283,28 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, PutTrafficWatchConfigurationOperation.Parameters> GetTrafficWatchConfigurationResult = GenerateJsonDeserializationRoutine<PutTrafficWatchConfigurationOperation.Parameters>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigurePostgreSqlOperationResult> ConfigurePostgreSqlOperationResult = GenerateJsonDeserializationRoutine<ConfigurePostgreSqlOperationResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, ElasticSearchEtlConfiguration> ElasticSearchEtlConfiguration = GenerateJsonDeserializationRoutine<ElasticSearchEtlConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, OlapEtlConfiguration> OlapEtlConfiguration = GenerateJsonDeserializationRoutine<OlapEtlConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, QueueEtlConfiguration> QueueEtlConfiguration = GenerateJsonDeserializationRoutine<QueueEtlConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, RavenEtlConfiguration> RavenEtlConfiguration = GenerateJsonDeserializationRoutine<RavenEtlConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, SqlEtlConfiguration> SqlEtlConfiguration = GenerateJsonDeserializationRoutine<SqlEtlConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, ElasticSearchConnectionString> ElasticSearchConnectionString = GenerateJsonDeserializationRoutine<ElasticSearchConnectionString>();
+
+        public static readonly Func<BlittableJsonReaderObject, SqlConnectionString> SqlConnectionString = GenerateJsonDeserializationRoutine<SqlConnectionString>();
+
+        public static readonly Func<BlittableJsonReaderObject, RavenConnectionString> RavenConnectionString = GenerateJsonDeserializationRoutine<RavenConnectionString>();
+
+        public static readonly Func<BlittableJsonReaderObject, QueueConnectionString> QueueConnectionString = GenerateJsonDeserializationRoutine<QueueConnectionString>();
+
+        public static readonly Func<BlittableJsonReaderObject, OlapConnectionString> OlapConnectionString = GenerateJsonDeserializationRoutine<OlapConnectionString>();
+
     }
 }

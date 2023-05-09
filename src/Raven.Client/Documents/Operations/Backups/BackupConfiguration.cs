@@ -111,6 +111,22 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(FtpSettings)] = FtpSettings?.ToJson()
             };
         }
+        public virtual DynamicJsonValue ToAuditJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(BackupType)] = BackupType,
+                [nameof(SnapshotSettings)] = SnapshotSettings?.ToAuditJson(),
+                [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToAuditJson(),
+                [nameof(LocalSettings)] = LocalSettings?.ToAuditJson(),
+                [nameof(S3Settings)] = S3Settings?.ToAuditJson(),
+                [nameof(GlacierSettings)] = GlacierSettings?.ToAuditJson(),
+                [nameof(AzureSettings)] = AzureSettings?.ToAuditJson(),
+                [nameof(GoogleCloudSettings)] = GoogleCloudSettings?.ToAuditJson(),
+                [nameof(FtpSettings)] = FtpSettings?.ToAuditJson()
+
+            };
+        }
 
         public virtual bool ValidateDestinations(out string message)
         {

@@ -63,5 +63,10 @@ namespace Raven.Client.Documents.Operations.ETL
             json[nameof(TopologyDiscoveryUrls)] = new DynamicJsonArray(TopologyDiscoveryUrls);
             return json;
         }
+
+        public override DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
     }
 }

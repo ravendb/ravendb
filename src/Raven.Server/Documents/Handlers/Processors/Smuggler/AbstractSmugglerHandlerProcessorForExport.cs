@@ -97,6 +97,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 
                 HttpContext.Abort();
             }
+
+            RequestHandler.LogTaskToAudit(Operations.OperationType.DatabaseExport.ToString(), operationId, configuration: null);
         }
     }
 }

@@ -17,5 +17,10 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(MinimumBackupAgeToKeep)] = MinimumBackupAgeToKeep
             };
         }
+
+        public DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
     }
 }

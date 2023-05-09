@@ -37,6 +37,10 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 await RaiseNotificationForSubscriptionTaskRemoval();
 
             await _action.Complete($"{raftRequestId}/complete");
+
+            var description = $"delete-{_type}";
+            description += $"{(string.IsNullOrEmpty(TaskName) ? string.Empty : $" with task name: '{TaskName}'")}";
+            RequestHandler.LogTaskToAudit(description, _taskId, configuration: null);
         }
 
         protected abstract ValueTask RaiseNotificationForSubscriptionTaskRemoval();
