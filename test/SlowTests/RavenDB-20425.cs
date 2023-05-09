@@ -260,7 +260,7 @@ namespace SlowTests
         }
         
 
-        [Fact] // Fix - PurgeOnDelete doesnt work with Enforce Config on deleted doc
+        [Fact] // ____Fixed - PurgeOnDelete doesnt work with Enforce Config on deleted doc
         public async Task DeleteDocWithRevisions_ThenAddPurgeOnDeleteConfig_EnforceConfig_ShouldDeleteTheRevisionsOfTheDeletedDoc()
         {
             using var store = GetDocumentStore();

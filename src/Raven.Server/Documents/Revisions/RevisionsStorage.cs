@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Amqp.Types;
+using Microsoft.CodeAnalysis.Operations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents;
@@ -664,10 +665,34 @@ namespace Raven.Server.Documents.Revisions
                 return false;
 
             long numberOfRevisionsToDelete;
-            var deleteBecausePurgeOnDelete = deletedDoc && configuration.PurgeOnDelete;
-            if (deleteBecausePurgeOnDelete)
+
+            if (configuration == ZeroConfiguration)
+            {
+                // handleOnlyConflictedRevisionsAndDeleteTheRest = true;
+                //
+                // var conflictConfig = ConflictConfiguration.Default;
+                // var conflictedRevisionsCount = GetConflictRevisionsCount(context, table, prefixSlice);
+                // var numberOfConflictedToDelete = conflictedRevisionsCount - conflictConfig.MinimumRevisionsToKeep.Value;
+                // numberOfRevisionsToDelete = revisionsCount - conflictedRevisionsCount + numberOfConflictedToDelete;
+                // if (numberOfRevisionsToDelete > 0 && conflictConfig.MaximumRevisionsToDeleteUponDocumentUpdate.HasValue && conflictConfig.MaximumRevisionsToDeleteUponDocumentUpdate.Value < numberOfRevisionsToDelete)
+                // {
+                //     numberOfRevisionsToDelete = conflictConfig.MaximumRevisionsToDeleteUponDocumentUpdate.Value;
+                //     moreRevisionToDelete = true;
+                // }
+                //
+                // if (numberOfRevisionsToDelete <= 0)
+                //     return false;
+                //
+                // var deleted = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete, conflictConfig.MinimumRevisionAgeToKeep, changeVector, lastModifiedTicks);
+                // return moreRevisionToDelete;
+                var results = HandleConflictRevisionsDelete(context, table, prefixSlice, collectionName, changeVector, revisionsCount, lastModifiedTicks);
+                IncrementCountOfRevisions(context, prefixSlice, -results.DeletedCount);
+                return results.MoreWork;
+            }
+            else if (deletedDoc && configuration.PurgeOnDelete)
             {
                 numberOfRevisionsToDelete = long.MaxValue;
+                moreRevisionToDelete = false;
             }
             else if (configuration.MinimumRevisionsToKeep.HasValue)
             {
@@ -692,7 +717,7 @@ namespace Raven.Server.Documents.Revisions
 
             Debug.Assert(numberOfRevisionsToDelete >= deletedRevisionsCount);
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
-            return moreRevisionToDelete && deletedRevisionsCount == numberOfRevisionsToDelete && deleteBecausePurgeOnDelete == false;
+            return moreRevisionToDelete && deletedRevisionsCount == numberOfRevisionsToDelete;
         }
 
         public void DeleteRevisionsFor(DocumentsOperationContext context, string id, long? maximumRevisionsToDeleteUponDocumentUpdate = long.MaxValue)
@@ -782,7 +807,7 @@ namespace Raven.Server.Documents.Revisions
 
             while (true)
             {
-                var hasValue = false;
+                var revisionHasBeenDeleted = false;
 
                 foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
                 {
@@ -795,8 +820,6 @@ namespace Raven.Server.Documents.Revisions
                         if (minimumTimeToKeep.HasValue &&
                             _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
                             return deletedRevisionsCount;
-
-                        hasValue = true;
 
                         using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
                         {
@@ -817,18 +840,134 @@ namespace Raven.Server.Documents.Revisions
 
                             writeTable.DeleteByKey(keySlice);
                         }
+                        revisionHasBeenDeleted = true;
                     }
 
                     deletedRevisionsCount++;
                     break;
                 }
 
-                if (hasValue == false)
+                if (revisionHasBeenDeleted == false) // passed over all the revisions withoud deleting
                     break;
             }
 
             _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
             return deletedRevisionsCount;
+        }
+
+        private (bool MoreWork, long DeletedCount) HandleConflictRevisionsDelete(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName,
+            string changeVector, long revisionCount, long lastModifiedTicks)
+        {
+            long maxEtagDeleted = 0;
+            Table writeTable = null;
+            string currentCollection = null;
+
+            var config = ConflictConfiguration.Default;
+
+            var conflictCount = GetConflictRevisionsCount(context, table, prefixSlice);
+            var regularCount = revisionCount - conflictCount;
+            var regularDeletedCount = 0;
+            var conflictDeletedCount = 0;
+
+            var stopDeleteConflict = false;
+            bool? moreWork = null;
+
+            while (true)
+            {
+                var revisionHasBeenDeleted = false;
+
+                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
+                {
+                    if (config.MaximumRevisionsToDeleteUponDocumentUpdate.HasValue &&
+                        config.MaximumRevisionsToDeleteUponDocumentUpdate.Value <= regularDeletedCount + conflictDeletedCount)
+                    {
+                        moreWork = true;
+                        break; //return true;
+                    }
+
+                    if (regularCount - regularDeletedCount == 0 &&
+                        ( (config.MinimumRevisionsToKeep.HasValue && conflictCount - conflictDeletedCount <= config.MinimumRevisionsToKeep.Value) || 
+                          stopDeleteConflict) ){
+                        moreWork = false;
+                        break; //return false;
+                    }
+
+                    var tvr = read.Result.Reader;
+                    using (var revision = TableValueToRevision(context, ref tvr))
+                    {
+                        if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
+                        {
+                            if (stopDeleteConflict)
+                                continue;
+                            if (config.MinimumRevisionAgeToKeep.HasValue &&
+                                _database.Time.GetUtcNow() - revision.LastModified <= config.MinimumRevisionAgeToKeep.Value)
+                            {
+                                stopDeleteConflict = true;
+                                continue;
+                            }
+                            conflictDeletedCount++;
+                        }
+                        else
+                        {
+                            regularDeletedCount++;
+                        }
+
+                        using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
+                        {
+                            CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
+
+                            maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
+                            if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                            {
+                                _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
+                            }
+
+                            var docCollection = CollectionName.GetCollectionName(revision.Data);
+                            if (writeTable == null || docCollection != currentCollection)
+                            {
+                                currentCollection = docCollection;
+                                writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(docCollection));
+                            }
+
+                            writeTable.DeleteByKey(keySlice);
+                        }
+                        revisionHasBeenDeleted = true;
+                        break;
+                    }
+
+                }
+
+                if (moreWork.HasValue)
+                {
+                    break;
+                }
+
+                if (revisionHasBeenDeleted == false)
+                {
+                    moreWork = false;
+                    break; // return false;
+                }
+            }
+
+            _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
+            return (moreWork.Value, regularDeletedCount + conflictDeletedCount);
+        }
+
+        private long GetConflictRevisionsCount(
+            DocumentsOperationContext context, Table table, Slice prefixSlice)
+        {
+            long count = 0;
+            foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
+            {
+                var tvr = read.Result.Reader;
+                using (var revision = TableValueToRevision(context, ref tvr))
+                {
+                    if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
+                        count++;
+                }
+            }
+
+            return count;
         }
 
         public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)
