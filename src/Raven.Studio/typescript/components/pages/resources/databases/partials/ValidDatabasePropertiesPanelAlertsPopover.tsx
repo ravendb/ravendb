@@ -24,21 +24,23 @@ export default function ValidDatabasePropertiesPanelAlertsPopover({
                             <strong>{localTotal} </strong>
                             {localTotal === 1 ? "alert" : "alerts"}
                         </span>
-                        <Button
-                            type="button"
-                            size="xs"
-                            color="warning"
-                            className="rounded-pill"
-                            onClick={openNotificationCenter}
-                        >
-                            <Icon icon="alert" />
-                            See {localTotal === 1 ? "alert" : "alerts"}
-                        </Button>
+                        {localTotal > 0 && (
+                            <Button
+                                type="button"
+                                size="xs"
+                                color="warning"
+                                className="rounded-pill"
+                                onClick={openNotificationCenter}
+                            >
+                                <Icon icon="alert" />
+                                See {localTotal === 1 ? "alert" : "alerts"}
+                            </Button>
+                        )}
                     </div>
                 </>
             )}
 
-            {remoteTopLevelStates.some((x) => !!x.performanceHints) && (
+            {remoteTopLevelStates.some((x) => !!x.alerts) && (
                 <>
                     {isCurrentNodeRelevant && <hr className="my-2" />}
                     <strong className="d-block mb-1">Remote</strong>
@@ -56,7 +58,7 @@ export default function ValidDatabasePropertiesPanelAlertsPopover({
                                 <span>
                                     <strong>{x.alerts}</strong> {x.alerts === 1 ? "alert" : "alerts"}
                                 </span>
-                                <a href={getServerNodeUrl(x.nodeTag)} className="no-decor">
+                                <a href={getServerNodeUrl(x.nodeTag)} className="no-decor" target="_blank">
                                     <Button type="button" size="xs" color="node" className="rounded-pill">
                                         <Icon icon="newtab" />
                                         Open node

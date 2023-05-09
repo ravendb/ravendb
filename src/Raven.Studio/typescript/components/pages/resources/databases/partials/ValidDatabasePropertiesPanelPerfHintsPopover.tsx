@@ -24,16 +24,18 @@ export default function ValidDatabasePropertiesPanelPerfHintsPopover({
                             <strong>{localTotal} </strong>
                             {localTotal === 1 ? "hint" : "hints"}
                         </span>
-                        <Button
-                            type="button"
-                            size="xs"
-                            color="info"
-                            className="rounded-pill"
-                            onClick={openNotificationCenter}
-                        >
-                            <Icon icon="rocket" />
-                            See {localTotal === 1 ? "hint" : "hints"}
-                        </Button>
+                        {localTotal > 0 && (
+                            <Button
+                                type="button"
+                                size="xs"
+                                color="info"
+                                className="rounded-pill"
+                                onClick={openNotificationCenter}
+                            >
+                                <Icon icon="rocket" />
+                                See {localTotal === 1 ? "hint" : "hints"}
+                            </Button>
+                        )}
                     </div>
                 </>
             )}
@@ -57,7 +59,7 @@ export default function ValidDatabasePropertiesPanelPerfHintsPopover({
                                     <strong>{x.performanceHints} </strong>
                                     {x.performanceHints === 1 ? "hint" : "hints"}
                                 </span>
-                                <a href={getServerNodeUrl(x.nodeTag)} className="no-decor">
+                                <a href={getServerNodeUrl(x.nodeTag)} className="no-decor" target="_blank">
                                     <Button type="button" size="xs" color="node" className="rounded-pill">
                                         <Icon icon="newtab" />
                                         Open node
