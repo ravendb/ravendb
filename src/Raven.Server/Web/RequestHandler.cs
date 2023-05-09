@@ -28,6 +28,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -852,29 +853,37 @@ namespace Raven.Server.Web
             return Task.CompletedTask;
         }
 
+        public const string BackupDatabaseOnceTag = "one-time-database-backup";
+        public const string DefineHubDebugTag = "update-hub-pull-replication";
+        public const string UpdatePullReplicationOnSinkNodeDebugTag = "update-sink-pull-replication";
+        public const string UpdatePeriodicBackupDebugTag = "update-periodic-backup";
+        public const string PutConnectionStringDebugTag = "put-connection-string";
+        public const string AddEtlDebugTag = "etl-add";
+        public const string UpdateExternalReplicationDebugTag = "update_external_replication";
+
         private DynamicJsonValue GetCustomConfigurationAuditJson(string name, BlittableJsonReaderObject configuration)
         {
             switch (name)
             {
-                case OngoingTasksHandler.BackupDatabaseOnceTag:
+                case BackupDatabaseOnceTag:
                     return JsonDeserializationServer.BackupConfiguration(configuration).ToAuditJson();
 
-                case OngoingTasksHandler.UpdatePeriodicBackupDebugTag:
+                case UpdatePeriodicBackupDebugTag:
                     return JsonDeserializationClient.PeriodicBackupConfiguration(configuration).ToAuditJson();
 
-                case OngoingTasksHandler.UpdateExternalReplicationDebugTag:
+                case UpdateExternalReplicationDebugTag:
                     return JsonDeserializationClient.ExternalReplication(configuration).ToAuditJson();
 
-                case PullReplicationHandler.DefineHubDebugTag:
+                case DefineHubDebugTag:
                     return JsonDeserializationClient.PullReplicationDefinition(configuration).ToAuditJson();
 
-                case PullReplicationHandler.UpdatePullReplicationOnSinkNodeDebugTag:
+                case UpdatePullReplicationOnSinkNodeDebugTag:
                     return JsonDeserializationClient.PullReplicationAsSink(configuration).ToAuditJson();
 
-                case OngoingTasksHandler.AddEtlDebugTag:
+                case AddEtlDebugTag:
                     return GetEtlConfigurationAuditJson(configuration);
 
-                case OngoingTasksHandler.PutConnectionStringDebugTag:
+                case PutConnectionStringDebugTag:
                     return GetConnectionStringConfigurationAuditJson(configuration);
             }
             return null;

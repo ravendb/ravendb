@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         private ExternalReplication _watcher;
-
+        private long _taskId;
         protected AbstractOngoingTasksHandlerProcessorForUpdateExternalReplication([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
@@ -37,13 +37,19 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             }
 
             FillResponsibleNode(context, responseJson, _watcher);
-
-            responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _watcher.TaskId == 0 ? index : _watcher.TaskId;
+            _taskId = _watcher.TaskId == 0 ? index : _watcher.TaskId;
+            responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _taskId;
         }
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             return RequestHandler.ServerStore.UpdateExternalReplication(RequestHandler.DatabaseName, configuration, raftRequestId, out _watcher);
+        }
+
+        protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
+        {
+            RequestHandler.LogTaskToAudit(Web.RequestHandler.UpdateExternalReplicationDebugTag, _taskId, configuration);
+            return ValueTask.CompletedTask;
         }
     }
 }

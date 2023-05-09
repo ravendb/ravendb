@@ -465,7 +465,7 @@ namespace SlowTests.Sharding.Cluster
                 var bucket2 = Sharding.GetBucket(config, id2);
 
                 var shard = ShardHelper.GetShardNumberFor(config, bucket1);
-                var shardDatabase = await Sharding.GetShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shard));
+                var shardDatabase = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shard));
 
                 using (var session = store.OpenAsyncSession())
                 {

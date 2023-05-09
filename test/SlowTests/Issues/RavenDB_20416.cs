@@ -151,8 +151,8 @@ namespace SlowTests.Issues
         {
             var db2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
 
-            var connectionState = new SubscriptionConnectionsState(state.SubscriptionId, db2.SubscriptionStorage);
-            connectionState.InitializeLastChangeVectorSent(state.ChangeVectorForNextBatchStartingPoint);
+            var connectionState = new SubscriptionConnectionsState(store2.Database, state.SubscriptionId, db2.SubscriptionStorage);
+            connectionState.LastChangeVectorSent = state.ChangeVectorForNextBatchStartingPoint;
             var fetcher = new DocumentSubscriptionFetcher(db2, connectionState, collection);
             using (db2.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx2))

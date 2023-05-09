@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography.X509Certificates;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
@@ -476,9 +477,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             var djv = base.ToAuditJson();
             djv[nameof(Url)] = Url;
-            djv[nameof(Port)] = Port;
             djv[nameof(UserName)] = UserName;
-            djv[nameof(CertificateFileName)] = CertificateFileName;
 
             return djv;
         }

@@ -20,8 +20,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        public const string BackupDatabaseOnceTag = "one-time-database-backup";
-
         protected AbstractOngoingTasksHandlerProcessorForBackupDatabaseOnce([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
@@ -66,7 +64,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                     }
 
-                    RequestHandler.LogTaskToAudit(BackupDatabaseOnceTag, operationId, json);
+                    RequestHandler.LogTaskToAudit(Web.RequestHandler.BackupDatabaseOnceTag, operationId, json);
                 }
                 catch (Exception e)
                 {
