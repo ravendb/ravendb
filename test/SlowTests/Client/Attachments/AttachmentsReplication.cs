@@ -632,8 +632,8 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                WaitForMarker(store1, store2);
-                WaitForMarker(store2, store1);
+                WaitForMarker(store1, store2, "marker/1$users/1");
+                WaitForMarker(store2, store1, "marker/2$users/1");
 
                 await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
@@ -675,8 +675,8 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                WaitForMarker(store1, store2);
-                WaitForMarker(store2, store1);
+                WaitForMarker(store1, store2, "marker/3$users/1");
+                WaitForMarker(store2, store1, "marker/4$users/1");
 
                 await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
@@ -2744,7 +2744,7 @@ namespace SlowTests.Client.Attachments
 
                 replication1.Break();
                 replication2.Break();
-                
+
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
                     var result = store2.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
@@ -2768,9 +2768,9 @@ namespace SlowTests.Client.Attachments
                 replication1.Mend();
                 replication2.Mend();
 
-                await replication1.EnsureNoReplicationLoopAsync();
-                await replication2.EnsureNoReplicationLoopAsync();
-                
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store1);
+
                 var res2 = await WaitForChangeVectorInReplicationAsync(stores);
                 Assert.True(res2);
 
@@ -2781,7 +2781,6 @@ namespace SlowTests.Client.Attachments
                     using (var session = store1.OpenAsyncSession())
                     using (var session2 = store2.OpenAsyncSession())
                     {
-
                         var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                         var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
 
@@ -2797,7 +2796,7 @@ namespace SlowTests.Client.Attachments
                 }, true, 15_000, 500);
 
                 Assert.True(res);
-                
+
                 using (var session = store1.OpenAsyncSession())
                 using (var session2 = store2.OpenAsyncSession())
                 {
