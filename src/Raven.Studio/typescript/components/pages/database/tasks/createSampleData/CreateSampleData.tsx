@@ -90,7 +90,7 @@ function CreateSampleData({ db }: CreateSampleDataProps) {
                     <Collapse isOpen={isCodeSampleOpen}>
                         <Card className="sample-code">
                             <CardBody>
-                                <CardHeader className="sample-code-header">
+                                <div className="sample-code-header">
                                     <h3>Sample data C# code</h3>
                                     {asyncGetSampleDataClasses.result && (
                                         <Button
@@ -105,7 +105,7 @@ function CreateSampleData({ db }: CreateSampleDataProps) {
                                             <Icon icon="copy" /> <span>Copy C# classes</span>
                                         </Button>
                                     )}
-                                </CardHeader>
+                                </div>
                                 {asyncGetSampleDataClasses.loading && (
                                     <div className="d-flex justify-content-center">
                                         <Spinner className="spinner-gradient" />
