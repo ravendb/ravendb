@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Replication;
-using Raven.Server.Config;
 using SlowTests.Server.Replication;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
@@ -20,8 +13,9 @@ namespace StressTests.Server.Replication
         {
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Replication, RavenArchitecture.AllX64)]
-        public void ExternalReplicationShouldWorkWithSmallTimeoutStress()
+        [RavenMultiplatformTheory(RavenTestCategory.Replication, RavenArchitecture.AllX64)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ExternalReplicationShouldWorkWithSmallTimeoutStress(RavenTestBase.Options options)
         {
             for (int i = 0; i < 10; i++)
             {
@@ -29,7 +23,7 @@ namespace StressTests.Server.Replication
                 {
                     using (var test = new ExternalReplicationTests(Output))
                     {
-                        test.ExternalReplicationShouldWorkWithSmallTimeoutStress(20000).Wait(TimeSpan.FromMinutes(10));
+                        test.ExternalReplicationShouldWorkWithSmallTimeoutStress(options, 20000).Wait(TimeSpan.FromMinutes(10));
                     }
                 });
             }
