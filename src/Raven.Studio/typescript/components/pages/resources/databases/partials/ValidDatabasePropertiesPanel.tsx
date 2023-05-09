@@ -43,6 +43,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const topLevelState = useAppSelector(selectTopLevelState(db.name));
 
     const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
+    const allNodes = useAppSelector(clusterSelectors.allNodes);
     const isCurrentNodeRelevant = db.currentNode.relevant;
 
     const dispatch = useAppDispatch();
@@ -117,6 +118,14 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const [perfHintsPopoverElement, setPerfHintsPopoverElement] = useState<HTMLElement>();
     const [alertsPopoverElement, setAlertsPopoverElement] = useState<HTMLElement>();
 
+    const getServerNodeUrl = (nodeTag: string): string => {
+        const serverUrl = allNodes.find((node) => node.nodeTag === nodeTag)?.serverUrl;
+        if (!serverUrl) {
+            return "#";
+        }
+        return serverUrl + "/studio/index.html#databases";
+    };
+
     const alertSection = (
         <React.Fragment>
             <Icon icon="warning" />
@@ -180,10 +189,10 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                         <strong>{x.performanceHints} </strong>
                                         {x.performanceHints === 1 ? "hint" : "hints"}
                                     </span>
-                                    <Button type="button" size="xs" color="node" className="rounded-pill">
+                                    <a href={getServerNodeUrl(x.nodeTag)} color="node" className="rounded-pill">
                                         <Icon icon="newtab" />
                                         Open node
-                                    </Button>
+                                    </a>
                                 </div>
                             );
                         })}

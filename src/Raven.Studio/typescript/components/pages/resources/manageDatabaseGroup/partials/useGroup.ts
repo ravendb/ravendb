@@ -8,7 +8,7 @@ export function useGroup(nodes: NodeInfo[], initialFixOrder: boolean) {
     const [fixOrder, setFixOrder] = useState(initialFixOrder);
     const [newOrder, setNewOrder] = useState<NodeInfo[]>([]);
     const [sortableMode, setSortableMode] = useState(false);
-    const clusterNodeTags = useAppSelector(clusterSelectors.clusterNodeTags);
+    const clusterNodeTags = useAppSelector(clusterSelectors.allNodeTags);
 
     const { isOperatorOrAbove } = useAccessManager();
     const canSort = nodes.length === 1 || !isOperatorOrAbove();

@@ -1,30 +1,43 @@
-﻿import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+﻿import { createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
+
+export interface ClusterNode {
+    nodeTag: string;
+    serverUrl: string;
+}
 
 interface ClusterState {
     localNodeTag: string;
-
-    nodeTags: string[];
+    nodes: EntityState<ClusterNode>;
 }
 
-const sliceName = "cluster";
+const clusterNodesAdapter = createEntityAdapter<ClusterNode>({
+    selectId: (node) => node.nodeTag,
+});
+
+const nodesSelectors = clusterNodesAdapter.getSelectors();
+
+const selectAllNodes = (store: RootState) => nodesSelectors.selectAll(store.cluster.nodes);
+const selectAllNodeTags = (store: RootState) => nodesSelectors.selectIds(store.cluster.nodes) as string[];
+const selectNodeByTag = (nodeTag: string) => (store: RootState) =>
+    nodesSelectors.selectById(store.cluster.nodes, nodeTag);
+
+const selectLocalNode = (store: RootState) =>
+    nodesSelectors.selectById(store.cluster.nodes, store.cluster.localNodeTag);
+const selectLocalNodeTag = (store: RootState) => store.cluster.localNodeTag;
 
 const initialState: ClusterState = {
     localNodeTag: "A",
-    nodeTags: [],
+    nodes: clusterNodesAdapter.getInitialState(),
 };
-
-const selectClusterNodeTags = (store: RootState) => store.cluster.nodeTags;
-const selectLocalNodeTag = (store: RootState) => store.cluster.localNodeTag;
-// TODO: kalczur - id: nodeTag, object {}
 
 export const clusterSlice = createSlice({
     initialState,
-    name: sliceName,
+    name: "cluster",
     reducers: {
-        nodeTagsLoaded: (state, action: PayloadAction<string[]>) => {
-            const bootstrapped = !action.payload.includes("?");
-            state.nodeTags = bootstrapped ? action.payload : [];
+        nodesLoaded: (state, action: PayloadAction<ClusterNode[]>) => {
+            const bootstrapped = !action.payload.some((x) => x.nodeTag === "?");
+            clusterNodesAdapter.setAll(state.nodes, bootstrapped ? action.payload : []);
         },
         localNodeTagLoaded: (state, action: PayloadAction<string>) => {
             state.localNodeTag = action.payload;
@@ -33,11 +46,14 @@ export const clusterSlice = createSlice({
 });
 
 export const clusterActions = {
-    nodeTagsLoaded: clusterSlice.actions.nodeTagsLoaded,
+    nodesLoaded: clusterSlice.actions.nodesLoaded,
     localNodeTagLoaded: clusterSlice.actions.localNodeTagLoaded,
 };
 
 export const clusterSelectors = {
-    clusterNodeTags: selectClusterNodeTags,
+    allNodes: selectAllNodes,
+    allNodeTags: selectAllNodeTags,
+    nodeByTag: selectNodeByTag,
+    localNode: selectLocalNode,
     localNodeTag: selectLocalNodeTag,
 };

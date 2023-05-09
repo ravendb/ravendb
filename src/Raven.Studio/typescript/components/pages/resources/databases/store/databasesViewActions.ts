@@ -115,7 +115,7 @@ export const loadDatabasesDetails = (nodeTags: string[]) => async (dispatch: App
 export const reloadDatabaseDetails =
     (databaseName: string): AppAsyncThunk =>
     async (dispatch: AppDispatch, getState) => {
-        const nodeTags = clusterSelectors.clusterNodeTags(getState());
+        const nodeTags = clusterSelectors.allNodeTags(getState());
         const tasks = nodeTags.map((nodeTag) =>
             dispatch(databasesViewSliceInternal.fetchDatabase({ nodeTag, databaseName }))
         );
@@ -130,7 +130,7 @@ export const confirmSetLockMode = (): AppAsyncThunk<boolean> => async () => {
 
 export const reloadDatabasesDetails: AppAsyncThunk = async (dispatch: AppDispatch, getState) => {
     const state = getState();
-    const nodeTags = clusterSelectors.clusterNodeTags(state);
+    const nodeTags = clusterSelectors.allNodeTags(state);
 
     const tasks = nodeTags.map((nodeTag) => dispatch(databasesViewSliceInternal.fetchDatabases(nodeTag)));
 
