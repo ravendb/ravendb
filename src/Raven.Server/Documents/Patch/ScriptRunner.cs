@@ -1994,7 +1994,7 @@ namespace Raven.Server.Documents.Patch
 
             private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(string documentId, JavaScriptException e)
             {
-                string msg = $"Script failed for document id '{documentId}'. ";
+                string msg = $"Script failed for document ID '{documentId}'. ";
                 if (e.Error.IsString())
                     msg += e.Error.AsString();
                 else if (e.Error.IsObject())
