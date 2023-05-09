@@ -11,6 +11,8 @@ class adminLogsTrafficWatchDialog extends dialogViewModelBase {
 
     private readonly model: trafficWatchConfiguration;
 
+    usingHttps = location.protocol === "https:";
+
     private allDatabaseNames = ko.observableArray<string>();
     private static allHttpMethods = ["GET", "POST", "PUT", "DELETE", "HEAD"];
     private static allChangeTypes: TrafficWatchChangeType[] = ["BulkDocs", "Counters", "Documents", "Hilo", "Index", "MultiGet", "Operations", "Queries", "Streams", "Subscriptions", "TimeSeries"];
