@@ -48,7 +48,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     const dispatch = useAppDispatch();
 
-    const nodeTags = useAppSelector(clusterSelectors.clusterNodeTags);
+    const nodeTags = useAppSelector(clusterSelectors.allNodeTags);
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
 
