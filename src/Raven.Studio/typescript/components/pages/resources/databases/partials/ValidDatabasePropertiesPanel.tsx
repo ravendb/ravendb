@@ -70,8 +70,8 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         .filter((x) => x);
 
     const indexingErrors = sumBy(nonEmptyDbState, (x) => x?.indexingErrors ?? 0);
-    const alerts = sumBy(nonEmptyTopLevelState, (x) => x?.alerts ?? 0);
-    const performanceHints = sumBy(nonEmptyTopLevelState, (x) => x?.performanceHints ?? 0);
+    const alertsCount = sumBy(nonEmptyTopLevelState, (x) => x?.alerts ?? 0);
+    const performanceHintsCount = sumBy(nonEmptyTopLevelState, (x) => x?.performanceHints ?? 0);
     const indexingPaused = nonEmptyDbState.some((x) => x?.indexingStatus === "Paused");
     const indexingDisabled = nonEmptyDbState.some((x) => x?.indexingStatus === "Disabled");
 
@@ -225,7 +225,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         </Badge>
                     </RichPanelDetailItem>
                 )}
-                {alerts > 0 && (
+                {alertsCount > 0 && (
                     <>
                         <RichPanelDetailItem key="alerts" title="Click to view alerts in Notification Center">
                             <Badge color="faded-warning" className="d-flex align-items-center lh-base rounded-pill">
@@ -236,11 +236,11 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                     ref={setAlertsPopoverElement}
                                 >
                                     {alertSection}
-                                    {!(isCurrentNodeRelevant && db.nodes.length === 1) && (
+                                    {alertsCount !== localAlertsCount && (
                                         <>
                                             <div className="vr bg-warning"></div>
                                             <Icon icon="global" />
-                                            {alerts}
+                                            {alertsCount}
                                         </>
                                     )}
                                 </a>
@@ -258,7 +258,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                         </PopoverWithHover>
                     </>
                 )}
-                {performanceHints > 0 && (
+                {performanceHintsCount > 0 && (
                     <>
                         <RichPanelDetailItem
                             key="performance-hints"
@@ -272,11 +272,11 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                                     ref={setPerfHintsPopoverElement}
                                 >
                                     {performanceHintsSection}
-                                    {!(isCurrentNodeRelevant && db.nodes.length === 1) && (
+                                    {performanceHintsCount !== localPerformanceHintsCount && (
                                         <>
                                             <div className="vr bg-info"></div>
                                             <Icon icon="global" />
-                                            {performanceHints}
+                                            {performanceHintsCount}
                                         </>
                                     )}
                                 </a>
