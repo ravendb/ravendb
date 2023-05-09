@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.ServerWide;
@@ -23,11 +22,12 @@ namespace SlowTests.Client.TimeSeries
 
         // RavenDB-15108
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task TimeSeriesConflictsInMetadata()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TimeSeriesConflictsInMetadata(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 await SetupReplicationAsync(storeA, storeB);
 
@@ -87,11 +87,12 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task MergeTimSeriesOnDocumentConflict()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MergeTimSeriesOnDocumentConflict(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 using (var session = storeA.OpenAsyncSession())
@@ -146,42 +147,24 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task MergeTimSeriesOnDocumentConflict2()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MergeTimSeriesOnDocumentConflict2(Options options)
         {
-            using (var storeA = GetDocumentStore(options: new Options
+            var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+            options.ModifyDatabaseRecord = record =>
             {
-                ModifyDatabaseRecord = record =>
+                modifyDatabaseRecord(record);
+                record.ConflictSolverConfig = new ConflictSolver
                 {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeB = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
-            using (var storeC = GetDocumentStore(options: new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.ConflictSolverConfig = new ConflictSolver
-                    {
-                        ResolveToLatest = false,
-                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
-                    };
-                }
-            }))
+                    ResolveToLatest = false,
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                };
+            };
+
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
+            using (var storeC = GetDocumentStore(options))
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 using (var session = storeA.OpenAsyncSession())
@@ -248,7 +231,7 @@ namespace SlowTests.Client.TimeSeries
                     var user = await session.LoadAsync<User>("users/1");
                     var flags = session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.Flags];
                     Assert.Equal((DocumentFlags.HasTimeSeries | DocumentFlags.HasRevisions | DocumentFlags.Resolved).ToString(), flags);
-                    
+
                     var list = session.Advanced.GetTimeSeriesFor(user);
                     Assert.Equal(3, list.Count);
 
@@ -260,14 +243,17 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task TimeSeriesAppendOnConflictedDocument()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TimeSeriesAppendOnConflictedDocument(Options options)
         {
-            using (var storeA = GetDocumentStore())
+            var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+            using (var storeA = GetDocumentStore(options))
             using (var storeB = GetDocumentStore(options: new Options
             {
                 ModifyDatabaseRecord = record =>
                 {
+                    modifyDatabaseRecord(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -295,6 +281,8 @@ namespace SlowTests.Client.TimeSeries
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
                 WaitUntilHasConflict(storeB, "users/1");
 
                 using (var session = storeB.OpenAsyncSession())
@@ -312,14 +300,17 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task PutNewTimeSeriesOnConflictedDocument()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task PutNewTimeSeriesOnConflictedDocument(Options options)
         {
-            using (var storeA = GetDocumentStore())
+            var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+            using (var storeA = GetDocumentStore(options))
             using (var storeB = GetDocumentStore(options: new Options
             {
                 ModifyDatabaseRecord = record =>
                 {
+                    modifyDatabaseRecord(record);
                     record.ConflictSolverConfig = new ConflictSolver
                     {
                         ResolveToLatest = false,
@@ -348,6 +339,8 @@ namespace SlowTests.Client.TimeSeries
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
                 WaitUntilHasConflict(storeB, "users/1");
 
                 using (var session = storeB.OpenAsyncSession())
@@ -391,11 +384,12 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
-        [RavenFact(RavenTestCategory.TimeSeries)]
-        public async Task TimeSeriesConflictsInMetadataOnDifferentCasing()
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TimeSeriesConflictsInMetadataOnDifferentCasing(Options options)
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options))
+            using (var storeB = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -429,7 +423,7 @@ namespace SlowTests.Client.TimeSeries
                     session.TimeSeriesFor("users/1-A", "heartrate").Append(baseline.AddDays(1), 1);
                     session.SaveChanges();
                 }
-                
+
                 await SetupReplicationAsync(storeA, storeB);
                 EnsureReplicating(storeA, storeB);
 
@@ -447,7 +441,7 @@ namespace SlowTests.Client.TimeSeries
                 Assert.Equal(4, val);
 
                 // both stores should have 'HeartRate' in metadata ("HeartRate" < "heartrate")
-                foreach (var store in new [] { storeA, storeB})
+                foreach (var store in new[] { storeA, storeB })
                 {
                     using (var session = store.OpenAsyncSession())
                     {
