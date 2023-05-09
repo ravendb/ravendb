@@ -13,5 +13,5 @@ public class TestIndexParameters
     
     public int? MaxDocumentsToProcess { get; set; }
     
-    public int? WaitForNonStaleResultsTimeout { get; set; }
+    public int? WaitForNonStaleResultsTimeoutInSeconds { get; set; }
 }
