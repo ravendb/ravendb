@@ -199,6 +199,7 @@ $separator-color: colors.$border-color-light-var;
         font-size: $multi-toggle-label-fontsize;
         padding-left: sizes.$gutter-xs;
         padding-right: sizes.$gutter-xxs;
+        box-shadow: none;
 
         .label-span {
             position: relative;
