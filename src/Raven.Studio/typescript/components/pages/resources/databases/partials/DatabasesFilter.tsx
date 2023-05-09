@@ -37,7 +37,7 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
     };
 
     return (
-        <div className="d-flex flex-wrap gap-3 mb-3">
+        <div className="d-flex flex-wrap flex-grow gap-3 mb-3">
             <div className="d-flex flex-column flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <Input

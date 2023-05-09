@@ -110,30 +110,26 @@ export function DatabasesPage(props: DatabasesPageProps) {
     return (
         <>
             <StickyHeader>
-                <Row>
-                    <Col sm="auto" className="align-self-center">
-                        {canCreateNewDatabase && (
-                            <UncontrolledDropdown>
-                                <ButtonGroup className="rounded-group">
-                                    <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>
-                                        <Icon icon="database" addon="plus" />
-                                        New database
-                                    </Button>
-                                    <DropdownToggle color="primary" caret></DropdownToggle>
-                                </ButtonGroup>
+                <div className="d-flex flex-wrap gap-3 align-items-center">
+                    {canCreateNewDatabase && (
+                        <UncontrolledDropdown>
+                            <ButtonGroup className="rounded-group">
+                                <Button color="primary" onClick={() => dispatch(openCreateDatabaseDialog())}>
+                                    <Icon icon="database" addon="plus" />
+                                    New database
+                                </Button>
+                                <DropdownToggle color="primary" caret></DropdownToggle>
+                            </ButtonGroup>
 
-                                <DropdownMenu>
-                                    <DropdownItem onClick={() => dispatch(openCreateDatabaseFromRestoreDialog())}>
-                                        <i className="icon-restore-backup" /> New database from backup (Restore)
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
-                        )}
-                    </Col>
-                    <Col>
-                        <DatabasesFilter searchCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
-                    </Col>
-                </Row>
+                            <DropdownMenu>
+                                <DropdownItem onClick={() => dispatch(openCreateDatabaseFromRestoreDialog())}>
+                                    <i className="icon-restore-backup" /> New database from backup (Restore)
+                                </DropdownItem>
+                            </DropdownMenu>
+                        </UncontrolledDropdown>
+                    )}
+                    <DatabasesFilter searchCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
+                </div>
 
                 <DatabasesSelectActions
                     databaseNames={filteredDatabaseNames}
