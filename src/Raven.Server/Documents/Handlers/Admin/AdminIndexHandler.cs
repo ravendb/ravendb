@@ -58,13 +58,16 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var query = testIndexParameters.Query;
                 var queryParameters = testIndexParameters.QueryParameters;
                 int maxDocumentsPerIndex = testIndexParameters.MaxDocumentsToProcess ?? 100;
-                int waitForNonStaleResultsTimeout = testIndexParameters.WaitForNonStaleResultsTimeout ?? 15;
+                int waitForNonStaleResultsTimeout = testIndexParameters.WaitForNonStaleResultsTimeoutInSeconds ?? 15;
+
+                const int documentsPerIndexUpperLimit = 10_000;
+                const int documentsPerIndexLowerLimit = 1;
                 
                 if (testIndexParameters.IndexDefinition is null)
-                    throw new ArgumentException("Index must have an 'IndexDefinition' field");
+                    throw new ArgumentException($"Index must have an {nameof(TestIndexParameters.IndexDefinition)} field");
 
-                if (maxDocumentsPerIndex > 10_000 || maxDocumentsPerIndex < 1)
-                    throw new ArgumentException("Number of documents to process cannot be bigger than 10 000 or less than 1.");
+                if (maxDocumentsPerIndex > documentsPerIndexUpperLimit || maxDocumentsPerIndex < documentsPerIndexLowerLimit)
+                    throw new ArgumentException($"Number of documents to process cannot be bigger than {documentsPerIndexUpperLimit} or less than {documentsPerIndexLowerLimit}.");
 
                 if (testIndexDefinition.Type.IsJavaScript() == false)
                 {
