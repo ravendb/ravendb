@@ -103,11 +103,11 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         
-        public string GetLastDocumentChangeVectorForSubscription(DocumentsOperationContext context, SubscriptionConnection.ParsedSubscription sub)
+        public string GetLastDocumentChangeVectorForSubscription(DocumentsOperationContext context, string collection)
         {
-            long lastEtag = sub.Collection == Constants.Documents.Collections.AllDocumentsCollection
+            long lastEtag = collection == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction)
-                : _db.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, sub.Collection);
+                : _db.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, collection);
 
             return _db.DocumentsStorage.GetNewChangeVector(context, lastEtag);
         }
