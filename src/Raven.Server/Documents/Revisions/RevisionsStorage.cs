@@ -650,7 +650,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private bool DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName,
-            RevisionsCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks)
+            RevisionsCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks, bool deletedDoc = false)
         {
             var moreRevisionToDelete = false;
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
@@ -664,7 +664,12 @@ namespace Raven.Server.Documents.Revisions
                 return false;
 
             long numberOfRevisionsToDelete;
-            if (configuration.MinimumRevisionsToKeep.HasValue)
+            var deleteBecausePurgeOnDelete = deletedDoc && configuration.PurgeOnDelete;
+            if (deleteBecausePurgeOnDelete)
+            {
+                numberOfRevisionsToDelete = long.MaxValue;
+            }
+            else if (configuration.MinimumRevisionsToKeep.HasValue)
             {
                 numberOfRevisionsToDelete = revisionsCount - configuration.MinimumRevisionsToKeep.Value;
                 if (numberOfRevisionsToDelete > 0 && configuration.MaximumRevisionsToDeleteUponDocumentUpdate.HasValue && configuration.MaximumRevisionsToDeleteUponDocumentUpdate.Value < numberOfRevisionsToDelete)
@@ -687,7 +692,7 @@ namespace Raven.Server.Documents.Revisions
 
             Debug.Assert(numberOfRevisionsToDelete >= deletedRevisionsCount);
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
-            return moreRevisionToDelete && deletedRevisionsCount == numberOfRevisionsToDelete;
+            return moreRevisionToDelete && deletedRevisionsCount == numberOfRevisionsToDelete && deleteBecausePurgeOnDelete == false;
         }
 
         public void DeleteRevisionsFor(DocumentsOperationContext context, string id, long? maximumRevisionsToDeleteUponDocumentUpdate = long.MaxValue)
@@ -1368,9 +1373,16 @@ namespace Raven.Server.Documents.Revisions
                     configuration = ZeroConfiguration;
                 }
 
+                var deletedDoc = false;
+                if (configuration.PurgeOnDelete)
+                {
+                    var local = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
+                    deletedDoc = local.Document == null && local.Tombstone != null;
+                }
+
                 var needToDeleteMore = DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, prevRevisionsCount,
                     NonPersistentDocumentFlags.None,
-                    changeVector, lastModifiedTicks);
+                    changeVector, lastModifiedTicks, deletedDoc);
 
                 var currentRevisionsCount = GetRevisionsCount(context, id);
 
