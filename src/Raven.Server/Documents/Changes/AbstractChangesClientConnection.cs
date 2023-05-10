@@ -191,7 +191,10 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
                                     context.Write(writer, djv);
                                     break;
                                 case BlittableJsonReaderObject bjro:
-                                    context.Write(writer, bjro.CloneForConcurrentRead(context));
+                                    using (bjro)
+                                    {
+                                        context.Write(writer, bjro.CloneForConcurrentRead(context));
+                                    }
                                     break;
                             }
                             messagesCount++;

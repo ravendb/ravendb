@@ -507,16 +507,17 @@ namespace Raven.Client.Http
                     await ExecuteAsync(parameters.Node, null, context, command, shouldRetry: false, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
                     var topology = command.Result;
 
+#if DEBUG
                     foreach (var node in topology.Nodes)
                     {
-                        if (node.Database != _databaseName)
+                        if (string.Equals(node.Database, _databaseName, StringComparison.OrdinalIgnoreCase) == false)
                         {
                             var msg = $"Expected topology for database '{_databaseName}', but got the database '{node.Database}' (reason: {parameters.DebugTag})";
                             Debug.Assert(false, msg);
-                            throw new InvalidOperationException(msg);
                         }
-                    }
-
+                    }          
+#endif
+                    
                     await DatabaseTopologyLocalCache.TrySavingAsync(_databaseName, TopologyHash, topology, Conventions, context, CancellationToken.None).ConfigureAwait(false);
 
                     if (_nodeSelector == null)
