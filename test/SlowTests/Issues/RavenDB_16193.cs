@@ -20,11 +20,12 @@ namespace SlowTests.Issues
 
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task WillGetIndexStatsFromStorageOrReader(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 var index = new Users_ByName();
                 await index.ExecuteAsync(store);
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 // wait for the entries count value to be stored - we update stats after we're done with indexing
 
