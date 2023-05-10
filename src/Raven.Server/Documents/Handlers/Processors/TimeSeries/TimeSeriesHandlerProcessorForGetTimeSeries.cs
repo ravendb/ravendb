@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     return ValueTask.FromResult<TimeSeriesRangeResult>(null);
                 }
 
-                bool shouldGetMissingIncludes = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
+                bool shouldGetMissingIncludes = RequestHandler.HttpContext.Request.IsFromOrchestrator();
 
                 var includesCommand = includeDoc || includeTags
                     ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, docId, includeDoc, includeTags, shouldGetMissingIncludes)

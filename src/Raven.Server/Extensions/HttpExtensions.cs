@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics.Eventing.Reader;
 using Raven.Client;
 using Microsoft.AspNetCore.Http;
+using Raven.Server.Web;
 
 namespace Raven.Server.Extensions
 {
@@ -58,9 +60,33 @@ namespace Raven.Server.Extensions
             return request.Headers.ContainsKey(Constants.Headers.StudioVersion);
         }
 
+        public static bool IsFromOrchestrator(this HttpRequest request)
+        {
+            return GetBoolFromHeaders(request, Constants.Headers.Sharded) ?? false;
+        }
+
         public static bool IsFromClientApi(this HttpRequest request)
         {
             return request.Headers.ContainsKey(Constants.Headers.ClientVersion);
+        }
+
+        private static bool? GetBoolFromHeaders(HttpRequest request, string name)
+        {
+            var headers = request.Headers[name];
+            if (headers.Count == 0)
+                return null;
+
+
+            var raw = headers[0][0] == '\"'
+                ? headers[0].AsSpan().Slice(1, headers[0].Length - 2)
+                : headers[0].AsSpan();
+
+            var success = bool.TryParse(raw, out var result);
+
+            if (success)
+                return result;
+
+            return null;
         }
     }
 }

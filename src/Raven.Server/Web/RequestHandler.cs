@@ -394,25 +394,6 @@ namespace Raven.Server.Web
             return null;
         }
 
-        internal bool? GetBoolFromHeaders(string name)
-        {
-            var headers = HttpContext.Request.Headers[name];
-            if (headers.Count == 0)
-                return null;
-
-
-            var raw = headers[0][0] == '\"'
-                ? headers[0].AsSpan().Slice(1, headers[0].Length - 2)
-                : headers[0].AsSpan();
-
-            var success = bool.TryParse(raw, out var result);
-
-            if (success)
-                return result;
-
-            return null;
-        }
-
         public void ThrowInvalidInteger(string name, string etag, string type = "int")
         {
             throw new ArgumentException($"Could not parse header '{name}' header as {type}, value was: {etag}");

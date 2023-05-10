@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Server.Documents.Handlers.Streaming;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -59,8 +60,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     },
                     initialState);
 
-                var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + databaseChangeVector + "\"";
+                if (HttpContext.Request.IsFromOrchestrator())
+                {
+                    var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                    HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + databaseChangeVector + "\"";
+                }
 
                 await using (var writer = GetLoadDocumentsResultsWriter(format, context, RequestHandler.ResponseBodyStream(), token.Token))
                 {
