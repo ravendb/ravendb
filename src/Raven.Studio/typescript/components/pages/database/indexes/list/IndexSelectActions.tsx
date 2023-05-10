@@ -77,7 +77,9 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                 color="primary"
                 size="lg"
                 className="ms-3"
-            />
+            >
+                <span className="small-label">Select all</span>
+            </Checkbox>
 
             <SelectionActions active={selectedIndexes.length > 0}>
                 <div className="d-flex align-items-center">
