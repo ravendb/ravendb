@@ -24,8 +24,10 @@
                         <div class="details-list" data-bind="foreach: mountPoints">
                             <div class="mount" data-bind="text: mountPointLabel, visible: $parent.mountPoints().length > 1"></div>
                             <div class="storage-legend">
-                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="Used by RavenDB"
+                                <div class="storage-ravendb" data-toggle="tooltip" data-placement="top" title="Used by RavenDB Data"
                                      data-bind="text: $root.sizeFormatter(ravenSize())"></div>
+                                <div class="storage-ravendb-temp-buffers" data-toggle="tooltip" data-placement="top" title="Used by RavenDB Temporary Buffers"
+                                     data-bind="text: $root.sizeFormatter(ravenTempBuffersSize())"></div>
                                 <div class="storage-used" data-toggle="tooltip" data-placement="top" title="Storage used"
                                     data-bind="text: $root.sizeFormatter(usedSpace())"></div>
                                 <div class="storage-free" data-toggle="tooltip" data-placement="top" title="Free"
@@ -37,6 +39,7 @@
                             <div class="storage-chart" data-bind="style: { width: scaleFactor() + '%' }">
                                 <div class="storage-used" data-bind="style: { width: usedSpacePercentage() + '%' }">
                                     <div class="storage-ravendb" data-bind="style: { width: ravendbToUsedSpacePercentage() + '%' }"></div>
+                                    <div class="storage-ravendb-temp-buffers" data-bind="style: { width: ravendbTempBuffersToUsedSpacePercentage() + '%' }"></div>
                                 </div>
                                 <div class="storage-free">
                                 </div>
