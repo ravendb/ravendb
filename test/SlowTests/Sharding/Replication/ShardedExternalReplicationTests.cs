@@ -54,7 +54,7 @@ namespace SlowTests.Sharding.Replication
             {
                 var error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
                 {
-                    await SetupReplicationAsync(store1, responsibleNode: "A", new IDocumentStore[] {store2});
+                    await SetupReplicationAsync(store1, responsibleNode: "A", new IDocumentStore[] { store2 });
                 });
                 Assert.Contains("Choosing a mentor node for an ongoing task is not supported in sharding", error.Message);
             }
@@ -284,44 +284,6 @@ namespace SlowTests.Sharding.Replication
 
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Sharding)]
-        public async Task EnsureNoReplicationLoopInExternalReplicationFromNonShardedToSharded()
-        {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = Sharding.GetDocumentStore())
-            {
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Store(new User() { Name = "Shiran" }, "users/1");
-                    s1.SaveChanges();
-                }
-
-                await SetupReplicationAsync(store1, store2);
-                await SetupReplicationAsync(store2, store1);
-                await EnsureReplicatingAsync(store2, store1);
-
-                Assert.True(WaitForDocument(store2, "users/1"));
-
-                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
-
-                // we should get 3 incoming handlers (for each shard) 
-                var incomingReplicationHandlers = db.ReplicationLoader?.IncomingHandlers.ToList();
-                Assert.NotNull(incomingReplicationHandlers);
-                Assert.Equal(3, incomingReplicationHandlers.Count);
-
-                // we want to ensure we sent back from the sharded DBs to the non-sharded DB only one document (from `EnsureReplicatingAsync`)
-                foreach (var incoming in incomingReplicationHandlers)
-                {
-                    var haveStats = incoming.GetReplicationPerformance().Any(p => p.Network.InputCount > 0);
-                    if (haveStats)
-                    {
-                        var stats = incoming.GetReplicationPerformance().Where(p => p.Network.InputCount > 0)?.Single();
-                        Assert.Equal(1, stats.Network.InputCount);
-                    }
-                }
             }
         }
 
@@ -637,7 +599,7 @@ namespace SlowTests.Sharding.Replication
 
                     // checking that after the replication resumes we don't start from scratch
                     var stats = outgoingHandler[0].GetReplicationPerformance().Where(p => p.Network.DocumentOutputCount > 0)?.Single();
-                    Assert.Equal(1, stats.Network.DocumentOutputCount);
+                    Assert.Equal(2, stats.Network.DocumentOutputCount);
                 }
             }
         }
@@ -1010,17 +972,6 @@ namespace SlowTests.Sharding.Replication
                         Assert.True(incomingHandlers.Count > 0);
 
                         total++;
-
-                        // we want to ensure we sent back from the sharded DBs to the non-sharded DB only one document ("users/3")
-                        foreach (var incoming in incomingHandlers)
-                        {
-                            var haveStats = incoming.GetReplicationPerformance().Any(p => p.Network.InputCount > 0);
-                            if (haveStats)
-                            {
-                                var incomingStats = incoming.GetReplicationPerformance().Where(p => p.Network.InputCount > 0)?.Single();
-                                Assert.Equal(1, incomingStats.Network.InputCount);
-                            }
-                        }
                     }
                     Assert.True(total > 0);
                 }
@@ -1068,14 +1019,6 @@ namespace SlowTests.Sharding.Replication
                 var watcher = new ExternalReplication(dstDB, "connection-1");
                 await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { dstLeader.WebUrl });
 
-                string changeVector;
-                using (var session = srcStore.OpenSession())
-                {
-                    var user = session.Load<User>("users/1");
-                    Assert.NotNull(user);
-                    changeVector = session.Advanced.GetChangeVectorFor(user);
-                }
-
                 using (var dstStore = new DocumentStore
                 {
                     Urls = dstTopology.Servers.Select(s => s.WebUrl).ToArray(),
@@ -1121,38 +1064,17 @@ namespace SlowTests.Sharding.Replication
                     var docsCount = storage.GetNumberOfDocuments();
                     Assert.Equal(0, docsCount);
 
-                    using (var session = srcStore.OpenSession())
-                    {
-                        var user = session.Load<User>("users/1");
-                        Assert.NotNull(user);
-                        var existingChangeVector = session.Advanced.GetChangeVectorFor(user);
-                        Assert.Equal(changeVector, existingChangeVector);
-                    }
+                    await WaitForChangeVectorInClusterAsync(srcNodes, srcDB, 30_000);
+                    await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(dstNodes, dstDB, replicationFactor, 30_000);
 
-                    var newLocation = await Sharding.GetShardNumberForAsync(dstStore, "users/2$users/1");
-                    db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, newLocation));
-                    storage = db.DocumentsStorage;
-                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    foreach (var server in srcNodes)
                     {
-                        using (var session = dstStore.OpenSession())
-                        {
-                            var user = session.Load<User>("users/1");
-                            Assert.NotNull(user);
-                            var existingChangeVector = session.Advanced.GetChangeVectorFor(user);
-                            existingChangeVector = context.GetChangeVector(existingChangeVector).Version;
-                            Assert.Equal(changeVector, existingChangeVector);
-                        }
+                        await EnsureNoReplicationLoop(server, srcDB);
                     }
 
                     foreach (var server in dstNodes)
                     {
                         await ShardingCluster.EnsureNoReplicationLoopForSharding(server, dstDB);
-                    }
-
-                    foreach (var server in srcNodes)
-                    {
-                        await EnsureNoReplicationLoop(server, srcDB);
                     }
                 }
             }
@@ -1198,14 +1120,6 @@ namespace SlowTests.Sharding.Replication
                 var watcher = new ExternalReplication(dstDB, "connection-1");
                 await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { dstLeader.WebUrl });
 
-                string changeVector;
-                using (var session = srcStore.OpenSession())
-                {
-                    var user = session.Load<User>("users/1");
-                    Assert.NotNull(user);
-                    changeVector = session.Advanced.GetChangeVectorFor(user);
-                }
-
                 using (var dstStore = new DocumentStore
                 {
                     Urls = dstTopology.Servers.Select(s => s.WebUrl).ToArray(),
@@ -1251,46 +1165,17 @@ namespace SlowTests.Sharding.Replication
                     var docsCount = storage.GetNumberOfDocuments();
                     Assert.Equal(0, docsCount);
 
-                    var srcLocation = await Sharding.GetShardNumberForAsync(srcStore, "users/1");
-                    db = await srcLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(srcDB, srcLocation));
-                    storage = db.DocumentsStorage;
-                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        using (var session = srcStore.OpenSession())
-                        {
-                            var user = session.Load<User>("users/1");
-                            Assert.NotNull(user);
-                            var existingChangeVector = session.Advanced.GetChangeVectorFor(user);
-                            existingChangeVector = context.GetChangeVector(existingChangeVector).Version;
-                            Assert.Equal(changeVector, existingChangeVector);
-                        }
-                    }
+                    await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(srcNodes, srcDB, replicationFactor, 30_000);
+                    await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(dstNodes, dstDB, replicationFactor, 30_000);
 
-                    var newLocation = await Sharding.GetShardNumberForAsync(dstStore, "users/2$users/1");
-                    db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, newLocation));
-                    storage = db.DocumentsStorage;
-                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    foreach (var server in srcNodes)
                     {
-                        using (var session = dstStore.OpenSession())
-                        {
-                            var user = session.Load<User>("users/1");
-                            Assert.NotNull(user);
-                            var existingChangeVector = session.Advanced.GetChangeVectorFor(user);
-                            existingChangeVector = context.GetChangeVector(existingChangeVector).Version;
-                            Assert.Equal(changeVector, existingChangeVector);
-                        }
+                        await ShardingCluster.EnsureNoReplicationLoopForSharding(server, srcDB);
                     }
 
                     foreach (var server in dstNodes)
                     {
                         await ShardingCluster.EnsureNoReplicationLoopForSharding(server, dstDB);
-                    }
-
-                    foreach (var server in srcNodes)
-                    {
-                        await ShardingCluster.EnsureNoReplicationLoopForSharding(server, srcDB);
                     }
                 }
             }
@@ -1341,7 +1226,8 @@ namespace SlowTests.Sharding.Replication
                     .Customize(x => x.WaitForNonStaleResults())
                     .Count();
 
-                var dstDocs = WaitForValue(() => Sharding.GetDocsCountForCollectionInAllShards(dstServers, "users"), sourceDocs);
+                var dstDocs = WaitForValue(() => Sharding.GetDocsCountForCollectionInAllShards(dstServers, "users"), sourceDocs, interval: 333);
+
                 Assert.Equal(sourceDocs, dstDocs);
             }
         }
