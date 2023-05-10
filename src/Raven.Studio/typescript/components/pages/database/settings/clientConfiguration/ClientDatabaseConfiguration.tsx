@@ -100,47 +100,31 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                     <PropSummaryItem className="border-0">
                                         <PropSummaryName>Identity parts separator</PropSummaryName>
                                         <PropSummaryValue color="info">
-                                            {(formValues.overrideConfig && formValues.identityPartsSeparatorValue) ||
-                                                globalConfig?.identityPartsSeparatorValue ||
-                                                "'/' (Default)"}
+                                            {getIdentityPartsSeparatorEffectiveValue(formValues, globalConfig)}
                                         </PropSummaryValue>
                                     </PropSummaryItem>
                                     <PropSummaryItem>
                                         <PropSummaryName>Max number of requests per session</PropSummaryName>
                                         <PropSummaryValue color="info">
-                                            {(formValues.overrideConfig && formValues.maximumNumberOfRequestsValue) ||
-                                                globalConfig?.maximumNumberOfRequestsValue ||
-                                                "30 (Default)"}
+                                            {getMaximumNumberOfRequestsEffectiveValue(formValues, globalConfig)}
                                         </PropSummaryValue>
                                     </PropSummaryItem>
                                     <PropSummaryItem>
                                         <PropSummaryName>Load Balance Behavior</PropSummaryName>
                                         <PropSummaryValue color="info">
-                                            {(formValues.overrideConfig &&
-                                                formValues.loadBalancerEnabled &&
-                                                formValues.loadBalancerValue) ||
-                                                (globalConfig?.loadBalancerEnabled &&
-                                                    globalConfig?.loadBalancerValue) ||
-                                                "None (Default)"}
+                                            {getLoadBalancerEffectiveValue(formValues, globalConfig)}
                                         </PropSummaryValue>
                                     </PropSummaryItem>
                                     <PropSummaryItem>
                                         <PropSummaryName>Seed</PropSummaryName>
                                         <PropSummaryValue color="info">
-                                            {(formValues.overrideConfig && formValues.loadBalancerSeedValue) ||
-                                                globalConfig?.loadBalancerSeedValue ||
-                                                "0 (Default)"}
+                                            {getLoadBalancerSeedEffectiveValue(formValues, globalConfig)}
                                         </PropSummaryValue>
                                     </PropSummaryItem>
                                     <PropSummaryItem>
                                         <PropSummaryName>Read Balance Behavior</PropSummaryName>
                                         <PropSummaryValue color="info">
-                                            {(formValues.overrideConfig &&
-                                                formValues.readBalanceBehaviorEnabled &&
-                                                formValues.readBalanceBehaviorValue) ||
-                                                (globalConfig?.readBalanceBehaviorEnabled &&
-                                                    globalConfig?.readBalanceBehaviorValue) ||
-                                                "None (Default)"}
+                                            {getReadBalanceBehaviorEffectiveValue(formValues, globalConfig)}
                                         </PropSummaryValue>
                                     </PropSummaryItem>
                                 </PropSummary>
@@ -453,5 +437,60 @@ function GlobalSettingsSeparator() {
         <div className="align-self-center col-sm-auto d-flex">
             <Icon icon="arrow-right" margin="m-0" />
         </div>
+    );
+}
+
+function getIdentityPartsSeparatorEffectiveValue(
+    formValues: ClientConfigurationFormData,
+    globalConfig: ClientConfigurationFormData
+) {
+    return (
+        (formValues.overrideConfig && formValues.identityPartsSeparatorValue) ||
+        globalConfig?.identityPartsSeparatorValue ||
+        "'/' (Default)"
+    );
+}
+
+function getMaximumNumberOfRequestsEffectiveValue(
+    formValues: ClientConfigurationFormData,
+    globalConfig: ClientConfigurationFormData
+) {
+    return (
+        (formValues.overrideConfig && formValues.maximumNumberOfRequestsValue) ||
+        globalConfig?.maximumNumberOfRequestsValue ||
+        "30 (Default)"
+    );
+}
+
+function getLoadBalancerEffectiveValue(
+    formValues: ClientConfigurationFormData,
+    globalConfig: ClientConfigurationFormData
+) {
+    return (
+        (formValues.overrideConfig && formValues.loadBalancerEnabled && formValues.loadBalancerValue) ||
+        (globalConfig?.loadBalancerEnabled && globalConfig?.loadBalancerValue) ||
+        "None (Default)"
+    );
+}
+
+function getLoadBalancerSeedEffectiveValue(
+    formValues: ClientConfigurationFormData,
+    globalConfig: ClientConfigurationFormData
+) {
+    return (
+        (formValues.overrideConfig && formValues.loadBalancerSeedValue) ||
+        globalConfig?.loadBalancerSeedValue ||
+        "0 (Default)"
+    );
+}
+
+function getReadBalanceBehaviorEffectiveValue(
+    formValues: ClientConfigurationFormData,
+    globalConfig: ClientConfigurationFormData
+) {
+    return (
+        (formValues.overrideConfig && formValues.readBalanceBehaviorEnabled && formValues.readBalanceBehaviorValue) ||
+        (globalConfig?.readBalanceBehaviorEnabled && globalConfig?.readBalanceBehaviorValue) ||
+        "None (Default)"
     );
 }
