@@ -146,7 +146,13 @@ namespace Raven.Server.Documents
                         
                         // unique stream for this bucket was add
                         var info = tree.GetStreamInfo(hashSlice, writable: false);
-                        Debug.Assert(info != null, $"Try to add stream {hashSlice}, but it is missing");
+
+                        if (info == null)
+                        {
+                            // missing attachment!
+                            return;
+                        }
+
                         streamSize = info->TotalSize;
                         break;
                     case 0:

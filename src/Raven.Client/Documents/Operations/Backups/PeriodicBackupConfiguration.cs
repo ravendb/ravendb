@@ -94,6 +94,20 @@ namespace Raven.Client.Documents.Operations.Backups
             return json;
         }
 
+        public override DynamicJsonValue ToAuditJson()
+        {
+            var json = base.ToAuditJson();
+            json[nameof(Name)] = Name;
+            json[nameof(TaskId)] = TaskId;
+            json[nameof(Disabled)] = Disabled;
+            json[nameof(MentorNode)] = MentorNode;
+            json[nameof(PinToMentorNode)] = PinToMentorNode;
+            json[nameof(FullBackupFrequency)] = FullBackupFrequency;
+            json[nameof(IncrementalBackupFrequency)] = IncrementalBackupFrequency;
+            json[nameof(RetentionPolicy)] = RetentionPolicy?.ToAuditJson();
+            return json;
+        }
+
         public override bool ValidateDestinations(out string message)
         {
             if (HasBackup() || Disabled)

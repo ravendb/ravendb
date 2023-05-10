@@ -14,6 +14,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
+        private long _taskId;
+
         protected AbstractOngoingTasksHandlerProcessorForUpdatePeriodicBackup([NotNull] TRequestHandler requestHandler)
             : base(requestHandler)
         {
@@ -35,16 +37,22 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             const string taskIdName = nameof(PeriodicBackupConfiguration.TaskId);
 
-            var taskId = configuration.TaskId;
-            if (taskId == 0)
-                taskId = index;
+            _taskId = configuration.TaskId;
+            if (_taskId == 0)
+                _taskId = index;
             
-            responseJson[taskIdName] = taskId;
+            responseJson[taskIdName] = _taskId;
         }
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, PeriodicBackupConfiguration configuration, string raftRequestId)
         {
             return RequestHandler.ServerStore.ModifyPeriodicBackup(context, RequestHandler.DatabaseName, configuration, raftRequestId);
+        }
+
+        protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, PeriodicBackupConfiguration configuration, string raftRequestId)
+        {
+            RequestHandler.LogTaskToAudit(Web.RequestHandler.UpdatePeriodicBackupDebugTag, _taskId, context.ReadObject(configuration.ToJson(), "backup-config"));
+            return ValueTask.CompletedTask;
         }
     }
 }

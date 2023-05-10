@@ -63,6 +63,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     {
                         writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                     }
+
+                    RequestHandler.LogTaskToAudit(Web.RequestHandler.BackupDatabaseOnceTag, operationId, json);
                 }
                 catch (Exception e)
                 {

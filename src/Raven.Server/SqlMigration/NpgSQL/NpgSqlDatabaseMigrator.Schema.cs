@@ -6,11 +6,6 @@ namespace Raven.Server.SqlMigration.NpgSQL
 {
     internal partial class NpgSqlDatabaseMigrator : GenericDatabaseMigrator
     {
-        public const string SelectColumns = "SELECT C.TABLE_SCHEMA, C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE" +
-                                            " FROM INFORMATION_SCHEMA.COLUMNS C JOIN INFORMATION_SCHEMA.TABLES T " +
-                                            " ON C.TABLE_CATALOG = T.TABLE_CATALOG AND C.TABLE_SCHEMA = T.TABLE_SCHEMA AND C.TABLE_NAME = T.TABLE_NAME " +
-                                            " WHERE T.TABLE_TYPE <> 'VIEW' AND T.TABLE_SCHEMA = 'public'";
-
         public const string SelectPrimaryKeys = "SELECT TC.TABLE_SCHEMA, TC.TABLE_NAME, COLUMN_NAME " +
                                                 "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS TC " +
                                                 "INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS KU " +
@@ -45,7 +40,7 @@ namespace Raven.Server.SqlMigration.NpgSQL
         {
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectColumns;
+                cmd.CommandText = _selectColumns;
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())

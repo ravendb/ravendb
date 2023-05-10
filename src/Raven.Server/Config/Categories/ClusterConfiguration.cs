@@ -128,5 +128,10 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Cluster.MaxSizeOfSingleRaftCommandInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size? MaxSizeOfSingleRaftCommand { get; set; }
+        
+        [Description("EXPERT: Specifies the max size of cluster transaction batch to be executed on the database at once")]
+        [DefaultValue(256)]
+        [ConfigurationEntry("Cluster.MaxClusterTransactionBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxClusterTransactionsBatchSize { get; set; }
     }
 }

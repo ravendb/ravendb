@@ -239,11 +239,21 @@ namespace Raven.Server.Documents.PeriodicBackup
                     continue;
 
                 var delayUntil = DateTime.UtcNow.AddTicks(delay.Ticks);
+                var nextBackup = GetNextBackupDetails(
+                    periodicBackup.Value.Configuration, 
+                    periodicBackup.Value.BackupStatus,
+                    periodicBackup.Value.Configuration.MentorNode, 
+                    skipErrorLog: true);
+
+                var originalBackupTime = delayUntil > nextBackup.DateTime 
+                    ? nextBackup.DateTime 
+                    : periodicBackup.Value.StartTimeInUtc;
 
                 var command = new DelayBackupCommand(_database.Name, RaftIdGenerator.NewId())
                 {
                     TaskId = periodicBackup.Key,
-                    DelayUntil = delayUntil
+                    DelayUntil = delayUntil,
+                    OriginalBackupTime = originalBackupTime
                 };
 
                 try
@@ -273,6 +283,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
                 periodicBackup.Value.BackupStatus.DelayUntil = delayUntil;
+                periodicBackup.Value.BackupStatus.OriginalBackupTime = originalBackupTime;
 
                 _forTestingPurposes?.OnBackupTaskRunHoldBackupExecution?.SetResult(null);
                 await _database.Operations.KillOperationAsync(taskId, token);
@@ -476,7 +487,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
             {
                 if (_periodicBackups.TryGetValue(periodicBackup.BackupStatus.TaskId, out PeriodicBackup inMemoryBackupStatus))
+                {
                     runningBackupStatus.DelayUntil = inMemoryBackupStatus.BackupStatus.DelayUntil;
+                    runningBackupStatus.OriginalBackupTime = inMemoryBackupStatus.BackupStatus.OriginalBackupTime;
+                }
 
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"Canceled the backup thread: '{periodicBackup.Configuration.Name}'", oce);
@@ -1059,6 +1073,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 periodicBackup.BackupStatus ??= new PeriodicBackupStatus();
                 periodicBackup.BackupStatus.DelayUntil = state.DelayUntil;
+                periodicBackup.BackupStatus.OriginalBackupTime = state.OriginalBackupTime;
             }
         }
 

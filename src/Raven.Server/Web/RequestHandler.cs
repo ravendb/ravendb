@@ -16,21 +16,30 @@ using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Extensions;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web
 {
@@ -842,6 +851,118 @@ namespace Raven.Server.Web
         public virtual Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
             return Task.CompletedTask;
+        }
+
+        public const string BackupDatabaseOnceTag = "one-time-database-backup";
+        public const string DefineHubDebugTag = "update-hub-pull-replication";
+        public const string UpdatePullReplicationOnSinkNodeDebugTag = "update-sink-pull-replication";
+        public const string UpdatePeriodicBackupDebugTag = "update-periodic-backup";
+        public const string PutConnectionStringDebugTag = "put-connection-string";
+        public const string AddEtlDebugTag = "etl-add";
+        public const string UpdateExternalReplicationDebugTag = "update_external_replication";
+
+        private DynamicJsonValue GetCustomConfigurationAuditJson(string name, BlittableJsonReaderObject configuration)
+        {
+            switch (name)
+            {
+                case BackupDatabaseOnceTag:
+                    return JsonDeserializationServer.BackupConfiguration(configuration).ToAuditJson();
+
+                case UpdatePeriodicBackupDebugTag:
+                    return JsonDeserializationClient.PeriodicBackupConfiguration(configuration).ToAuditJson();
+
+                case UpdateExternalReplicationDebugTag:
+                    return JsonDeserializationClient.ExternalReplication(configuration).ToAuditJson();
+
+                case DefineHubDebugTag:
+                    return JsonDeserializationClient.PullReplicationDefinition(configuration).ToAuditJson();
+
+                case UpdatePullReplicationOnSinkNodeDebugTag:
+                    return JsonDeserializationClient.PullReplicationAsSink(configuration).ToAuditJson();
+
+                case AddEtlDebugTag:
+                    return GetEtlConfigurationAuditJson(configuration);
+
+                case PutConnectionStringDebugTag:
+                    return GetConnectionStringConfigurationAuditJson(configuration);
+            }
+            return null;
+        }
+
+        private DynamicJsonValue GetEtlConfigurationAuditJson(BlittableJsonReaderObject configuration)
+        {
+            var etlType = EtlConfiguration<ConnectionString>.GetEtlType(configuration);
+
+            switch (etlType)
+            {
+                case EtlType.Raven:
+                    return JsonDeserializationClient.RavenEtlConfiguration(configuration).ToAuditJson();
+
+                case EtlType.ElasticSearch:
+                    return JsonDeserializationClient.ElasticSearchEtlConfiguration(configuration).ToAuditJson();
+
+                case EtlType.Queue:
+                    return JsonDeserializationClient.QueueEtlConfiguration(configuration).ToAuditJson();
+
+                case EtlType.Sql:
+                    return JsonDeserializationClient.SqlEtlConfiguration(configuration).ToAuditJson();
+
+                case EtlType.Olap:
+                    return JsonDeserializationClient.OlapEtlConfiguration(configuration).ToAuditJson();
+            }
+
+            return null;
+        }
+
+        private DynamicJsonValue GetConnectionStringConfigurationAuditJson(BlittableJsonReaderObject configuration)
+        {
+            var connectionStringType = ConnectionString.GetConnectionStringType(configuration);
+            switch (connectionStringType)
+            {
+                case ConnectionStringType.Raven:
+                    return JsonDeserializationClient.RavenConnectionString(configuration).ToAuditJson();
+                
+                case ConnectionStringType.ElasticSearch:
+                    return JsonDeserializationClient.ElasticSearchConnectionString(configuration).ToAuditJson();
+
+                case ConnectionStringType.Queue:
+                    return JsonDeserializationClient.QueueConnectionString(configuration).ToAuditJson();
+
+                case ConnectionStringType.Sql:
+                    return JsonDeserializationClient.SqlConnectionString(configuration).ToAuditJson();
+
+                case ConnectionStringType.Olap:
+                    return JsonDeserializationClient.OlapConnectionString(configuration).ToAuditJson();
+            }
+
+            return null;
+        }
+
+        public void LogTaskToAudit(string description, long id, BlittableJsonReaderObject configuration)
+        {
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                DynamicJsonValue conf = GetCustomConfigurationAuditJson(description, configuration);
+                var clientCert = GetCurrentCertificate();
+                var auditLog = LoggingSource.AuditLog.GetLogger(_context.DatabaseName ?? "Server", "Audit");
+                var line = $"Task: '{description}' with taskId: '{id}'";
+
+                if (clientCert != null)
+                    line += $" executed by '{clientCert.Subject}' '{clientCert.Thumbprint}'";
+
+                if (conf != null)
+                {
+                    var confString = string.Empty;
+                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                    {
+                        confString = ctx.ReadObject(conf, "conf").ToString();
+                    }
+
+                    line += ($" Configuration: {confString}");
+                }
+
+                auditLog.Info(line);
+            }
         }
     }
 }

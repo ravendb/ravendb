@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Handlers
                         break;
 
                     case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                        options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, sub.Collection);
+                        options.ChangeVector = Database.SubscriptionStorage.GetLastDocumentChangeVectorForSubscription(context, sub);
                         break;
                 }
             }

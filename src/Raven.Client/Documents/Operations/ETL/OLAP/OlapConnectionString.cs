@@ -138,5 +138,10 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             json[nameof(FtpSettings)] = FtpSettings?.ToJson();
             return json;
         }
+
+        public override DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
     }
 }

@@ -538,7 +538,7 @@ namespace Raven.Server.Documents
                     using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        const int batchSize = 256;
+                        var batchSize = Configuration.Cluster.MaxClusterTransactionsBatchSize;
                         var executed = await ExecuteClusterTransaction(context, batchSize: batchSize);
                         if (executed.BatchSize == batchSize)
                         {
@@ -601,67 +601,83 @@ namespace Raven.Server.Documents
         public async Task<(long BatchSize, long CommandsCount)> ExecuteClusterTransaction(ClusterOperationContext context, int batchSize)
         {
             using var batchCollector = CollectCommandsBatch(context, batchSize);
-
-            if (batchCollector.Count == 0)
-            {
-                var index = CompareExchangeStorage.GetLastCompareExchangeIndex(context);
-
-                if (RachisLogIndexNotifications.LastModifiedIndex != index)
-                    RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                return (0, 0);
-            }
-
-            var batch = batchCollector.GetData();
-            var mergedCommands = new ClusterTransactionMergedCommand(this, batch);
-
-            ForTestingPurposes?.BeforeExecutingClusterTransactions?.Invoke();
+            Stopwatch stopwatch = null;
 
             try
             {
+                if (_logger.IsInfoEnabled)
+                {
+                    stopwatch = Stopwatch.StartNew();
+                    //_nextClusterCommand refers to each individual put/delete while batch size refers to number of transaction (each contains multiple commands)
+                    _logger.Info($"Read {batchCollector.Count:#,#;;0} cluster transaction commands - fromCount: {_nextClusterCommand}, take: {batchSize}");
+                }
+
+                if (batchCollector.Count == 0)
+                {
+                    var index = CompareExchangeStorage.GetLastCompareExchangeIndex(context);
+
+                    if (RachisLogIndexNotifications.LastModifiedIndex != index)
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                    return (0, 0);
+                }
+
+                var batch = batchCollector.GetData();
+                var mergedCommands = new ClusterTransactionMergedCommand(this, batch);
+
+                ForTestingPurposes?.BeforeExecutingClusterTransactions?.Invoke();
+
                 try
                 {
-                    //If we get a database shutdown while we process a cluster tx command this
-                    //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
-                    await TxMerger.Enqueue(mergedCommands);
-                    batchCollector.AllCommandsBeenProcessed = true;
-                }
-                catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Failed to execute cluster transaction batch (count: {batchCollector.Count}), will retry them one-by-one.", e);
-
-                    if (await ExecuteClusterTransactionOneByOne(batch))
+                    try
+                    {
+                        //If we get a database shutdown while we process a cluster tx command this
+                        //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
+                        await TxMerger.Enqueue(mergedCommands);
                         batchCollector.AllCommandsBeenProcessed = true;
-                }
-            }
-            catch
-            {
-                if (_databaseShutdown.IsCancellationRequested == false)
-                    throw;
+                    }
+                    catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Failed to execute cluster transaction batch (count: {batchCollector.Count}), will retry them one-by-one.", e);
 
-                // we got an exception while the database was shutting down
-                // setting it only for commands that we didn't process yet (can only be if we used ExecuteClusterTransactionOneByOne)
-                var exception = CreateDatabaseShutdownException();
+                        if (await ExecuteClusterTransactionOneByOne(batch))
+                            batchCollector.AllCommandsBeenProcessed = true;
+                    }
+                }
+                catch
+                {
+                    if (_databaseShutdown.IsCancellationRequested == false)
+                        throw;
+
+                    // we got an exception while the database was shutting down
+                    // setting it only for commands that we didn't process yet (can only be if we used ExecuteClusterTransactionOneByOne)
+                    var exception = CreateDatabaseShutdownException();
+                    foreach (var command in batch)
+                    {
+                        if (command.Processed)
+                            continue;
+
+                        OnClusterTransactionCompletion(command, mergedCommands, exception);
+                    }
+
+                    return (0, 0);
+                }
+
+                var commandsCount = 0;
                 foreach (var command in batch)
                 {
-                    if (command.Processed)
-                        continue;
+                    commandsCount += command.Commands.Length;
 
-                    OnClusterTransactionCompletion(command, mergedCommands, exception);
+                    OnClusterTransactionCompletion(command, mergedCommands);
                 }
 
-                return (0, 0);
+                return (batch.Count, commandsCount);
             }
-
-            var commandsCount = 0;
-            foreach (var command in batch)
+            finally
             {
-                commandsCount += command.Commands.Length;
-
-                OnClusterTransactionCompletion(command, mergedCommands);
+                if (_logger.IsInfoEnabled && stopwatch != null)
+                    _logger.Info($"cluster transaction batch took {stopwatch.Elapsed:c}");
             }
-
-            return (batch.Count, commandsCount);
         }
 
         private async Task<bool> ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)

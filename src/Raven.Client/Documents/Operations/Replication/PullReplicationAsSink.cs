@@ -68,6 +68,19 @@ namespace Raven.Client.Documents.Operations.Replication
             return djv;
         }
 
+        public override DynamicJsonValue ToAuditJson()
+        {
+            var djv = base.ToAuditJson();
+
+            djv[nameof(Mode)] = Mode;
+            djv[nameof(HubName)] = HubName;
+            djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
+            djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
+            djv[nameof(AccessName)] = AccessName;
+
+            return djv;
+        }
+
         public override string GetDefaultTaskName()
         {
             return $"Replication Sink for {HubName}";

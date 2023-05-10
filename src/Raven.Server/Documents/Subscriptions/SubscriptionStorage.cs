@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -99,6 +100,16 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 logger.Info($"Subscription with name {name} was deleted");
             }
+        }
+
+        
+        public string GetLastDocumentChangeVectorForSubscription(DocumentsOperationContext context, SubscriptionConnection.ParsedSubscription sub)
+        {
+            long lastEtag = sub.Collection == Constants.Documents.Collections.AllDocumentsCollection
+                ? DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction)
+                : _db.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, sub.Collection);
+
+            return _db.DocumentsStorage.GetNewChangeVector(context, lastEtag);
         }
 
         protected override void SetConnectionException(SubscriptionConnectionsState state, SubscriptionException ex)

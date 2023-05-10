@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -15,6 +14,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
+        private long _taskId;
+
         protected AbstractOngoingTasksHandlerProcessorForAddEtl([NotNull] TRequestHandler requestHandler)
             : base(requestHandler)
         {
@@ -22,7 +23,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected override void OnBeforeResponseWrite(TransactionOperationContext _, DynamicJsonValue responseJson, BlittableJsonReaderObject configuration, long index)
         {
-            responseJson[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index;
+            _taskId = index;
+
+            responseJson[nameof(EtlConfiguration<ConnectionString>.TaskId)] = _taskId;
         }
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
@@ -32,6 +35,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext _, BlittableJsonReaderObject configuration, string raftRequestId)
         {
+            RequestHandler.LogTaskToAudit(Web.RequestHandler.AddEtlDebugTag, _taskId, configuration);
+
             // Reset scripts if needed
             var scriptsToReset = RequestHandler.GetStringValuesQueryString("reset", required: false);
             configuration.TryGet(nameof(RavenEtlConfiguration.Name), out string etlConfigurationName);

@@ -70,6 +70,8 @@ namespace Raven.Server.Dashboard
 
         public int? ManagedThreadId { get; set; }
 
+        public long? UnmanagedAllocationsInBytes { get; set; }
+
         public DateTime? StartingTime { get; set; }
 
         public double Duration { get; set; }
@@ -94,6 +96,7 @@ namespace Raven.Server.Dashboard
                 [nameof(CpuUsage)] = CpuUsage,
                 [nameof(Name)] = Name,
                 [nameof(ManagedThreadId)] = ManagedThreadId,
+                [nameof(UnmanagedAllocationsInBytes)] = UnmanagedAllocationsInBytes,
                 [nameof(StartingTime)] = StartingTime,
                 [nameof(Duration)] = Duration,
                 [nameof(TotalProcessorTime)] = TotalProcessorTime,

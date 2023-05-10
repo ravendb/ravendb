@@ -31,6 +31,13 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(EncryptionMode)] = EncryptionMode
             };
         }
+        public DynamicJsonValue ToAuditJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(EncryptionMode)] = EncryptionMode
+            };
+        }
     }
 
     public enum EncryptionMode {

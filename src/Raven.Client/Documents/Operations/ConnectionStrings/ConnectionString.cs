@@ -33,12 +33,28 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             };
         }
 
+        public virtual DynamicJsonValue ToAuditJson()
+        {
+            return ToJson();
+        }
+
         public virtual bool IsEqual(ConnectionString connectionString)
         {
             if (connectionString == null)
                 return false;
 
             return Name == connectionString.Name && Type == connectionString.Type;
+        }
+
+        internal static ConnectionStringType GetConnectionStringType(BlittableJsonReaderObject connectionStringConfiguration)
+        {
+            if (connectionStringConfiguration.TryGet("Type", out string type) == false)
+                throw new InvalidOperationException($"ConnectionString configuration must have {nameof(ConnectionStringType)} field");
+
+            if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
+                throw new NotSupportedException($"Unknown Connection string type: {connectionStringType}");
+            
+            return connectionStringType;
         }
     }
 

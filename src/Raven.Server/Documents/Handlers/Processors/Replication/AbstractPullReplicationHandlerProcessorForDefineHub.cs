@@ -16,6 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         private PullReplicationDefinition _pullReplication;
+        private long _taskId;
 
         protected AbstractPullReplicationHandlerProcessorForDefineHub([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
@@ -23,7 +24,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         protected override void OnBeforeResponseWrite(TransactionOperationContext context, DynamicJsonValue responseJson, BlittableJsonReaderObject configuration, long index)
         {
-            responseJson[nameof(OngoingTask.TaskId)] = _pullReplication.TaskId == 0 ? index : _pullReplication.TaskId;
+            _taskId = _pullReplication.TaskId == 0 ? index : _pullReplication.TaskId;
+            responseJson[nameof(OngoingTask.TaskId)] = _taskId;
         }
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
@@ -36,6 +38,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                 Definition = _pullReplication
             };
             return RequestHandler.ServerStore.SendToLeaderAsync(updatePullReplication);
+        }
+
+        protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
+        {
+            RequestHandler.LogTaskToAudit(Web.RequestHandler.DefineHubDebugTag, _taskId, configuration);
+            return ValueTask.CompletedTask;
         }
     }
 }

@@ -17,6 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         private PullReplicationAsSink _pullReplication;
+        private long _taskId;
 
         protected AbstractPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
@@ -37,13 +38,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             }
 
             FillResponsibleNode(context, responseJson, _pullReplication);
-
-            responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _pullReplication.TaskId == 0 ? index : _pullReplication.TaskId;
+            _taskId = _pullReplication.TaskId == 0 ? index : _pullReplication.TaskId;
+            responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _taskId;
         }
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             return RequestHandler.ServerStore.UpdatePullReplicationAsSink(RequestHandler.DatabaseName, configuration, raftRequestId, out _pullReplication);
+        }
+
+        protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
+        {
+            RequestHandler.LogTaskToAudit(Web.RequestHandler.UpdatePullReplicationOnSinkNodeDebugTag, _taskId, configuration);
+            return ValueTask.CompletedTask;
         }
     }
 }
