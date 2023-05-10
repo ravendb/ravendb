@@ -239,9 +239,11 @@ export function DatabasePanel(props: DatabasePanelProps) {
                 <div className="flex-grow-1">
                     <RichPanelHeader onClick={(e) => onHeaderClicked(db, e)}>
                         <RichPanelInfo>
-                            <RichPanelSelect>
-                                <Input type="checkbox" checked={selected} onChange={toggleSelection} />
-                            </RichPanelSelect>
+                            {isOperatorOrAbove() && (
+                                <RichPanelSelect>
+                                    <Input type="checkbox" checked={selected} onChange={toggleSelection} />
+                                </RichPanelSelect>
+                            )}
 
                             <RichPanelName className="max-width-heading">
                                 {canNavigateToDatabase ? (
@@ -279,17 +281,19 @@ export function DatabasePanel(props: DatabasePanelProps) {
                         </RichPanelInfo>
 
                         <RichPanelActions>
-                            <Button
-                                href={manageGroupUrl}
-                                title="Manage the Database Group"
-                                target={db.currentNode.relevant ? undefined : "_blank"}
-                                className="ms-1"
-                                disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
-                            >
-                                <span>
-                                    <Icon icon="dbgroup" addon="settings" /> Manage group
-                                </span>
-                            </Button>
+                            {isOperatorOrAbove() && (
+                                <Button
+                                    href={manageGroupUrl}
+                                    title="Manage the Database Group"
+                                    target={db.currentNode.relevant ? undefined : "_blank"}
+                                    className="ms-1"
+                                    disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
+                                >
+                                    <span>
+                                        <Icon icon="dbgroup" addon="settings" /> Manage group
+                                    </span>
+                                </Button>
+                            )}
 
                             {isAdminAccessOrAbove(db) && (
                                 <UncontrolledDropdown className="ms-1">
