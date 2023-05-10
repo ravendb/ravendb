@@ -16,7 +16,6 @@ import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
-import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "components/common/PropSummary";
 
 // TODO: show modal on exit intent if is dirty
 export default function ClientGlobalConfiguration() {
@@ -25,7 +24,7 @@ export default function ClientGlobalConfiguration() {
 
     const { handleSubmit, control, formState, setValue, reset } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
-        mode: "onChange",
+        mode: "all",
         defaultValues: async () =>
             ClientConfigurationUtils.mapToFormData(await asyncGetGlobalClientConfiguration.execute(), true),
     });
@@ -53,7 +52,7 @@ export default function ClientGlobalConfiguration() {
     }
 
     return (
-        <Form onSubmit={handleSubmit(onSave)}>
+        <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
             <Col md="9" lg="6" className="content-margin">
                 <Button type="submit" color="primary" disabled={formState.isSubmitting || !formState.isDirty}>
                     {formState.isSubmitting ? <Spinner size="sm" className="me-1" /> : <Icon icon="save" />}

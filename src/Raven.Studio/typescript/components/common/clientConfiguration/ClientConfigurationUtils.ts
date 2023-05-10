@@ -68,15 +68,15 @@ export default class ClientConfigurationUtils {
         return {
             overrideConfig: !dto.Disabled,
             identityPartsSeparatorEnabled: !!dto.IdentityPartsSeparator,
-            identityPartsSeparatorValue: dto.IdentityPartsSeparator,
+            identityPartsSeparatorValue: dto.IdentityPartsSeparator || null,
             maximumNumberOfRequestsEnabled: !!dto.MaxNumberOfRequestsPerSession,
-            maximumNumberOfRequestsValue: dto.MaxNumberOfRequestsPerSession,
+            maximumNumberOfRequestsValue: dto.MaxNumberOfRequestsPerSession || null,
             loadBalancerEnabled: dto.LoadBalanceBehavior === "UseSessionContext",
-            loadBalancerValue: dto.LoadBalanceBehavior,
+            loadBalancerValue: dto.LoadBalanceBehavior || "None",
             loadBalancerSeedEnabled: !!dto.LoadBalancerContextSeed,
-            loadBalancerSeedValue: dto.LoadBalancerContextSeed,
+            loadBalancerSeedValue: dto.LoadBalancerContextSeed || null,
             readBalanceBehaviorEnabled: !!dto.ReadBalanceBehavior && dto.ReadBalanceBehavior !== "None",
-            readBalanceBehaviorValue: dto.ReadBalanceBehavior,
+            readBalanceBehaviorValue: dto.ReadBalanceBehavior || "None",
         };
     }
 
@@ -91,8 +91,7 @@ export default class ClientConfigurationUtils {
         return {
             IdentityPartsSeparator: formData.identityPartsSeparatorValue,
             LoadBalanceBehavior: formData.loadBalancerValue,
-            LoadBalancerContextSeed:
-                formData.loadBalancerValue === "UseSessionContext" ? formData.loadBalancerSeedValue : null,
+            LoadBalancerContextSeed: formData.loadBalancerSeedEnabled ? formData.loadBalancerSeedValue : null,
             ReadBalanceBehavior: formData.readBalanceBehaviorValue,
             MaxNumberOfRequestsPerSession: formData.maximumNumberOfRequestsValue,
             Disabled: !formData.overrideConfig,
