@@ -395,25 +395,19 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     </DropdownMenu>
                                 </UncontrolledDropdown>
                             )}
-
-                            <Button
-                                color="secondary"
-                                onClick={togglePanelCollapsed}
-                                title="Toggle distribution details"
-                                className="ms-1"
-                            >
-                                <Icon icon={panelCollapsed ? "arrow-down" : "arrow-up"} margin="m-0" />
-                            </Button>
                         </RichPanelActions>
                     </RichPanelHeader>
-
-                    <ValidDatabasePropertiesPanel db={db} />
-                    <div className="px-3 pb-2">
+                    <ValidDatabasePropertiesPanel
+                        db={db}
+                        panelCollapsed={panelCollapsed}
+                        togglePanelCollapsed={togglePanelCollapsed}
+                    />
+                    <div className="px-4 pb-2">
                         <Collapse isOpen={!panelCollapsed}>
                             <DatabaseDistribution db={db} />
                         </Collapse>
                         <Collapse isOpen={panelCollapsed}>
-                            <DatabaseTopology db={db} />
+                            <DatabaseTopology db={db} togglePanelCollapsed={togglePanelCollapsed} />
                         </Collapse>
                     </div>
                 </div>

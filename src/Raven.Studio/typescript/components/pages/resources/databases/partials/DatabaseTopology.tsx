@@ -6,16 +6,22 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 
 interface DatabaseTopologyProps {
     db: DatabaseSharedInfo;
+    togglePanelCollapsed: () => void;
 }
 
 export function DatabaseTopology(props: DatabaseTopologyProps) {
-    const { db } = props;
+    const { db, togglePanelCollapsed } = props;
 
     if (db.sharded) {
         const shardedDb = db as ShardedDatabaseSharedInfo;
         return (
             <div>
-                <NodeSet color="orchestrator" className="m-1">
+                <NodeSet
+                    color="orchestrator"
+                    className="m-1 cursor-pointer"
+                    onClick={togglePanelCollapsed}
+                    title="Expand distribution details"
+                >
                     <NodeSetLabel color="orchestrator" icon="orchestrator">
                         Orchestrators
                     </NodeSetLabel>
@@ -27,7 +33,12 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
                 {shardedDb.shards.map((shard) => {
                     return (
                         <React.Fragment key={shard.name}>
-                            <NodeSet color="shard" className="m-1">
+                            <NodeSet
+                                color="shard"
+                                className="m-1 cursor-pointer"
+                                onClick={togglePanelCollapsed}
+                                title="Expand distribution details"
+                            >
                                 <NodeSetLabel color="shard" icon="shard">
                                     #{DatabaseUtils.shardNumber(shard.name)}
                                 </NodeSetLabel>
@@ -56,7 +67,11 @@ export function DatabaseTopology(props: DatabaseTopologyProps) {
     } else {
         return (
             <div>
-                <NodeSet className="m-1">
+                <NodeSet
+                    className="m-1 cursor-pointer"
+                    onClick={togglePanelCollapsed}
+                    title="Expand distribution details"
+                >
                     <NodeSetLabel icon="database">Nodes</NodeSetLabel>
                     {db.nodes.map((node) => {
                         return <DatabaseNodeSetItem key={node.tag} node={node} />;

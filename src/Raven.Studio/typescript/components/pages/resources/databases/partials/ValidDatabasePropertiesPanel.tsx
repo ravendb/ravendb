@@ -8,7 +8,7 @@ import { withPreventDefault } from "components/utils/common";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import BackupInfo = Raven.Client.ServerWide.Operations.BackupInfo;
 import { clusterSelectors } from "components/common/shell/clusterSlice";
-import { Badge } from "reactstrap";
+import { Badge, Button } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import {
     selectDatabaseState,
@@ -32,6 +32,8 @@ export interface ValidDatabasePropertiesPanelPopoverProps {
 
 interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
+    panelCollapsed: boolean;
+    togglePanelCollapsed: () => void;
 }
 
 export function findLatestBackup(localInfos: DatabaseLocalInfo[]): BackupInfo {
@@ -47,7 +49,7 @@ export function findLatestBackup(localInfos: DatabaseLocalInfo[]): BackupInfo {
 }
 
 export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) {
-    const { db } = props;
+    const { db, panelCollapsed, togglePanelCollapsed } = props;
 
     const dbState = useAppSelector(selectDatabaseState(db.name));
     const topLevelState = useAppSelector(selectTopLevelState(db.name));
@@ -155,6 +157,16 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     return (
         <RichPanelDetails className="flex-wrap pb-1">
+            <RichPanelDetailItem>
+                <Button
+                    color="secondary"
+                    title={panelCollapsed ? "Expand distribution details" : "Collapse distribution details"}
+                    onClick={togglePanelCollapsed}
+                    className="ms-1 btn-toggle-panel rounded-pill"
+                >
+                    <Icon icon={panelCollapsed ? "unfold" : "fold"} margin="m-0" />
+                </Button>
+            </RichPanelDetailItem>
             <RichPanelDetailItem>
                 <div className="encryption">
                     {db.encrypted && (

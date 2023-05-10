@@ -10,14 +10,20 @@ interface NodeSetProps {
     children?: ReactNode | ReactNode[];
     className?: string;
     color?: string;
+    onClick?: () => void;
+    title?: string;
 }
 
 export function NodeSet(props: NodeSetProps) {
-    const { children, className, color } = props;
+    const { children, className, color, onClick, title } = props;
 
     const colorClass = color ? "bg-faded-" + color : "bg-faded-secondary";
 
-    return <div className={classNames("node-set", colorClass, className)}>{children}</div>;
+    return (
+        <div className={classNames("node-set", colorClass, className)} onClick={onClick} title={title}>
+            {children}
+        </div>
+    );
 }
 
 export function NodeSetList(props: { children?: ReactNode | ReactNode[] }) {
