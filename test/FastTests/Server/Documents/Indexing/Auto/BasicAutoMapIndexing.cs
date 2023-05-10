@@ -1275,12 +1275,35 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         private async Task CleanupUnusedAutoIndexesOnNonSharded(ClusterObserver.DatabaseObservationState state)
         {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+
             var mergedState = new ClusterObserver.MergedDatabaseObservationState(state.RawDatabase);
             mergedState.AddState(state);
-            var indexCleanupCommands = Server.ServerStore.Observer.GetUnusedAutoIndexes(mergedState);
+
+            var server = Server;
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            var serverStore = server.ServerStore;
+            if (serverStore == null)
+                throw new ArgumentNullException(nameof(serverStore));
+
+            var observer = serverStore.Observer;
+            if (observer == null)
+                throw new ArgumentNullException(nameof(observer));
+
+            var engine = serverStore.Engine;
+            if (engine == null)
+                throw new ArgumentNullException(nameof(engine));
+
+            var indexCleanupCommands = observer.GetUnusedAutoIndexes(mergedState);
             foreach (var (cmd, _) in indexCleanupCommands)
             {
-                await Server.ServerStore.Engine.PutAsync(cmd);
+                if (cmd == null)
+                    throw new ArgumentNullException(nameof(cmd));
+
+                await engine.PutAsync(cmd);
             }
         }
 
