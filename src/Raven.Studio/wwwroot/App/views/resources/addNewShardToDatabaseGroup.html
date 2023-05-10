@@ -12,8 +12,40 @@
             <div class="form-group">
                 <div class="input-group" title="Set the number of nodes that will contain the database" data-bind="validationElement: replicationFactor">
                     <span class="input-group-addon">Replication factor</span>
-                    <input class="form-control" type="number" min="1" title="Set the number of nodes that will contain the database" placeholder="Enter number of nodes" data-bind="numericInput: replicationFactor">
+                    <input class="form-control" type="number" min="1" title="Set the number of nodes that will contain the database" 
+                           placeholder="Enter number of nodes" data-bind="numericInput: replicationFactor, disable: manualMode">
                 </div>
+            </div>
+
+            <div>
+                <div>
+                    <div class="toggle">
+                        <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode">
+                        <label for="manual_mode">Set nodes layout manually</label>
+                    </div>
+                    <small class="toggle-caption">Select replication nodes from the list below.</small>
+                </div>
+                <div>
+                    <div class="bg-info padding no-margin" data-bind="visible: manualMode()">
+                        <h3>Available nodes</h3>
+                        <div class="checkbox checkbox-info margin-bottom-xxs">
+                            <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
+                            <label for="toggle_all_in_cluster"><i class="icon-cluster"></i><span>All cluster nodes</span></label>
+                        </div>
+                        <div data-bind="foreach: clusterNodes">
+                            <div class="checkbox checkbox-success padding-left-md" data-bind="validationOptions: { errorsAsTitle: false, insertMessages: false }">
+                                <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_' + $index() }, checked: $parent.nodes, checkedValue: $data">
+                                <label class="text-success" data-bind="attr: { for: 'cluster_node_' + $index() }">
+                                    <i class="icon-cluster-node"></i><span data-bind="text: tag()"></span> &nbsp; <small data-bind="text: serverUrl()"></small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="validationElement: nodes">
+                        <div class="help-block" data-bind="validationMessage: nodes"></div>
+                    </div>
+                </div>
+                
             </div>
         </div>
         <div class="modal-footer">
