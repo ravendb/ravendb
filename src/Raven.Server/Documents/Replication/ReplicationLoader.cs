@@ -19,7 +19,6 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
@@ -27,7 +26,7 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
-using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -619,6 +618,16 @@ namespace Raven.Server.Documents.Replication
         {
             if (incomingPullParams == null)
             {
+                if (ShardHelper.IsShardName(Database.Name) && 
+                    getLatestEtagMessage.ReplicationsType == ReplicationLatestEtagRequest.ReplicationType.Sharded)
+                {
+                    return new IncomingExternalReplicationHandlerForShard(tcpConnectionOptions,
+                        getLatestEtagMessage,
+                        this,
+                        buffer,
+                        getLatestEtagMessage.ReplicationsType);
+                }
+
                 return new IncomingReplicationHandler(
                     tcpConnectionOptions,
                     getLatestEtagMessage,

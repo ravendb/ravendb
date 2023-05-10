@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
         private readonly Dictionary<int, ShardedOutgoingReplicationHandler> _handlers;
         private string _lastAcceptedChangeVector;
-        private long _lastAcceptedEtag;
+        private Dictionary<int, long> _lastSentEtagPerDestination;
 
         public ShardedIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ShardedDatabaseContext.ShardedReplicationContext parent,
             JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag)
@@ -35,11 +35,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             _parent = parent;
             _attachmentStreamsTempFile = GetTempFile();
             _handlers = new Dictionary<int, ShardedOutgoingReplicationHandler>(_parent.Context.ShardCount);
-
+            _lastSentEtagPerDestination = new Dictionary<int, long>();
             foreach (var shardNumber in _parent.Context.ShardsTopology.Keys)
             {
                 var node = new ShardReplicationNode { ShardNumber = shardNumber, Database = ShardHelper.ToShardName(_parent.DatabaseName, shardNumber) };
                 var info = GetConnectionInfo(node);
+
+                _lastSentEtagPerDestination.Add(shardNumber, 0L);
 
                 _handlers[shardNumber] = new ShardedOutgoingReplicationHandler(parent, node, info, replicatedLastEtag.SourceDatabaseId);
                 _handlers[shardNumber].Start();
@@ -91,8 +93,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 foreach (var (shardNumber, batch) in batches)
                 {
-                    batch.LastAcceptedChangeVector = changeVector ?? _lastAcceptedChangeVector;
-                    batch.LastSentEtagFromSource = _lastAcceptedEtag;
+                    if (_lastSentEtagPerDestination[shardNumber] > 0)
+                    {
+                        batch.LastAcceptedChangeVector = changeVector;
+                        batch.LastSentEtagFromSource = _lastSentEtagPerDestination[shardNumber];
+                    }
+
                     tasks[i++] = _handlers[shardNumber].SendBatch(batch);
                 }
 
@@ -129,6 +135,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 handlersChangeVector.Add(acceptedChangeVector);
                 lastAcceptedEtag = Math.Min(acceptedEtag, lastAcceptedEtag);
             }
+
             var mergedChangeVector = ChangeVectorUtils.MergeVectorsDown(handlersChangeVector);
             return (mergedChangeVector, lastAcceptedEtag);
         }
@@ -150,7 +157,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 int i = 0;
                 foreach (var shardToBatch in batches)
                 {
-                    shardToBatch.Value.LastSentEtagFromSource = _lastDocumentEtag;
+                    shardToBatch.Value.LastSentEtagFromSource = shardToBatch.Value.Items.Count > 0 ?
+                        _lastDocumentEtag :
+                        _lastSentEtagPerDestination[shardToBatch.Key];
+
                     tasks[i] = _handlers[shardToBatch.Key].SendBatch(shardToBatch.Value);
                     i++;
                 }
@@ -169,17 +179,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 var cvs = new List<string>();
                 var minEtag = long.MaxValue;
-                foreach (ReplicationBatch replicationBatch in batches.Values)
+                foreach (var (shardNumber, batch) in batches)
                 {
                     // ignore change vectors from heartbeat
-                    if (replicationBatch.Items.Count > 0)
-                        cvs.Add(replicationBatch.LastAcceptedChangeVector);
+                    if (batch.Items.Count == 0)
+                        continue;
 
-                    minEtag = Math.Min(minEtag, replicationBatch.LastEtagAccepted);
+                    cvs.Add(batch.LastAcceptedChangeVector);
+                    _lastSentEtagPerDestination[shardNumber] = batch.LastEtagAccepted;
                 }
 
                 _lastAcceptedChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
-                _lastAcceptedEtag = minEtag;
             }
         }
 
@@ -251,7 +261,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         private void EnsureNotNullAttachmentStreams(Dictionary<int, ReplicationBatch> batches)
         {
-            foreach(var batch in batches.Values)
+            foreach (var batch in batches.Values)
             {
                 if (batch.AttachmentStreams != null)
                 {
@@ -325,6 +335,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     }
                 }
             });
+
+            _lastSentEtagPerDestination.Clear();
+            _lastSentEtagPerDestination = null;
 
             base.DisposeInternal();
         }
