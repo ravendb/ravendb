@@ -24,7 +24,7 @@ namespace Raven.Server.Web.Studio
             {
                 var sourceSqlDatabase = JsonDeserializationServer.SourceSqlDatabase(sourceSqlDatabaseBlittable);
 
-                var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
+                var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString, sourceSqlDatabase.Schemas);
                 var schema = dbDriver.FindSchema();
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -55,7 +55,7 @@ namespace Raven.Server.Web.Studio
 
                     var sourceSqlDatabase = migrationRequest.Source;
 
-                    var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
+                    var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString, sourceSqlDatabase.Schemas);
                     var schema = dbDriver.FindSchema();
                     var token = CreateOperationToken();
 
@@ -120,7 +120,7 @@ namespace Raven.Server.Web.Studio
 
                     var sourceSqlDatabase = testRequest.Source;
 
-                    var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
+                    var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString, sourceSqlDatabase.Schemas);
                     var schema = dbDriver.FindSchema();
 
                     var (testResultDocument, documentId) = dbDriver.Test(testRequest.Settings, schema, context);

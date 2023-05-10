@@ -21,7 +21,8 @@ class sqlMigration {
         trimSuffix: ko.observable<boolean>(true),
         suffixToTrim: ko.observable<string>("_id"),
         detectManyToMany: ko.observable<boolean>(true),
-        includeUnsupported: ko.observable<boolean>(false)
+        includeUnsupported: ko.observable<boolean>(false),
+        
     };
 
     // cache connection strings between page views
@@ -45,7 +46,9 @@ class sqlMigration {
     mySqlValidationGroup: KnockoutValidationGroup;
 
     npgSql = {
-        connectionString: ko.observable<string>(sqlMigration.savedNpgsqlConnectionString)
+        connectionString: ko.observable<string>(sqlMigration.savedNpgsqlConnectionString),
+        includeSchemas: ko.observable<boolean>(false),
+        schemas: ko.observable<string>()
     };
 
     npgSqlValidationGroup: KnockoutValidationGroup;
@@ -94,6 +97,12 @@ class sqlMigration {
         this.npgSql.connectionString.extend({
             required: true
         });
+        
+        this.npgSql.schemas.extend({
+            required: {
+                onlyIf: () => this.npgSql.includeSchemas()
+            }
+        });
 
         this.oracle.connectionString.extend({
             required: true
@@ -114,7 +123,8 @@ class sqlMigration {
         this.npgSqlValidationGroup = ko.validatedObservable({
             connectionString: this.npgSql.connectionString,
             batchSize: this.batchSize,
-            maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
+            maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable,
+            schemas: this.npgSql.schemas
         });
 
         this.oracleValidationGroup = ko.validatedObservable({
@@ -331,9 +341,12 @@ class sqlMigration {
     }
     
     toSourceDto(): Raven.Server.SqlMigration.Model.SourceSqlDatabase {
+        const schemas = this.databaseType() === "NpgSQL" && this.npgSql.includeSchemas() ? this.npgSql.schemas().split(",") : null;
+        
         return {
             ConnectionString: this.getConnectionString(),
-            Provider: this.databaseType()
+            Provider: this.databaseType(),
+            Schemas: schemas
         }
     }
     
