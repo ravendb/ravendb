@@ -127,21 +127,31 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
     {
         try
         {
-            var online = ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask) && dbTask is { IsCompleted: true };
+            ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask);
+            StudioDatabaseStatus status = StudioDatabaseStatus.None;
+            if (dbTask != null)
+            {
+                if (dbTask.IsCompleted)
+                    status = StudioDatabaseStatus.Online;
+                else if (dbTask.IsFaulted)
+                    status = StudioDatabaseStatus.Error;
+                else
+                    status = StudioDatabaseStatus.Loading;
+            }
 
             // Check for exceptions
-            if (dbTask is { IsFaulted: true })
+            if (status == StudioDatabaseStatus.Error)
             {
                 var exception = dbTask.Exception.ExtractSingleInnerException();
                 WriteFaultedDatabaseState(databaseName, exception, context, writer);
                 return;
             }
 
-            var database = online ? dbTask.Result : null;
+            var database = status == StudioDatabaseStatus.Online ? dbTask.Result : null;
             var indexingStatus = GetIndexingStatus(record, database);
             var upTime = GetUpTime(database);
             var backupInfo = GetBackupInfo(databaseName, record, database, ServerStore, context);
-            var state = StudioDatabaseState.From(databaseName, database, ServerStore.DatabaseInfoCache, backupInfo, upTime, indexingStatus);
+            var state = StudioDatabaseState.From(databaseName, status, database, ServerStore.DatabaseInfoCache, backupInfo, upTime, indexingStatus);
 
             context.Write(writer, state.ToJson());
         }
@@ -162,7 +172,8 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
         var doc = new DynamicJsonValue
         {
             [nameof(DatabaseInfo.Name)] = databaseName,
-            [nameof(DatabaseInfo.LoadError)] = exception.Message
+            [nameof(DatabaseInfo.LoadError)] = exception.Message,
+            [nameof(StudioDatabaseStatus)] = StudioDatabaseStatus.Error
         };
 
         context.Write(writer, doc);
@@ -249,7 +260,7 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
         {
             if (databaseName == null)
                 throw new ArgumentNullException(nameof(databaseName));
-            if (database == null) 
+            if (database == null)
                 throw new ArgumentNullException(nameof(database));
 
             return new StudioOrchestratorState
@@ -271,9 +282,27 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
         }
     }
 
-    internal class StudioDatabaseState : DatabaseState
+    internal enum StudioDatabaseStatus
     {
-        public static StudioDatabaseState From(string databaseName, DocumentDatabase database, DatabaseInfoCache databaseInfoCache, BackupInfo backupInfo, TimeSpan? upTime, IndexRunningStatus? indexingStatus)
+        None,
+        Online,
+        Loading,
+        Error
+    }
+
+    internal sealed class StudioDatabaseState : DatabaseState
+    {
+        public StudioDatabaseStatus DatabaseStatus { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+            djv[nameof(DatabaseStatus)] = DatabaseStatus;
+
+            return djv;
+        }
+
+        public static StudioDatabaseState From(string databaseName, StudioDatabaseStatus databaseStatus, DocumentDatabase database, DatabaseInfoCache databaseInfoCache, BackupInfo backupInfo, TimeSpan? upTime, IndexRunningStatus? indexingStatus)
         {
             Size totalSize = null;
             Size tempBuffersSize = null;
@@ -322,6 +351,7 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
                 IndexingErrors = indexingErrors,
                 DocumentsCount = documentsCount,
                 IndexingStatus = indexingStatus ?? IndexRunningStatus.Running,
+                DatabaseStatus = databaseStatus
             };
 
             static Size GetSize(BlittableJsonReaderObject json, string propertyName)
