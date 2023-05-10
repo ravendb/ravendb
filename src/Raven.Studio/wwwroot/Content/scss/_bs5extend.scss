@@ -185,6 +185,18 @@
     border-radius: $gutter-xs;
 }
 
+.table-inner-border {
+    tr {
+        td {
+            border: none;
+        }
+
+        & + tr {
+            border-top: solid $border-width $border-color-light;
+        }
+    }
+}
+
 .btn .kbd {
     font-size: 10px;
     kbd {
