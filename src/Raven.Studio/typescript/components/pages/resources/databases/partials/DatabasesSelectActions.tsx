@@ -116,7 +116,9 @@ export function DatabasesSelectActions({
                 title="Select all or none"
                 size="lg"
                 className="ms-5"
-            />
+            >
+                <span className="small-label">Select All</span>
+            </Checkbox>
 
             <SelectionActions active={anythingSelected && !toggleChanges}>
                 <div className="d-flex align-items-center">
