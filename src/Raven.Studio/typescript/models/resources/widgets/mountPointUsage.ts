@@ -3,12 +3,14 @@ class mountPointUsage {
     isLowSpace = ko.observable<boolean>(false);
     mountPoint = ko.observable<string>();
     ravenSize = ko.observable<number>();
+    ravenTempBuffersSize = ko.observable<number>();
     totalCapacity = ko.observable<number>();
     volumeLabel = ko.observable<string>();
 
     usedSpace: KnockoutComputed<number>;
     usedSpacePercentage: KnockoutComputed<number>;
     ravendbToUsedSpacePercentage: KnockoutComputed<number>;
+    ravendbTempBuffersToUsedSpacePercentage: KnockoutComputed<number>;
 
     mountPointLabel: KnockoutComputed<string>;
     scaleFactor = ko.observable<number>();
@@ -41,6 +43,17 @@ class mountPointUsage {
             return documentsUsed *  100.0 / totalUsed;
         });
 
+        this.ravendbTempBuffersToUsedSpacePercentage = ko.pureComputed(() => {
+            const totalUsed = this.usedSpace();
+            const tempBuffersSize = this.ravenTempBuffersSize();
+
+            if (!totalUsed) {
+                return 0;
+            }
+
+            return tempBuffersSize *  100.0 / totalUsed;
+        });
+
         this.usedSpacePercentage = ko.pureComputed(() => {
             const total = this.totalCapacity();
             const used = this.usedSpace();
@@ -60,6 +73,7 @@ class mountPointUsage {
         this.ravenSize(data.RavenSize);
         this.totalCapacity(data.TotalCapacity);
         this.volumeLabel(data.VolumeLabel);
+        this.ravenTempBuffersSize(data.RavenTempBuffersSize);
     }
 }
 
