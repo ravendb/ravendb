@@ -12,6 +12,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -107,7 +108,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                     indexQuery.AddTimeSeriesNames = RequestHandler.GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
                     indexQuery.DisableAutoIndexCreation = RequestHandler.GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
 
-                    if (RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) == true)
+                    if (RequestHandler.HttpContext.Request.IsFromOrchestrator())
                         indexQuery.ReturnOptions = IndexQueryServerSide.QueryResultReturnOptions.CreateForSharding(indexQuery);
 
                     AssertIndexQuery(indexQuery);

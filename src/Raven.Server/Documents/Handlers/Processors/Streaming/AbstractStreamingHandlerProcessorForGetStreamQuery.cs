@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
@@ -92,7 +93,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     query.IsStream = true;
                 }
 
-                if (RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) == true)
+                var fromSharded = RequestHandler.HttpContext.Request.IsFromOrchestrator();
+
+                if (fromSharded)
                     query.ReturnOptions = IndexQueryServerSide.QueryResultReturnOptions.CreateForSharding(query);
 
                 if (TrafficWatchManager.HasRegisteredClients)
@@ -102,8 +105,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 // set the exported file name prefix
                 var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
                 fileNamePrefix = $"{RequestHandler.DatabaseName}_{ServerStore.NodeTag}_{fileNamePrefix}";
-
-                var fromSharded = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
 
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {

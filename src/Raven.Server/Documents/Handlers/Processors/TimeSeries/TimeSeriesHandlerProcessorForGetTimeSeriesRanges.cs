@@ -9,6 +9,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
 
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     }
                 }
 
-                bool shouldGetMissingIncludes = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
+                bool shouldGetMissingIncludes = RequestHandler.HttpContext.Request.IsFromOrchestrator();
 
                 var includesCommand = includeDoc || includeTags
                     ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags, shouldGetMissingIncludes)

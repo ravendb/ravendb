@@ -35,6 +35,8 @@ namespace Raven.Server.Documents.Sharding.Operations
         public DynamicJsonArray Combine(Dictionary<int, ShardExecutionResult<BlittableJsonReaderObject>> results)
         {
             ShardMismatchException lastMismatchException = null;
+            var fromStudio = HttpRequest.IsFromStudio();
+
             foreach (var c in _commandsPerShard.Values)
             {
                 var executionResult = results[c.ShardNumber];
@@ -51,7 +53,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                     continue;
                 }
 
-                _command.MarkShardAsComplete(_resultContext, c.ShardNumber, HttpRequest.IsFromStudio());
+                _command.MarkShardAsComplete(_resultContext, c.ShardNumber, fromStudio);
             }
 
             if (lastMismatchException != null)
