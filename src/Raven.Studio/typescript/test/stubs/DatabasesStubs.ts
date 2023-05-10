@@ -218,6 +218,7 @@ export class DatabasesStubs {
                 SizeInBytes: 2,
                 HumaneSize: "2 Bytes",
             },
+            DatabaseStatus: "Online"
         };
     }
 
