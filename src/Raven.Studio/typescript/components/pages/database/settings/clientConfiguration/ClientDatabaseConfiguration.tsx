@@ -35,7 +35,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
 
     const { handleSubmit, control, formState, setValue, reset } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
-        mode: "onChange",
+        mode: "all",
         defaultValues: async () =>
             ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(db), false),
     });
@@ -48,6 +48,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         if (!globalConfigResult) {
             return null;
         }
+
         return ClientConfigurationUtils.mapToFormData(globalConfigResult, true);
     }, [asyncGetClientGlobalConfiguration.result]);
 
@@ -70,18 +71,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
         return <LoadError error="Unable to load client configuration" refresh={onRefresh} />;
     }
 
-    function GlobalSettingsSeparator() {
-        return (
-            <>
-                <div className="align-self-center col-sm-auto d-flex">
-                    <Icon icon="arrow-right" margin="m-0" />
-                </div>
-            </>
-        );
-    }
-
     return (
-        <Form onSubmit={handleSubmit(onSave)}>
+        <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
             <Col md="12" lg={globalConfig ? 9 : 6} className="content-margin">
                 <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
                     <div>
@@ -93,13 +84,13 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             )}
                             Save
                         </Button>
-                        {formState.isDirty && globalConfig && (
+
+                        {globalConfig && (
                             <span ref={popovers.setEffectiveConfiguration} className="ms-3 cursor-pointer text-info">
                                 <Icon icon="config" />
                                 See effective configuration
                             </span>
                         )}
-
                         <PopoverWithHover target={popovers.effectiveConfiguration} placement="right">
                             <div className="flex-horizontal p-1">
                                 <PropSummary>
@@ -108,23 +99,49 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                     </PropSummaryItem>
                                     <PropSummaryItem className="border-0">
                                         <PropSummaryName>Identity parts separator</PropSummaryName>
-                                        <PropSummaryValue color="info">a</PropSummaryValue>
+                                        <PropSummaryValue color="info">
+                                            {(formValues.overrideConfig && formValues.identityPartsSeparatorValue) ||
+                                                globalConfig?.identityPartsSeparatorValue ||
+                                                "'/' (Default)"}
+                                        </PropSummaryValue>
                                     </PropSummaryItem>
                                     <PropSummaryItem>
                                         <PropSummaryName>Max number of requests per session</PropSummaryName>
-                                        <PropSummaryValue color="info">b</PropSummaryValue>
+                                        <PropSummaryValue color="info">
+                                            {(formValues.overrideConfig && formValues.maximumNumberOfRequestsValue) ||
+                                                globalConfig?.maximumNumberOfRequestsValue ||
+                                                "30 (Default)"}
+                                        </PropSummaryValue>
                                     </PropSummaryItem>
                                     <PropSummaryItem>
                                         <PropSummaryName>Load Balance Behavior</PropSummaryName>
-                                        <PropSummaryValue color="info">c</PropSummaryValue>
+                                        <PropSummaryValue color="info">
+                                            {(formValues.overrideConfig &&
+                                                formValues.loadBalancerEnabled &&
+                                                formValues.loadBalancerValue) ||
+                                                (globalConfig?.loadBalancerEnabled &&
+                                                    globalConfig?.loadBalancerValue) ||
+                                                "None (Default)"}
+                                        </PropSummaryValue>
                                     </PropSummaryItem>
                                     <PropSummaryItem>
                                         <PropSummaryName>Seed</PropSummaryName>
-                                        <PropSummaryValue color="info">d</PropSummaryValue>
+                                        <PropSummaryValue color="info">
+                                            {(formValues.overrideConfig && formValues.loadBalancerSeedValue) ||
+                                                globalConfig?.loadBalancerSeedValue ||
+                                                "0 (Default)"}
+                                        </PropSummaryValue>
                                     </PropSummaryItem>
                                     <PropSummaryItem>
                                         <PropSummaryName>Read Balance Behavior</PropSummaryName>
-                                        <PropSummaryValue color="info">e</PropSummaryValue>
+                                        <PropSummaryValue color="info">
+                                            {(formValues.overrideConfig &&
+                                                formValues.readBalanceBehaviorEnabled &&
+                                                formValues.readBalanceBehaviorValue) ||
+                                                (globalConfig?.readBalanceBehaviorEnabled &&
+                                                    globalConfig?.readBalanceBehaviorValue) ||
+                                                "None (Default)"}
+                                        </PropSummaryValue>
                                     </PropSummaryItem>
                                 </PropSummary>
                             </div>
@@ -428,5 +445,13 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                 </Card>
             </Col>
         </Form>
+    );
+}
+
+function GlobalSettingsSeparator() {
+    return (
+        <div className="align-self-center col-sm-auto d-flex">
+            <Icon icon="arrow-right" margin="m-0" />
+        </div>
     );
 }

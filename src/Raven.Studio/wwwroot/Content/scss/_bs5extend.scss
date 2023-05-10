@@ -144,3 +144,13 @@
     right: 0;
     bottom: 0;
 }
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+    -webkit-text-fill-color: $input-focus-color;
+    -webkit-box-shadow: 0 0 0 30px $input-focus-bg inset !important;
+}

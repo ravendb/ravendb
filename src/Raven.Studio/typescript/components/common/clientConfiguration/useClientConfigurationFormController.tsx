@@ -10,22 +10,22 @@ export default function useClientConfigurationFormController(
 
     useEffect(() => {
         if (!formValues.identityPartsSeparatorEnabled && formValues.identityPartsSeparatorValue !== null) {
-            setValue("identityPartsSeparatorValue", null);
+            setValue("identityPartsSeparatorValue", null, { shouldValidate: true });
         }
         if (!formValues.maximumNumberOfRequestsEnabled && formValues.maximumNumberOfRequestsValue !== null) {
-            setValue("maximumNumberOfRequestsValue", null);
+            setValue("maximumNumberOfRequestsValue", null, { shouldValidate: true });
         }
         if (!formValues.loadBalancerEnabled && formValues.loadBalancerValue !== "None") {
-            setValue("loadBalancerValue", "None");
+            setValue("loadBalancerValue", "None", { shouldValidate: true });
         }
         if (!formValues.loadBalancerEnabled && formValues.loadBalancerSeedEnabled !== false) {
-            setValue("loadBalancerSeedEnabled", false);
+            setValue("loadBalancerSeedEnabled", false, { shouldValidate: true });
         }
         if (!formValues.loadBalancerSeedEnabled && formValues.loadBalancerSeedValue !== null) {
-            setValue("loadBalancerSeedValue", null);
+            setValue("loadBalancerSeedValue", null, { shouldValidate: true });
         }
         if (!formValues.readBalanceBehaviorEnabled && formValues.readBalanceBehaviorValue !== "None") {
-            setValue("readBalanceBehaviorValue", "None");
+            setValue("readBalanceBehaviorValue", "None", { shouldValidate: true });
         }
     }, [formValues, setValue]);
 

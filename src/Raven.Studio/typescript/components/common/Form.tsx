@@ -91,7 +91,9 @@ function FormInputGeneral<
                     name={name}
                     type={type}
                     onBlur={onBlur}
-                    onChange={onChange}
+                    onChange={(x) =>
+                        onChange(type === "number" ? Number(x.currentTarget.value) : x.currentTarget.value)
+                    }
                     value={value == null ? "" : value}
                     invalid={invalid}
                     {...rest}
