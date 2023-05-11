@@ -1,9 +1,6 @@
 ﻿
 
 class sqlConnectionStringSyntax {
-    
-    private constructor() {
-    }
 
     static readonly mssqlSyntax = `Example: <code>Data Source=10.0.0.107;Database=SourceDB;User ID=sa;Password=secret;</code>
                 <br />

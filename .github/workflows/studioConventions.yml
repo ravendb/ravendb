@@ -49,7 +49,7 @@ jobs:
           branch=$GITHUB_REF_NAME
         fi
 
-        [[ ${branch:1:1} -lt 6 ]] && echo "skipping prettier for versions below 6.0" && exit 0
+        [[ ${branch:1:1} -lt 6 ]] && echo "skipping prettier for ravendb versions below 6.0" && exit 0
 
         npm run prettier
       working-directory: ./src/Raven.Studio
