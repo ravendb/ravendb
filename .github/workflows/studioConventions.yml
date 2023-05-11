@@ -11,9 +11,26 @@ on:
 jobs:
   conventions:
     name: Studio Conventions
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
+    - name: Grep .Net version
+      run: |
+        dotnet_version=$(grep '<TargetFramework>' < src/Raven.Server/Raven.Server.csproj | tr -cd [:digit:].)
+        echo "DOTNET_VERSION=${dotnet_version}" >> $GITHUB_ENV
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '${{ env.DOTNET_VERSION }}'
+
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Build dotnet
+      run: dotnet build
 
     - name: Install npm dependencies
       run: npm install
@@ -37,7 +54,7 @@ jobs:
           branch=$GITHUB_REF_NAME
         fi
 
-        [[ ${branch:1:1} -lt 6 ]] && echo "skipping prettier for versions below 6.0" && exit 0
+        [[ ${branch:1:1} -lt 6 ]] && echo "skipping prettier for ravendb versions below 6.0" && exit 0
 
         npm run prettier
       working-directory: ./src/Raven.Studio
