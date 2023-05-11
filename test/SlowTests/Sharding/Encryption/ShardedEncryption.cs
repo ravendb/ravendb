@@ -379,7 +379,7 @@ namespace SlowTests.Sharding.Encryption
             {
                 // add shard
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
-                var nodeToAddShardTo = sharding.Shards[0].Members[0];
+                var nodeToAddShardTo = sharding.Shards[0].AllNodes.First();
 
                 var addShardRes = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, new[] { nodeToAddShardTo }));
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addShardRes.RaftCommandIndex);
