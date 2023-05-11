@@ -22,6 +22,7 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
     protected readonly Dictionary<int, ShardedQueryCommand> QueryCommands;
 
     protected readonly TransactionOperationContext Context;
+    protected readonly bool HadActiveMigrationsBeforeQueryStarted;
     protected long CombinedResultEtag;
 
     protected AbstractShardedQueryOperation(
@@ -38,6 +39,8 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
         Context = context ?? throw new ArgumentNullException(nameof(context));
         _requestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
         ExpectedEtag = metadata.HasOrderByRandom == false ? expectedEtag : null;
+        
+        HadActiveMigrationsBeforeQueryStarted = requestHandler.DatabaseContext.DatabaseRecord.Sharding.HasActiveMigrations();
     }
 
     public HttpRequest HttpRequest { get => _requestHandler.HttpContext.Request; }
@@ -62,7 +65,7 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
 
     public abstract TCombinedResult CombineResults(Dictionary<int, ShardExecutionResult<QueryResult>> results);
 
-    protected static void CombineSingleShardResultProperties(QueryResult<List<TResult>, List<TIncludes>> combinedResult, QueryResult singleShardResult, bool isDistinct)
+    protected static void CombineSingleShardResultProperties(QueryResult<List<TResult>, List<TIncludes>> combinedResult, QueryResult singleShardResult)
     {
         combinedResult.TotalResults += singleShardResult.TotalResults;
         combinedResult.IsStale |= singleShardResult.IsStale;

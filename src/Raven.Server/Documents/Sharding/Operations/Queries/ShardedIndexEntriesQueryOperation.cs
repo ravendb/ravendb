@@ -41,14 +41,15 @@ public class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOperation<S
         var result = new ShardedIndexEntriesQueryResult
         {
             Results = new List<BlittableJsonReaderObject>(),
-            ResultEtag = CombinedResultEtag
+            ResultEtag = CombinedResultEtag,
+            IsStale = HadActiveMigrationsBeforeQueryStarted
         };
 
         foreach (var (_, cmdResult) in results)
         {
             var queryResult = cmdResult.Result;
 
-            CombineSingleShardResultProperties(result, queryResult, _query.Metadata.IsDistinct);
+            CombineSingleShardResultProperties(result, queryResult);
         }
 
         // all the results from each command are already ordered

@@ -35,7 +35,8 @@ public class ShardedSuggestionQueryOperation : AbstractShardedQueryOperation<Sug
     {
         var result = new SuggestionQueryResult
         {
-            ResultEtag = CombinedResultEtag
+            ResultEtag = CombinedResultEtag,
+            IsStale = HadActiveMigrationsBeforeQueryStarted
         };
 
         var suggestions = new Dictionary<string, CombinedSuggestions>();
@@ -48,7 +49,7 @@ public class ShardedSuggestionQueryOperation : AbstractShardedQueryOperation<Sug
 
             CombineExplanations(result, cmdResult);
             CombineTimings(shardNumber, cmdResult);
-            CombineSingleShardResultProperties(result, queryResult, isDistinct: false);
+            CombineSingleShardResultProperties(result, queryResult);
 
             foreach (BlittableJsonReaderObject suggestionJson in cmdResult.Result.Results)
             {

@@ -46,6 +46,7 @@ using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.NotificationCenter.Notifications;
@@ -146,6 +147,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryReferencesIndexProgress =
             new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
+
+        private ShardedDocumentDatabase _shardedDocumentDatabase;
 
         internal DocumentDatabase DocumentDatabase;
 
@@ -800,6 +803,7 @@ namespace Raven.Server.Documents.Indexes
                 Debug.Assert(Definition != null);
 
                 DocumentDatabase = documentDatabase;
+                _shardedDocumentDatabase = documentDatabase as ShardedDocumentDatabase;
                 Configuration = configuration;
                 PerformanceHintsConfig = performanceHints;
 
@@ -1408,6 +1412,14 @@ namespace Raven.Server.Documents.Indexes
                                              $"with etag range '{lastProcessedTombstoneEtag} - {cutoff.Value}'.");
                     }
                 }
+            }
+
+            if (_shardedDocumentDatabase?.ShardingConfiguration.HasActiveMigrations() == true)
+            {
+                if (stalenessReasons == null)
+                    return true;
+
+                stalenessReasons.Add("There are active migrations of buckets between shards.");
             }
 
             return stalenessReasons?.Count > 0;
