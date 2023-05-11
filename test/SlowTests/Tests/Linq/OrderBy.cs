@@ -25,8 +25,8 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanDescOrderBy_AProjection(Options config)
         {
             using (var store = GetDocumentStore(config))
@@ -51,8 +51,8 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanAscOrderBy_AProjection(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Tests.Linq
         {
         }
 
-        [Fact]
-        public void QueryString_CaseSensitive_ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryString_CaseSensitive_ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -33,10 +35,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void QueryString_IgnoreCase_ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryString_IgnoreCase_ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -51,10 +54,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void QueryString_WithoutSpecifyingTheComparisonType_ShouldJustWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryString_WithoutSpecifyingTheComparisonType_ShouldJustWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -69,10 +73,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void QueryString_WithoutSpecifyingTheComparisonType_ShouldJustWork_InvertParametersOrder()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryString_WithoutSpecifyingTheComparisonType_ShouldJustWork_InvertParametersOrder(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -87,10 +92,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void RegularStringEqual_ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RegularStringEqual_ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -105,10 +111,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void ConstantStringEquals_ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ConstantStringEquals_ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -123,10 +130,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void StringEqualsConstant_ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StringEqualsConstant_ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -141,10 +149,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void StringEqualsConstant_IgnoreCase_ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StringEqualsConstant_IgnoreCase_ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -159,10 +168,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void StringEqualsConstant_CaseSensitive_ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StringEqualsConstant_CaseSensitive_ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -179,10 +189,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void RegularStringEqual_CaseSensitive_ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RegularStringEqual_CaseSensitive_ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 

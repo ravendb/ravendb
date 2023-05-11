@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Tests.Querying
         {
         }
 
-        [Fact]
-        public void WillSkipDuplicates()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void WillSkipDuplicates(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var indexDefinition = new IndexDefinitionBuilder<BlogPost>()
                 {
@@ -44,10 +46,11 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact]
-        public void WillNotSkipDuplicates()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void WillNotSkipDuplicates(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var indexDefinition = new IndexDefinitionBuilder<BlogPost>
                 {

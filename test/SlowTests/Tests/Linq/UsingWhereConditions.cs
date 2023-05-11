@@ -27,7 +27,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Use_Where(Options options)
         {
             using (var store = GetDocumentStore(options))

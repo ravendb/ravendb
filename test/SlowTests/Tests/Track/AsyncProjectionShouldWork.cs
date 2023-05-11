@@ -44,7 +44,7 @@ namespace SlowTests.Tests.Track
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void SyncWorks(Options options)
         {
             using (var store = GetDocumentStore(options))

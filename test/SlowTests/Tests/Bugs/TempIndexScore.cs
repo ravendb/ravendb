@@ -70,7 +70,7 @@ namespace SlowTests.Tests.Bugs
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void ScoreShouldBeAValidDoubleValue(Options options)
         {
             using (var store = SetupSampleData(options))
