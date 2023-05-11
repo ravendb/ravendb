@@ -16,10 +16,15 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Grep .Net version
+      run: |
+        dotnet_version=$(grep '<TargetFramework>' < src/Raven.Server/Raven.Server.csproj | tr -cd [:digit:].)
+        echo "DOTNET_VERSION=${dotnet_version}" >> $GITHUB_ENV
+
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '6.0'
+        dotnet-version: '${{ env.DOTNET_VERSION }}'
 
     - name: Install dependencies
       run: dotnet restore
