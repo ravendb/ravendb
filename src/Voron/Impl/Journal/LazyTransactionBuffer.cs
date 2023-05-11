@@ -79,10 +79,8 @@ namespace Voron.Impl.Journal
             tx.Environment.AllowDisposeWithLazyTransactionRunning(_readTransaction);
         }
 
-        public TimeSpan WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)
+        public void WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)
         {
-            TimeSpan writeToJournalDuration = default;
-
             if (_firstPositionInJournalFile != null)
             {
                 using (var tempTx = new TempPagerTransaction())
@@ -94,7 +92,7 @@ namespace Voron.Impl.Journal
                     _lazyTransactionPager.EnsureMapped(tempTx, 0, numberOfPages);
                     var src = _lazyTransactionPager.AcquirePagePointer(tempTx, 0);
                     var sp = Stopwatch.StartNew();
-                    writeToJournalDuration = journalFile.Write(_firstPositionInJournalFile.Value, src, _lastUsed4Kbs);
+                    journalFile.Write(_firstPositionInJournalFile.Value, src, _lastUsed4Kbs);
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info($"Writing lazy transaction buffer with {_lastUsed4Kbs / 4:#,#0} kb took {sp.Elapsed}");
@@ -111,8 +109,6 @@ namespace Voron.Impl.Journal
             _lastUsed4Kbs = 0;
             _readTransaction = null;
             NumberOfPages = 0;
-
-            return writeToJournalDuration;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

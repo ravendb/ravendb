@@ -18,7 +18,6 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Corax;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
@@ -2378,7 +2377,6 @@ namespace Raven.Server.Documents.Indexes
                             tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => IndexPersistence.CleanWritersIfNeeded();
 
                             tx.Commit();
-                            SlowWriteNotification.Notify(commitStats, DocumentDatabase);
                             stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
                         }
                     }

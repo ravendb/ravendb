@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Conventions;
@@ -8,6 +9,8 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
+using Sparrow.Server.Meters;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -20,44 +23,35 @@ namespace Raven.Server.NotificationCenter
         private Timer _timer;
         private bool _updateNotificationInStorageRequired;
         private readonly object _pagerCreationLock = new object();
-        private readonly ConcurrentDictionary<string, SlowWritesDetails.SlowWriteInfo> _slowWrites;
+        private readonly ConcurrentDictionary<string, SlowIoDetails.SlowWriteInfo> _slowWrites;
         private readonly Logger _logger;
+        private bool _shouldUpdateStorageKeys = true;
 
         public SlowWriteNotifications(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
         {
             _notificationCenter = notificationCenter;
             _notificationsStorage = notificationsStorage;
             _database = database;
-            _slowWrites = new ConcurrentDictionary<string, SlowWritesDetails.SlowWriteInfo>();
+            _slowWrites = new ConcurrentDictionary<string, SlowIoDetails.SlowWriteInfo>();
             _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
-        public void Add(string path, double dataSizeInMb, double durationInSec)
+        public void Add(IoChange ioChange)
         {
             var now = SystemTime.UtcNow;
 
-            if (_slowWrites.TryGetValue(path, out var info))
+            if (_slowWrites.TryGetValue(ioChange.Key, out var info))
             {
                 if (now - info.Date < UpdateFrequency)
                     return;
 
-                info.DataWrittenInMb = dataSizeInMb;
-                info.DurationInSec = durationInSec;
-                info.SpeedInMbPerSec = dataSizeInMb / durationInSec;
-                info.Date = now;
+                info.Update(ioChange, now);
             }
             else
             {
-                info = new SlowWritesDetails.SlowWriteInfo
-                {
-                    Path = path,
-                    DataWrittenInMb = dataSizeInMb,
-                    DurationInSec = durationInSec,
-                    SpeedInMbPerSec = dataSizeInMb / durationInSec,
-                    Date = now
-                };
+                info = new SlowIoDetails.SlowWriteInfo(ioChange, now);
 
-                _slowWrites.TryAdd(path, info);
+                _slowWrites.TryAdd(ioChange.Key, info);
             }
 
             _updateNotificationInStorageRequired = true;
@@ -81,15 +75,18 @@ namespace Raven.Server.NotificationCenter
                 if (_updateNotificationInStorageRequired == false)
                     return;
 
-                var hint = GetOrCreateSlowWrites(out var details);
+                var hint = GetOrCreateSlowIoPerformanceHint(out var details);
 
                 foreach (var info in _slowWrites)
                 {
                     details.Writes[info.Key] = info.Value;
                 }
 
-                if (details.Writes.Count > SlowWritesDetails.MaxNumberOfWrites)
-                    details.Writes = details.Writes.OrderBy(x => x.Value.Date).TakeLast(SlowWritesDetails.MaxNumberOfWrites).ToDictionary(x => x.Key, x => x.Value);
+                if (details.Writes.Count > SlowIoDetails.MaxNumberOfWrites)
+                    details.Writes = details.Writes
+                        .OrderBy(x => x.Value.Date)
+                        .TakeLast(SlowIoDetails.MaxNumberOfWrites)
+                        .ToDictionary(x => x.Key, x => x.Value);
 
                 _notificationCenter.Add(hint);
 
@@ -102,13 +99,13 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        internal SlowWritesDetails GetSlowWritesDetails()
+        internal SlowIoDetails GetSlowIoDetails()
         {
-            GetOrCreateSlowWrites(out var details);
+            GetOrCreateSlowIoPerformanceHint(out var details);
             return details;
         }
 
-        private PerformanceHint GetOrCreateSlowWrites(out SlowWritesDetails details)
+        private PerformanceHint GetOrCreateSlowIoPerformanceHint(out SlowIoDetails details)
         {
             const string source = "slow-writes";
 
@@ -116,13 +113,19 @@ namespace Raven.Server.NotificationCenter
 
             using (_notificationsStorage.Read(id, out var ntv))
             {
-                if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                if (ntv == null || 
+                    ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || 
+                    detailsJson == null)
                 {
-                    details = new SlowWritesDetails();
+                    details = new SlowIoDetails();
+                    _shouldUpdateStorageKeys = false;
                 }
                 else
                 {
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<SlowWritesDetails>(detailsJson);
+                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<SlowIoDetails>(detailsJson);
+
+                    // Modified the key structure from {Path} to {Type}/{Path} to support the inclusion of all IO metric types, not just JournalWrite entries.
+                    UpdateStorageKeysIfNeeded(details); 
                 }
 
                 return PerformanceHint.Create(
@@ -135,6 +138,23 @@ namespace Raven.Server.NotificationCenter
                     details
                 );
             }
+        }
+
+        private void UpdateStorageKeysIfNeeded(SlowIoDetails details)
+        {
+            if (_shouldUpdateStorageKeys == false)
+                return;
+
+            var oldWrites = details.Writes;
+            details.Writes = new Dictionary<string, SlowIoDetails.SlowWriteInfo>();
+
+            foreach (var oldWriteEntry in oldWrites.Where(kv => kv.Key == kv.Value.Path))
+            {
+                oldWriteEntry.Value.Type = IoMetrics.MeterType.JournalWrite;
+                details.Writes.Add(oldWriteEntry.Value.Key, oldWriteEntry.Value);
+            }
+
+            _shouldUpdateStorageKeys = false;
         }
 
         public void Dispose()

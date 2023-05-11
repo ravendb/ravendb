@@ -382,6 +382,7 @@ namespace Raven.Server.Documents
                     }
                 }, DatabaseShutdown);
                 _serverStore.LicenseManager.LicenseChanged += LoadTimeSeriesPolicyRunnerConfigurations;
+                IoChanges.OnIoChange += CheckWriteRateAndNotifyIfNecessary;
             }
             catch (Exception)
             {
@@ -910,6 +911,11 @@ namespace Raven.Server.Documents
             exceptionAggregator.Execute(() =>
             {
                 _serverStore.LicenseManager.LicenseChanged -= LoadTimeSeriesPolicyRunnerConfigurations;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                IoChanges.OnIoChange -= CheckWriteRateAndNotifyIfNecessary;
             });
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing MasterKey");
@@ -1806,6 +1812,15 @@ namespace Raven.Server.Documents
             {
                 // exception in raising an alert can't prevent us from unloading a database
             }
+        }
+
+        public void CheckWriteRateAndNotifyIfNecessary(IoChange ioChange)
+        {
+            if (ioChange.MeterItem.Duration.TotalMilliseconds < 500 ||  // we don't want to raise the error too often
+                ioChange.MeterItem.RateOfWritesInMbPerSec > 1) 
+                return;
+
+            NotificationCenter.SlowWrites.Add(ioChange);
         }
 
         public long GetEnvironmentsHash()
