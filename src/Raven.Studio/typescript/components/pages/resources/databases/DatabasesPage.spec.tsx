@@ -69,10 +69,9 @@ describe("DatabasesPage", function () {
     it("can render different access modes", async () => {
         const { screen } = rtlRender(<WithDifferentAccessLevel />);
 
-        expect(await screen.findAllByText(/Manage group/i)).toHaveLength(3);
-
         expect(await screen.findAllByText("9 Indexing errors")).toHaveLength(3);
 
+        expect(screen.queryByText(/Manage group/i)).not.toBeInTheDocument();
         expect(screen.queryByText(selectors.disableButton)).not.toBeInTheDocument();
         expect(screen.queryByText(selectors.enableButton)).not.toBeInTheDocument();
         expect(screen.queryByText(selectors.disableIndexing)).not.toBeInTheDocument();
