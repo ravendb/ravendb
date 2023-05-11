@@ -33,4 +33,15 @@ public class ShardingConfiguration
 
         return false;
     }
+
+    internal bool HasActiveMigrations()
+    {
+        foreach (var m in BucketMigrations)
+        {
+            if (m.Value.IsActive)
+                return true;
+        }
+
+        return false;
+    }
 }

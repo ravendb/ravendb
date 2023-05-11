@@ -80,13 +80,8 @@ namespace Raven.Server.ServerWide
         public bool HasActiveMigrations(string database)
         {
             var config = _serverStore.Cluster.ReadShardingConfiguration(database);
-            foreach (var m in config.BucketMigrations)
-            {
-                if (m.Value.IsActive) 
-                    return true;
-            }
 
-            return false;
+            return config.HasActiveMigrations();
         }
 
         public void ClearPublishedUrls()

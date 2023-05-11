@@ -11,7 +11,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands.Querying;
-using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Extensions;
@@ -59,7 +58,8 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
         var result = new ShardedQueryResult
         {
             Results = new List<BlittableJsonReaderObject>(),
-            ResultEtag = CombinedResultEtag
+            ResultEtag = CombinedResultEtag,
+            IsStale = HadActiveMigrationsBeforeQueryStarted
         };
 
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Check if we could handle this in streaming manner so we won't need to materialize all blittables and do Clone() here");
@@ -75,7 +75,7 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
 
             CombineExplanations(result, cmdResult);
             CombineTimings(shardNumber, cmdResult);
-            CombineSingleShardResultProperties(result, queryResult, _query.Metadata.IsDistinct);
+            CombineSingleShardResultProperties(result, queryResult);
 
             // For includes, we send the includes to all shards, then we merge them together. We do explicitly
             // support including from another shard, so we'll need to do that again for missing includes

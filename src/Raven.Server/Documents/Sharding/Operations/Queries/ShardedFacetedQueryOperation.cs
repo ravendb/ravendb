@@ -30,7 +30,8 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
     {
         var result = new FacetedQueryResult
         {
-            ResultEtag = CombinedResultEtag
+            ResultEtag = CombinedResultEtag,
+            IsStale = HadActiveMigrationsBeforeQueryStarted
         };
 
         var facets = new Dictionary<string, CombinedFacet>();
@@ -43,7 +44,7 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
 
             CombineExplanations(result, cmdResult);
             CombineTimings(shardNumber, cmdResult);
-            CombineSingleShardResultProperties(result, queryResult, isDistinct: false);
+            CombineSingleShardResultProperties(result, queryResult);
 
             if (queryResult.Includes is { Count: > 0 })
             {
