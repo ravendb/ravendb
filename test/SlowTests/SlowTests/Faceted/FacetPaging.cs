@@ -21,7 +21,7 @@ namespace SlowTests.SlowTests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc(Options options)
         {
             //also specify more results than we have
@@ -78,7 +78,7 @@ namespace SlowTests.SlowTests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedPagingSearchWithNoPageSizeWithMaxResults_HitsDesc(Options options)
         {
             //also specify more results than we have

@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,17 +14,17 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void QueryDateCompareTest()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryDateCompareTest(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
-                {
-                    var documentStore = (IDocumentStore)s;
-                    documentStore.OnBeforeQuery += (sender, beforeQueryExecutedArgs) => beforeQueryExecutedArgs.QueryCustomization.WaitForNonStaleResults();
-                }
-            }))
+                var documentStore = (IDocumentStore)s;
+                documentStore.OnBeforeQuery += (sender, beforeQueryExecutedArgs) => beforeQueryExecutedArgs.QueryCustomization.WaitForNonStaleResults();
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

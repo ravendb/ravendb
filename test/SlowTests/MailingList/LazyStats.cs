@@ -18,7 +18,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

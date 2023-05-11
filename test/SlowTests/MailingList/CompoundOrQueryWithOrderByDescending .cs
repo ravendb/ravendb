@@ -24,8 +24,8 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void ThreeOrClauses_works(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -70,8 +70,8 @@ namespace SlowTests.MailingList
         }
 
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void FourOrClauses_fails(Options options)
         {
             using (var store = GetDocumentStore(options))

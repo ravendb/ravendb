@@ -17,7 +17,7 @@ namespace SlowTests.SlowTests.Indexes
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WillNotProduceAnyErrors(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -35,8 +35,8 @@ https://www.talentous.comSenior consultantWorking as software architect and seni
             public string Name { get; set; }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQuery(Options options)
         {
             using(var store = GetDocumentStore(options))

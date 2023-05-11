@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +14,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void Where_clause_with_greater_than_or_less_than()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Where_clause_with_greater_than_or_less_than(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MyIndex().Execute(store);
 
@@ -30,17 +33,34 @@ namespace SlowTests.MailingList
                     var albums = session.Query<Album>().Customize(c => c.WaitForNonStaleResults()).ToList();
                     Assert.Equal(albums.Count, 4);
 
-                    var result1 = session.Query<MyIndex.ReduceResult, MyIndex>().Customize(c => c.WaitForNonStaleResults()).Where(i =>
+                    if (options.DatabaseMode == RavenDatabaseMode.Single)
+                    {
+                        var result1 = session.Query<MyIndex.ReduceResult, MyIndex>().Customize(c => c.WaitForNonStaleResults()).Where(i =>
                             i.Count == 4).ToList();
-                    Assert.Equal(result1.Count, 1);
+                        Assert.Equal(result1.Count, 1);
 
-                    var result2 = session.Query<MyIndex.ReduceResult, MyIndex>().Customize(c => c.WaitForNonStaleResults()).Where(i =>
+                        var result2 = session.Query<MyIndex.ReduceResult, MyIndex>().Customize(c => c.WaitForNonStaleResults()).Where(i =>
                             i.Count > 1).ToList();
-                    Assert.Equal(result2.Count, 1);
+                        Assert.Equal(result2.Count, 1);
 
-                    var result3 = session.Query<MyIndex.ReduceResult, MyIndex>().Customize(c => c.WaitForNonStaleResults()).Where(i =>
+                        var result3 = session.Query<MyIndex.ReduceResult, MyIndex>().Customize(c => c.WaitForNonStaleResults()).Where(i =>
                             i.Count < 5).ToList();
-                    Assert.Equal(result3.Count, 1);
+                        Assert.Equal(result3.Count, 1);
+                    }
+                    else
+                    {
+                        var result1 = session.Query<MyIndex.ReduceResult, MyIndex>().Customize(c => c.WaitForNonStaleResults()).Filter(i =>
+                            i.Count == 4).ToList();
+                        Assert.Equal(result1.Count, 1);
+
+                        var result2 = session.Query<MyIndex.ReduceResult, MyIndex>().Customize(c => c.WaitForNonStaleResults()).Filter(i =>
+                            i.Count > 1).ToList();
+                        Assert.Equal(result2.Count, 1);
+
+                        var result3 = session.Query<MyIndex.ReduceResult, MyIndex>().Customize(c => c.WaitForNonStaleResults()).Filter(i =>
+                            i.Count < 5).ToList();
+                        Assert.Equal(result3.Count, 1);
+                    }
                 }
             }
         }

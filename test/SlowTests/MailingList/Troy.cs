@@ -12,6 +12,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,10 +26,11 @@ namespace SlowTests.MailingList
 
         private DocumentStore _store;
 
-        [Fact]
-        public void QueryProductWithPhraseOrOtherTermsByDepartmentAndSwitchTermOrder()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryProductWithPhraseOrOtherTermsByDepartmentAndSwitchTermOrder(Options options)
         {
-            using (var store = CreateStore())
+            using (var store = CreateStore(options))
             using (var session = store.OpenSession())
             {
 
@@ -84,10 +86,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void QueryProductWithPhraseOrOtherTermsByDepartmentSeemsToBeAndSearch()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryProductWithPhraseOrOtherTermsByDepartmentSeemsToBeAndSearch(Options options)
         {
-            using (var store = CreateStore())
+            using (var store = CreateStore(options))
             using (var session = store.OpenSession())
             {
 
@@ -176,12 +179,10 @@ namespace SlowTests.MailingList
             };
         }
 
-        private DocumentStore CreateStore()
+        private DocumentStore CreateStore(Options options)
         {
-            _store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = ModifyStore
-            });
+            options.ModifyDocumentStore = ModifyStore;
+            _store = GetDocumentStore(options);
 
             // Create the Index
             new Product_Search().Execute(_store);

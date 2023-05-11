@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,12 +15,13 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void Projection_With_Multiple_Nested_Loads_Should_Not_Throw_Exception()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Projection_With_Multiple_Nested_Loads_Should_Not_Throw_Exception(Options options)
         {
             //https://10137960102884337581.googlegroups.com/attach/a47ae1f7c46d8/ProjectionNestedLoadExceptionTests.cs?part=0.2&view=1&vt=ANaJVrG8D8tAgKI01vVR3y1j2c8-6Mul6tmESdLbo0YG3w3ovm7Tzb1YQN5Rl-IDNc8l249MB40HXW76RnFBjd8irKij28ZAGFo2_Tqv9mGobBqeq7xYg8w
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

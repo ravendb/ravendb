@@ -24,7 +24,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void LoadAllStartingWithShouldNotLoadDeletedDocs(Options options)
         {
             using (var store = GetDocumentStore(options))

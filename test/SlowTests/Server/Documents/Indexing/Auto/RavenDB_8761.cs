@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -17,8 +18,8 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_group_by_array_values(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -145,10 +146,11 @@ namespace SlowTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public void Can_group_by_array_content()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_group_by_array_content(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 PutDocs(store);
 
@@ -199,7 +201,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                         }).OrderBy(x => x.Count).ToList(),
 
                         // document query
-                        session.Advanced.DocumentQuery<Order>().GroupBy(("Lines[].Product", GroupByMethod.Array)).SelectKey(projectedName: "Products").SelectCount().OrderBy("Count").OfType<ProductCount>().ToList()
+                        session.Advanced.DocumentQuery<Order>().GroupBy(("Lines[].Product", GroupByMethod.Array)).SelectKey(projectedName: "Products").SelectCount().OrderBy("Count", OrderingType.Long).OfType<ProductCount>().ToList()
                     })
                     {
                         Assert.Equal(2, products.Count);
@@ -231,7 +233,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             .SelectKey("Lines[].Product", "Products")
                             .SelectKey("ShipTo.Country", "Country")
                             .SelectCount()
-                            .OrderBy("Count")
+                            .OrderBy("Count", OrderingType.Long)
                             .OfType<ProductCount>()
                             .ToList()
                     })
@@ -267,7 +269,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             .SelectKey("Lines[].Product", "Products")
                             .SelectKey("Lines[].Quantity", "Quantities")
                             .SelectCount()
-                            .OrderBy("Count")
+                            .OrderBy("Count", OrderingType.Long)
                             .OfType<ProductCount>()
                             .ToList()
                     })

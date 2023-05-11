@@ -11,6 +11,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,22 +23,21 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void Can_Deserialize_IdentityUser()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_Deserialize_IdentityUser(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
+                s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
-                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                    CustomizeJsonSerializer = serializer =>
                     {
-                        CustomizeJsonSerializer = serializer =>
-                        {
-                            serializer.ObjectCreationHandling = ObjectCreationHandling.Auto;
-                        }
-                    };
-                }
-            }))
+                        serializer.ObjectCreationHandling = ObjectCreationHandling.Auto;
+                    }
+                };
+            };
+            using (var store = GetDocumentStore(options))
             {
                 using (IDocumentSession session = store.OpenSession())
                 {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,17 +19,16 @@ namespace SlowTests.MailingList
         private Guid _privateKey;
 
 
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
-                {
-                    s.Conventions.TransformTypeCollectionNameToDocumentIdPrefix = tag => tag;
-                    s.Conventions.FindCollectionName = type => type.Name;
-                }
-            }))
+                s.Conventions.TransformTypeCollectionNameToDocumentIdPrefix = tag => tag;
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 new LogEntryCountByDate().Execute(store);
                 using (var session = store.OpenSession())

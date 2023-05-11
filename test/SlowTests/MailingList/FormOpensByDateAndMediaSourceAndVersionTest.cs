@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 InitData(store);
                 using (var session = store.OpenSession())
@@ -33,10 +35,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Should_return_18_after_aggregation()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_return_18_after_aggregation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 InitData(store);
                 IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
@@ -53,10 +56,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Should_return_12_after_aggregating_all_GOO()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_return_12_after_aggregating_all_GOO(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 InitData(store);
                 IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
@@ -74,10 +78,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Should_return_3_after_aggregating_all_GOO_Version_5_on_20120902()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_return_3_after_aggregating_all_GOO_Version_5_on_20120902(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 InitData(store);
                 IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
