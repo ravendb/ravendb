@@ -106,8 +106,7 @@ const TemplatePanel = (args: { loadingActive: boolean }) => {
                             <Icon icon="warning" /> Errors
                         </div>
                         <div>
-                            <Icon icon="changes" />
-                            Status
+                            <Icon icon="changes" /> State
                         </div>
                     </DistributionLegend>
 

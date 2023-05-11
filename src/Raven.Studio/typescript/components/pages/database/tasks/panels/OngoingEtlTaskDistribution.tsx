@@ -94,8 +94,7 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
                         <Icon icon="warning" /> Error
                     </div>
                     <div>
-                        <Icon icon="changes" />
-                        Status
+                        <Icon icon="changes" /> State
                     </div>
                 </DistributionLegend>
                 {items}

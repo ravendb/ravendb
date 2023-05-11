@@ -52,13 +52,25 @@ function ChangeVectorInfo(props: ChangeVectorInfoProps) {
                 </div>
                 {Object.keys(info.changeVectorForNextBatchStartingPointPerShard).map((shard) => {
                     const vector = info.changeVectorForNextBatchStartingPointPerShard[shard];
+                    const vectorItems = vector.split(",");
                     return (
                         <div key={shard} className="change-vector-grid">
-                            <div>
+                            <div className="change-vector-label">
                                 <Icon icon="shard" color="shard" className="m-0" />
                                 <strong>#{shard}</strong>
                             </div>
-                            <div className="change-vector-item">{vector}</div>
+                            <div className="change-vector-item">
+                                {vectorItems.map((item, index) => (
+                                    <React.Fragment key={index}>
+                                        {index > 0 && (
+                                            <span>
+                                                ,<br />
+                                            </span>
+                                        )}
+                                        {item.trim()}
+                                    </React.Fragment>
+                                ))}
+                            </div>
                         </div>
                     );
                 })}
@@ -67,9 +79,21 @@ function ChangeVectorInfo(props: ChangeVectorInfoProps) {
     }
 
     if (info.changeVectorForNextBatchStartingPoint) {
+        const vectorTrim = info.changeVectorForNextBatchStartingPoint.split(",");
         return (
             <div className="p-3 change-vector-popover">
-                <div className="change-vector-item">{info.changeVectorForNextBatchStartingPoint}</div>
+                <div className="change-vector-item">
+                    {vectorTrim.map((item, index) => (
+                        <React.Fragment key={index}>
+                            {index > 0 && (
+                                <span>
+                                    ,<br />
+                                </span>
+                            )}
+                            {item.trim()}
+                        </React.Fragment>
+                    ))}
+                </div>
             </div>
         );
     }

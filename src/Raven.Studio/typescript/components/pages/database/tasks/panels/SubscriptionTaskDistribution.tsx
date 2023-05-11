@@ -85,8 +85,7 @@ export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionPr
                         <Icon icon="warning" /> Error
                     </div>
                     <div>
-                        <i />
-                        Status
+                        <Icon icon="changes" /> State
                     </div>
                 </DistributionLegend>
                 {items}
