@@ -31,6 +31,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
     public enum OngoingTaskState
     {
+        None,
         Enabled,
         Disabled,
         PartiallyEnabled
@@ -115,6 +116,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             {
                 TaskName = state.SubscriptionName,
                 TaskId = state.SubscriptionId,
+                TaskState = state.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 Query = state.Query,
                 ChangeVectorForNextBatchStartingPoint = state.ChangeVectorForNextBatchStartingPoint,
                 ChangeVectorForNextBatchStartingPointPerShard = state.ShardingState?.ChangeVectorForNextBatchStartingPointPerShard,
