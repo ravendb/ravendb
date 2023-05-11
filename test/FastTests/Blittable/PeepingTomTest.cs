@@ -36,6 +36,7 @@ namespace FastTests.Blittable
         [InlineDataWithRandomSeed]
         [InlineData(1291481720)]
         [InlineData(916490010)]
+        [InlineData(548492993)]
         public void PeepingTomStreamShouldPeepCorrectlyWithRandomValues(int seed)
         {
             var random = new Random(seed);
@@ -45,7 +46,7 @@ namespace FastTests.Blittable
             {
                 for (int i = 0; i < 10; i++)
                 {
-                    var originalSize = random.Next(0, 128 * 1024);
+                    var originalSize = random.Next(1, 128 * 1024);
                     var chunkSizeToRead = random.Next(1, originalSize);
                     var offset = chunkSizeToRead / 4;
                     PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, seed, context, cts.Token);

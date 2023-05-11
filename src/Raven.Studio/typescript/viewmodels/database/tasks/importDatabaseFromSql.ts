@@ -301,7 +301,7 @@ class importDatabaseFromSql extends viewModelBase {
     }
     
     migrate() {
-        const firstWithDuplicates = this.model.tables().find(x => x.hasDuplicateProperties());
+        const firstWithDuplicates = this.model.tables().filter(x => x.checked()).find(x => x.hasDuplicateProperties());
         if (firstWithDuplicates) {
             this.goToTable(firstWithDuplicates);
             return;
