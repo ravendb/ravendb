@@ -453,11 +453,16 @@ namespace SlowTests.Issues
                 // add doc
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Store(new Company { Name = "CF", ExternalId = "companies/cf" });
+                    session.Store(new Company { Name = "CF", ExternalId = "companies/cf" }, "foo/bar");
 
                     session.SaveChanges();
                 }
                 
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var c = session.Load<Company>("foo/bar"); // ensure the document is propagated to the database
+                    Assert.NotNull(c);
+                }
                 if (options.DatabaseMode is RavenDatabaseMode.Single)
                 {
                     store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAny((_, staleness) =>
@@ -517,10 +522,16 @@ namespace SlowTests.Issues
                 // add doc and compare
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Store(new Company { Name = "HR", ExternalId = "companies/hr" });
+                    session.Store(new Company { Name = "HR", ExternalId = "companies/hr" }, "foo/bar/2");
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", "Cesarea");
 
                     session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var c = session.Load<Company>("foo/bar/2"); // ensure the document is propagated to the database
+                    Assert.NotNull(c);
                 }
 
                 if (options.DatabaseMode is RavenDatabaseMode.Single)
@@ -542,12 +553,10 @@ namespace SlowTests.Issues
 
                 store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAll((_, staleness) => Assert.False(staleness.IsStale));
 
-                store.Maintenance.ForTesting(() => new GetTermsOperation(indexName, "City", null)).AssertAny((_, terms) =>
-                {
-                    Assert.Equal(2, terms.Length);
-                    Assert.Contains("torun", terms);
-                    Assert.Contains("cesarea", terms);
-                });
+                var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("torun", terms);
+                Assert.Contains("cesarea", terms);
 
                 store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
@@ -578,12 +587,13 @@ namespace SlowTests.Issues
 
                 store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAll((_, staleness) => Assert.False(staleness.IsStale));
 
-                store.Maintenance.ForTesting(() => new GetTermsOperation(indexName, "City", null)).AssertAny((_, terms) =>
-                {
-                    Assert.Equal(2, terms.Length);
-                    Assert.Contains("torun", terms);
-                    Assert.Contains("hadera", terms);
-                });
+                
+                store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAll((_, staleness) => Assert.False(staleness.IsStale));
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("torun", terms);
+                Assert.Contains("hadera", terms);
 
                 store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
@@ -614,11 +624,9 @@ namespace SlowTests.Issues
 
                 store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAll((_, staleness) => Assert.False(staleness.IsStale));
 
-                store.Maintenance.ForTesting(() => new GetTermsOperation(indexName, "City", null)).AssertAny((_, terms) =>
-                {
-                    Assert.Equal(1, terms.Length);
-                    Assert.Contains("torun", terms);
-                });
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("torun", terms);
                 
                 // live add compare without stopping indexing
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -634,12 +642,10 @@ namespace SlowTests.Issues
 
                 store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName)).AssertAll((_, staleness) => Assert.False(staleness.IsStale));
 
-                store.Maintenance.ForTesting(() => new GetTermsOperation(indexName, "City", null)).AssertAny((_, terms) =>
-                {
-                    Assert.Equal(2, terms.Length);
-                    Assert.Contains("torun", terms);
-                    Assert.Contains("tel aviv", terms);
-                });
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("torun", terms);
+                Assert.Contains("tel aviv", terms);
             }
         }
 
