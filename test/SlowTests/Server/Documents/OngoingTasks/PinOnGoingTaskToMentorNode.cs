@@ -134,7 +134,10 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             });
 
             var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive,CancellationToken.None);
-            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(10)), $"{Cluster.CollectLogs(revivedServer)}");
+            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(10)), 
+                $"{Cluster.CollectLogs(revivedServer)}{Environment.NewLine}" +
+                $"prev: {waitForNotPassive.Status}, current: {revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive,CancellationToken.None).Status}");
+
             using (var session = src.OpenSession())
             {
                 session.Store(new User()
