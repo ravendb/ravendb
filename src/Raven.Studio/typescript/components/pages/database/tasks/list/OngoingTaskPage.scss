@@ -12,13 +12,16 @@
 .change-vector-popover {
     .change-vector-grid {
         display: grid;
-        grid-template-columns: 60px auto;
+        grid-template-columns: 70px auto;
+        gap: sizes.$gutter-xs;
         &:not(:first-of-type) {
             margin-top: sizes.$gutter-xs;
         }
     }
 
-    .change-vector-item {
+    .change-vector-item,
+    .change-vector-label {
+        overflow-wrap: anywhere;
         line-height: 1rem;
     }
 }

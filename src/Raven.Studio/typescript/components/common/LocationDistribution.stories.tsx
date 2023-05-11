@@ -31,8 +31,7 @@ const Template = (args: { withSummary: boolean; withLegend: boolean }) => {
                         <Icon icon="warning" /> Errors
                     </div>
                     <div>
-                        <Icon icon="changes" />
-                        Status
+                        <Icon icon="changes" /> State
                     </div>
                 </DistributionLegend>
             )}

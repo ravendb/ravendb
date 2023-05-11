@@ -134,8 +134,7 @@ export function IndexDistribution(props: IndexDistributionProps) {
                     <Icon icon="warning" /> Errors
                 </div>
                 <div>
-                    <Icon icon="changes" />
-                    Status
+                    <Icon icon="changes" /> State
                 </div>
             </DistributionLegend>
             <DistributionSummary>
