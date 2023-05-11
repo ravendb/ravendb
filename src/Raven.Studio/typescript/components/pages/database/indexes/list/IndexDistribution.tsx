@@ -208,7 +208,7 @@ function getState(index: IndexSharedInfo) {
 }
 
 function getIcon(index: IndexSharedInfo): IconName {
-    if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details.state === "Error")) {
+    if (index.nodesInfo.some((x) => x.status === "failure" || x.details?.faulty || x.details?.state === "Error")) {
         return "cancel";
     }
     if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
