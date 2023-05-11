@@ -25,7 +25,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection(Options options)
         {
             var blogOne = new Blog

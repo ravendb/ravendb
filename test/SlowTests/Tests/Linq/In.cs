@@ -59,7 +59,7 @@ namespace SlowTests.Tests.Linq
         private readonly Guid userId = new Guid("dc89a428-7eb2-428c-bc97-99763db25f9a");
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WithNotEmptyObjectsArray(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -97,7 +97,7 @@ namespace SlowTests.Tests.Linq
         private readonly string[] _users = { "a-A 1", " -", "- " };
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryEvilDashStrings(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -117,7 +117,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WithNotEmptyGuidsArray(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -189,7 +189,7 @@ namespace SlowTests.Tests.Linq
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WithEmptyGuidsArray(Options options)
         {
             using (var store = GetDocumentStore(options))

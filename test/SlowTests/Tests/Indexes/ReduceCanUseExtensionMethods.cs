@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,10 +29,11 @@ namespace SlowTests.Tests.Indexes
 #pragma warning restore 649
         }
 
-        [Fact]
-        public void CanUseExtensionMethods()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseExtensionMethods(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var indexDefinition = new IndexDefinitionBuilder<InputData, Result>()
                 {

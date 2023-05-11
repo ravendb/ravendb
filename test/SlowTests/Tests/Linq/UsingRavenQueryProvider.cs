@@ -94,10 +94,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Can_perform_First_and_FirstOrDefault_Query()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_perform_First_and_FirstOrDefault_Query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -132,10 +133,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Can_perform_Single_and_SingleOrDefault_Query()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_perform_Single_and_SingleOrDefault_Query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -176,10 +178,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Can_perform_Boolean_Queries()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_perform_Boolean_Queries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string indexName = "UserIndex";
                 using (var session = store.OpenSession())
@@ -221,14 +224,15 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Can_perform_DateTime_Comparison_Queries()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_perform_DateTime_Comparison_Queries(Options options)
         {
             DateTime firstTime = SystemTime.UtcNow;
             DateTime secondTime = firstTime.AddMonths(1);  // use .AddHours(1) to get a second bug, timezone related
             DateTime thirdTime = secondTime.AddMonths(1);  // use .AddHours(1) to get a second bug, timezone related
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string indexName = "UserIndex";
                 using (var session = store.OpenSession())
@@ -290,10 +294,12 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact] // See issue #105 (http://github.com/ravendb/ravendb/issues/#issue/105)
-        public void Does_Not_Ignore_Expressions_Before_Where()
+        // See issue #105 (http://github.com/ravendb/ravendb/issues/#issue/105)
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Does_Not_Ignore_Expressions_Before_Where(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -326,10 +332,12 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
-        public void Can_Use_Static_Fields_In_Where_Clauses()
+        // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Use_Static_Fields_In_Where_Clauses(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -372,9 +380,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        public void Can_Use_Static_Properties_In_Where_Clauses()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Use_Static_Properties_In_Where_Clauses(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -406,10 +416,12 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
-        public void Can_use_inequality_to_compare_dates()
+        // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_use_inequality_to_compare_dates(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -446,11 +458,13 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact] // See issue #91 http://github.com/ravendb/ravendb/issues/issue/91 and 
+        // See issue #91 http://github.com/ravendb/ravendb/issues/issue/91 and 
         //discussion here http://groups.google.com/group/ravendb/browse_thread/thread/3df57d19d41fc21
-        public void Can_do_projection_in_query_result()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_do_projection_in_query_result(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 

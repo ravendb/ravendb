@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,11 +17,12 @@ namespace SlowTests.Tests.Linq
         {
         }
 
-        [Fact]
-        public void DynamicQueryWillInterpretFieldNamesProperly()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void DynamicQueryWillInterpretFieldNamesProperly(Options options)
         {
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())

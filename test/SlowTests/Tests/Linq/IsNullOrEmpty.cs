@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
@@ -16,10 +17,11 @@ namespace SlowTests.Tests.Linq
             public string SomeProperty { get; set; }
         }
 
-        [Fact]
-        public void IsNullOrEmptyEqTrue()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IsNullOrEmptyEqTrue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -36,10 +38,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void IsNullOrEmptyEqFalse()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IsNullOrEmptyEqFalse(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -56,10 +59,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void IsNullOrEmptyNegated()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IsNullOrEmptyNegated(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -76,10 +80,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void WithAny()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WithAny(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -96,10 +101,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void WithAnyEqFalse()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WithAnyEqFalse(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
@@ -16,10 +17,11 @@ namespace SlowTests.Tests.Linq
             public string SomeProperty { get; set; }
         }
 
-        [Fact]
-        public void CanQueryWithNot()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithNot(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -34,10 +36,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void CanQueryWithOr()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithOr(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -54,10 +57,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void CanQueryWithAnd()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithAnd(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

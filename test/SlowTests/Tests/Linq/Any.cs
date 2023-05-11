@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Util;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,10 +22,11 @@ namespace SlowTests.Tests.Linq
             public List<string> StringList { get; set; }
         }
 
-        [Fact]
-        public void CanQueryArrayWithAny()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryArrayWithAny(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -44,10 +46,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void CanCountWithAny()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCountWithAny(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -64,10 +67,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void CanCountWithLengthGreaterThenZero()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCountWithLengthGreaterThenZero(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -87,10 +91,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void CanCountWithCountGreaterThenZero()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCountWithCountGreaterThenZero(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -113,10 +118,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void EmptyArraysShouldBeCountedProperlyWhenUsingAny()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void EmptyArraysShouldBeCountedProperlyWhenUsingAny(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -133,10 +139,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void CanCountNullArraysWithAnyIfHaveAnotherPropertyStoredInTheIndex()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCountNullArraysWithAnyIfHaveAnotherPropertyStoredInTheIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -158,10 +165,11 @@ namespace SlowTests.Tests.Linq
             public DateTime Order { get; set; }
         }
 
-        [Fact]
-        public void NullRefWhenQuerying()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NullRefWhenQuerying(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
