@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,11 +19,12 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void TestSortBys()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TestSortBys(Options options)
         {
             var values = new int[] { 3, 20, 100 };
-            using(var store = GetDocumentStore())
+            using(var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

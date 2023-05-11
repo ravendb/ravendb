@@ -2,6 +2,7 @@
 using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void CanQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new TestDocumentByName());
                 using (var session = store.OpenSession())
@@ -44,10 +46,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanQuery2()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQuery2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new TestDocumentByName());
                 using (var session = store.OpenSession())
@@ -77,10 +80,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanUseToCharArrayInsideProjection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseToCharArrayInsideProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

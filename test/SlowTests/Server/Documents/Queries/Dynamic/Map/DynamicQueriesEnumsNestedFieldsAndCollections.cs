@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,10 +16,11 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         {
         }
 
-        [Fact]
-        public async Task Query_on_enum()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Query_on_enum(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -51,10 +53,11 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Query_on_nested_field()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Query_on_nested_field(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -96,10 +99,11 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Query_on_collection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Query_on_collection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -166,8 +170,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                     orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Lines.Any(y => y.PricePerUnit >= 10)).ToList();
 
                     Assert.Equal(2, orders.Count);
-                    Assert.Equal("orders/1", orders[0].Id);
-                    Assert.Equal("orders/2", orders[1].Id);
+                    Assert.Contains("orders/1", orders.Select(x => x.Id));
+                    Assert.Contains("orders/2", orders.Select(x => x.Id));
                 }
             }
         }

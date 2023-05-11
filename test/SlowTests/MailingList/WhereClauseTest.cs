@@ -7,6 +7,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void ATest()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ATest(Options options)
         {
-            using (var ds = GetDocumentStore())
+            using (var ds = GetDocumentStore(options))
             {
                 using (IDocumentSession session = ds.OpenSession())
                 {

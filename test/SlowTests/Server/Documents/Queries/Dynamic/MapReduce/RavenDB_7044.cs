@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         {
         }
 
-        [Fact]
-        public void Can_filter_by_property_of_composite_group_by_key()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_filter_by_property_of_composite_group_by_key(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var today = DateTime.UtcNow;
                 var tomorrow = today.AddDays(1);

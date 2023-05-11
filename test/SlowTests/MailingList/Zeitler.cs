@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,11 +23,12 @@ namespace SlowTests.MailingList
             public DateTimeOffset LastModified { get; set; }
         }
 
-        [Fact]
-        public void AddTest()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void AddTest(Options options)
         {
             // want a green test? comment this	
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.Initialize();
 

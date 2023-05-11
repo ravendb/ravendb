@@ -6,6 +6,7 @@ using System.Runtime.Serialization;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -74,16 +75,15 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void GetDummyDoc()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void GetDummyDoc(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
-                {
-                    s.Conventions.SaveEnumsAsIntegers = true;
-                }
-            }))
+                s.Conventions.SaveEnumsAsIntegers = true;
+            };
+            using (var store = GetDocumentStore(options))
             {
                 new MyDocIndex().Execute(store);
 

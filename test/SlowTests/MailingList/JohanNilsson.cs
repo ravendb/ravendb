@@ -4,6 +4,7 @@ using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
@@ -30,26 +31,26 @@ namespace SlowTests.MailingList
             public string ImportantProperty { get; set; }
         }
 
-        [Fact]
-        public void WithCustomizedTagNameAndIdentityProperty()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void WithCustomizedTagNameAndIdentityProperty(Options options)
         {
-            var id = string.Empty;
-            using (var store = GetDocumentStore(new Options()
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
-                {
-                    var defaultFindIdentityProperty = s.Conventions.FindIdentityProperty;
-                    s.Conventions.FindIdentityProperty = property =>
+                var defaultFindIdentityProperty = s.Conventions.FindIdentityProperty;
+                s.Conventions.FindIdentityProperty = property =>
                     typeof(IEntity).IsAssignableFrom(property.DeclaringType)
-                      ? property.Name == "Id2"
-                      : defaultFindIdentityProperty(property);
+                        ? property.Name == "Id2"
+                        : defaultFindIdentityProperty(property);
 
-                    s.Conventions.FindCollectionName = type =>
-                                                    typeof(IDomainObject).IsAssignableFrom(type)
-                                                        ? "domainobjects"
-                                                        : DocumentConventions.DefaultGetCollectionName(type);
-                }
-            }))
+                s.Conventions.FindCollectionName = type =>
+                    typeof(IDomainObject).IsAssignableFrom(type)
+                        ? "domainobjects"
+                        : DocumentConventions.DefaultGetCollectionName(type);
+            };
+
+            var id = string.Empty;
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

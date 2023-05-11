@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,14 +21,15 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void UsingInQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void UsingInQuery(Options options)
         {
             var id1 = Guid.Parse("00000000-0000-0000-0000-000000000001").ToString();
             var id2 = Guid.Parse("00000000-0000-0000-0000-000000000002").ToString();
             var id3 = Guid.Parse("00000000-0000-0000-0000-000000000003").ToString();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

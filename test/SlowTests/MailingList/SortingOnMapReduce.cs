@@ -8,6 +8,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,10 +31,11 @@ namespace SlowTests.MailingList
             public long Count { get; set; }
         }
 
-        [Fact]
-        public void MapReduceSortingBug()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void MapReduceSortingBug(Options options)
         {
-            using (var ds = GetDocumentStore())
+            using (var ds = GetDocumentStore(options))
             {
                 ds.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition

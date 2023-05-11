@@ -15,7 +15,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQuery2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
         }
         
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQuery(Options options)
         {
             using (var store = GetDocumentStore(options))

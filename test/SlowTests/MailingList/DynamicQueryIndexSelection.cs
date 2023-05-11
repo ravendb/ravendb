@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,11 +17,12 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void DynamicQueryShouldNotChooseStaticIndex_TheyCanBeSatisfiedOnlyByAutoIndexes()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void DynamicQueryShouldNotChooseStaticIndex_TheyCanBeSatisfiedOnlyByAutoIndexes(Options options)
         {
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 // With the proper fix in RavenQueryProviderProcessor<T>.GetMember(Expression expression), this should produce member paths like

@@ -27,10 +27,11 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void Different_ways_of_loading_same_projection_should_give_equivalent_results()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Different_ways_of_loading_same_projection_should_give_equivalent_results(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

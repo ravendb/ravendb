@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -72,10 +73,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void PatchShouldWorkCorrectly()
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void PatchShouldWorkCorrectly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new Proficiencies_ConsultantId());
 

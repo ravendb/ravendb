@@ -8,6 +8,7 @@ using System.Reflection;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,10 +25,11 @@ namespace SlowTests.MailingList
         /// and if you turn on "Break on all Errors", you'll see
         /// some interesting exceptions
         /// </summary>
-        [Fact]
-        public void GetAllRecordsWithXtraFields()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void GetAllRecordsWithXtraFields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new FakeObjsIndex().Execute(store);
                 using (var session = store.OpenSession())

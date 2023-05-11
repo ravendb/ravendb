@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         {
         }
 
-        [Fact]
-        public void Cannot_filter_if_field_isnt_aggregation_nor_part_of_group_by_key()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Cannot_filter_if_field_isnt_aggregation_nor_part_of_group_by_key(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -29,10 +31,11 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
-        [Fact]
-        public void Queries_specifying_different_ordering_in_group_by_should_be_handled_by_the_same_index()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Queries_specifying_different_ordering_in_group_by_should_be_handled_by_the_same_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

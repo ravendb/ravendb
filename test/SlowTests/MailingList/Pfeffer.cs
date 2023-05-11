@@ -4,6 +4,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,14 +25,13 @@ namespace SlowTests.MailingList
             return true;
         }
 
-        [Fact]
-        public void QueryingUsingObjects()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void QueryingUsingObjects(Options options)
         {
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = documentStore =>
-                   documentStore.Conventions.RegisterQueryValueConverter<object>(TryConvertValueForQueryDelegate, RangeType.None)
-            }))
+            options.ModifyDocumentStore = documentStore =>
+                documentStore.Conventions.RegisterQueryValueConverter<object>(TryConvertValueForQueryDelegate, RangeType.None);
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
 
