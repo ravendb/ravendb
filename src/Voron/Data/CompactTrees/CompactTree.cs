@@ -465,6 +465,8 @@ namespace Voron.Data.CompactTrees
             return true;
         }
 
+        public long DictionaryId => State.TreeDictionaryId;
+
         public void InitializeStateForTryGetNextValue()
         {
             _internalCursor._pos = -1;
