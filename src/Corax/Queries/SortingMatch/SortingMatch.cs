@@ -258,144 +258,45 @@ namespace Corax.Queries
 
             TotalResults = 0;
 
-            // if (_orderMetadata.HasBoost)
-            // {
-            //     _fillFunc = SortBy<BoostingScorer, (long, float), EntryComparerByScore>(orderMetadata);
-            // }
-            // else
+            if (_orderMetadata.HasBoost)
+            {
+                _fillFunc = SortBy<EntryComparerByScore>(orderMetadata);
+            }
+            else
             {
                 _fillFunc = _orderMetadata.FieldType switch
                 {
-                    MatchCompareFieldType.Sequence => SortBy<TermsScorer, long, EntryComparerByTerm>(orderMetadata),
-                    MatchCompareFieldType.Alphanumeric => SortBy<TermsScorer, long, EntryComparerByTermAlphaNumeric>(orderMetadata),
-                    MatchCompareFieldType.Integer => SortBy<TermsScorer, long, EntryComparerByLong>(orderMetadata),
-                    MatchCompareFieldType.Floating => SortBy<TermsScorer, long, EntryComparerByDouble>(orderMetadata),
-                    // MatchCompareFieldType.Spatial => SortBy<TermsScorer, long, EntryComparerBySpatial>(orderMetadata),
+                    MatchCompareFieldType.Sequence => SortBy<EntryComparerByTerm>(orderMetadata),
+                    MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric>(orderMetadata),
+                    MatchCompareFieldType.Integer => SortBy<EntryComparerByLong>(orderMetadata),
+                    MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble>(orderMetadata),
+                    MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial>(orderMetadata),
                     _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
                 };
             }
         }
         
-        private interface IScorer<TItem>
-            where TItem : unmanaged
-        {
-            void Init(ref SortingMatch<TInner> match, int length);
-            void ComputeMatchScores(ref SortingMatch<TInner> match, Span<long> matches, int read);
-            TItem GetItemFor(long entryId, int index);
-        }
-
-        private struct TermsScorer : IScorer<long>, IDisposable
-        {
-            public void Init(ref SortingMatch<TInner> match, int length)
-            {
-                
-            }
-
-            public void ComputeMatchScores(ref SortingMatch<TInner> match, Span<long> matches, int read)
-            {
-                
-            }
-
-            public long GetItemFor(long entryId, int index)
-            {
-                return entryId;
-            }
-
-            public void Dispose()
-            {
-                
-            }
-        }
-
-        private struct BoostingScorer : IScorer<(long, float)>, IDisposable
-        {
-            private ByteStringContext<ByteStringMemoryCache>.InternalScope _bufferHandler;
-            private float* _scoresBuffer;
-            private int _length;
-
-            public void Init(ref SortingMatch<TInner> match, int length)
-            {
-                _bufferHandler = match._searcher.Allocator.Allocate(length * sizeof(float), out var buffer);
-                _scoresBuffer = (float*)buffer.Ptr;
-                _length = length;
-            }
-            
-            public void ComputeMatchScores(ref SortingMatch<TInner> match, Span<long> matches, int read)
-            {
-                Debug.Assert(_length == matches.Length);
-
-                var readScores = new Span<float>(_scoresBuffer, read);
-
-                // We have to initialize the score buffer with a positive number to ensure that multiplication (document-boosting) is taken into account when BM25 relevance returns 0 (for example, with AllEntriesMatch).
-                readScores.Fill(Bm25Relevance.InitialScoreValue);
-
-                // We perform the scoring process. 
-                match._inner.Score(matches[..read], readScores, 1f);
-
-                // If we need to do documents boosting then we need to modify the based on documents stored score. 
-                if (match._searcher.DocumentsAreBoosted)
-                {
-                    // We get the boosting tree and go to check every document. 
-                    var tree = match._searcher.GetDocumentBoostTree();
-                    if (tree is { NumberOfEntries: > 0 })
-                    {
-                        // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
-                        ref var scoresRef = ref MemoryMarshal.GetReference(readScores);
-                        ref var matchesRef = ref MemoryMarshal.GetReference(matches);
-                        for (int idx = 0; idx < matches.Length; idx++)
-                        {
-                            var ptr = (float*)tree.ReadPtr(Unsafe.Add(ref matchesRef, idx), out var _);
-                            if (ptr == null)
-                                continue;
-
-                            ref var scoresIdx = ref Unsafe.Add(ref scoresRef, idx);
-                            scoresIdx *= *ptr;
-                        }
-                    }
-                }
-            }
-
-            public (long, float) GetItemFor(long entryId, int index)
-            {
-                return (entryId, _scoresBuffer[index]);
-            }
-
-            public EntryComparerByScore GetComparer(ref SortingMatch<TInner> match)
-            {
-                return new EntryComparerByScore();
-            }
-
-            public void Dispose()
-            {
-                _bufferHandler.Dispose();
-            }
-        }
-
-
-        private static delegate*<ref SortingMatch<TInner>, Span<long>, int> SortBy<TScorer, TItem, TEntryComparer>(OrderMetadata metadata)
-            where TScorer : struct, IScorer<TItem>, IDisposable
-            where TItem : unmanaged
-            where TEntryComparer : struct, IComparerInit, IComparer<UnmanagedSpan>
+        
+        private static delegate*<ref SortingMatch<TInner>, Span<long>, int> SortBy<TEntryComparer>(OrderMetadata metadata)
+            where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
         {
             if (metadata.Ascending)
             {
-                return &Fill<TScorer, TItem, TEntryComparer>;
+                return &Fill<TEntryComparer>;
             }
 
-            return &Fill<TScorer, TItem, Descending<TEntryComparer>>;
+            return &Fill<Descending<TEntryComparer>>;
         }
 
 
-        private static int Fill<TScorer,TItem, TEntryComparer>(ref SortingMatch<TInner> match, Span<long> matches)
-            where TScorer : struct, IScorer<TItem>, IDisposable
-            where TItem : unmanaged
-            where TEntryComparer : struct, IComparerInit, IComparer<UnmanagedSpan>
+        private static int Fill<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> matches)
+            where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
         {
             // This method should also be re-entrant for the case where we have already pre-sorted everything and 
             // we will just need to acquire via pages the totality of the results. 
             if (match._results.Count == NotStarted)
             {
-                FillAndSortResults<TItem, TEntryComparer>(ref match);
+                FillAndSortResults<TEntryComparer>(ref match);
             }
 
             var read = match._results.CopyTo(matches);
@@ -409,8 +310,8 @@ namespace Corax.Queries
             return 0;
         }
 
-        private struct Descending<TInnerCmp> : IComparerInit, IComparer<UnmanagedSpan> 
-            where TInnerCmp : struct,  IComparerInit, IComparer<UnmanagedSpan>
+        private struct Descending<TInnerCmp> : IEntryComparer, IComparer<UnmanagedSpan> 
+            where TInnerCmp : struct,  IEntryComparer, IComparer<UnmanagedSpan>
         {
             private TInnerCmp cmp;
 
@@ -419,9 +320,16 @@ namespace Corax.Queries
                 cmp = new();
             }
 
-            public Lookup<long> Init(ref SortingMatch<TInner> match)
+            public void Init(ref SortingMatch<TInner> match)
             {
-                return cmp.Init(ref match);
+                cmp.Init(ref match);
+            }
+
+            public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+                UnmanagedSpan* batchTerms,
+                bool descending = false)
+            {
+                return cmp.SortBatch(match: ref match, llt: llt, pageLocator: pageLocator, batchResults: batchResults, batchTermIds: batchTermIds, batchTerms: batchTerms, descending: true);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -431,56 +339,82 @@ namespace Corax.Queries
             }
         }
 
-        private struct EntryComparerByScore : IComparerInit
+        private struct EntryComparerByScore : IEntryComparer, IComparer<UnmanagedSpan>
         {
-            public int Compare((long, float) x, (long, float) y)
+            public void Init(ref SortingMatch<TInner> match)
             {
-                // with order by score() we want to find the *highest* value by default, so we sort
-                // in the opposite order by default for the values of the score
-                var cmp = y.Item2.CompareTo(x.Item2);
-                if (cmp != 0) return cmp;
-                // if the score is identical, we then compare entry ids in the usual manner 
-                return x.Item1.CompareTo(y.Item1);
             }
 
-            public long GetEntryId((long, float) x)
+            public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+                UnmanagedSpan* batchTerms,
+                bool descending = false)
             {
-                return x.Item1;
+                var readScores = MemoryMarshal.Cast<long, float>(batchTermIds)[..batchResults.Length];
+
+                // We have to initialize the score buffer with a positive number to ensure that multiplication (document-boosting) is taken into account when BM25 relevance returns 0 (for example, with AllEntriesMatch).
+                readScores.Fill(Bm25Relevance.InitialScoreValue);
+
+                // We perform the scoring process. 
+                match._inner.Score(batchResults, readScores, 1f);
+
+                // If we need to do documents boosting then we need to modify the based on documents stored score. 
+                if (match._searcher.DocumentsAreBoosted)
+                {
+                    // We get the boosting tree and go to check every document. 
+                    BoostDocuments(match, batchResults, readScores);
+                }
+                
+                // Note! readScores & indexes are aliased and same as batchTermIds
+                var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+                for (int i = 0; i < batchTermIds.Length; i++)
+                {
+                    batchTerms[i] = new UnmanagedSpan(readScores[i]);
+                    indexes[i] = i;
+                }
+
+                EntryComparerHelper.IndirectSort<EntryComparerByScore>(indexes, batchTerms, descending);
+                
+                return indexes;
             }
 
-            public Lookup<long> Init(ref SortingMatch<TInner> match)
+            private static void BoostDocuments(SortingMatch<TInner> match, Span<long> batchResults, Span<float> readScores)
             {
-                return default;
+                var tree = match._searcher.GetDocumentBoostTree();
+                if (tree is { NumberOfEntries: > 0 })
+                {
+                    // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
+                    ref var scoresRef = ref MemoryMarshal.GetReference(readScores);
+                    ref var matchesRef = ref MemoryMarshal.GetReference(batchResults);
+                    for (int idx = 0; idx < batchResults.Length; idx++)
+                    {
+                        var ptr = (float*)tree.ReadPtr(Unsafe.Add(ref matchesRef, idx), out var _);
+                        if (ptr == null)
+                            continue;
+
+                        ref var scoresIdx = ref Unsafe.Add(ref scoresRef, idx);
+                        scoresIdx *= *ptr;
+                    }
+                }
+            }
+
+            public int Compare(UnmanagedSpan x, UnmanagedSpan y)
+            {
+                // Note, for scores, we go *descending* by default!
+                return y.Double.CompareTo(x.Double);
             }
         }
 
-        private interface IComparerInit
+        private interface IEntryComparer
         {
-            Lookup<long> Init(ref SortingMatch<TInner> match);
+            void Init(ref SortingMatch<TInner> match);
+
+            Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+                UnmanagedSpan* batchTerms,
+                bool descending = false);
         }
 
-        private struct EntryComparerByTerm : IComparerInit, IComparer<UnmanagedSpan>
+        private struct CompactKeyComparer : IComparer<UnmanagedSpan>
         {
-            private TermsReader _reader;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int Compare(long x, long y)
-            {
-                var cmp = _reader.Compare(x, y);
-                return cmp == 0 ? x.CompareTo(y) : cmp;
-            }
-
-            public long GetEntryId(long x)
-            {
-                return x;
-            }
-
-            public Lookup<long> Init(ref SortingMatch<TInner> match)
-            {
-                _reader = match._searcher.TermsReaderFor(match._orderMetadata.Field.FieldName);
-                return match._searcher.TermsIdReaderFor(match._orderMetadata.Field.FieldName);
-            }
-
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(UnmanagedSpan xItem, UnmanagedSpan yItem)
             {
@@ -494,43 +428,169 @@ namespace Corax.Queries
                 var match = AdvMemory.Compare(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
                 if (match != 0)
                     return match;
-                
+
                 var xItemLengthInBits = (xItem.Length - 1) * 8 - (xItem.Address[0] >> 4);
                 var yItemLengthInBits = (yItem.Length - 1) * 8 - (yItem.Address[0] >> 4);
                 return xItemLengthInBits - yItemLengthInBits;
             }
         }
+
+        private struct EntryComparerByTerm : IEntryComparer, IComparer<UnmanagedSpan>
+        {
+            private CompactKeyComparer _cmpTerm;
+            private Lookup<long> _lookup;
+
+            public void Init(ref SortingMatch<TInner> match)
+            {
+                 _lookup = match._searcher.TermsIdReaderFor(match._orderMetadata.Field.FieldName);
+            }
+
+            public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+                UnmanagedSpan* batchTerms,
+                bool descending)
+            {
+                _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
+                Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
+                var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer());
+                return SortByTerms(batchTermIds, batchTerms, descending, indirectComparer);
+            }
+
+            private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker) where TComparer : struct, IComparer<long>
+            {
+                // We may have ties, have to resolve that before we can continue
+                for (int i = 1; i < buffer.Length; i++)
+                {
+                    var x = buffer[i - 1] >> 15;
+                    var y = buffer[i] >> 15;
+                    if (x != y)
+                        continue;
+
+                    // we have a match on the prefix, need to figure out where it ends hopefully this is rare
+                    int end = i;
+                    for (; end < buffer.Length; end++)
+                    {
+                        if (x != (buffer[end] >> 15))
+                            break;
+                    }
+
+                    buffer[(i - 1)..end].Sort(tieBreaker);
+                    i = end;
+                }
+            }
+
+            private static long CopyTermPrefix(UnmanagedSpan item)
+            {
+                long l = 0;
+                Memory.Copy(&l, item.Address + 1 /* skip metadata byte */, Math.Min(6, item.Length - 1));
+                l = BinaryPrimitives.ReverseEndianness(l) >>> 1;
+                return l;
+            }
+
+            private static Span<int> SortByTerms<TComparer>(Span<long> buffer, UnmanagedSpan* batchTerms, bool isDescending, TComparer tieBreaker)
+                where TComparer : struct, IComparer<long>
+            {
+                for (int i = 0; i < buffer.Length; i++)
+                {
+                    long sortKey = CopyTermPrefix(batchTerms[i]) | (uint)i;
+                    if (isDescending)
+                        sortKey = -sortKey;
+                    buffer[i] = sortKey;
+                }
+
+
+                Sort.Run(buffer);
+
+                MaybeBreakTies(buffer, tieBreaker);
+
+                return ExtractIndexes(buffer, isDescending);
+            }
+
+            private static Span<int> ExtractIndexes(Span<long> buffer, bool isDescending)
+            {
+                // note - we reuse the memory
+                var indexes = MemoryMarshal.Cast<long, int>(buffer)[..(buffer.Length)];
+                for (int i = 0; i < buffer.Length; i++)
+                {
+                    var sortKey = buffer[i];
+                    if (isDescending)
+                        sortKey = -sortKey;
+                    var idx = (ushort)sortKey & 0x7FFF;
+                    indexes[i] = idx;
+                }
+
+                return indexes;
+            }
+
+            public int Compare(UnmanagedSpan x, UnmanagedSpan y)
+            {
+                return _cmpTerm.Compare(x, y);
+            }
+        }
+
         
-        private struct EntryComparerByLong : IComparerInit, IComparer<UnmanagedSpan>
+        private static string[] DebugTerms(LowLevelTransaction llt, Span<UnmanagedSpan> terms)
+        {
+            using var s = new CompactKeyCacheScope(llt);
+            var l = new string[terms.Length];
+            for (int i = 0; i < terms.Length; i++)
+            {
+                var item = terms[i];
+                int remainderBits = item.Address[0] >> 4;
+                int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
+                long dicId = PersistentDictionary.CreateDefault(llt);
+                s.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], dicId);
+                l[i] = s.Key.ToString();
+            }
+
+            return l;
+        }
+
+        private struct EntryComparerHelper
+        {
+            public static Span<int> NumericSortBatch<TCmp>(LowLevelTransaction llt, PageLocator pageLocator ,Span<long> batchTermIds, UnmanagedSpan* batchTerms, bool descending = false) 
+                where TCmp : struct, IComparer<UnmanagedSpan>, IEntryComparer
+            {
+                Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
+                var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+                for (int i = 0; i < batchTermIds.Length; i++)
+                {
+                    indexes[i] = i;
+                }
+
+                IndirectSort<TCmp>(indexes, batchTerms, descending);
+                
+                return indexes;
+            }
+
+            public static void IndirectSort<TCmp>(Span<int> indexes, UnmanagedSpan* batchTerms, bool descending) 
+                where TCmp : struct, IComparer<UnmanagedSpan>, IEntryComparer
+            {
+                if (descending)
+                {
+                    indexes.Sort(new IndirectComparer<Descending<TCmp>>(batchTerms, default));
+                }
+                else
+                {
+                    indexes.Sort(new IndirectComparer<TCmp>(batchTerms, default));
+                }
+            }
+        }
+
+        private struct EntryComparerByLong : IEntryComparer, IComparer<UnmanagedSpan>
         {
             private Lookup<long> _lookup;
 
-            public int Compare(long x, long y)
+            public void Init(ref SortingMatch<TInner> match)
             {
-                if (_lookup  == null)
-                    return 0; // nothing to figure out _by_
-
-                var hasX = _lookup.TryGetValue(x, out var xTerm);
-                if (_lookup.TryGetValue(y, out var yTerm) == false)
-                {
-                    return hasX == false ? 0 : 1;
-                }
-
-                if (hasX == false)
-                    return -1;
-
-                var cmp = xTerm.CompareTo(yTerm);
-                return cmp == 0 ? x.CompareTo(y) : cmp;
+                _lookup = match._searcher.LongReader(match._orderMetadata.Field.FieldName);
             }
 
-            public long GetEntryId(long x)
+            public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+                UnmanagedSpan* batchTerms,
+                bool descending = false)
             {
-                return x;
-            }
-
-            public Lookup<long> Init(ref SortingMatch<TInner> match)
-            {
-                return _lookup = match._searcher.LongReader(match._orderMetadata.Field.FieldName);
+                _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
+                return EntryComparerHelper.NumericSortBatch<EntryComparerByLong>(llt, pageLocator, batchTermIds, batchTerms, descending);
             }
 
             public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -539,39 +599,57 @@ namespace Corax.Queries
             }
         }
         
-        private struct EntryComparerByDouble : IComparerInit, IComparer<UnmanagedSpan>
+        private struct EntryComparerByDouble : IEntryComparer, IComparer<UnmanagedSpan>
         {
+            private Lookup<long> _lookup;
 
-            public Lookup<long> Init(ref SortingMatch<TInner> match)
+            public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+                UnmanagedSpan* batchTerms,
+                bool descending = false)
+            {                _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
+
+                return EntryComparerHelper.NumericSortBatch<EntryComparerByDouble>(llt, pageLocator, batchTermIds, batchTerms, descending);
+            }
+            public void Init(ref SortingMatch<TInner> match)
             {
-                return match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
+                _lookup = match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
             }
 
             public int Compare(UnmanagedSpan x, UnmanagedSpan y)
             {
                 return x.Double.CompareTo(y.Double);
             }
+
         }
 
-        private struct EntryComparerByTermAlphaNumeric : IComparerInit, IComparer<UnmanagedSpan>
+        private struct EntryComparerByTermAlphaNumeric : IEntryComparer, IComparer<UnmanagedSpan>
         {
             private TermsReader _reader;
             private long _dictionaryId;
+            private Lookup<long> _lookup;
 
-            public Lookup<long> Init(ref SortingMatch<TInner> match)
+            public void Init(ref SortingMatch<TInner> match)
             {
                 _reader = match._searcher.TermsReaderFor(match._orderMetadata.Field.FieldName);
                 _dictionaryId = match._searcher.GetDictionaryIdFor(match._orderMetadata.Field.FieldName);
-                return match._searcher.TermsIdReaderFor(match._orderMetadata.Field.FieldName);
-
+                _lookup = match._searcher.TermsIdReaderFor(match._orderMetadata.Field.FieldName);
             }
 
-            public int Compare(long x, long y)
+            public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+                UnmanagedSpan* batchTerms,
+                bool descending = false)
             {
-                _reader.GetDecodedTerms(x, out var xTerm, y, out var yTerm);
-
-                return SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
+                _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
+                Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
+                var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+                for (int i = 0; i < batchTermIds.Length; i++)
+                {
+                    indexes[i] = i;
+                }
+                EntryComparerHelper.IndirectSort<EntryComparerByTermAlphaNumeric>(indexes, batchTerms, descending);
+                return indexes;
             }
+
 
             public int Compare(UnmanagedSpan x, UnmanagedSpan y)
             {
@@ -580,42 +658,50 @@ namespace Corax.Queries
             }
         }
         
-        private struct EntryComparerBySpatial : IComparerInit
+        private struct EntryComparerBySpatial : IEntryComparer, IComparer<UnmanagedSpan>
         {
             private SpatialReader _reader;
             private (double X, double Y) _center;
             private SpatialUnits _units;
             private double _round;
 
-            public Lookup<long> Init(ref SortingMatch<TInner> match)
+            public void Init(ref SortingMatch<TInner> match)
             {
                 _center = (match._orderMetadata.Point.X, match._orderMetadata.Point.Y);
                 _units = match._orderMetadata.Units;
                 _round = match._orderMetadata.Round;
                 _reader = match._searcher.SpatialReader(match._orderMetadata.Field.FieldName);
-                return null;
             }
 
-            public int Compare(long x, long y)
+            public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+                UnmanagedSpan* batchTerms,
+                bool descending = false)
             {
-                var hasX = _reader.TryGetSpatialPoint(x, out var xCoords);
-                var hasY = _reader.TryGetSpatialPoint(y, out var yCoords);
+                var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+                for (int i = 0; i < batchResults.Length; i++)
+                {
+                     double distance;
+                    if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
+                    {
+                        // always at the bottom, then, desc & asc
+                        distance = descending ? double.MinValue : double.MaxValue;
+                    }
+                    else
+                    {
+                        distance = SpatialUtils.GetGeoDistance(coords, _center, _round, _units);
+                    }
 
-                if (hasY == false)
-                    return hasX ? 1 : 0;
-                if (hasX == false)
-                    return -1;
+                    batchTerms[i] = new UnmanagedSpan(distance);
+                    indexes[i] = i;
+                }
 
-                var xDist = SpatialUtils.GetGeoDistance(xCoords, _center, _round, _units);
-                var yDist = SpatialUtils.GetGeoDistance(yCoords, _center, _round, _units);
-
-                var cmp = xDist.CompareTo(yDist);
-                return cmp == 0 ? x.CompareTo(y) : cmp;
+                EntryComparerHelper.IndirectSort<EntryComparerByDouble>(indexes, batchTerms, descending);
+                return indexes;
             }
 
-            public long GetEntryId(long x)
+            public int Compare(UnmanagedSpan x, UnmanagedSpan y)
             {
-                return x;
+                return x.Double.CompareTo(y.Double);
             }
         }
 
@@ -647,8 +733,8 @@ namespace Corax.Queries
             }
         }
 
-        private static void FillAndSortResults<TItem, TEntryComparer>(ref SortingMatch<TInner> match) where TItem : unmanaged
-            where TEntryComparer : struct,  IComparerInit, IComparer<UnmanagedSpan>
+        private static void FillAndSortResults<TEntryComparer>(ref SortingMatch<TInner> match) 
+            where TEntryComparer : struct,  IEntryComparer, IComparer<UnmanagedSpan>
         {
             var llt = match._searcher.Transaction.LowLevelTransaction;
             var allocator = match._searcher.Allocator;
@@ -663,7 +749,7 @@ namespace Corax.Queries
 
             // Initialize the important infrastructure for the sorting.
             TEntryComparer entryComparer = new();
-            var lookup = entryComparer.Init(ref match);
+            entryComparer.Init(ref match);
             match._results.Init();
             
             var pageCache = new PageLocator(llt, 1024);
@@ -680,41 +766,8 @@ namespace Corax.Queries
                 var batchTerms = terms[..read];
 
                 Sort.Run(batchResults);
-                
-                lookup.GetFor(batchResults, batchTermIds, long.MinValue);
 
-                var indirectComparer = new IndirectComparer<TEntryComparer>(termsPtr, entryComparer);
-
-                Span<int> indexes;
-                if (typeof(TEntryComparer) == typeof(EntryComparerByTerm) ||
-                    typeof(TEntryComparer) == typeof(Descending<EntryComparerByTerm>))
-                {
-                    bool isDescending = typeof(TEntryComparer) == typeof(Descending<EntryComparerByTerm>);
-                    Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageCache);
-                    indexes = SortByTerms(llt, batchTermIds, batchTerms, isDescending, indirectComparer);
-                }
-                else if (typeof(TEntryComparer) == typeof(EntryComparerByTermAlphaNumeric) ||
-                         typeof(TEntryComparer) == typeof(Descending<EntryComparerByTermAlphaNumeric>))
-                {
-                    Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageCache);
-                    indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
-                    for (int i = 0; i < batchTermIds.Length; i++)
-                    {
-                        indexes[i] = i;
-                    }
-                    indexes.Sort(indirectComparer);
-                }
-                else
-                {
-                    indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
-                    for (int i = 0; i < batchTermIds.Length; i++)
-                    {
-                        batchTerms[i] = new UnmanagedSpan(batchTermIds[i]);
-                        indexes[i] = i;
-                    }
-                    indexes.Sort(indirectComparer);
-                }
-                
+                Span<int> indexes = entryComparer.SortBatch(ref match, llt, pageCache, batchResults, batchTermIds, termsPtr);
 
                 match._results.Merge(entryComparer, indexes, batchResults, batchTerms);
             }
@@ -725,88 +778,6 @@ namespace Corax.Queries
         }
 
 
-        private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker) where TComparer : struct, IComparer<long>
-        {
-            // We may have ties, have to resolve that before we can continue
-            for (int i = 1; i < buffer.Length; i++)
-            {
-                var x = buffer[i - 1] >> 15;
-                var y = buffer[i] >> 15;
-                if (x != y)
-                    continue;
-
-                // we have a match on the prefix, need to figure out where it ends hopefully this is rare
-                int end = i;
-                for (; end < buffer.Length; end++)
-                {
-                    if (x != (buffer[end] >> 15))
-                        break;
-                }
-
-                buffer[(i - 1)..end].Sort(tieBreaker);
-                i = end;
-            }
-        }
-
-        private static string[] DebugTerms(LowLevelTransaction llt,Span<UnmanagedSpan> terms)
-        {
-            using var s = new CompactKeyCacheScope(llt);
-            var l = new string[terms.Length];
-            for (int i = 0; i < terms.Length; i++)
-            {
-                var item = terms[i];
-                int remainderBits = item.Address[0] >> 4;
-                int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
-                long dicId = PersistentDictionary.CreateDefault(llt);
-                s.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], dicId);
-                l[i] = s.Key.ToString();
-            }
-
-            return l;
-        }
-
-        private static long CopyTermPrefix(LowLevelTransaction llt, UnmanagedSpan item)
-        {
-            long l = 0;
-            Memory.Copy(&l, item.Address + 1/* skip metadata byte */, Math.Min(6, item.Length - 1));
-            l = BinaryPrimitives.ReverseEndianness(l) >>> 1;
-            return l;
-        }
-
-        private static Span<int> SortByTerms<TComparer>(LowLevelTransaction llt, Span<long> buffer,  Span<UnmanagedSpan> batchTerms, bool isDescending,  TComparer tieBreaker)
-            where TComparer : struct, IComparer<long>
-        {
-            for (int i = 0; i < batchTerms.Length; i++)
-            {
-                long sortKey = CopyTermPrefix(llt, batchTerms[i])| (uint)i;
-                if (isDescending)
-                    sortKey = -sortKey;
-                buffer[i] = sortKey;
-            }
-            
-
-            Sort.Run(buffer);
-
-            MaybeBreakTies(buffer, tieBreaker);
-
-            return ExtractIndexes(buffer, isDescending);
-        }
- 
-        private static Span<int> ExtractIndexes(Span<long> buffer, bool isDescending)
-        {
-            // note - we reuse the memory
-            var indexes = MemoryMarshal.Cast<long, int>(buffer)[..(buffer.Length)];
-            for (int i = 0; i < buffer.Length; i++)
-            {
-                var sortKey = buffer[i];
-                if (isDescending)
-                    sortKey = -sortKey;
-                var idx = (ushort)sortKey & 0x7FFF;
-                indexes[i] = idx;
-            }
-            return indexes;
-        }
-        
         public long Count => _inner.Count;
 
         public QueryCountConfidence Confidence => throw new NotSupportedException();
