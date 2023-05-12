@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.Indexes.Sharding.Persistence.Corax;
 
 public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 {
-    private SortingMatch.SpatialAscendingMatchComparer? _ascSpatialComparer;
-    private SortingMatch.SpatialDescendingMatchComparer? _descSpatialComparer;
+    private LegacySortingMatch.SpatialAscendingMatchComparer? _ascSpatialComparer;
+    private LegacySortingMatch.SpatialDescendingMatchComparer? _descSpatialComparer;
 
     public ShardedCoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query)
@@ -90,8 +90,8 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                         reader.Read(out (double lat, double lon) coordinates);
 
                         ISpatialComparer comparer = orderByField.Ascending
-                            ? _ascSpatialComparer ??= new SortingMatch.SpatialAscendingMatchComparer(_indexSearcher, orderByFieldMetadata)
-                            : _descSpatialComparer ??= new SortingMatch.SpatialDescendingMatchComparer(_indexSearcher, orderByFieldMetadata);
+                            ? _ascSpatialComparer ??= new LegacySortingMatch.SpatialAscendingMatchComparer(_indexSearcher, orderByFieldMetadata)
+                            : _descSpatialComparer ??= new LegacySortingMatch.SpatialDescendingMatchComparer(_indexSearcher, orderByFieldMetadata);
 
                         var distance = SpatialUtils.GetGeoDistance(in coordinates, in comparer);
                         result.AddDoubleOrderByField(distance);

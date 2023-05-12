@@ -6,7 +6,7 @@ using Corax.Utils;
 
 namespace Corax.Queries.SortingMatches.Comparers;
 
-unsafe partial struct SortingMatch
+unsafe partial struct LegacySortingMatch
 {
     public unsafe struct AlphanumericAscendingMatchComparer : IMatchComparer
     {
