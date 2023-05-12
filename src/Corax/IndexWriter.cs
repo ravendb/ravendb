@@ -426,8 +426,8 @@ namespace Corax
                 _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i));
 
             _entriesAlreadyAdded = new HashSet<long>();
-            _additionsForTerm = new HashSet<long>();
-            _removalsForTerm = new HashSet<long>();
+            _additionsForTerm = new List<long>();
+            _removalsForTerm = new List<long>();
         }
         
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
@@ -876,7 +876,8 @@ namespace Corax
         }
 
         private readonly long _initialNumberOfEntries;
-        private readonly HashSet<long> _entriesAlreadyAdded, _additionsForTerm, _removalsForTerm;
+        private readonly HashSet<long> _entriesAlreadyAdded;
+        private readonly List<long> _additionsForTerm, _removalsForTerm;
         private readonly IndexOperationsDumper _indexDebugDumper;
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
@@ -1643,12 +1644,12 @@ namespace Corax
             }
         }
 
-        private void AddRange(HashSet<long> set, ReadOnlySpan<long> span)
+        private void AddRange(List<long> list, ReadOnlySpan<long> span)
         {
-            set.Clear();
+            list.Clear();
             for (int i = 0; i < span.Length; i++)
             {
-                set.Add(span[i]);
+                list.Add(span[i]);
             }
         }
 
@@ -1860,7 +1861,7 @@ namespace Corax
             return AddEntriesToTermResult.NothingToDo;
         }
 
-        private unsafe void InsertNumericFieldLongs(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        private void InsertNumericFieldLongs(Tree fieldsTree, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
         {
             var fieldTree = fieldsTree.LookupFor<long>(indexedField.NameLong);
             var entriesToTerms = entriesToTermsTree.LookupFor<long>(indexedField.NameLong); 
