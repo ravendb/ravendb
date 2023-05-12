@@ -33,6 +33,11 @@ namespace Corax.Queries.SortingMatches;
     {
         private TInnerCmp cmp;
 
+        public Descending(TInnerCmp cmp)
+        {
+            this.cmp = cmp;
+        }
+
         public Descending()
         {
             cmp = new();
@@ -240,13 +245,13 @@ namespace Corax.Queries.SortingMatches;
 
     private struct EntryComparerHelper
     {
-        public static Span<int> NumericSortBatch<TCmp>(LowLevelTransaction llt, PageLocator pageLocator ,Span<long> batchTermIds, UnmanagedSpan* batchTerms, bool descending = false) 
+        public static Span<int> NumericSortBatch<TCmp>(Span<long> batchTermIds, UnmanagedSpan* batchTerms, bool descending = false) 
             where TCmp : struct, IComparer<UnmanagedSpan>, IEntryComparer
         {
-            Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             for (int i = 0; i < batchTermIds.Length; i++)
             {
+                batchTerms[i] = new UnmanagedSpan(batchTermIds[i]);
                 indexes[i] = i;
             }
 
@@ -255,16 +260,16 @@ namespace Corax.Queries.SortingMatches;
             return indexes;
         }
 
-        public static void IndirectSort<TCmp>(Span<int> indexes, UnmanagedSpan* batchTerms, bool descending) 
+        public static void IndirectSort<TCmp>(Span<int> indexes, UnmanagedSpan* batchTerms, bool descending, TCmp cmp = default) 
             where TCmp : struct, IComparer<UnmanagedSpan>, IEntryComparer
         {
             if (descending)
             {
-                indexes.Sort(new IndirectComparer<Descending<TCmp>>(batchTerms, default));
+                indexes.Sort(new IndirectComparer<Descending<TCmp>>(batchTerms, new (cmp)));
             }
             else
             {
-                indexes.Sort(new IndirectComparer<TCmp>(batchTerms, default));
+                indexes.Sort(new IndirectComparer<TCmp>(batchTerms, cmp));
             }
         }
     }
@@ -283,7 +288,7 @@ namespace Corax.Queries.SortingMatches;
             bool descending = false)
         {
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            return EntryComparerHelper.NumericSortBatch<EntryComparerByLong>(llt, pageLocator, batchTermIds, batchTerms, descending);
+            return EntryComparerHelper.NumericSortBatch<EntryComparerByLong>(batchTermIds, batchTerms, descending);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -301,7 +306,7 @@ namespace Corax.Queries.SortingMatches;
             bool descending = false)
         {                _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
 
-            return EntryComparerHelper.NumericSortBatch<EntryComparerByDouble>(llt, pageLocator, batchTermIds, batchTerms, descending);
+            return EntryComparerHelper.NumericSortBatch<EntryComparerByDouble>(batchTermIds, batchTerms, descending);
         }
         public void Init(ref SortingMatch<TInner> match)
         {
@@ -339,7 +344,7 @@ namespace Corax.Queries.SortingMatches;
             {
                 indexes[i] = i;
             }
-            EntryComparerHelper.IndirectSort<EntryComparerByTermAlphaNumeric>(indexes, batchTerms, descending);
+            EntryComparerHelper.IndirectSort<EntryComparerByTermAlphaNumeric>(indexes, batchTerms, descending, this);
             return indexes;
         }
 

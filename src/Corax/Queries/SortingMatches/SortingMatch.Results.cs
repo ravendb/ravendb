@@ -14,17 +14,18 @@ unsafe partial struct SortingMatch<TInner>
     private struct Results : IDisposable
     {
         private long* _matches;
+        private UnmanagedSpan* _terms;
         private ByteString _matchesBuffer;
         private ByteString _termsBuffer;
-        public int Count;
         private readonly LowLevelTransaction _llt;
         private readonly ByteStringContext _allocator;
         private readonly int _max;
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _matchesScope;
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _termsScope;
         private int _capacity;
-        private readonly UnmanagedSpan* _terms;
 
+        public int Count;
+        
         public string[] DebugEntries => DebugTerms(_llt, new(_terms, Count));
 
         public Results(LowLevelTransaction llt, ByteStringContext allocator, int max)
@@ -200,6 +201,8 @@ unsafe partial struct SortingMatch<TInner>
             var additionalSize = _capacity - oldCapacity;
             _allocator.GrowAllocation(ref _matchesBuffer, ref _matchesScope, additionalSize * sizeof(long));
             _allocator.GrowAllocation(ref _termsBuffer, ref _termsScope, additionalSize * sizeof(UnmanagedSpan));
+            _matches = (long*)_matchesBuffer.Ptr;
+            _terms = (UnmanagedSpan*)_termsBuffer.Ptr;
         }
 
         public void Dispose()
