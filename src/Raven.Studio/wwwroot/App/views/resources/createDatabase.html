@@ -114,11 +114,12 @@
         <!-- Local Directory -->
 
         <div class="form-group row" data-bind="visible: source() === localServerCredentials().backupStorageType">
-            <div data-bind="foreach: restoreSourceObject().items">
-                <div class="flex-horizontal">
-                    <div class="flex-start" data-bind="visible: $parent.enableSharding">
-                        <div class="margin-bottom">
-                            <i class="icon-shard text-info" title="Shard"></i> #<span data-bind="text: $index()"></span>
+            <div data-bind="foreach: restoreSourceObject().items" class="col-md-12">
+                <div class="margin-top-sm margin-bottom">
+                    <hr class="border-light" data-bind="visible: $parent.enableSharding">
+                    <div class="align-items-center flex-horizontal justify-content-between margin-bottom-xs" data-bind="visible: $parent.enableSharding">
+                        <div class="badge badge-info rounded-pill padding-xxs">
+                            <i class="icon-shard" title="Shard"></i> #<span data-bind="text: $index()" class="m-0"></span>
                         </div>
                         <button class="btn btn-danger" type="button" data-bind="click: $parent.restoreSourceObject().removeRestoreItem, visible: $index() > 0">
                             <i class="icon-trash"></i>
@@ -341,7 +342,7 @@
         
        <div data-bind="visible: source() === amazonS3Credentials().backupStorageType">
            <div data-bind="with: amazonS3Credentials">
-               <div class="row margin-bottom">
+               <div class="row margin-bottom-xs">
                    <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
                        <div class="toggle margin-left">
                            <input id="s3CustomHost" type="checkbox" data-bind="checked: useCustomS3Host">
@@ -713,10 +714,11 @@
 
 <script type="text/html" id="remote-folder-and-restore-point-selector">
     <div data-bind="foreach: $parent.restoreSourceObject().items">
-        <div class="flex-horizontal">
-            <div class="flex-start" data-bind="visible: $root.databaseModel.restore.enableSharding">
-                <div class="margin-bottom">
-                    <i class="icon-shard text-info" title="Shard"></i> #<span data-bind="text: $index()"></span>
+        <div class="margin-top-sm margin-bottom">
+            <hr class="border-light" data-bind="visible: $root.databaseModel.restore.enableSharding">
+            <div class="align-items-center flex-horizontal justify-content-between margin-bottom-xs" data-bind="visible: $root.databaseModel.restore.enableSharding">
+                <div class="badge badge-info rounded-pill padding-xxs">
+                    <i class="icon-shard" title="Shard"></i> #<span data-bind="text: $index()"></span>
                 </div>
                 <button class="btn btn-danger" type="button" data-bind="click: $parents[1].restoreSourceObject().removeRestoreItem, visible: $index() > 0">
                     <i class="icon-trash"></i>
