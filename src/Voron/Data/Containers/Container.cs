@@ -890,10 +890,9 @@ namespace Voron.Data.Containers
         /// <summary>
         /// Assumes that ids is sorted 
         /// </summary>
-        public static void GetAll(LowLevelTransaction llt, Span<long> ids, Span<UnmanagedSpan> spans, long missingValue)
+        public static void GetAll(LowLevelTransaction llt, Span<long> ids, Span<UnmanagedSpan> spans, long missingValue, PageLocator pageCache)
         {
-         
-            var container = new Container();
+            Debug.Assert(ids.Length == spans.Length);
             for (int i = 0; i < ids.Length; i++)
             {
                 if (ids[i]== missingValue)
@@ -902,19 +901,24 @@ namespace Voron.Data.Containers
                     continue;
                 }
                 var (pageNum, offset) = Math.DivRem(ids[i], Constants.Storage.PageSize);
-                if (container._page.IsValid == false ||
-                    pageNum != container._page.PageNumber)
-                    container = new Container(llt.GetPage(pageNum));
+
+                if (pageCache.TryGetReadOnlyPage(pageNum, out var page) == false)
+                {
+                    page = llt.GetPage(pageNum);
+                    pageCache.SetReadable(pageNum, page);
+                }
+
+                var container = new Container(page);
                 
                 if (container._page.IsOverflow)
                 {
-                    spans[i] = new(container._page.DataPointer, container._page.OverflowSize);
+                    spans[i] = new(page.DataPointer, page.OverflowSize);
                     continue;
                 }
 
                 var metadata = container.MetadataFor(OffsetToIndex(offset));
                 Debug.Assert(metadata.IsFree == false);
-                var p = container._page.Pointer;
+                var p = page.Pointer;
                 int size = metadata.Get(ref p);
                 spans[i] = new(p, size);
             }
