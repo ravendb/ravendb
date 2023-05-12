@@ -1126,31 +1126,36 @@ namespace Voron.Data.Lookups
                     terms[i] = missingValue;
                     continue;
                 }
-                
+
+                terms[i] = SearchNextPage(ref state, keys[i]);
+            }
+
+            long SearchNextPage(ref CursorState state, TKey key)
+            {
                 while (_internalCursor._pos > 0)
                 {
                     PopPage(ref _internalCursor);
                     state = ref _internalCursor._stk[_internalCursor._pos];
                     var previousSearchPosition = state.LastSearchPosition;
 
-                    SearchInCurrentPage(keys[i], ref state);
+                    SearchInCurrentPage(key, ref state);
 
                     if (state.LastSearchPosition < 0)
                         state.LastSearchPosition = ~state.LastSearchPosition;
-        
-                    
-                    if (state.LastSearchPosition <= previousSearchPosition ||
-                        state.LastSearchPosition >= state.Header->NumberOfEntries) 
-                        continue; // not here, need to go up
-                    
-                    // is this points to a different page, just search there normally
-                    FindPageFor(ref _internalCursor, ref state, keys[i]);
-                    state = ref _internalCursor._stk[_internalCursor._pos];
-                    terms[i] = state.LastMatch == 0 ? 
-                        GetValue(ref state, state.LastSearchPosition) :
-                        missingValue;
-                    break;
+
+                    if (state.LastSearchPosition > previousSearchPosition &&
+                        state.LastSearchPosition < state.Header->NumberOfEntries)
+                    {
+                        // is this points to a different page, just search there normally
+                        FindPageFor(ref _internalCursor, ref state, key);
+                        state = ref _internalCursor._stk[_internalCursor._pos];
+                        return state.LastMatch == 0 ? GetValue(ref state, state.LastSearchPosition) : missingValue;
+                    }
+                    // not here, need to go up
                 }
+
+                // got all the way to the top? Just search normally
+                return TryGetValue(key, out var v) ? v : missingValue;
             }
         }
     }

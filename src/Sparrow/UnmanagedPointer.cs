@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Sparrow
@@ -17,13 +19,45 @@ namespace Sparrow
         public static UnmanagedPointer operator +(UnmanagedPointer pointer, int offset) => new UnmanagedPointer(pointer.Address + offset);
     }
 
+    [StructLayout(LayoutKind.Explicit)]
     public readonly unsafe struct UnmanagedSpan
     {
+        [FieldOffset(0)] 
         public readonly byte* Address;
+        [FieldOffset(8)] // ensure that even on 32 bits, we have 8 bytes space
         public readonly int Length;
+
+        [FieldOffset(0)]
+        public readonly long Long;
+        
+        [FieldOffset(0)]
+        public readonly double Double;
+
+
+        public override string ToString()
+        {
+            if (Length == -1)
+            {
+                return Long.ToString();
+            }
+
+            return $"{(long)Address:x8}, Len: {Length}";
+        }
 
         public static UnmanagedSpan Empty = new UnmanagedSpan(null, 0);
 
+        public UnmanagedSpan(long l)
+        {
+            Long = l;
+            Length = -1;
+        }
+
+        public UnmanagedSpan(double d)
+        {
+            Double = d;
+            Length = -1;
+        }
+        
         public UnmanagedSpan(byte* address, int length)
         {
             Address = address;
@@ -38,11 +72,13 @@ namespace Sparrow
 
         public UnmanagedSpan Slice(int offset)
         {
+            Debug.Assert(Length >= 0);
             return new UnmanagedSpan(Address + offset, Length - offset);
         }
 
         public UnmanagedSpan Slice(int position, int length)
         {
+            Debug.Assert(Length >= 0);
             return new UnmanagedSpan(Address + position, length);
         }
 
