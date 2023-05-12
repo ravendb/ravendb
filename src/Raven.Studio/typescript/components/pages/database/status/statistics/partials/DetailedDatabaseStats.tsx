@@ -2,7 +2,7 @@
 import React from "react";
 import genUtils from "common/generalUtils";
 import changeVectorUtils from "common/changeVectorUtils";
-import { Card, Table, UncontrolledTooltip } from "reactstrap";
+import { Card, PopoverBody, Table, UncontrolledPopover } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
@@ -87,20 +87,35 @@ export function DetailedDatabaseStats() {
                                     }
 
                                     return (
-                                        <div id={id}>
-                                            {formattedChangeVector.map((cv) => (
-                                                <div key={cv.fullFormat} className="badge bg-secondary margin-right-xs">
-                                                    {cv.shortFormat}
-                                                </div>
-                                            ))}
-                                            <UncontrolledTooltip target={id}>
-                                                <div>
+                                        <>
+                                            <div id={id} className="d-inline-flex flex-wrap gap-1">
+                                                {formattedChangeVector.map((cv) => (
+                                                    <div
+                                                        key={cv.fullFormat}
+                                                        className="badge bg-secondary"
+                                                        id="popoverContainer"
+                                                    >
+                                                        {cv.shortFormat}
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <UncontrolledPopover
+                                                target={id}
+                                                placement="top"
+                                                trigger="hover"
+                                                container="popoverContainer"
+                                            >
+                                                <PopoverBody>
                                                     {formattedChangeVector.map((cv) => (
-                                                        <small key={cv.fullFormat}>{cv.fullFormat}</small>
+                                                        <>
+                                                            <small key={cv.fullFormat}>{cv.fullFormat}</small>
+                                                            <br />
+                                                        </>
                                                     ))}
-                                                </div>
-                                            </UncontrolledTooltip>
-                                        </div>
+                                                </PopoverBody>
+                                            </UncontrolledPopover>
+                                        </>
                                     );
                                 }}
                             </DetailsBlock>
@@ -114,12 +129,19 @@ export function DetailedDatabaseStats() {
                                 {(data, location) => {
                                     const id = "js-size-on-disk-" + location.nodeTag + "-" + location.shardNumber;
                                     return (
-                                        <span id={id}>
-                                            {genUtils.formatBytesToSize(
-                                                data.SizeOnDisk.SizeInBytes + data.TempBuffersSizeOnDisk.SizeInBytes
-                                            )}
-                                            <UncontrolledTooltip target={id}>
-                                                <div>
+                                        <>
+                                            <span id={id}>
+                                                {genUtils.formatBytesToSize(
+                                                    data.SizeOnDisk.SizeInBytes + data.TempBuffersSizeOnDisk.SizeInBytes
+                                                )}
+                                            </span>
+                                            <UncontrolledPopover
+                                                target={id}
+                                                placement="top"
+                                                trigger="hover"
+                                                container={id}
+                                            >
+                                                <PopoverBody>
                                                     Data:{" "}
                                                     <strong>
                                                         {genUtils.formatBytesToSize(data.SizeOnDisk.SizeInBytes)}
@@ -139,9 +161,9 @@ export function DetailedDatabaseStats() {
                                                                 data.TempBuffersSizeOnDisk.SizeInBytes
                                                         )}
                                                     </strong>
-                                                </div>
-                                            </UncontrolledTooltip>
-                                        </span>
+                                                </PopoverBody>
+                                            </UncontrolledPopover>
+                                        </>
                                     );
                                 }}
                             </DetailsBlock>

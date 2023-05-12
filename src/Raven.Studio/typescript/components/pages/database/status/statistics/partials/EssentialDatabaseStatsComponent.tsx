@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
-import { Button, Card, Col, Row, UncontrolledTooltip } from "reactstrap";
+import { Button, Card, Col, Row, UncontrolledPopover } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
 import {
     refresh,
@@ -34,13 +34,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                 <Col>
                     <h2 className="on-base-background">
                         General Database Stats
-                        <Button
-                            color="link"
-                            className="margin-left-xs"
-                            target="_blank"
-                            href={rawJsonUrl}
-                            title="Show raw output"
-                        >
+                        <Button color="link" target="_blank" href={rawJsonUrl} title="Show raw output">
                             <Icon icon="link" margin="m-0" />
                         </Button>
                     </h2>
@@ -191,28 +185,27 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <div className="name">
                                 <Icon icon="timeseries-settings" />
                                 <span>Time Series Segments Count</span>
-                                <span id="js-timeseries-segments" className="margin-left margin-left-sm has-info-icon">
-                                    <Icon icon="info" color="info" margin="m-0" />
+                                <span id="js-timeseries-segments">
+                                    <Icon icon="info" color="info" margin="ms-1" />
                                 </span>
-                                <UncontrolledTooltip target="js-timeseries-segments">
-                                    <ul>
-                                        <li>
-                                            <small>
-                                                <strong>Time series</strong> data is stored within{" "}
-                                                <strong>segments</strong>
-                                                .<br /> Each segment contains consecutive entries from the same time
-                                                series.
-                                            </small>
-                                        </li>
-                                        <li>
-                                            <small>
-                                                Segments&apos; maximum size is 2KB. <br /> Segments are added as needed
-                                                when the number of entries grows, <br /> or when a certain amount of
-                                                time has passed since the last entry.
-                                            </small>
-                                        </li>
-                                    </ul>
-                                </UncontrolledTooltip>
+                                <UncontrolledPopover
+                                    target="js-timeseries-segments"
+                                    placement="top"
+                                    trigger="hover"
+                                    container="js-timeseries-segments"
+                                >
+                                    <div className="p-3">
+                                        <div className="mb-2">
+                                            <strong>Time series</strong> data is stored within <strong>segments</strong>
+                                            . Each segment contains consecutive entries from the same time series.
+                                        </div>
+                                        <div>
+                                            Segments&apos; maximum size is 2KB. Segments are added as needed when the
+                                            number of entries grows, or when a certain amount of time has passed since
+                                            the last entry.
+                                        </div>
+                                    </div>
+                                </UncontrolledPopover>
                             </div>
                             <LazyLoad active={!stats}>
                                 <div className="value">
