@@ -86,7 +86,8 @@ namespace SlowTests.MailingList
                     .ToArray();
 
                 Assert.Equal(runningActivities.Length, 2);
-                Assert.Equal(runningActivities[0], "1");
+                Assert.Contains("1", runningActivities);
+                Assert.Contains("2", runningActivities);
             }
         }
     }

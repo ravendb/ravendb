@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanSelectMetadata_SingleCallExpression()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSelectMetadata_SingleCallExpression(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/1";
 

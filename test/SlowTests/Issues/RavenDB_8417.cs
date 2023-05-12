@@ -14,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void TotalResultsShouldBeCountedProperlyForCollectionQueries()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TotalResultsShouldBeCountedProperlyForCollectionQueries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

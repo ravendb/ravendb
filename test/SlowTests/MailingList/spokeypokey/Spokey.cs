@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,13 +22,14 @@ namespace SlowTests.MailingList.spokeypokey
             public List<string> ZipCodes2 { get; set; }
         }
 
-        [Fact]
-        public void Can_query_empty_list()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_query_empty_list(Options options)
         {
             var user1 = new Employee() { FirstName = "Joe", ZipCodes2 = new List<string>() };
             var length = user1.ZipCodes2.Count;
             Assert.Equal(0, length);
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -49,13 +51,14 @@ namespace SlowTests.MailingList.spokeypokey
             }
         }
 
-        [Fact]
-        public void Can_query_empty_array()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_query_empty_array(Options options)
         {
             var user1 = new Employee() { FirstName = "Joe", ZipCodes = new string[] { } };
             var length = user1.ZipCodes.Length;
             Assert.Equal(0, length);
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

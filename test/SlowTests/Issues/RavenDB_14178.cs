@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,10 +21,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseNegatedAnyInLinq()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseNegatedAnyInLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

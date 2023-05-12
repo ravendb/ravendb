@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,12 +26,13 @@ namespace SlowTests.Issues
             public string MiddleName { get; set; }
         }
 
-        [Fact]
-        public void IndexEntryFieldShouldNotContainNullValues()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexEntryFieldShouldNotContainNullValues(Options options)
         {
             const string IndexName = "Index1";
 
-            using (var docStore = GetDocumentStore())
+            using (var docStore = GetDocumentStore(options))
             {
                 docStore.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {

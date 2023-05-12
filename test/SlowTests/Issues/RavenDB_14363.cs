@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Query_With_Where_Clause()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Query_With_Where_Clause(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {

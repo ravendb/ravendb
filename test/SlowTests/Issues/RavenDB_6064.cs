@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void MapOnSeveralCompressedStrings()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void MapOnSeveralCompressedStrings(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new EntityIndex().Execute(store);
                 CreateEntries(store, 2, "Foo", 1024);
@@ -37,10 +39,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void MapReduceOnSeveralCompressedStrings()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void MapReduceOnSeveralCompressedStrings(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new GetMultipleStringFieldsIndex().Execute(store);
                 CreateEntries(store, 2, "Foo", 1024, 10);

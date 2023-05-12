@@ -36,7 +36,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void InOnObjects(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -86,7 +86,7 @@ namespace SlowTests.MailingList
 
                     // this query returns empty
                     var queryUsingWhereIn = session.Query<Developer>("DevByIDE").Statistics(out stats)
-                                                   .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(5)))
+                                                   .Customize(x => x.WaitForNonStaleResults())
                                                    .Where(d => d.PreferredIDE.In(bestIDEsEver))
                                                    .ToList();
                     Assert.NotEmpty(queryUsingWhereIn);

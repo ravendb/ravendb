@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void TimingsShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -57,7 +57,12 @@ namespace SlowTests.Issues
                         .ToHashSet();
 
                     Assert.Contains(nameof(QueryTimingsScope.Names.Query), keys);
-                    Assert.Contains(nameof(QueryTimingsScope.Names.Lucene), keys);
+
+                    if (options.SearchEngineMode == RavenSearchEngineMode.Corax)
+                        Assert.Contains(nameof(QueryTimingsScope.Names.Corax), keys);
+                    else
+                        Assert.Contains(nameof(QueryTimingsScope.Names.Lucene), keys);
+
                     Assert.Contains(nameof(QueryTimingsScope.Names.Optimizer), keys);
                     Assert.Contains(nameof(QueryTimingsScope.Names.Retriever), keys);
                     Assert.Contains(nameof(QueryTimingsScope.Names.Storage), keys);

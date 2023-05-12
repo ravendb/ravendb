@@ -31,7 +31,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void It_should_be_found(Options options)
         {
             var customer = new Customer()

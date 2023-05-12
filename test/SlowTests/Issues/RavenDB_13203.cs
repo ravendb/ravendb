@@ -3,6 +3,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void TermsShouldNotBeReturnedIfThereAreNoMatchingDocumentsForThem()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TermsShouldNotBeReturnedIfThereAreNoMatchingDocumentsForThem(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

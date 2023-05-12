@@ -343,7 +343,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.CompareExchange)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseCompareExchangeValueIncludesInQueries_Dynamic(Options options)
         {
             using (var store = GetDocumentStore(options))

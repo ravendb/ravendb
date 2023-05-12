@@ -2,6 +2,7 @@
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void QueryShouldQuoteCollectionName()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryShouldQuoteCollectionName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Validate(store, "Core/Order", "Core/Order");
                 Validate(store, "1234", "1234");

@@ -13,6 +13,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,23 +25,22 @@ namespace SlowTests.MailingList.Everett
         {
         }
 
-        [Fact]
-        public void query_for_object_with_byte_array_with_TypeNameHandling_All()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void query_for_object_with_byte_array_with_TypeNameHandling_All(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
+                s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
-                    s.
-                        Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                    CustomizeJsonSerializer = serializer =>
                     {
-                        CustomizeJsonSerializer = serializer =>
-                        {
-                            serializer.TypeNameHandling = TypeNameHandling.All;
-                        }
-                    };
-                }
-            }))
+                        serializer.TypeNameHandling = TypeNameHandling.All;
+                    }
+                };
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
@@ -65,10 +65,11 @@ namespace SlowTests.MailingList.Everett
             }
         }
 
-        [Fact]
-        public void query_for_object_with_byte_array_with_default_TypeNameHandling()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void query_for_object_with_byte_array_with_default_TypeNameHandling(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
@@ -93,22 +94,22 @@ namespace SlowTests.MailingList.Everett
             }
         }
 
-        [Fact]
-        public void load_object_with_byte_array_with_TypeNameHandling_All()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void load_object_with_byte_array_with_TypeNameHandling_All(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
+                s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
-                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                    CustomizeJsonSerializer = serializer =>
                     {
-                        CustomizeJsonSerializer = serializer =>
-                        {
-                            serializer.TypeNameHandling = TypeNameHandling.All;
-                        }
-                    };
-                }
-            }))
+                        serializer.TypeNameHandling = TypeNameHandling.All;
+                    }
+                };
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
@@ -127,10 +128,11 @@ namespace SlowTests.MailingList.Everett
             }
         }
 
-        [Fact]
-        public void load_object_with_byte_array_with_default_TypeNameHandling()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void load_object_with_byte_array_with_default_TypeNameHandling(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();

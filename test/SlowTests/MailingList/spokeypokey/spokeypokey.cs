@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,26 +39,26 @@ namespace SlowTests.MailingList.spokeypokey
             }
         }
 
-        [Fact]
-        public void Can_use_barn_index2()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_use_barn_index2(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
+                s.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) =>
                 {
-                    s.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) =>
+                    var result = path + prop;
+                    switch (result)
                     {
-                        var result = path + prop;
-                        switch (result)
-                        {
-                            case "Households[].Members[].Name":
-                                return "MembersName";
-                            default:
-                                return result;
-                        }
-                    };
-                }
-            }))
+                        case "Households[].Members[].Name":
+                            return "MembersName";
+                        default:
+                            return result;
+                    }
+                };
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 new BarnIndex().Execute(store);
 
