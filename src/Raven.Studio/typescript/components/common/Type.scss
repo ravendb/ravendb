@@ -31,3 +31,7 @@ a:not(.btn):not(.dropdown-item):not(.no-decor) {
         background-size: 85% $border-width;
     }
 }
+
+.text-limit-width {
+    max-width: 40em;
+}
