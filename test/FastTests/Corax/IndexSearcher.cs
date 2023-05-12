@@ -7,6 +7,7 @@ using Corax;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
+using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Static.Extensions;

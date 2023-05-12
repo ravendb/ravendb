@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Corax.Queries;
+using Corax.Queries.SortingMatches.Comparers;
 using Sparrow.Server;
 using Spatial4n.Context;
 using Spatial4n.Distance;

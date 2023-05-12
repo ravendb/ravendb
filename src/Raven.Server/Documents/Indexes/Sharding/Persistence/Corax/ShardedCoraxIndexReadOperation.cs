@@ -2,6 +2,8 @@
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.SortingMatches;
+using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Raven.Client.Documents.Indexes;

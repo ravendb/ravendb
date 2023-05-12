@@ -4,6 +4,7 @@ using System.Text;
 using Corax.Queries;
 using Corax;
 using Corax.Mappings;
+using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes;

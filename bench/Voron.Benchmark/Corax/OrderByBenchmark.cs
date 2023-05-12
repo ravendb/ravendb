@@ -17,6 +17,7 @@ using BenchmarkDotNet.Validators;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Sparrow.Server;
 using Sparrow.Threading;

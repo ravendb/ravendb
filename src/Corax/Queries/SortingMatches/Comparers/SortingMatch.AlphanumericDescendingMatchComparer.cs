@@ -4,30 +4,27 @@ using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Utils;
 
-namespace Corax.Queries;
+namespace Corax.Queries.SortingMatches.Comparers;
 
 unsafe partial struct SortingMatch
 {
-    public unsafe struct DescendingMatchComparer : IMatchComparer
+    public unsafe struct AlphanumericDescendingMatchComparer : IMatchComparer
     {
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
-        private readonly delegate*<ref DescendingMatchComparer, long, long, int> _compareFunc;
+        private readonly delegate*<ref AlphanumericDescendingMatchComparer, long, long, int> _compareFunc;
         private readonly MatchCompareFieldType _fieldType;
 
         public FieldMetadata Field => _field;
         public MatchCompareFieldType FieldType => _fieldType;
 
-        public DescendingMatchComparer(IndexSearcher searcher, OrderMetadata orderMetadata)
+        public AlphanumericDescendingMatchComparer(IndexSearcher searcher, OrderMetadata orderMetadata)
         {
             _searcher = searcher;
             _field = orderMetadata.Field;
             _fieldType = orderMetadata.FieldType;
 
-            if (orderMetadata.Ascending == true)
-                throw new ArgumentException($"The metadata for field '{orderMetadata.Field.FieldName}' is not marked as 'Ascending == false' ");
-
-            static int CompareWithLoadSequence(ref DescendingMatchComparer comparer, long x, long y)
+            static int CompareWithLoadSequence(ref AlphanumericDescendingMatchComparer comparer, long x, long y)
             {
                 var readerX = comparer._searcher.GetEntryReaderFor(x);
                 var readX = readerX.GetFieldReaderFor(comparer._field).Read( out var resultX);
@@ -45,13 +42,13 @@ unsafe partial struct SortingMatch
                 return 1;
             }
 
-            static int CompareWithLoadNumerical<T>(ref DescendingMatchComparer comparer, long x, long y) where T : unmanaged, INumber<T>
+            static int CompareWithLoadNumerical<T>(ref AlphanumericDescendingMatchComparer comparer, long x, long y) where T : unmanaged, INumber<T>
             {
                 var readerX = comparer._searcher.GetEntryReaderFor(x);
-                var readX = readerX.GetFieldReaderFor(comparer._field).Read<T>(out var resultX);
+                var readX = readerX.GetFieldReaderFor(comparer._field).Read<T>( out var resultX);
 
                 var readerY = comparer._searcher.GetEntryReaderFor(y);
-                var readY = readerY.GetFieldReaderFor(comparer._field).Read<T>(out var resultY);
+                var readY = readerY.GetFieldReaderFor(comparer._field).Read<T>( out var resultY);
 
                 if (readX && readY)
                 {
@@ -65,11 +62,9 @@ unsafe partial struct SortingMatch
 
             _compareFunc = _fieldType switch
             {
-                MatchCompareFieldType.Sequence => &CompareWithLoadSequence,
                 MatchCompareFieldType.Integer => &CompareWithLoadNumerical<long>,
                 MatchCompareFieldType.Floating => &CompareWithLoadNumerical<double>,
-                MatchCompareFieldType.Spatial => &CompareWithLoadNumerical<double>,
-                var type => throw new NotSupportedException($"Currently, we do not support sorting by {type}.")
+                _ => &CompareWithLoadSequence,
             };
         }
 
@@ -82,7 +77,7 @@ unsafe partial struct SortingMatch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
         {
-            return -BasicComparers.CompareAscending(sx, sy);
+            return -BasicComparers.CompareAlphanumericAscending(sx, sy);
         }
     }
 }

@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Corax.Queries
+namespace Corax.Queries.SortingMatches
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe partial struct SortingMatch : IQueryMatch

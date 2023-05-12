@@ -8,6 +8,7 @@ using System.Threading;
 using Amazon.SQS.Model;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.SortingMatches;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Explanation;
