@@ -269,6 +269,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public AllEntriesMatch AllEntries() => new AllEntriesMatch(this, _transaction);
    public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
 
+   public long GetDictionaryIdFor(Slice field)
+   {
+       var terms = _fieldsTree?.CompactTreeFor(field);
+       return terms?.DictionaryId ?? -1;
+   }
+   
     public long GetTermAmountInField(FieldMetadata field)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);

@@ -267,9 +267,9 @@ namespace Corax.Queries
                 _fillFunc = _orderMetadata.FieldType switch
                 {
                     MatchCompareFieldType.Sequence => SortBy<TermsScorer, long, EntryComparerByTerm>(orderMetadata),
-                    // MatchCompareFieldType.Alphanumeric => SortBy<TermsScorer, long, EntryComparerByTermAlphaNumeric>(orderMetadata),
+                    MatchCompareFieldType.Alphanumeric => SortBy<TermsScorer, long, EntryComparerByTermAlphaNumeric>(orderMetadata),
                     MatchCompareFieldType.Integer => SortBy<TermsScorer, long, EntryComparerByLong>(orderMetadata),
-                    // MatchCompareFieldType.Floating => SortBy<TermsScorer, long, EntryComparerByDouble>(orderMetadata),
+                    MatchCompareFieldType.Floating => SortBy<TermsScorer, long, EntryComparerByDouble>(orderMetadata),
                     // MatchCompareFieldType.Spatial => SortBy<TermsScorer, long, EntryComparerBySpatial>(orderMetadata),
                     _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
                 };
@@ -382,7 +382,7 @@ namespace Corax.Queries
                 return &Fill<TScorer, TItem, TEntryComparer>;
             }
 
-            return &Fill<TScorer, TItem, Descending<TEntryComparer, TItem>>;
+            return &Fill<TScorer, TItem, Descending<TEntryComparer>>;
         }
 
 
@@ -409,9 +409,8 @@ namespace Corax.Queries
             return 0;
         }
 
-        private struct Descending<TInnerCmp, TItem> : IComparerInit, IComparer<UnmanagedSpan> 
+        private struct Descending<TInnerCmp> : IComparerInit, IComparer<UnmanagedSpan> 
             where TInnerCmp : struct,  IComparerInit, IComparer<UnmanagedSpan>
-            where TItem : unmanaged
         {
             private TInnerCmp cmp;
 
@@ -540,48 +539,29 @@ namespace Corax.Queries
             }
         }
         
-        private struct EntryComparerByDouble : IComparerInit
+        private struct EntryComparerByDouble : IComparerInit, IComparer<UnmanagedSpan>
         {
-            private Lookup<long> _lookup;
-
-            public int Compare(long x, long y)
-            {
-                if (_lookup  == null)
-                    return 0; // nothing to figure out _by_
-
-                var hasX = _lookup.TryGetValue(x, out var xTerm);
-                if (_lookup.TryGetValue(y, out var yTerm) == false)
-                {
-                    return hasX == false ? 0 : 1;
-                }
-
-                if (hasX == false)
-                    return -1;
-
-                double xDouble = BitConverter.Int64BitsToDouble(xTerm);
-                double yDouble = BitConverter.Int64BitsToDouble(yTerm);
-                var cmp = xDouble.CompareTo(yDouble);
-                return cmp == 0 ? x.CompareTo(y) : cmp;
-            }
-
-            public long GetEntryId(long x)
-            {
-                return x;
-            }
 
             public Lookup<long> Init(ref SortingMatch<TInner> match)
             {
-                return _lookup = match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
+                return match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
+            }
+
+            public int Compare(UnmanagedSpan x, UnmanagedSpan y)
+            {
+                return x.Double.CompareTo(y.Double);
             }
         }
 
-        private struct EntryComparerByTermAlphaNumeric : IComparerInit
+        private struct EntryComparerByTermAlphaNumeric : IComparerInit, IComparer<UnmanagedSpan>
         {
             private TermsReader _reader;
+            private long _dictionaryId;
 
             public Lookup<long> Init(ref SortingMatch<TInner> match)
             {
                 _reader = match._searcher.TermsReaderFor(match._orderMetadata.Field.FieldName);
+                _dictionaryId = match._searcher.GetDictionaryIdFor(match._orderMetadata.Field.FieldName);
                 return match._searcher.TermsIdReaderFor(match._orderMetadata.Field.FieldName);
 
             }
@@ -590,13 +570,13 @@ namespace Corax.Queries
             {
                 _reader.GetDecodedTerms(x, out var xTerm, y, out var yTerm);
 
-                var cmp = SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
-                return cmp == 0 ? x.CompareTo(y) : cmp;
+                return SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
             }
 
-            public long GetEntryId(long x)
+            public int Compare(UnmanagedSpan x, UnmanagedSpan y)
             {
-                return x;
+                _reader.GetDecodedTerms(_dictionaryId, x, out var xTerm, y, out var yTerm);
+                return SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
             }
         }
         
@@ -641,16 +621,16 @@ namespace Corax.Queries
 
         private const int SortBatchSize = 4096;
 
-        private readonly struct PrefixTieBreakerComparer<TComparer> : IComparer<long>
+        private readonly struct IndirectComparer<TComparer> : IComparer<long>, IComparer<int>
             where TComparer : struct, IComparer<UnmanagedSpan>
         {
             private readonly UnmanagedSpan* _terms;
             private readonly TComparer _inner;
 
-            public PrefixTieBreakerComparer(UnmanagedSpan* terms)
+            public IndirectComparer(UnmanagedSpan* terms, TComparer entryComparer)
             {
                 _terms = terms;
-                _inner = default;
+                _inner = entryComparer;
             }
 
             public int Compare(long x, long y)
@@ -659,6 +639,11 @@ namespace Corax.Queries
                 var yIdx = (ushort)y & 0X7FFF;
                 Debug.Assert(yIdx < SortBatchSize && xIdx < SortBatchSize);
                 return _inner.Compare(_terms[xIdx], _terms[yIdx]);
+            }
+
+            public int Compare(int x, int y)
+            {
+                return _inner.Compare(_terms[x], _terms[y]);
             }
         }
 
@@ -698,27 +683,36 @@ namespace Corax.Queries
                 
                 lookup.GetFor(batchResults, batchTermIds, long.MinValue);
 
+                var indirectComparer = new IndirectComparer<TEntryComparer>(termsPtr, entryComparer);
+
                 Span<int> indexes;
                 if (typeof(TEntryComparer) == typeof(EntryComparerByTerm) ||
-                    typeof(TEntryComparer) == typeof(Descending<EntryComparerByTerm, long>))
+                    typeof(TEntryComparer) == typeof(Descending<EntryComparerByTerm>))
                 {
-                    bool isDescending = typeof(TEntryComparer) == typeof(Descending<EntryComparerByTerm, long>);
-                    
+                    bool isDescending = typeof(TEntryComparer) == typeof(Descending<EntryComparerByTerm>);
                     Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageCache);
-                    var tieBreaker = new PrefixTieBreakerComparer<TEntryComparer>(termsPtr);
-                    indexes = SortByTerms(llt, batchTermIds, batchTerms, isDescending, tieBreaker);
+                    indexes = SortByTerms(llt, batchTermIds, batchTerms, isDescending, indirectComparer);
                 }
-                else if (typeof(TEntryComparer) == typeof(EntryComparerByLong) )
+                else if (typeof(TEntryComparer) == typeof(EntryComparerByTermAlphaNumeric) ||
+                         typeof(TEntryComparer) == typeof(Descending<EntryComparerByTermAlphaNumeric>))
                 {
-                    indexes = SortByTermsLong<NumericComparer>(batchTermIds, batchTerms, isDescending: false, default);
-                }
-                else if (typeof(TEntryComparer) == typeof(Descending<EntryComparerByLong, long>))
-                {
-                    indexes = SortByTermsLong<NumericDescendingComparer>(batchTermIds, batchTerms, isDescending: true, default);
+                    Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageCache);
+                    indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+                    for (int i = 0; i < batchTermIds.Length; i++)
+                    {
+                        indexes[i] = i;
+                    }
+                    indexes.Sort(indirectComparer);
                 }
                 else
                 {
-                    throw new NotSupportedException();
+                    indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+                    for (int i = 0; i < batchTermIds.Length; i++)
+                    {
+                        batchTerms[i] = new UnmanagedSpan(batchTermIds[i]);
+                        indexes[i] = i;
+                    }
+                    indexes.Sort(indirectComparer);
                 }
                 
 
@@ -729,34 +723,7 @@ namespace Corax.Queries
             termsIdScope.Dispose();
             matchesScope.Dispose();
         }
-        
-        private static Span<int> SortByTermsLong<TComparer>(
-            Span<long> buffer,  Span<UnmanagedSpan> batchTerms, bool isDescending,  TComparer tieBreaker)
-            where TComparer : struct, IComparer<long>
-        {
-            const long LowTwoBytesMask = 0xFFFF;
-            long lowTwoBytes = buffer[0] & LowTwoBytesMask;
-            bool lowTwoBytesIdentical = true;
-            for (int i = 0; i < buffer.Length; i++)
-            {
-                lowTwoBytesIdentical &= lowTwoBytes == (buffer[i] & LowTwoBytesMask);
-                batchTerms[i] = new UnmanagedSpan(buffer[i]);
-                long sortKey = (buffer[i] << 15) | (uint)i;
-                if (isDescending)
-                    sortKey = -sortKey;
-                buffer[i] = sortKey;
-            }
-            
-            Sort.Run(buffer);
-            
-            // if all of the values have the same top 2 bytes, we can skip the tie breaker check
-            if (lowTwoBytesIdentical == false)
-            {
-                MaybeBreakTies(buffer, tieBreaker);
-            }
 
-            return ExtractIndexes(buffer, isDescending);
-        }
 
         private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker) where TComparer : struct, IComparer<long>
         {

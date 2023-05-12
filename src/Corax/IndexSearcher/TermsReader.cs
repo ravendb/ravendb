@@ -59,6 +59,13 @@ public unsafe struct TermsReader : IDisposable
         term = _xKeyScope.Key.ToString();
         return true;
     }
+    
+    public void GetDecodedTerms(long dictionaryId, UnmanagedSpan x, out ReadOnlySpan<byte> xTerm, UnmanagedSpan y, out ReadOnlySpan<byte> yTerm)
+    {
+        // we have to do this so we won't get both terms from the same scope, maybe overwriting one another
+        DecodeKey(_xKeyScope, x.Address, x.Length, dictionaryId, out xTerm);
+        DecodeKey(_yKeyScope, y.Address, y.Length, dictionaryId, out yTerm);
+    }
 
     public void GetDecodedTerms(long x, out ReadOnlySpan<byte> xTerm, long y, out ReadOnlySpan<byte> yTerm)
     {
@@ -72,16 +79,22 @@ public unsafe struct TermsReader : IDisposable
         if (_lookup.TryGetValue(id, out var termContainerId) )
         {
             var item = Container.Get(_llt, termContainerId);
-            int remainderBits = item.Address[0] >> 4;
-            int encodedKeyLengthInBits = (item.Length - 1) * 8 - remainderBits;
+            long dictionaryId = item.PageLevelMetadata;
 
-            scope.Key.Set(encodedKeyLengthInBits, item.ToSpan()[1..], item.PageLevelMetadata);
-            term = scope.Key.Decoded();
+            DecodeKey(scope, item.Address, item.Length, dictionaryId, out term);
         }
         else
         {
             term = ReadOnlySpan<byte>.Empty;
         }
+    }
+
+    private static void DecodeKey(CompactKeyCacheScope scope, byte* ptr, int len, long dictionaryId, out ReadOnlySpan<byte> term)
+    {
+        int remainderBits = ptr[0] >> 4;
+        int encodedKeyLengthInBits = (len - 1) * 8 - remainderBits;
+        scope.Key.Set(encodedKeyLengthInBits, ptr+1, dictionaryId);
+        term = scope.Key.Decoded();
     }
 
     private UnmanagedSpan GetTerm(long entryId)
