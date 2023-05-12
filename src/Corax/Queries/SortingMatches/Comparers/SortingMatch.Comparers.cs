@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Corax.Queries.SortingMatches.Comparers;
 
-unsafe partial struct SortingMatch
+public unsafe partial struct LegacySortingMatch
 {
     internal struct SequenceItem
     {
