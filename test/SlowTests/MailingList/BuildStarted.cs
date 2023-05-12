@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.MailingList
         //This test attempts to lookup an existing item when none exist in the
         //database. It returns null which that variable is assigned a new value
         //storing that new value, however, fails.
-        [Fact]
-        public void DocumentStoreFailsWhenGrabbingNonExistingItemAndStoringNewOne()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void DocumentStoreFailsWhenGrabbingNonExistingItemAndStoringNewOne(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

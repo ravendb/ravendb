@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Xunit;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_group_by_array_and_collection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_group_by_array_and_collection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

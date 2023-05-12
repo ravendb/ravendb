@@ -21,10 +21,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void streaming_and_projections_with_property_rename()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void streaming_and_projections_with_property_rename(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Customers_ByName();
                 index.Execute(store);

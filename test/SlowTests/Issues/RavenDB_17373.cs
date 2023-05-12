@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Issues
             public DateTime Registered;
         }
 
-        [Fact]
-        public void CanGetSameResultOnRangeQueryMultipleTimes()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGetSameResultOnRangeQueryMultipleTimes(Options options)
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(options);
             using (var s = store.OpenSession())
             {
                 var start = new DateTime(2021, 1, 1);

@@ -28,7 +28,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryOnDictionaryWithDateTimeAsKeyShouldWork(Options options)
         {
             var dt = new DateTime(1982, 11, 28);

@@ -38,7 +38,7 @@ namespace SlowTests.Issues
         }
                 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Complex object")]
         public void CanQueryNestedClass(Options options)
         {             

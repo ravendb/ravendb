@@ -163,7 +163,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void IndexesShouldGetCreated(Options options)
         {
             using (var store = GetDocumentStore(options))

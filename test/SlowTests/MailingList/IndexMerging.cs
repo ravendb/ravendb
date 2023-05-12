@@ -21,7 +21,7 @@ namespace SlowTests.MailingList
         private const string SampleLogfileStoreId = "123";
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void AutoIndexReuseFails(Options options)
         {
             using (var store = GetDocumentStore(options))

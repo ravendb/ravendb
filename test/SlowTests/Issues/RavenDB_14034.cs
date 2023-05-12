@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.CompareExchange)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void CmpxchgInWhereShouldAffectQueryEtag_DynamicIndexQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.CompareExchange)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void CmpxchgInWhereShouldAffectQueryEtag_StaticIndexQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -187,7 +187,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.CompareExchange)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void CmpxchgInSelectShouldAffectQueryEtag_IndexQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
