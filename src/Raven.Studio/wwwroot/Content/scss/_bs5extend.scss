@@ -209,6 +209,10 @@
     }
 }
 
+.carousel-auto-height {
+    transition: height 0.5s $global-easing-in-out;
+}
+
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
