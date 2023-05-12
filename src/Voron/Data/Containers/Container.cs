@@ -890,9 +890,8 @@ namespace Voron.Data.Containers
         /// <summary>
         /// Assumes that ids is sorted 
         /// </summary>
-        public static void GetAll(LowLevelTransaction llt, Span<long> ids, Span<UnmanagedSpan> spans, long missingValue, PageLocator pageCache)
+        public static void GetAll(LowLevelTransaction llt, Span<long> ids, UnmanagedSpan* spans, long missingValue, PageLocator pageCache)
         {
-            Debug.Assert(ids.Length == spans.Length);
             for (int i = 0; i < ids.Length; i++)
             {
                 if (ids[i]== missingValue)
