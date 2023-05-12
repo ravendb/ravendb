@@ -344,7 +344,7 @@ namespace Corax.Queries.SortingMatches;
             {
                 indexes[i] = i;
             }
-            EntryComparerHelper.IndirectSort<EntryComparerByTermAlphaNumeric>(indexes, batchTerms, descending, this);
+            EntryComparerHelper.IndirectSort(indexes, batchTerms, descending, this);
             return indexes;
         }
 

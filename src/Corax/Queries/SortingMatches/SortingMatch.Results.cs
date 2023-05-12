@@ -71,10 +71,9 @@ unsafe partial struct SortingMatch<TInner>
         public void Merge<TEntryComparer>(TEntryComparer comparer,
             Span<int> indexes,
             Span<long> matches, 
-            Span<UnmanagedSpan> terms)
+            UnmanagedSpan* terms)
             where TEntryComparer : struct, IComparer<UnmanagedSpan>
         {
-            Debug.Assert(matches.Length == terms.Length);
             Debug.Assert(matches.Length == indexes.Length);
 
             if (_max == -1 || // no limit
@@ -121,8 +120,8 @@ unsafe partial struct SortingMatch<TInner>
                 var cmp = comparer.Compare(_terms[i], terms[bIdx]);
                 if (cmp > 0)
                 {
-                    Swap(_matches, i, matches, bIdx);
-                    Swap(_terms, i, terms, bIdx);
+                    (_matches[i], matches[bIdx]) = (matches[bIdx], _matches[i]);
+                    (_terms[i], terms[bIdx]) = (terms[bIdx], _terms[i]);
 
                     // put it in the right place
                     int j = 1;
@@ -140,14 +139,8 @@ unsafe partial struct SortingMatch<TInner>
             }
         }
 
-        private static void Swap<T>(T* a, int aIdx, Span<T> b, int bIdx) where T : unmanaged
-        {
-            (a[aIdx], b[bIdx]) = (b[bIdx], a[aIdx]);
-        }
-            
 
-
-        private void FullyMergeWith<TComparer>(TComparer comparer, Span<int> indexes, Span<long> matches, Span<UnmanagedSpan> terms)
+        private void FullyMergeWith<TComparer>(TComparer comparer, Span<int> indexes, Span<long> matches, UnmanagedSpan* terms)
             where TComparer : struct, IComparer<UnmanagedSpan>
         {
             if (indexes.Length + Count > _capacity)
@@ -182,7 +175,7 @@ unsafe partial struct SortingMatch<TInner>
             Count += indexes.Length;
         }
 
-        private void CopyToHeadOfBuffer(Span<int> indexes, Span<long> matches, Span<UnmanagedSpan> terms, int limit)
+        private void CopyToHeadOfBuffer(Span<int> indexes, Span<long> matches, UnmanagedSpan* terms, int limit)
         {
             for (int i = 0; i < limit; i++)
             {

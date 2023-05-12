@@ -18,7 +18,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
     private readonly IndexSearcher _searcher;
-    private readonly IQueryMatch _inner;
+    private readonly TInner _inner;
     private readonly OrderMetadata _orderMetadata;
     private readonly delegate*<ref SortingMatch<TInner>, Span<long>, int> _fillFunc;
 
@@ -76,7 +76,22 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         // we will just need to acquire via pages the totality of the results. 
         if (match._results.Count == NotStarted)
         {
-            FillAndSortResults<TEntryComparer>(ref match);
+            var memoizer = match._searcher.Memoize(match._inner);
+            var allMatches = memoizer.FillAndRetrieve();
+            match.TotalResults = allMatches.Length;
+            switch (allMatches.Length)
+            {
+                case 0:
+                    match._results.Count = 0;
+                    return 0;
+                case <= 4096:
+                    SortSmallResult<TEntryComparer>(ref match, allMatches);
+                    break;
+                default:
+                    SortLargeResult<TEntryComparer>(ref match, allMatches);
+                    break;
+            }
+            memoizer.Dispose();
         }
 
         var read = match._results.CopyTo(matches);
@@ -89,7 +104,47 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         return 0;
     }
-        
+
+    private static void SortLargeResult<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> allMatches)
+        where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
+    {
+        var llt = match._searcher.Transaction.LowLevelTransaction;
+        var allocator = match._searcher.Allocator;
+
+        var termsIdScope = allocator.Allocate(SortBatchSize * sizeof(long), out ByteString bs);
+        Span<long> termIds = new(bs.Ptr, SortBatchSize);
+        var termsScope = allocator.Allocate(SortBatchSize * sizeof(UnmanagedSpan), out bs);
+        UnmanagedSpan* termsPtr = (UnmanagedSpan*)bs.Ptr;
+
+        // Initialize the important infrastructure for the sorting.
+        TEntryComparer entryComparer = new();
+        entryComparer.Init(ref match);
+        match._results.Init();
+
+        var pageCache = new PageLocator(llt, 1024);
+
+        while(true)
+        {
+            var read = Math.Min(allMatches.Length, SortBatchSize);
+            var batchResults = allMatches[..read];
+            allMatches = allMatches[read..];
+            match.TotalResults += read;
+            if (read == 0)
+                break;
+
+            var batchTermIds = termIds[..read];
+
+            Sort.Run(batchResults);
+
+            Span<int> indexes = entryComparer.SortBatch(ref match, llt, pageCache, batchResults, batchTermIds, termsPtr);
+
+            match._results.Merge(entryComparer, indexes, batchResults, termsPtr);
+        }
+
+        termsScope.Dispose();
+        termsIdScope.Dispose();
+    }
+
     private static string[] DebugTerms(LowLevelTransaction llt, Span<UnmanagedSpan> terms)
     {
         using var s = new CompactKeyCacheScope(llt);
@@ -109,19 +164,15 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     
     private const int SortBatchSize = 4096;
 
-    private static void FillAndSortResults<TEntryComparer>(ref SortingMatch<TInner> match) 
+    private static void SortSmallResult<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> batchResults) 
         where TEntryComparer : struct,  IEntryComparer, IComparer<UnmanagedSpan>
     {
         var llt = match._searcher.Transaction.LowLevelTransaction;
         var allocator = match._searcher.Allocator;
 
-        var matchesScope = allocator.Allocate(SortBatchSize * sizeof(long), out ByteString bs);
-        Span<long> matches = new(bs.Ptr, SortBatchSize);
-        var termsIdScope = allocator.Allocate(SortBatchSize * sizeof(long), out bs);
-        Span<long> termIds = new(bs.Ptr, SortBatchSize);
-        var termsScope = allocator.Allocate(SortBatchSize * sizeof(UnmanagedSpan), out bs);
-        Span<UnmanagedSpan> terms = new(bs.Ptr, SortBatchSize);
-        UnmanagedSpan* termsPtr = (UnmanagedSpan*)bs.Ptr;
+        var bufScope = allocator.Allocate( batchResults.Length * (sizeof(long)+sizeof(UnmanagedSpan)), out ByteString bs);
+        Span<long> batchTermIds = new(bs.Ptr, batchResults.Length);
+        UnmanagedSpan* termsPtr = (UnmanagedSpan*)(bs.Ptr + batchResults.Length * sizeof(long));
 
         // Initialize the important infrastructure for the sorting.
         TEntryComparer entryComparer = new();
@@ -129,28 +180,13 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         match._results.Init();
             
         var pageCache = new PageLocator(llt, 1024);
+        
+        var indexes = entryComparer.SortBatch(ref match, llt, pageCache, batchResults, batchTermIds, termsPtr);
 
-        while (true)
-        {
-            var read = match._inner.Fill(matches);
-            match.TotalResults += read;
-            if (read == 0)
-                break;
+        match._results.Merge(entryComparer, indexes, batchResults, termsPtr);
 
-            var batchResults = matches[..read];
-            var batchTermIds = termIds[..read];
-            var batchTerms = terms[..read];
-
-            Sort.Run(batchResults);
-
-            Span<int> indexes = entryComparer.SortBatch(ref match, llt, pageCache, batchResults, batchTermIds, termsPtr);
-
-            match._results.Merge(entryComparer, indexes, batchResults, batchTerms);
-        }
-
-        termsScope.Dispose();
-        termsIdScope.Dispose();
-        matchesScope.Dispose();
+        pageCache.Release();
+        bufScope.Dispose();
     }
 
 
