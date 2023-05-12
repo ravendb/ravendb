@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Utils;
 
-namespace Corax.Queries;
+namespace Corax.Queries.SortingMatches.Comparers;
 
 unsafe partial struct SortingMatch
 {

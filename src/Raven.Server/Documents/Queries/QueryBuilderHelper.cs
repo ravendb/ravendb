@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;

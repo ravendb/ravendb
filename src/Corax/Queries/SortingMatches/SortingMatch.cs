@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
@@ -16,7 +17,7 @@ using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
 
-namespace Corax.Queries
+namespace Corax.Queries.SortingMatches
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct SortingMatch<TInner> : IQueryMatch
@@ -654,7 +655,7 @@ namespace Corax.Queries
             public int Compare(UnmanagedSpan x, UnmanagedSpan y)
             {
                 _reader.GetDecodedTerms(_dictionaryId, x, out var xTerm, y, out var yTerm);
-                return SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
+                return Comparers.SortingMatch.BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
             }
         }
         

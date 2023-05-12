@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils.Spatial;
 using Spatial4n.Shapes;
 

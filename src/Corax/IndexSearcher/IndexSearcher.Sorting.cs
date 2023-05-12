@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using Corax.Queries;
+using Corax.Queries.SortingMatches;
 using Corax.Utils;
 
 namespace Corax;

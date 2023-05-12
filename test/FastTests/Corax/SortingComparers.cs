@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Corax.Queries;
+using Corax.Queries.SortingMatches;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

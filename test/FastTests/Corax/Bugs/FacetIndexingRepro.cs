@@ -3,6 +3,7 @@ using System.IO;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using FastTests.Voron;
 using Parquet.Thrift;

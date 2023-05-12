@@ -7,15 +7,15 @@ using Corax.Utils;
 using Corax.Utils.Spatial;
 using Spatial4n.Shapes;
 
-namespace Corax.Queries;
+namespace Corax.Queries.SortingMatches.Comparers;
 
 unsafe partial struct SortingMatch
 {
-    public struct SpatialDescendingMatchComparer : ISpatialComparer
+    public struct SpatialAscendingMatchComparer : ISpatialComparer
     {
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
-        private readonly delegate*<ref SpatialDescendingMatchComparer, long, long, int> _compareFunc;
+        private readonly delegate*<ref SpatialAscendingMatchComparer, long, long, int> _compareFunc;
         private readonly MatchCompareFieldType _fieldType;
         private readonly IPoint _point;
         private readonly double _round;
@@ -26,12 +26,10 @@ unsafe partial struct SortingMatch
         public double Round => _round;
 
         public SpatialUnits Units => _units;
-
         public FieldMetadata Field => _field;
-        
         public MatchCompareFieldType FieldType => _fieldType;
 
-        public SpatialDescendingMatchComparer(IndexSearcher searcher, in OrderMetadata metadata)
+        public SpatialAscendingMatchComparer(IndexSearcher searcher, in OrderMetadata metadata)
         {
             _searcher = searcher;
             _field = metadata.Field;
@@ -40,18 +38,19 @@ unsafe partial struct SortingMatch
             _round = metadata.Round;
             _units = metadata.Units;
             
-            static int ThrowOnWrongEntryFieldType(ref SpatialDescendingMatchComparer comparer, long x, long y)
+
+            static int ThrowOnWrongEntryFieldType(ref SpatialAscendingMatchComparer comparer, long x, long y)
             {
-                throw new InvalidDataException($"{nameof(SpatialDescendingMatchComparer)} is only for spatial data.");
+                throw new InvalidDataException($"{nameof(SpatialAscendingMatchComparer)} is only for spatial data.");
             }
             
-            static int CompareWithSpatialLoad<T>(ref SpatialDescendingMatchComparer comparer, long x, long y) where T : unmanaged
+            static int CompareWithSpatialLoad<T>(ref SpatialAscendingMatchComparer comparer, long x, long y) where T : unmanaged
             {
                 var readerX = comparer._searcher.GetEntryReaderFor(x);
-                var readX = readerX.GetFieldReaderFor(comparer._field).Read(out (double lat, double lon) resultX);
+                var readX = readerX.GetFieldReaderFor(comparer._field).Read( out (double lat, double lon) resultX);
 
                 var readerY = comparer._searcher.GetEntryReaderFor(y);
-                var readY = readerY.GetFieldReaderFor(comparer._field).Read(out (double lat, double lon) resultY);
+                var readY = readerY.GetFieldReaderFor(comparer._field).Read( out (double lat, double lon) resultY);
 
                 if (readX && readY)
                 {
@@ -61,11 +60,11 @@ unsafe partial struct SortingMatch
                     return comparer.CompareNumerical(readerXDistance, readerYDistance);
                 }
                 else if (readX)
-                    return -1;
+                    return 1;
 
-                return 1;
+                return -1;
             }
-
+            
             _compareFunc = _fieldType switch
             {
                 MatchCompareFieldType.Sequence => &ThrowOnWrongEntryFieldType,
@@ -79,13 +78,13 @@ unsafe partial struct SortingMatch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareNumerical<T>(T sx, T sy) where T : unmanaged, INumber<T>
         {
-            return -BasicComparers.CompareAscending(sx, sy);
+            return BasicComparers.CompareAscending(sx, sy);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
         {
-            return -BasicComparers.CompareAscending(sx, sy);
+            return BasicComparers.CompareAscending(sx, sy);
         }
     }
 }

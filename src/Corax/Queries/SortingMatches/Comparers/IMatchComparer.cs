@@ -2,11 +2,10 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
-using Corax.Utils;
 using Corax.Utils.Spatial;
 using Spatial4n.Shapes;
 
-namespace Corax.Queries
+namespace Corax.Queries.SortingMatches.Comparers
 {
     public enum MatchCompareFieldType
     {
