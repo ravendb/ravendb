@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
@@ -9,6 +10,8 @@ using Sparrow.Server;
 using Sparrow.Server.Utils.VxSort;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Containers;
+using Voron.Data.PostingLists;
 using Voron.Impl;
 
 namespace Corax.Queries.SortingMatches;
@@ -84,9 +87,9 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 case 0:
                     match._results.Count = 0;
                     return 0;
-                case <= 4096:
-                    SortSmallResult<TEntryComparer>(ref match, allMatches);
-                    break;
+                // case <= 4096:
+                //     SortSmallResult<TEntryComparer>(ref match, allMatches);
+                //     break;
                 default:
                     SortLargeResult<TEntryComparer>(ref match, allMatches);
                     break;
@@ -105,44 +108,141 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         return 0;
     }
 
+    private ref struct SortedIndexReader
+    {
+        private PostingList.Iterator _postListIt;
+        private Span<byte> _smallPostingListBuffer;
+        private PForDecoder.DecoderState _state;
+        private CompactTree.Iterator _termsIt;
+        private IndexSearcher _searcher;
+        private LowLevelTransaction _llt;
+
+        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, CompactTree.Iterator termsIt)
+        {
+            _termsIt = termsIt;
+            _termsIt.Reset();
+            _llt = llt;
+            _searcher = searcher;
+            _postListIt = default;
+            _smallPostingListBuffer = default;
+            _state = default;
+        }
+
+        public int Read(Span<long> sortedIds)
+        {
+            int currentIdx = 0;
+            // here we resume the *previous* operation
+            if (_state.BufferSize != 0)
+            {
+                ReadSmallPostingList(sortedIds, ref currentIdx);
+            }
+            else if (_postListIt.IsValid)
+            {
+                ReadLargePostingList(sortedIds, ref currentIdx);
+            }
+
+            while (currentIdx < sortedIds.Length)
+            {
+                if (_termsIt.MoveNext(out  var k, out var postingListId) == false)
+                    break;
+
+                var termType = (TermIdMask)postingListId & TermIdMask.EnsureIsSingleMask;
+                switch (termType)
+                {
+                    case TermIdMask.Single:
+                        sortedIds[currentIdx++] = EntryIdEncodings.GetContainerId(postingListId);
+                        break;
+                    case TermIdMask.SmallPostingList:
+                        var smallSetId = EntryIdEncodings.GetContainerId(postingListId);
+                        _smallPostingListBuffer = Container.Get(_llt, smallSetId).ToSpan();
+                        _state = new(_smallPostingListBuffer.Length);
+                        ReadSmallPostingList(sortedIds, ref currentIdx);
+                        break;
+                    case TermIdMask.PostingList:
+                        var postingList = _searcher.GetPostingList(postingListId);
+                        _postListIt = postingList.Iterate();
+                        ReadLargePostingList(sortedIds, ref currentIdx);
+                        break;
+                    default:
+                        throw new OutOfMemoryException(termType.ToString());
+                }
+            }
+
+            return currentIdx;
+        }
+
+        private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)
+        {
+            if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false)
+                _postListIt = default;
+            currentIdx += read;
+        }
+
+        private void ReadSmallPostingList(Span<long> sortedIds, ref int currentIdx)
+        {
+            while (currentIdx< sortedIds.Length)
+            {
+                var read = PForDecoder.Decode(ref _state, _smallPostingListBuffer, sortedIds[currentIdx..]);
+                currentIdx += read;
+                if (read == 0)
+                {
+                    _state = default;
+                    break;
+                }
+            }
+        }
+    }
+
     private static void SortLargeResult<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> allMatches)
         where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
     {
         var llt = match._searcher.Transaction.LowLevelTransaction;
         var allocator = match._searcher.Allocator;
 
-        var termsIdScope = allocator.Allocate(SortBatchSize * sizeof(long), out ByteString bs);
-        Span<long> termIds = new(bs.Ptr, SortBatchSize);
-        var termsScope = allocator.Allocate(SortBatchSize * sizeof(UnmanagedSpan), out bs);
-        UnmanagedSpan* termsPtr = (UnmanagedSpan*)bs.Ptr;
+        var take = 15;
+        
+        var indexesScope = allocator.Allocate(SortBatchSize * sizeof(int), out ByteString bs);
+        Span<int> indexesBuffer = new(bs.Ptr, SortBatchSize);
+        var sortedIdsScope = allocator.Allocate( sizeof(long) * SortBatchSize * 2, out bs);
+        Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize * 2);
 
-        // Initialize the important infrastructure for the sorting.
-        TEntryComparer entryComparer = new();
-        entryComparer.Init(ref match);
+        var termsTree = match._searcher.GetTermsFor(match._orderMetadata.Field.FieldName);
+        var reader = new SortedIndexReader(llt, match._searcher, termsTree.Iterate());
         match._results.Init();
-
-        var pageCache = new PageLocator(llt, 1024);
-
-        while(true)
+        
+        while (match._results.Count < take)
         {
-            var read = Math.Min(allMatches.Length, SortBatchSize);
-            var batchResults = allMatches[..read];
-            allMatches = allMatches[read..];
-            match.TotalResults += read;
+            var read = reader.Read(sortedIdBuffer);
             if (read == 0)
                 break;
-
-            var batchTermIds = termIds[..read];
-
-            Sort.Run(batchResults);
-
-            Span<int> indexes = entryComparer.SortBatch(ref match, llt, pageCache, batchResults, batchTermIds, termsPtr);
-
-            match._results.Merge(entryComparer, indexes, batchResults, termsPtr);
+            var sortedIds = sortedIdBuffer[..read];
+            var sortedIdsByEntryId = sortedIdBuffer[read..(read * 2)];
+            sortedIds.CopyTo(sortedIdsByEntryId);
+            var indexes = indexesBuffer[..read];
+            InitializeIndexes(indexes);
+            // we effectively permute the indexes as well as the sortedIds to get a sorted list to compare
+            // with the allMatches
+            sortedIdsByEntryId.Sort(indexes);
+            read = SortHelper.FindMatches(indexes, sortedIdsByEntryId, allMatches);
+            indexes = indexes[..read];
+            indexes.Sort();
+            match._results.EnsureAdditionalCapacity(indexes.Length);
+            // now get the *actual* matches in their sorted order
+            for (int i = 0; i < indexes.Length; i++)
+            {
+                int idx = indexes[i];
+                match._results.Append(sortedIds[idx]);
+            }
         }
 
-        termsScope.Dispose();
-        termsIdScope.Dispose();
+        sortedIdsScope.Dispose();
+        indexesScope.Dispose();
+    }
+
+    private static void InitializeIndexes(Span<int> span)
+    {
+        for (int i = 0; i < span.Length; i++)
+            span[i] = i;
     }
 
     private static string[] DebugTerms(LowLevelTransaction llt, Span<UnmanagedSpan> terms)

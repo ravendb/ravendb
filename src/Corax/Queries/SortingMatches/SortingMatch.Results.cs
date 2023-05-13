@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using Newtonsoft.Json.Bson;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Impl;
@@ -41,33 +42,12 @@ unsafe partial struct SortingMatch<TInner>
             _matches = (long*)_matchesBuffer.Ptr;
             _terms = (UnmanagedSpan*)_termsBuffer.Ptr;
         }
-            
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private static int BinarySearch<TEntryComparer>(TEntryComparer comparer,Span<int> indexes, Span<UnmanagedSpan> terms, UnmanagedSpan needle)
-            where TEntryComparer : struct, IComparer<UnmanagedSpan>
+
+        public void Append(long match)
         {
-            int l = 0;
-            int r = indexes.Length - 1;
-            while (l <= r)
-            {
-                var pivot = (l + r) >> 1;
-                var cmp = comparer.Compare(terms[indexes[pivot]], needle);
-                switch (cmp)
-                {
-                    case 0:
-                        return pivot;
-                    case < 0:
-                        l = pivot + 1;
-                        break;
-                    default:
-                        r = pivot - 1;
-                        break;
-                }
-            }
-
-            return ~l;
+            _matches[Count++] = match;
         }
-
+            
         public void Merge<TEntryComparer>(TEntryComparer comparer,
             Span<int> indexes,
             Span<long> matches, 
@@ -183,6 +163,13 @@ unsafe partial struct SortingMatch<TInner>
                 _matches[i] = matches[bIdx];
                 _terms[i] = terms[bIdx];
             }
+        }
+
+        public void EnsureAdditionalCapacity(int additionalCount)
+        {
+            if (Count + additionalCount < _capacity)
+                return;
+            EnsureCapacity(Count + additionalCount);
         }
 
         private void EnsureCapacity(int req)
