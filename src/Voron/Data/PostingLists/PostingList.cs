@@ -228,6 +228,8 @@ namespace Voron.Data.PostingLists
 
             public long Current;
 
+            public bool IsValid => _parent != null;
+            
             public Iterator(PostingList parent)
             {
                 _parent = parent;

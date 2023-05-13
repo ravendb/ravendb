@@ -60,6 +60,12 @@ namespace Voron.Data.CompactTrees
 
             public bool MoveNext(out CompactKeyCacheScope scope, out long value)
             {
+                if (_cursor._pos < 0)
+                {
+                    scope = default;
+                    value = default;
+                    return false;
+                }
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)
                 {
@@ -76,7 +82,7 @@ namespace Voron.Data.CompactTrees
                         return true;
                     }
                     if (_tree.GoToNextPage(ref _cursor) == false)
-                    {
+                    { 
                         scope = default;
                         value = default;
                         return false;

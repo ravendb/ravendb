@@ -61,6 +61,8 @@ public partial class IndexSearcher
 
         return TermQuery(numericalField, containerId, 1);
     }
+    
+    public CompactTree GetTermsFor(Slice name) =>_fieldsTree?.CompactTreeFor(name); 
 
     public TermMatch TermQuery(FieldMetadata field, string term, CompactTree termsTree = null)
     {
@@ -154,12 +156,8 @@ public partial class IndexSearcher
         TermMatch matches;
         if ((containerId & (long)TermIdMask.PostingList) != 0)
         {
-            var setId = EntryIdEncodings.GetContainerId(containerId);
-            var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
-
-            ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
-            var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
-            matches = TermMatch.YieldSet(this, Allocator, set, termRatioToWholeCollection, field.HasBoost, IsAccelerated);
+            var postingList = GetPostingList(containerId);
+            matches = TermMatch.YieldSet(this, Allocator, postingList, termRatioToWholeCollection, field.HasBoost, IsAccelerated);
         }
         else if ((containerId & (long)TermIdMask.SmallPostingList) != 0)
         {
@@ -173,6 +171,16 @@ public partial class IndexSearcher
         }
 
         return matches;
+    }
+
+    public PostingList GetPostingList(long containerId)
+    {
+        var setId = EntryIdEncodings.GetContainerId(containerId);
+        var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
+
+        ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
+        var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
+        return set;
     }
 
     public long NumberOfDocumentsUnderSpecificTerm<TData>(FieldMetadata binding, TData term)
