@@ -666,7 +666,8 @@ namespace Raven.Server.Documents.Revisions
 
             long numberOfRevisionsToDelete;
 
-            if (configuration == ZeroConfiguration)
+            if (configuration == ConflictConfiguration.Default || 
+                configuration == ZeroConfiguration)
             {
                 // handleOnlyConflictedRevisionsAndDeleteTheRest = true;
                 //
@@ -685,7 +686,7 @@ namespace Raven.Server.Documents.Revisions
                 //
                 // var deleted = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete, conflictConfig.MinimumRevisionAgeToKeep, changeVector, lastModifiedTicks);
                 // return moreRevisionToDelete;
-                var results = HandleConflictRevisionsDelete(context, table, prefixSlice, collectionName, changeVector, revisionsCount, lastModifiedTicks);
+                var results = HandleConflictRevisionsDelete(context, table, prefixSlice, collectionName, changeVector, revisionsCount, lastModifiedTicks, handleNotConflicted: nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration));
                 IncrementCountOfRevisions(context, prefixSlice, -results.DeletedCount);
                 return results.MoreWork;
             }
@@ -856,7 +857,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private (bool MoreWork, long DeletedCount) HandleConflictRevisionsDelete(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName,
-            string changeVector, long revisionCount, long lastModifiedTicks)
+            string changeVector, long revisionCount, long lastModifiedTicks, bool handleNotConflicted)
         {
             long maxEtagDeleted = 0;
             Table writeTable = null;
@@ -885,7 +886,7 @@ namespace Raven.Server.Documents.Revisions
                         break; //return true;
                     }
 
-                    if (regularCount - regularDeletedCount == 0 &&
+                    if ((regularCount - regularDeletedCount == 0 || handleNotConflicted == false) &&
                         ( (config.MinimumRevisionsToKeep.HasValue && conflictCount - conflictDeletedCount <= config.MinimumRevisionsToKeep.Value) || 
                           stopDeleteConflict) ){
                         moreWork = false;
@@ -909,6 +910,10 @@ namespace Raven.Server.Documents.Revisions
                         }
                         else
                         {
+                            if (handleNotConflicted == false)
+                            {
+                                continue;
+                            }
                             regularDeletedCount++;
                         }
 
@@ -1520,7 +1525,7 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 var needToDeleteMore = DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, prevRevisionsCount,
-                    NonPersistentDocumentFlags.None,
+                    NonPersistentDocumentFlags.ByEnforceRevisionConfiguration,
                     changeVector, lastModifiedTicks, deletedDoc);
 
                 var currentRevisionsCount = GetRevisionsCount(context, id);
