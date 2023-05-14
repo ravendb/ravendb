@@ -183,8 +183,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         <PopoverWithHover target={popovers.identityPartsSeparator} placement="top">
                             <div className="flex-horizontal p-3">
                                 <div>
-                                    Changes the default separator for automatically generated document IDs. You can use
-                                    any <code>char</code> except <code>|</code> (pipe)
+                                    Changes the default separator for automatically generated document IDs.<br /> 
+                                    You can use any <code>char</code> except <code>|</code> (pipe)
                                 </div>
                             </div>
                         </PopoverWithHover>
@@ -193,7 +193,10 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         {globalConfig && (
                             <>
                                 <Col className="d-flex">
-                                    <Input defaultValue={globalConfig.identityPartsSeparatorValue} disabled />
+                                    <Input defaultValue={globalConfig.identityPartsSeparatorValue} 
+                                           disabled
+                                           placeholder={globalConfig.identityPartsSeparatorValue || "'/' (default)"}
+                                    />
                                 </Col>
                                 {formValues.overrideConfig && formValues.identityPartsSeparatorEnabled && (
                                     <GlobalSettingsSeparator />
@@ -213,7 +216,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                     type="text"
                                     control={control}
                                     name="identityPartsSeparatorValue"
-                                    placeholder="Default is '/'"
+                                    placeholder="'/' (default)"
                                     disabled={!formValues.identityPartsSeparatorEnabled || !formValues.overrideConfig}
                                     className="d-flex"
                                 />
@@ -241,7 +244,11 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         {globalConfig && (
                             <>
                                 <Col className="d-flex">
-                                    <Input defaultValue={globalConfig.maximumNumberOfRequestsValue} disabled />
+                                    <Input defaultValue={globalConfig.maximumNumberOfRequestsValue}
+                                           disabled
+                                           placeholder={globalConfig.maximumNumberOfRequestsValue ? 
+                                               globalConfig.maximumNumberOfRequestsValue.toLocaleString() : "30 (default)"}
+                                    />
                                 </Col>
                                 {formValues.overrideConfig && formValues.maximumNumberOfRequestsEnabled && (
                                     <GlobalSettingsSeparator />
@@ -261,7 +268,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                     type="number"
                                     control={control}
                                     name="maximumNumberOfRequestsValue"
-                                    placeholder="Default value is 30"
+                                    placeholder="30 (default)"
                                     disabled={!formValues.maximumNumberOfRequestsEnabled || !formValues.overrideConfig}
                                 />
                             </InputGroup>
@@ -330,7 +337,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             <Input
                                                 defaultValue={globalConfig.loadBalancerSeedValue}
                                                 disabled
-                                                placeholder="0"
+                                                placeholder="0 (default)"
                                             />
                                         </Col>
                                         {formValues.overrideConfig && formValues.loadBalancerSeedEnabled && (
@@ -368,7 +375,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             type="number"
                                             control={control}
                                             name="loadBalancerSeedValue"
-                                            placeholder="Enter seed number"
+                                            placeholder="0 (default)"
                                             disabled={!formValues.loadBalancerSeedEnabled || !formValues.overrideConfig}
                                         />
                                     </InputGroup>

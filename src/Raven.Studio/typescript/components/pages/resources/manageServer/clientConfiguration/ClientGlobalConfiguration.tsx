@@ -68,8 +68,8 @@ export default function ClientGlobalConfiguration() {
                         <PopoverWithHover target={popovers.identityPartsSeparator} placement="top">
                             <div className="flex-horizontal p-3">
                                 <div>
-                                    Changes the default separator for automatically generated document IDs. You can use
-                                    any <code>char</code> except <code>|</code> (pipe)
+                                    Changes the default separator for automatically generated document IDs.<br />
+                                    You can use any <code>char</code> except <code>|</code> (pipe)
                                 </div>
                             </div>
                         </PopoverWithHover>
@@ -84,7 +84,7 @@ export default function ClientGlobalConfiguration() {
                                     type="text"
                                     control={control}
                                     name="identityPartsSeparatorValue"
-                                    placeholder="Default is '/'"
+                                    placeholder="'/' (default)"
                                     disabled={!formValues.identityPartsSeparatorEnabled}
                                     className="d-flex"
                                 />
@@ -118,7 +118,7 @@ export default function ClientGlobalConfiguration() {
                                     type="number"
                                     control={control}
                                     name="maximumNumberOfRequestsValue"
-                                    placeholder="Default value is 30"
+                                    placeholder="30 (default)"
                                     disabled={!formValues.maximumNumberOfRequestsEnabled}
                                 />
                             </InputGroup>
@@ -185,7 +185,7 @@ export default function ClientGlobalConfiguration() {
                                             type="number"
                                             control={control}
                                             name="loadBalancerSeedValue"
-                                            placeholder="Enter seed number"
+                                            placeholder="0 (default)"
                                             disabled={!formValues.loadBalancerSeedEnabled}
                                         />
                                     </InputGroup>
