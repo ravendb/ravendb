@@ -238,7 +238,8 @@ namespace Corax.Queries.SortingMatches;
 
             Sort.Run(buffer);
 
-            if (buffer.Length > match._take)
+            if (match._take >= 0 && 
+                buffer.Length > match._take)
                 buffer = buffer[..match._take];
             
             MaybeBreakTies(buffer, tieBreaker);

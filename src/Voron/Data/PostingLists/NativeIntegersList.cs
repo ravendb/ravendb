@@ -10,7 +10,7 @@ public unsafe struct NativeIntegersList : IDisposable
 {
     private readonly ByteStringContext _ctx;
     public int Count;
-    public int Capacity;
+    private int _capacity;
     public long* RawItems;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _releaseItems;
 
@@ -20,24 +20,24 @@ public unsafe struct NativeIntegersList : IDisposable
         RawItems = null;
         _releaseItems = default;
         Count = 0;
-        Capacity = 0;
+        _capacity = 0;
         GrowListUnlikely(initialCapacity);
     }
 
     public void Add(ReadOnlySpan<long> values)
     {
-        if (Count + values.Length >= Capacity)
+        if (Count + values.Length >= _capacity)
         {
             GrowListUnlikely(values.Length);
-            Debug.Assert(Count + values.Length <= Capacity);
+            Debug.Assert(Count + values.Length <= _capacity);
         }
 
-        values.CopyTo(new Span<long>(RawItems + Count, Capacity - Count));
+        values.CopyTo(new Span<long>(RawItems + Count, _capacity - Count));
         Count += values.Length;
     }
     public void Add(long l)
     {
-        if (Count == Capacity)
+        if (Count == _capacity)
         {
             GrowListUnlikely(1);
         }
@@ -49,8 +49,8 @@ public unsafe struct NativeIntegersList : IDisposable
 
     private void GrowListUnlikely(int addition)
     {
-        Capacity = Math.Max(16, Bits.PowerOf2(Capacity + addition));
-        var scope = _ctx.Allocate(Capacity * sizeof(long), out var mem);
+        _capacity = Math.Max(16, Bits.PowerOf2(_capacity + addition));
+        var scope = _ctx.Allocate(_capacity * sizeof(long), out var mem);
         if (RawItems != null)
         {
             Memory.Copy(mem.Ptr, RawItems, Count * sizeof(long));
@@ -71,5 +71,14 @@ public unsafe struct NativeIntegersList : IDisposable
             return;
         
         Sparrow.Server.Utils.VxSort.Sort.Run(RawItems, Count);
+    }
+
+    public int MoveTo(Span<long> matches)
+    {
+        var read = Math.Min(Count, matches.Length);
+        new Span<long>(this.RawItems, read).CopyTo(matches);
+        Count -= read;
+        RawItems += read;
+        return read;
     }
 }

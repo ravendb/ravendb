@@ -45,19 +45,37 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         if (_orderMetadata.HasBoost)
         {
-            _fillFunc = SortBy<EntryComparerByScore, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata);
+            _fillFunc = SortBy<EntryComparerByScore, NoIterationOptimization, NoIterationOptimization>(orderMetadata);
         }
         else
         {
             _fillFunc = _orderMetadata.FieldType switch
             {
                 MatchCompareFieldType.Sequence => SortBy<EntryComparerByTerm, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata),
-                MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
                 MatchCompareFieldType.Integer => SortBy<EntryComparerByLong, Lookup<long>.ForwardIterator, Lookup<long>.BackwardIterator>(orderMetadata),
                 MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble,  Lookup<double>.ForwardIterator, Lookup<double>.BackwardIterator>(orderMetadata),
-                MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial, NoIterationOptimization, NoIterationOptimization>(orderMetadata),
                 _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
             };
+        }
+    }
+    
+    private struct NoIterationOptimization : ITreeIterator
+    {
+        public void Init<T>(T parent)
+        {
+            throw new NotSupportedException();
+        }
+
+        public void Reset()
+        {
+            throw new NotSupportedException();
+        }
+
+        public bool MoveNext(out long value)
+        {
+            throw new NotSupportedException();
         }
     }
         
@@ -87,24 +105,23 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             var memoizer = match._searcher.Memoize(match._inner);
             var allMatches = memoizer.FillAndRetrieve();
             match.TotalResults = allMatches.Length;
-            switch (allMatches.Length)
+            
+            if (match.TotalResults == 0)
+                return 0;
+
+            if (typeof(TDirection) == typeof(NoIterationOptimization) || 
+                match.TotalResults < 4096)
             {
-                case 0:
-                    match._results.Count = 0;
-                    return 0;
-                // case <= 4096:
-                //     SortSmallResult<TEntryComparer>(ref match, allMatches);
-                //     break;
-                default:
-                    //SortSmallResult<TEntryComparer>(ref match, allMatches);
-                    SortLargeResult<TEntryComparer, TDirection>(ref match, allMatches);
-                    break;
+                SortResults<TEntryComparer>(ref match, allMatches);
+            }
+            else
+            {
+                SortUsingIndex<TEntryComparer, TDirection>(ref match, allMatches);
             }
             memoizer.Dispose();
         }
 
-        var read = match._results.Count;
-        match._results.Items.CopyTo(matches);
+        var read = match._results.MoveTo(matches);
 
         if (read != 0) 
             return read;
@@ -206,7 +223,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         }
     }
 
-    private static void SortLargeResult<TEntryComparer,TDirection>(ref SortingMatch<TInner> match, Span<long> allMatches) 
+    private static void SortUsingIndex<TEntryComparer,TDirection>(ref SortingMatch<TInner> match, Span<long> allMatches) 
         where TDirection : struct, ITreeIterator
         where TEntryComparer : struct, IEntryComparer
     {
@@ -309,7 +326,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     
     private const int SortBatchSize = 4096;
 
-    private static void SortSmallResult<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> batchResults) 
+    private static void SortResults<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> batchResults) 
         where TEntryComparer : struct,  IEntryComparer, IComparer<UnmanagedSpan>
     {
         var llt = match._searcher.Transaction.LowLevelTransaction;
