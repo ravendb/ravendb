@@ -19,6 +19,15 @@ namespace Corax.Queries
         private ByteStringContext _ctx;
         private readonly long _totalResults;
         private readonly QueryCountConfidence _confidence;
+        
+        
+        private bool _doNotSortResults;
+
+        public void DoNotSortResults()
+        {
+            _doNotSortResults = true;
+        }
+
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
 

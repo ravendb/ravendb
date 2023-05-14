@@ -190,7 +190,9 @@ namespace Voron.Data.CompactTrees
 
             public bool MoveNext(out long value)
             {
-                return MoveNext(out value);
+                var b =  MoveNext(out var scope, out value);
+                scope.Dispose();
+                return b;
             }
 
             public bool MoveNext(out CompactKeyCacheScope scope, out long value)

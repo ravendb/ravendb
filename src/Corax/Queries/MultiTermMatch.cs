@@ -22,6 +22,7 @@ namespace Corax.Queries
         private long _totalResults;
         private long _current;
         private long _currentIdx;
+        private bool _doNotSortResults;
         private QueryCountConfidence _confidence;
 
         private Bm25Relevance[] _frequenciesHolder;
@@ -36,6 +37,11 @@ namespace Corax.Queries
         public bool IsBoosting => _isBoosting;
         public long Count => _totalResults;
         public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
+
+        public void DoNotSortResults()
+        {
+            _doNotSortResults = true;
+        }
 
         public QueryCountConfidence Confidence => _confidence;
 
@@ -94,7 +100,7 @@ namespace Corax.Queries
             _current = count != 0 ? buffer[count - 1] : QueryMatch.Invalid;
 
         End:
-            if (requiresSort && count > 1)
+            if (_doNotSortResults == false && requiresSort && count > 1)
             {
                 count = Sorting.SortAndRemoveDuplicates(buffer[0..count]);                         
             }

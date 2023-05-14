@@ -25,11 +25,12 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private readonly OrderMetadata _orderMetadata;
     private readonly delegate*<ref SortingMatch<TInner>, Span<long>, int> _fillFunc;
 
+    private readonly int _take;
     private const int NotStarted = -1;
         
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesBufferScope;
 
-    private Results _results;
+    private NativeIntegersList _results;
     public long TotalResults;
 
     public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, int take = -1)
@@ -37,9 +38,10 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
-        _results = new Results(searcher.Transaction.LowLevelTransaction, searcher.Allocator, take);
+        _take = take;
+        _results = new NativeIntegersList(searcher.Allocator);
 
-        TotalResults = 0;
+        TotalResults = NotStarted;
 
         if (_orderMetadata.HasBoost)
         {
@@ -80,7 +82,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     {
         // This method should also be re-entrant for the case where we have already pre-sorted everything and 
         // we will just need to acquire via pages the totality of the results. 
-        if (match._results.Count == NotStarted)
+        if (match.TotalResults == NotStarted)
         {
             var memoizer = match._searcher.Memoize(match._inner);
             var allMatches = memoizer.FillAndRetrieve();
@@ -94,13 +96,15 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 //     SortSmallResult<TEntryComparer>(ref match, allMatches);
                 //     break;
                 default:
+                    //SortSmallResult<TEntryComparer>(ref match, allMatches);
                     SortLargeResult<TEntryComparer, TDirection>(ref match, allMatches);
                     break;
             }
             memoizer.Dispose();
         }
 
-        var read = match._results.CopyTo(matches);
+        var read = match._results.Count;
+        match._results.Items.CopyTo(matches);
 
         if (read != 0) 
             return read;
@@ -210,7 +214,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         var allocator = match._searcher.Allocator;
         var entryCmp = default(TEntryComparer);
 
-        int maxResults = match._results.Max;
+        int maxResults = match._take == -1 ? int.MaxValue : match._take;
 
         var indexesScope = allocator.Allocate(SortBatchSize * sizeof(long), out ByteString bs);
         Span<long> indexesBuffer = new(bs.Ptr, SortBatchSize);
@@ -218,8 +222,6 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize);
 
         SortedIndexReader<TDirection> reader = GetReader(ref match);
-        
-        match._results.Init();
         
         while (match._results.Count < maxResults)
         {
@@ -236,11 +238,10 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             read = SortHelper.FindMatches(indexes, sortedIds, allMatches);
             indexes = indexes[..read];
             indexes.Sort();
-            match._results.EnsureAdditionalCapacity(indexes.Length);
             // now get the *actual* matches in their sorted order
             for (int i = 0; i < indexes.Length; i++)
             {
-                match._results.Append(sortedIds[(int)indexes[i]]);
+                match._results.Add(sortedIds[(int)indexes[i]]);
             }
         }
 
@@ -321,13 +322,10 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         // Initialize the important infrastructure for the sorting.
         TEntryComparer entryComparer = new();
         entryComparer.Init(ref match);
-        match._results.Init();
             
         var pageCache = new PageLocator(llt, 1024);
         
-        var indexes = entryComparer.SortBatch(ref match, llt, pageCache, batchResults, batchTermIds, termsPtr);
-
-        match._results.Merge(entryComparer, indexes, batchResults, termsPtr);
+        entryComparer.SortBatch(ref match, llt, pageCache, batchResults, batchTermIds, termsPtr);
 
         pageCache.Release();
         bufScope.Dispose();

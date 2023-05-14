@@ -197,7 +197,7 @@ namespace Voron.Data.Lookups
                     return false;
 
                 ref var state = ref cstate._stk[cstate._pos];
-                Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Branch));
+                Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Branch));
                 if (--state.LastSearchPosition < 0)
                     continue; // go up
                 do
