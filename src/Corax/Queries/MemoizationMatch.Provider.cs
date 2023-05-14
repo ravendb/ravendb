@@ -29,6 +29,13 @@ namespace Corax.Queries
         private ByteString _bufferHolder;
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _bufferScope;
         
+        private bool _doNotSortResults;
+
+        public void DoNotSortResults()
+        {
+            _doNotSortResults = true;
+        }
+
         public MemoizationMatchProvider(ByteStringContext ctx, in TInner inner)
         {
             _ctx = ctx;
@@ -69,6 +76,8 @@ namespace Corax.Queries
             var bufferState = Buffer;
             int iterations = 0;
 
+            _inner.DoNotSortResults();
+            
             int count = 0;
             while (true)
             {
@@ -95,7 +104,8 @@ namespace Corax.Queries
             End:
             // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
             // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-            if (iterations > 1 && count > 1)
+            if (_doNotSortResults == false &&
+                iterations > 1 && count > 1)
             {
                 // We need to sort and remove duplicates.
                 count = Sorting.SortAndRemoveDuplicates(Buffer[..count]);
@@ -116,7 +126,7 @@ namespace Corax.Queries
             }
             else
             {
-                size = currentLength * 2;
+                size = currentLength * 3;
             }
 
             // Allocate the new buffer
@@ -126,7 +136,7 @@ namespace Corax.Queries
             Buffer[..currentlyUsed].CopyTo(MemoryMarshal.Cast<byte,long>(newBufferHolder.ToSpan()));
             _bufferScope.Dispose();
             _bufferHolder = newBufferHolder;
-            _bufferHolder = newBufferHolder;
+            _bufferScope = newBufferScope;
         }
 
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)

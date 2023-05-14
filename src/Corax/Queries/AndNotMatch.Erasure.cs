@@ -16,6 +16,7 @@ namespace Corax.Queries
             _functionTable = functionTable;
         }
 
+        public void DoNotSortResults() => _inner.DoNotSortResults();
         public bool IsBoosting => _inner.IsBoosting;
 
         public long Count => _functionTable.CountFunc(ref this);

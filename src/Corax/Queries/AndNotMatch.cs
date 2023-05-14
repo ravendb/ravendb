@@ -30,6 +30,13 @@ namespace Corax.Queries
         internal int _bufferIdx;              
         internal IDisposable _bufferHandler;
 
+        private bool _doNotSortResults;
+
+        public void DoNotSortResults()
+        {
+            _doNotSortResults = true;
+        }
+
         public QueryCountConfidence Confidence => _confidence;
 
         private AndNotMatch(ByteStringContext context, 
@@ -127,7 +134,7 @@ namespace Corax.Queries
 
                 // Again multiple Fill calls do not ensure that we will get a sequence of ordered
                 // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
-                if (iterations > 1)
+                if (_doNotSortResults == false && iterations > 1)
                 {
                     // We need to sort and remove duplicates.
                     totalResults = Sorting.SortAndRemoveDuplicates(matches.Slice(0, totalResults));

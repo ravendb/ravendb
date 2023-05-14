@@ -25,7 +25,7 @@ namespace Corax.Queries.SortingMatches;
          Slice GetSortFieldName(ref SortingMatch<TInner> match);
          void Init(ref SortingMatch<TInner> match);
 
-         Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+         void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
              UnmanagedSpan* batchTerms,
              bool descending = false);
      }
@@ -56,11 +56,11 @@ namespace Corax.Queries.SortingMatches;
             cmp.Init(ref match);
         }
 
-        public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+        public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
-            return cmp.SortBatch(match: ref match, llt: llt, pageLocator: pageLocator, batchResults: batchResults, batchTermIds: batchTermIds, batchTerms: batchTerms, descending: true);
+            cmp.SortBatch(match: ref match, llt: llt, pageLocator: pageLocator, batchResults: batchResults, batchTermIds: batchTermIds, batchTerms: batchTerms, descending: true);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -81,7 +81,7 @@ namespace Corax.Queries.SortingMatches;
         {
         }
 
-        public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+        public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
@@ -109,8 +109,11 @@ namespace Corax.Queries.SortingMatches;
             }
 
             EntryComparerHelper.IndirectSort<EntryComparerByScore>(indexes, batchTerms, descending);
-                
-            return indexes;
+
+            for (int i = 0; i < indexes.Length; i++)
+            {
+                match._results.Add(batchResults[indexes[i]]);
+            }
         }
 
         private static void BoostDocuments(SortingMatch<TInner> match, Span<long> batchResults, Span<float> readScores)
@@ -174,14 +177,19 @@ namespace Corax.Queries.SortingMatches;
             _lookup = match._searcher.EntriesToTermsReader(match._orderMetadata.Field.FieldName);
         }
 
-        public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+        public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending)
         {
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
             var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer());
-            return SortByTerms(batchTermIds, batchTerms, descending, indirectComparer);
+            var indexes = SortByTerms(ref match, batchTermIds, batchTerms, descending, indirectComparer);
+            for (int i = 0; i < indexes.Length; i++)
+            {
+                int bIdx = indexes[i];
+                match._results.Add(batchResults[bIdx]);
+            }
         }
 
         private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker) where TComparer : struct, IComparer<long>
@@ -215,7 +223,8 @@ namespace Corax.Queries.SortingMatches;
             return l;
         }
 
-        private static Span<int> SortByTerms<TComparer>(Span<long> buffer, UnmanagedSpan* batchTerms, bool isDescending, TComparer tieBreaker)
+        private static Span<int> SortByTerms<TComparer>(ref SortingMatch<TInner> match, Span<long> buffer, UnmanagedSpan* batchTerms, bool isDescending,
+            TComparer tieBreaker)
             where TComparer : struct, IComparer<long>
         {
             for (int i = 0; i < buffer.Length; i++)
@@ -229,6 +238,9 @@ namespace Corax.Queries.SortingMatches;
 
             Sort.Run(buffer);
 
+            if (buffer.Length > match._take)
+                buffer = buffer[..match._take];
+            
             MaybeBreakTies(buffer, tieBreaker);
 
             return ExtractIndexes(buffer, isDescending);
@@ -305,12 +317,16 @@ namespace Corax.Queries.SortingMatches;
             _lookup = match._searcher.EntriesToTermsReader(GetSortFieldName(ref match));
         }
 
-        public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+        public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            return EntryComparerHelper.NumericSortBatch<EntryComparerByLong>(batchTermIds, batchTerms, descending);
+            var indexes = EntryComparerHelper.NumericSortBatch<EntryComparerByLong>(batchTermIds, batchTerms, descending);
+            for (int i = 0; i < indexes.Length; i++)
+            {
+                match._results.Add(batchResults[indexes[i]]);
+            }
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -323,12 +339,16 @@ namespace Corax.Queries.SortingMatches;
     {
         private Lookup<long> _lookup;
 
-        public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+        public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {              
             _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
-            return EntryComparerHelper.NumericSortBatch<EntryComparerByDouble>(batchTermIds, batchTerms, descending);
+            var indexes = EntryComparerHelper.NumericSortBatch<EntryComparerByDouble>(batchTermIds, batchTerms, descending);
+            for (int i = 0; i < indexes.Length; i++)
+            {
+                match._results.Add(batchResults[indexes[i]]);
+            }
         }
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match)
@@ -364,7 +384,7 @@ namespace Corax.Queries.SortingMatches;
             _lookup = match._searcher.EntriesToTermsReader(match._orderMetadata.Field.FieldName);
         }
 
-        public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+        public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
@@ -376,7 +396,10 @@ namespace Corax.Queries.SortingMatches;
                 indexes[i] = i;
             }
             EntryComparerHelper.IndirectSort(indexes, batchTerms, descending, this);
-            return indexes;
+            for (int i = 0; i < indexes.Length; i++)
+            {
+                match._results.Add(batchResults[indexes[i]]);
+            }
         }
 
 
@@ -404,7 +427,7 @@ namespace Corax.Queries.SortingMatches;
             _reader = match._searcher.SpatialReader(match._orderMetadata.Field.FieldName);
         }
 
-        public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
+        public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
         {
@@ -427,7 +450,10 @@ namespace Corax.Queries.SortingMatches;
             }
 
             EntryComparerHelper.IndirectSort<EntryComparerByDouble>(indexes, batchTerms, descending);
-            return indexes;
+            for (int i = 0; i < indexes.Length; i++)
+            {
+                match._results.Add(batchResults[indexes[i]]);
+            }
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
