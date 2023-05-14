@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
 using Sparrow;
+using Sparrow.Compression;
 using Sparrow.Server;
-using Sparrow.Server.Utils.VxSort;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
+using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Impl;
 
@@ -43,37 +43,40 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         if (_orderMetadata.HasBoost)
         {
-            _fillFunc = SortBy<EntryComparerByScore>(orderMetadata);
+            _fillFunc = SortBy<EntryComparerByScore, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata);
         }
         else
         {
             _fillFunc = _orderMetadata.FieldType switch
             {
-                MatchCompareFieldType.Sequence => SortBy<EntryComparerByTerm>(orderMetadata),
-                MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric>(orderMetadata),
-                MatchCompareFieldType.Integer => SortBy<EntryComparerByLong>(orderMetadata),
-                MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble>(orderMetadata),
-                MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial>(orderMetadata),
+                MatchCompareFieldType.Sequence => SortBy<EntryComparerByTerm, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Alphanumeric => SortBy<EntryComparerByTermAlphaNumeric, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Integer => SortBy<EntryComparerByLong, Lookup<long>.ForwardIterator, Lookup<long>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Floating => SortBy<EntryComparerByDouble,  Lookup<double>.ForwardIterator, Lookup<double>.BackwardIterator>(orderMetadata),
+                MatchCompareFieldType.Spatial => SortBy<EntryComparerBySpatial, CompactTree.ForwardIterator, CompactTree.BackwardIterator>(orderMetadata),
                 _ => throw new ArgumentOutOfRangeException(_orderMetadata.FieldType.ToString())
             };
         }
     }
         
-        
-    private static delegate*<ref SortingMatch<TInner>, Span<long>, int> SortBy<TEntryComparer>(OrderMetadata metadata)
+    private static delegate*<ref SortingMatch<TInner>, Span<long>, int> 
+        SortBy<TEntryComparer, TFwdIt,TBackIt>(OrderMetadata metadata)
         where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
+        where TFwdIt : struct, ITreeIterator
+        where TBackIt : struct, ITreeIterator
     {
         if (metadata.Ascending)
         {
-            return &Fill<TEntryComparer>;
+            return &Fill<TEntryComparer, TFwdIt>;
         }
 
-        return &Fill<Descending<TEntryComparer>>;
+        return &Fill<Descending<TEntryComparer>, TBackIt>;
     }
 
 
-    private static int Fill<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> matches)
-        where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
+    private static int Fill<TEntryComparer, TDirection>(ref SortingMatch<TInner> match, Span<long> matches)
+        where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan> 
+        where TDirection : struct, ITreeIterator
     {
         // This method should also be re-entrant for the case where we have already pre-sorted everything and 
         // we will just need to acquire via pages the totality of the results. 
@@ -91,7 +94,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 //     SortSmallResult<TEntryComparer>(ref match, allMatches);
                 //     break;
                 default:
-                    SortLargeResult<TEntryComparer>(ref match, allMatches);
+                    SortLargeResult<TEntryComparer, TDirection>(ref match, allMatches);
                     break;
             }
             memoizer.Dispose();
@@ -108,18 +111,19 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         return 0;
     }
 
-    private ref struct SortedIndexReader
+    private ref struct SortedIndexReader<TIterator>
+        where TIterator : struct, ITreeIterator
     {
         private PostingList.Iterator _postListIt;
         private Span<byte> _smallPostingListBuffer;
         private PForDecoder.DecoderState _state;
-        private CompactTree.ForwardIterator _termsIt;
-        private IndexSearcher _searcher;
-        private LowLevelTransaction _llt;
+        private TIterator _termsIt;
+        private readonly IndexSearcher _searcher;
+        private readonly LowLevelTransaction _llt;
 
-        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, CompactTree.ForwardIterator termsIt)
+        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, TIterator it)
         {
-            _termsIt = termsIt;
+            _termsIt = it;
             _termsIt.Reset();
             _llt = llt;
             _searcher = searcher;
@@ -143,7 +147,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
             while (currentIdx < sortedIds.Length)
             {
-                if (_termsIt.MoveNext(out  var k, out var postingListId) == false)
+                if (_termsIt.MoveNext(out var postingListId) == false)
                     break;
 
                 var termType = (TermIdMask)postingListId & TermIdMask.EnsureIsSingleMask;
@@ -154,8 +158,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                         break;
                     case TermIdMask.SmallPostingList:
                         var smallSetId = EntryIdEncodings.GetContainerId(postingListId);
-                        _smallPostingListBuffer = Container.Get(_llt, smallSetId).ToSpan();
-                        _state = new(_smallPostingListBuffer.Length);
+                        var item = Container.Get(_llt, smallSetId);
+                        VariableSizeEncoding.Read<int>(item.Address, out var offset);
+                        item = item.IncrementOffset(offset);
+                        _state = new(item.Length);
+                        _smallPostingListBuffer = item.ToSpan();
                         ReadSmallPostingList(sortedIds, ref currentIdx);
                         break;
                     case TermIdMask.PostingList:
@@ -182,7 +189,9 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         {
             while (currentIdx< sortedIds.Length)
             {
-                var read = PForDecoder.Decode(ref _state, _smallPostingListBuffer, sortedIds[currentIdx..]);
+                var buffer = sortedIds[currentIdx..];
+                var read = PForDecoder.Decode(ref _state, _smallPostingListBuffer, buffer);
+                EntryIdEncodings.DecodeAndDiscardFrequency(buffer, read);
                 currentIdx += read;
                 if (read == 0)
                 {
@@ -193,33 +202,35 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         }
     }
 
-    private static void SortLargeResult<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> allMatches)
-        where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
+    private static void SortLargeResult<TEntryComparer,TDirection>(ref SortingMatch<TInner> match, Span<long> allMatches) 
+        where TDirection : struct, ITreeIterator
+        where TEntryComparer : struct, IEntryComparer
     {
         var llt = match._searcher.Transaction.LowLevelTransaction;
         var allocator = match._searcher.Allocator;
+        var entryCmp = default(TEntryComparer);
 
-        var take = 15;
-        
+        int maxResults = match._results.Max;
+
         var indexesScope = allocator.Allocate(SortBatchSize * sizeof(long), out ByteString bs);
         Span<long> indexesBuffer = new(bs.Ptr, SortBatchSize);
         var sortedIdsScope = allocator.Allocate( sizeof(long) * SortBatchSize, out bs);
         Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize);
 
-        var termsTree = match._searcher.GetTermsFor(match._orderMetadata.Field.FieldName);
-        var reader = new SortedIndexReader(llt, match._searcher, termsTree.Iterate());
+        SortedIndexReader<TDirection> reader = GetReader(ref match);
+        
         match._results.Init();
         
-        while (match._results.Count < take)
+        while (match._results.Count < maxResults)
         {
             var read = reader.Read(sortedIdBuffer);
             if (read == 0)
                 break;
             var sortedIds = sortedIdBuffer[..read];
             var indexes = indexesBuffer[..read];
-            InitializeIndexesTopHalf(indexes);
             // we effectively permute the indexes as well as the sortedIds to get a sorted list to compare
             // with the allMatches
+            InitializeIndexesTopHalf(indexes);
             sortedIds.Sort(indexes);
             InitializeIndexesBottomHalf(indexes);
             read = SortHelper.FindMatches(indexes, sortedIds, allMatches);
@@ -229,13 +240,41 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             // now get the *actual* matches in their sorted order
             for (int i = 0; i < indexes.Length; i++)
             {
-                int idx = (int)indexes[i];
-                match._results.Append(sortedIds[idx]);
+                match._results.Append(sortedIds[(int)indexes[i]]);
             }
         }
 
         sortedIdsScope.Dispose();
         indexesScope.Dispose();
+        
+        
+        SortedIndexReader<TDirection> GetReader(ref SortingMatch<TInner> match)
+        {
+            if (typeof(TDirection) == typeof(CompactTree.ForwardIterator) ||
+                typeof(TDirection) == typeof(CompactTree.BackwardIterator))
+            {
+                var termsTree = match._searcher.GetTermsFor(entryCmp.GetSortFieldName(ref match));
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>());
+            }
+
+            if (typeof(TDirection) == typeof(Lookup<long>.ForwardIterator) ||
+                typeof(TDirection) == typeof(Lookup<long>.BackwardIterator))
+            {
+                var termsTree = match._searcher.GetLongTermsFor(entryCmp.GetSortFieldName(ref match));
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>());
+            }
+
+            if (typeof(TDirection) == typeof(Lookup<double>.ForwardIterator) ||
+                typeof(TDirection) == typeof(Lookup<double>.BackwardIterator))
+            {
+                var termsTree = match._searcher.GetDoubleTermsFor(entryCmp.GetSortFieldName(ref match));
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>());
+            }
+
+            throw new NotSupportedException(typeof(TDirection).FullName);
+        }
+        
+
     }
 
     private static void InitializeIndexesTopHalf(Span<long> span)

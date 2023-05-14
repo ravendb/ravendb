@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Voron.Global;
 
 namespace Voron.Data.CompactTrees
 {
@@ -13,21 +14,21 @@ namespace Voron.Data.CompactTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public TDirection Iterate<TDirection>() where TDirection : struct, ICompactTreeIterator
+        public TDirection Iterate<TDirection>() where TDirection : struct, ITreeIterator
         {
             var it = new TDirection();
             it.Init(this);
             return it;
         }
 
-        public unsafe struct ForwardIterator : ICompactTreeIterator
+        public unsafe struct ForwardIterator : ITreeIterator
         {
             private CompactTree _tree;
             private IteratorCursorState _cursor;
 
-            public void Init(CompactTree tree)
+            public void Init<T>(T tree)
             {
-                _tree = tree;
+                _tree = (CompactTree)(object)tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
             }
 
@@ -71,8 +72,19 @@ namespace Voron.Data.CompactTrees
                 }
             }
 
+            public bool MoveNext(out long value)
+            {
+                return MoveNext(out _, out value);
+            }
+
             public bool MoveNext(out CompactKeyCacheScope scope, out long value)
             {
+                if (_cursor._pos < 0)
+                {
+                    value = default;
+                    scope = default;
+                    return false;
+                }
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)
                 {
@@ -120,14 +132,14 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        public unsafe struct BackwardIterator : ICompactTreeIterator
+        public unsafe struct BackwardIterator : ITreeIterator
         {
             private CompactTree _tree;
             private IteratorCursorState _cursor;
 
-            public void Init(CompactTree tree)
+            public void Init<T>(T tree)
             {
-                _tree = tree;
+                _tree = (CompactTree)(object)tree;
                 _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
             }
 
@@ -176,8 +188,19 @@ namespace Voron.Data.CompactTrees
                 state.LastSearchPosition = state.Header->NumberOfEntries - 1;
             }
 
+            public bool MoveNext(out long value)
+            {
+                return MoveNext(out value);
+            }
+
             public bool MoveNext(out CompactKeyCacheScope scope, out long value)
             {
+                if (_cursor._pos < 0)
+                {
+                    value = default;
+                    scope = default;
+                    return false;
+                }
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)
                 {

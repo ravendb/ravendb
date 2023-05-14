@@ -2,8 +2,10 @@
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
@@ -16,10 +18,11 @@ using Voron.Impl;
 
 namespace Corax.Queries.SortingMatches;
 
- unsafe partial struct SortingMatch<TInner> 
+ unsafe partial struct SortingMatch<TInner>
  {
      private interface IEntryComparer
      {
+         Slice GetSortFieldName(ref SortingMatch<TInner> match);
          void Init(ref SortingMatch<TInner> match);
 
          Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
@@ -43,6 +46,11 @@ namespace Corax.Queries.SortingMatches;
             cmp = new();
         }
 
+        public Slice GetSortFieldName(ref SortingMatch<TInner> match)
+        {
+            return cmp.GetSortFieldName(ref match);
+        }
+
         public void Init(ref SortingMatch<TInner> match)
         {
             cmp.Init(ref match);
@@ -64,6 +72,11 @@ namespace Corax.Queries.SortingMatches;
 
     private struct EntryComparerByScore : IEntryComparer, IComparer<UnmanagedSpan>
     {
+        public Slice GetSortFieldName(ref SortingMatch<TInner> match)
+        {
+            throw new NotImplementedException("Scoring has no field name");
+        }
+
         public void Init(ref SortingMatch<TInner> match)
         {
         }
@@ -154,9 +167,11 @@ namespace Corax.Queries.SortingMatches;
         private CompactKeyComparer _cmpTerm;
         private Lookup<long> _lookup;
 
+        public Slice GetSortFieldName(ref SortingMatch<TInner> match) => match._orderMetadata.Field.FieldName;
+        
         public void Init(ref SortingMatch<TInner> match)
         {
-            _lookup = match._searcher.TermsIdReaderFor(match._orderMetadata.Field.FieldName);
+            _lookup = match._searcher.EntriesToTermsReader(match._orderMetadata.Field.FieldName);
         }
 
         public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
@@ -278,9 +293,16 @@ namespace Corax.Queries.SortingMatches;
     {
         private Lookup<long> _lookup;
 
+        public Slice GetSortFieldName(ref SortingMatch<TInner> match)
+        {
+            IndexFieldsMappingBuilder.GetFieldNameForLongs(match._searcher.Allocator, match._orderMetadata.Field.FieldName, out var lngName);
+            return lngName;
+        }
+
+
         public void Init(ref SortingMatch<TInner> match)
         {
-            _lookup = match._searcher.LongReader(match._orderMetadata.Field.FieldName);
+            _lookup = match._searcher.EntriesToTermsReader(GetSortFieldName(ref match));
         }
 
         public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
@@ -304,13 +326,20 @@ namespace Corax.Queries.SortingMatches;
         public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
-        {                _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
-
+        {              
+            _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
             return EntryComparerHelper.NumericSortBatch<EntryComparerByDouble>(batchTermIds, batchTerms, descending);
         }
+
+        public Slice GetSortFieldName(ref SortingMatch<TInner> match)
+        {
+            IndexFieldsMappingBuilder.GetFieldNameForDoubles(match._searcher.Allocator, match._orderMetadata.Field.FieldName, out var dblName);
+            return dblName;
+        }
+
         public void Init(ref SortingMatch<TInner> match)
         {
-            _lookup = match._searcher.DoubleReader(match._orderMetadata.Field.FieldName);
+            _lookup = match._searcher.EntriesToTermsReader(GetSortFieldName(ref match));
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -326,11 +355,13 @@ namespace Corax.Queries.SortingMatches;
         private long _dictionaryId;
         private Lookup<long> _lookup;
 
+        public Slice GetSortFieldName(ref SortingMatch<TInner> match) => match._orderMetadata.Field.FieldName;
+
         public void Init(ref SortingMatch<TInner> match)
         {
             _reader = match._searcher.TermsReaderFor(match._orderMetadata.Field.FieldName);
             _dictionaryId = match._searcher.GetDictionaryIdFor(match._orderMetadata.Field.FieldName);
-            _lookup = match._searcher.TermsIdReaderFor(match._orderMetadata.Field.FieldName);
+            _lookup = match._searcher.EntriesToTermsReader(match._orderMetadata.Field.FieldName);
         }
 
         public Span<int> SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
@@ -362,6 +393,8 @@ namespace Corax.Queries.SortingMatches;
         private (double X, double Y) _center;
         private SpatialUnits _units;
         private double _round;
+
+        public Slice GetSortFieldName(ref SortingMatch<TInner> match) => match._orderMetadata.Field.FieldName;
 
         public void Init(ref SortingMatch<TInner> match)
         {
