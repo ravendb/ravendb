@@ -4544,17 +4544,17 @@ namespace Raven.Server.ServerWide
             return tcs.Task;
         }
 
-        public override void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
+        public override async Task AfterSnapshotInstalledAsync(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
         {
             if (onFullSnapshotInstalledTask == null)
                 return;
 
             try
             {
-                onFullSnapshotInstalledTask.Wait(token);
+                await onFullSnapshotInstalledTask.WaitAsync(token);
                 _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
                 // will not notify here
             }
