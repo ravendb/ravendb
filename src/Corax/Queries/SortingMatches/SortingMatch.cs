@@ -113,11 +113,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private PostingList.Iterator _postListIt;
         private Span<byte> _smallPostingListBuffer;
         private PForDecoder.DecoderState _state;
-        private CompactTree.Iterator _termsIt;
+        private CompactTree.ForwardIterator _termsIt;
         private IndexSearcher _searcher;
         private LowLevelTransaction _llt;
 
-        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, CompactTree.Iterator termsIt)
+        public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, CompactTree.ForwardIterator termsIt)
         {
             _termsIt = termsIt;
             _termsIt.Reset();

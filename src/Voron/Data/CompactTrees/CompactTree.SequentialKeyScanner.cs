@@ -13,7 +13,7 @@ unsafe partial class CompactTree
     public struct SequentialKeyScanner : IReadOnlySpanEnumerator
     {
         private readonly CompactTree _tree;
-        private Iterator _iterator;
+        private ForwardIterator _iterator;
 
         public SequentialKeyScanner(CompactTree tree)
         {

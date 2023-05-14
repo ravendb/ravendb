@@ -13,7 +13,7 @@ namespace Corax.Queries
         private readonly FieldMetadata _field;
         private readonly CompactKey _term;
 
-        private CompactTree.Iterator _iterator;
+        private CompactTree.ForwardIterator _iterator;
         public ContainsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey term)
         {
             _tree = tree;
