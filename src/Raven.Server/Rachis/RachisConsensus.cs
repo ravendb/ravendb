@@ -917,9 +917,11 @@ namespace Raven.Server.Rachis
                         }
                     }
 
+                    TaskExecutor.CompleteAndReplace(ref _stateChanged);
+
                     if (disposeAsync)
                     {
-                        TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
+                        Task.Run(() =>
                         {
                             if (Log.IsInfoEnabled)
                             {
@@ -931,8 +933,8 @@ namespace Raven.Server.Rachis
                     }
                     else
                     {
+                        // this called only during server dispose
                         ParallelDispose(toDispose);
-                        TaskExecutor.CompleteAndReplace(ref _stateChanged);
                     }
 
                     var elapsed = sp.Elapsed;

@@ -86,17 +86,6 @@ namespace Sparrow.Server.Utils
             task2.TrySetResult(null);
         }
 
-        public static void CompleteReplaceAndExecute(ref TaskCompletionSource<object> task, Action act)
-        {
-            var task2 = Interlocked.Exchange(ref task, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
-            Execute(state =>
-            {
-                var (tcs, action) = ((TaskCompletionSource<object>, Action))state;
-                tcs.TrySetResult(null);
-                act();
-            }, (task2, act));
-        }
-
         public static void Complete(TaskCompletionSource<object> task)
         {
             task.TrySetResult(null);
