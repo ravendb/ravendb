@@ -201,10 +201,10 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         var take = 15;
         
-        var indexesScope = allocator.Allocate(SortBatchSize * sizeof(int), out ByteString bs);
-        Span<int> indexesBuffer = new(bs.Ptr, SortBatchSize);
-        var sortedIdsScope = allocator.Allocate( sizeof(long) * SortBatchSize * 2, out bs);
-        Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize * 2);
+        var indexesScope = allocator.Allocate(SortBatchSize * sizeof(long), out ByteString bs);
+        Span<long> indexesBuffer = new(bs.Ptr, SortBatchSize);
+        var sortedIdsScope = allocator.Allocate( sizeof(long) * SortBatchSize, out bs);
+        Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize);
 
         var termsTree = match._searcher.GetTermsFor(match._orderMetadata.Field.FieldName);
         var reader = new SortedIndexReader(llt, match._searcher, termsTree.Iterate());
@@ -216,21 +216,20 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             if (read == 0)
                 break;
             var sortedIds = sortedIdBuffer[..read];
-            var sortedIdsByEntryId = sortedIdBuffer[read..(read * 2)];
-            sortedIds.CopyTo(sortedIdsByEntryId);
             var indexes = indexesBuffer[..read];
-            InitializeIndexes(indexes);
+            InitializeIndexesTopHalf(indexes);
             // we effectively permute the indexes as well as the sortedIds to get a sorted list to compare
             // with the allMatches
-            sortedIdsByEntryId.Sort(indexes);
-            read = SortHelper.FindMatches(indexes, sortedIdsByEntryId, allMatches);
+            sortedIds.Sort(indexes);
+            InitializeIndexesBottomHalf(indexes);
+            read = SortHelper.FindMatches(indexes, sortedIds, allMatches);
             indexes = indexes[..read];
             indexes.Sort();
             match._results.EnsureAdditionalCapacity(indexes.Length);
             // now get the *actual* matches in their sorted order
             for (int i = 0; i < indexes.Length; i++)
             {
-                int idx = indexes[i];
+                int idx = (int)indexes[i];
                 match._results.Append(sortedIds[idx]);
             }
         }
@@ -239,10 +238,16 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         indexesScope.Dispose();
     }
 
-    private static void InitializeIndexes(Span<int> span)
+    private static void InitializeIndexesTopHalf(Span<long> span)
     {
         for (int i = 0; i < span.Length; i++)
-            span[i] = i;
+            span[i] = (long)i << 32;
+    }
+    
+    private static void InitializeIndexesBottomHalf(Span<long> span)
+    {
+        for (int i = 0; i < span.Length; i++)
+            span[i] |= (uint)i;
     }
 
     private static string[] DebugTerms(LowLevelTransaction llt, Span<UnmanagedSpan> terms)
