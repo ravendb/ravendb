@@ -208,7 +208,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         private void ReadSmallPostingList(Span<long> sortedIds, ref int currentIdx)
         {
-            while (currentIdx< sortedIds.Length)
+            while (currentIdx + PForEncoder.BufferLen < sortedIds.Length)
             {
                 var buffer = sortedIds[currentIdx..];
                 var read = PForDecoder.Decode(ref _state, _smallPostingListBuffer, buffer);
