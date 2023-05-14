@@ -9,15 +9,10 @@ namespace Corax.Queries
 {
     internal unsafe class SortHelper
     {
-        /// <summary>
-        /// This function takes two sorted spans (left & right)
-        /// and writes to the dst the *indexes* of all the matching elements from the left
-        /// that show up in the right as well in the *lower 32 bits* in the dst span
-        /// </summary>
-        public static int FindMatches(Span<int> dst, Span<long> left, Span<long> right)
+        public static int FindMatches(Span<long> dst, Span<long> left, Span<long> right)
         {
             Debug.Assert(dst.Length == left.Length);
-            fixed(int* dstPtr = dst)
+            fixed(long* dstPtr = dst)
             fixed(long* leftPtr = left, rightPtr = right)
             {
                 return FindMatches(dstPtr, leftPtr, left.Length, rightPtr, right.Length);
@@ -25,24 +20,22 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int FindMatches(int* dst, long* left, int leftLength, long* right, int rightLength)
+        private static int FindMatches(long* dst, long* left, int leftLength, long* right, int rightLength)
         {
             if (Avx2.IsSupported)
                 return FindMatchesVectorized(dst, left, leftLength, right, rightLength);
             return FindMatchesScalar(dst, left, leftLength, right, rightLength);
         }
 
-        /// <summary>
-        /// AVX2 implementation of vectorized AND.
-        /// </summary>
+    
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int FindMatchesVectorized(int* dst, long* left, int leftLength, long* right, int rightLength)
+        private static int FindMatchesVectorized(long* dst, long* left, int leftLength, long* right, int rightLength)
         {
             // This is effectively a constant. 
             uint N = (uint)Vector256<ulong>.Count;
 
-            int* dstStart = dst;
-            int* dstPtr = dst;
+            long* dstStart = dst;
+            long* dstPtr = dst;
 
             long* leftStart = left;
             long* leftPtr = left;
@@ -120,15 +113,12 @@ namespace Corax.Queries
             return (int)(dstPtr - dst);
         }
 
-        /// <summary>
-        /// Scalar CPU fallback implementation in case some CPUs do not support the most advanced versions like AVX2 or SSE2. It
-        /// is also used for testing purposes. 
-        /// </summary>
+   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int FindMatchesScalar(int* dst, long* left, int leftLength, long* right, int rightLength)
+        private static int FindMatchesScalar(long* dst, long* left, int leftLength, long* right, int rightLength)
         {
-            int* dstStart = dst;
-            int* dstPtr = dst;
+            long* dstStart = dst;
+            long* dstPtr = dst;
             long* leftPtr = left;
             long* rightPtr = right;
 
