@@ -15,7 +15,7 @@ public struct RegexTermProvider : ITermProvider
     private readonly FieldMetadata _field;
     private readonly Regex _regex;
 
-    private CompactTree.Iterator _iterator;
+    private CompactTree.ForwardIterator _iterator;
 
     public RegexTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Regex regex)
     {

@@ -14,7 +14,7 @@ namespace Corax.Queries
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
 
-        private CompactTree.Iterator _iterator;
+        private CompactTree.ForwardIterator _iterator;
 
         public ExistsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field)
         {

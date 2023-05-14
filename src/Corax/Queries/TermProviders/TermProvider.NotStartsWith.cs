@@ -16,7 +16,7 @@ namespace Corax.Queries
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
 
-        private CompactTree.Iterator _iterator;
+        private CompactTree.ForwardIterator _iterator;
 
         public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, FieldMetadata field, CompactKey startWith)
         {

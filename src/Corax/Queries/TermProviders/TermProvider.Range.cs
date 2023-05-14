@@ -34,7 +34,7 @@ namespace Corax.Queries
         private readonly FieldMetadata _field;
         private readonly Slice _low, _high;
 
-        private CompactTree.Iterator _iterator;
+        private CompactTree.ForwardIterator _iterator;
 
         private readonly bool _skipHighCheck;
         private bool _skipLowCheck;

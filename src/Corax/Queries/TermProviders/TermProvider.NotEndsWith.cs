@@ -19,7 +19,7 @@ namespace Corax.Queries
         private readonly FieldMetadata _field;
         private readonly CompactKey _endsWith;
 
-        private CompactTree.Iterator _iterator;
+        private CompactTree.ForwardIterator _iterator;
 
         public NotEndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
         {

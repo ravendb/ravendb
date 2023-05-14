@@ -15,7 +15,7 @@ namespace Corax.Queries
 
         private readonly CompactKey _endsWith;
 
-        private CompactTree.Iterator _iterator;
+        private CompactTree.ForwardIterator _iterator;
         public EndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, CompactKey endsWith)
         {
             _tree = tree;
