@@ -49,6 +49,7 @@ namespace Voron.Data.CompactTrees
 
             public void Seek(CompactKey key)
             {
+                key.ChangeDictionary(_tree.State.TreeDictionaryId);
                 _tree.FindPageFor(key, ref _cursor);
 
                 ref var state = ref _cursor._stk[_cursor._pos];
@@ -160,6 +161,7 @@ namespace Voron.Data.CompactTrees
 
             public void Seek(CompactKey key)
             {
+                key.ChangeDictionary(_tree.State.TreeDictionaryId);
                 _tree.FindPageFor(key, ref _cursor);
 
                 ref var state = ref _cursor._stk[_cursor._pos];
