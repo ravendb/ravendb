@@ -100,9 +100,9 @@ namespace Raven.Server.Rachis
             return StateMachine.ShouldSnapshot(slice, type);
         }
 
-        public override void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
+        public override Task AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
         {
-            StateMachine.AfterSnapshotInstalled(lastIncludedIndex, onFullSnapshotInstalledTask, token);
+            return StateMachine.AfterSnapshotInstalledAsync(lastIncludedIndex, onFullSnapshotInstalledTask, token);
         }
 
         public override Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
@@ -2223,7 +2223,7 @@ namespace Raven.Server.Rachis
 
         public abstract long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
-        public abstract void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token);
+        public abstract Task AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token);
         public abstract Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token);
 
         internal readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();

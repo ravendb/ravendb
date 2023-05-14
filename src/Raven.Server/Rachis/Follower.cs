@@ -415,9 +415,9 @@ namespace Raven.Server.Rachis
             Task onFullSnapshotInstalledTask = null;
             using (var cts = new CancellationTokenSource())
             {
-                KeepAliveAndExecuteAction(() =>
+                KeepAliveAndExecuteAction(async () =>
                 {
-                    onFullSnapshotInstalledTask = ReadAndCommitSnapshotAsync(snapshot, cts.Token);
+                    onFullSnapshotInstalledTask = await ReadAndCommitSnapshotAsync(snapshot, cts.Token);
                 }, cts, "ReadAndCommitSnapshot");
             }
 
@@ -428,10 +428,8 @@ namespace Raven.Server.Rachis
             // going on
             using (var cts = new CancellationTokenSource())
             {
-                KeepAliveAndExecuteAction(() =>
-                {
-                    _engine.AfterSnapshotInstalled(snapshot.LastIncludedIndex, onFullSnapshotInstalledTask, cts.Token);
-                }, cts, "SnapshotInstalledAsync");
+                KeepAliveAndExecuteAction(() => _engine.AfterSnapshotInstalled(snapshot.LastIncludedIndex, onFullSnapshotInstalledTask, cts.Token)
+                , cts, "SnapshotInstalledAsync");
             }
 
             _debugRecorder.Record("Done with StateMachine.SnapshotInstalled");
@@ -449,9 +447,9 @@ namespace Raven.Server.Rachis
             _engine.Timeout.Defer(_connection.Source);
         }
 
-        private void KeepAliveAndExecuteAction(Action action, CancellationTokenSource cts, string debug)
+        private void KeepAliveAndExecuteAction(Func<Task> func, CancellationTokenSource cts, string debug)
         {
-            var task = Task.Run(action, cts.Token);
+            var task = func?.Invoke().WaitAsync(cts.Token);
             try
             {
                 WaitForTaskCompletion(task, debug);
@@ -488,12 +486,12 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private async Task ReadAndCommitSnapshotAsync(InstallSnapshot snapshot, CancellationToken token)
+        private async Task<Task> ReadAndCommitSnapshotAsync(InstallSnapshot snapshot, CancellationToken token)
         {
             var command = new FollowerReadAndCommitSnapshotCommand(_engine, this, snapshot, token);
             await _engine.TxMerger.Enqueue(command);
 
-            await command.OnFullSnapshotInstalledTask;
+            return command.OnFullSnapshotInstalledTask;
         }
 
         private bool InstallSnapshot(ClusterOperationContext context, CancellationToken token)
