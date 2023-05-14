@@ -129,7 +129,7 @@ namespace Corax.Queries
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly TVal _low, _high;
-        private Lookup<TVal>.Iterator _iterator;
+        private Lookup<TVal>.ForwardIterator _iterator;
         private bool _first;
 
         public TermNumericRangeProvider(IndexSearcher searcher, Lookup<TVal> set, FieldMetadata field, TVal low, TVal high)

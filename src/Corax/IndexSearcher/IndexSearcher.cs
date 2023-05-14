@@ -433,27 +433,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         
         return new SpatialReader(_transaction.LowLevelTransaction, _entriesToSpatialTree, name);
     }
-    
-    public Lookup<long> TermsIdReaderFor(Slice name)
+ 
+    public Lookup<long> EntriesToTermsReader(Slice name)
     {
         return _entriesToTermsTree?.LookupFor<long>(name);
     }
 
-    public Lookup<long> LongReader(Slice name)
-    {
-        if (_entriesToTermsTree == null)
-            return null;
-        IndexFieldsMappingBuilder.GetFieldNameForLongs(Allocator, name, out var longName);
-        return _entriesToTermsTree.LookupFor<long>(longName);
-    }
-
-    public Lookup<long> DoubleReader(Slice name)
-    {
-        if (_entriesToTermsTree == null)
-            return null;
-        IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, name, out var dblName);
-        return _entriesToTermsTree.LookupFor<long>(dblName);
-    }
     
     public void Dispose()
     {

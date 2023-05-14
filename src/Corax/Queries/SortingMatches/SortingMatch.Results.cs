@@ -20,7 +20,7 @@ unsafe partial struct SortingMatch<TInner>
         private ByteString _termsBuffer;
         private readonly LowLevelTransaction _llt;
         private readonly ByteStringContext _allocator;
-        private readonly int _max;
+        public readonly int Max;
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _matchesScope;
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _termsScope;
         private int _capacity;
@@ -33,10 +33,11 @@ unsafe partial struct SortingMatch<TInner>
         {
             _llt = llt;
             _allocator = allocator;
-            _max = max;
-            Count = NotStarted;
-
             _capacity = Math.Max(128, max);
+
+            Max = max == -1 ? int.MaxValue : max;
+            
+            Count = NotStarted;
             _matchesScope = allocator.Allocate(sizeof(long) * _capacity, out _matchesBuffer);
             _termsScope = allocator.Allocate(sizeof(UnmanagedSpan) * _capacity, out _termsBuffer);
             _matches = (long*)_matchesBuffer.Ptr;
@@ -56,24 +57,24 @@ unsafe partial struct SortingMatch<TInner>
         {
             Debug.Assert(matches.Length == indexes.Length);
 
-            if (_max == -1 || // no limit
-                Count + matches.Length < _max) // *after* the batch, we are still below the limit
+            if (Max == -1 || // no limit
+                Count + matches.Length < Max) // *after* the batch, we are still below the limit
             {
                 FullyMergeWith(comparer, indexes, matches, terms);
                 return;
             }
                  
-            if(Count < _max)
+            if(Count < Max)
             {
                 // fill up to maximum size
-                int sizeToFull = _max - Count;
+                int sizeToFull = Max - Count;
                 FullyMergeWith(comparer, indexes[..sizeToFull], matches, terms);
                 indexes = indexes[sizeToFull..];
             }
                 
-            if(indexes.Length > _max)
+            if(indexes.Length > Max)
             {
-                indexes = indexes[.._max];
+                indexes = indexes[..Max];
             }
 
             if (indexes.Length == 0)

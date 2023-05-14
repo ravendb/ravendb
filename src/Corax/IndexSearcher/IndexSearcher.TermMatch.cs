@@ -12,6 +12,7 @@ using Sparrow.Compression;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
+using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 
 namespace Corax;
@@ -63,6 +64,10 @@ public partial class IndexSearcher
     }
     
     public CompactTree GetTermsFor(Slice name) =>_fieldsTree?.CompactTreeFor(name); 
+    
+    public Lookup<long> GetLongTermsFor(Slice name) =>_fieldsTree?.LookupFor<long>(name);
+    
+    public Lookup<double> GetDoubleTermsFor(Slice name) =>_fieldsTree?.LookupFor<double>(name);
 
     public TermMatch TermQuery(FieldMetadata field, string term, CompactTree termsTree = null)
     {
