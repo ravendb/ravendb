@@ -65,11 +65,11 @@ export default function ClientGlobalConfiguration() {
                             Identity parts separator{" "}
                             <i ref={popovers.setIdentityPartsSeparator} className="icon-info text-info" />
                         </div>
-                        <PopoverWithHover target={popovers.identityPartsSeparator} placement="top">
+                        <PopoverWithHover target={popovers.identityPartsSeparator} placement="right">
                             <div className="flex-horizontal p-3">
                                 <div>
-                                    Changes the default separator for automatically generated document IDs.<br />
-                                    You can use any <code>char</code> except <code>|</code> (pipe)
+                                    Set the default separator for automatically generated document identity IDs.<br />
+                                    Use any character except <code>'|'</code> (pipe).
                                 </div>
                             </div>
                         </PopoverWithHover>
@@ -99,11 +99,11 @@ export default function ClientGlobalConfiguration() {
                             Maximum number of requests per session{" "}
                             <i ref={popovers.setMaximumRequestsPerSession} className="icon-info text-info" />
                         </div>
-                        <PopoverWithHover target={popovers.maximumRequestsPerSession} placement="top">
+                        <PopoverWithHover target={popovers.maximumRequestsPerSession} placement="right">
                             <div className="flex-horizontal p-3">
                                 <div>
-                                    Set this number to restrict the number of requests (<strong>Reads</strong> &{" "}
-                                    <strong>Writes</strong>) per session in the client API.
+                                    Set this number to restrict the number of requests
+                                    (<strong>Reads</strong> &{" "}<strong>Writes</strong>) per session in the client API.
                                 </div>
                             </div>
                         </PopoverWithHover>
@@ -130,11 +130,21 @@ export default function ClientGlobalConfiguration() {
                     <div className="d-flex flex-grow-1">
                         <div className="md-label">
                             Load Balance Behavior <i ref={popovers.setSessionContext} className="icon-info text-info" />
-                            <PopoverWithHover target={popovers.sessionContext} placement="top">
+                            <PopoverWithHover target={popovers.sessionContext} placement="right">
                                 <div className="flex-horizontal p-3">
                                     <div>
-                                        Allow client sessions to select topology by tag, so they&apos;d be able to
-                                        load-balance their requests.
+                                        Set the Load balance method for <strong>Read</strong> &{" "}<strong>Write</strong> requests<br/><br/>
+                                        <ul>
+                                            <li><strong>None:</strong><br/>
+                                                Read requests - the node the client will target will be based the Read
+                                                balance behavior configuration.<br />
+                                                Write requests - will be sent to the preferred node.
+                                            </li><br />
+                                            <li><strong>Use session context:</strong><br/>
+                                                Sessions that are assigned the same context will have all their Read & Write requests routed to the same node.<br />
+                                                The session context is hashed from a context string (given by the client) and an optional seed.
+                                            </li>
+                                        </ul>
                                     </div>
                                 </div>
                             </PopoverWithHover>
@@ -172,10 +182,11 @@ export default function ClientGlobalConfiguration() {
                                             ref={popovers.setLoadBalanceSeedBehavior}
                                             className="icon-info text-info margin-left-xxs"
                                         />
-                                        <PopoverWithHover target={popovers.loadBalanceSeedBehavior} placement="top">
+                                        <PopoverWithHover target={popovers.loadBalanceSeedBehavior} placement="right">
                                             <div className="flex-horizontal p-3">
                                                 <div>
-                                                    Select a hash seed to fix the topology that clients would use.
+                                                    An optional seed number.<br />
+                                                    Used when hashing the session context.
                                                 </div>
                                             </div>
                                         </PopoverWithHover>
@@ -197,13 +208,12 @@ export default function ClientGlobalConfiguration() {
                         <div className="md-label">
                             Read Balance Behavior{" "}
                             <i ref={popovers.setReadBalanceBehavior} className="icon-info text-info" />
-                            <PopoverWithHover target={popovers.readBalanceBehavior} placement="top">
+                            <PopoverWithHover target={popovers.readBalanceBehavior} placement="right">
                                 <div className="flex-horizontal p-3">
                                     <div>
-                                        Set the load-balance method that the client will use when accessing a node with
-                                        <strong> Read</strong> requests. The method selected will also affect the
-                                        client&apos;s decision of which node to failover to in case of issues with the
-                                        <strong> Read</strong> request.
+                                        Set the Read balance method the client will use when accessing a node with
+                                        <strong> Read</strong> requests.<br />
+                                        <strong>Write</strong> requests are sent to the preferred node.
                                     </div>
                                 </div>
                             </PopoverWithHover>
