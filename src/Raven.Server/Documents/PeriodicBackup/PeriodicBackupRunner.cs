@@ -7,7 +7,6 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Nest;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -1015,19 +1014,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public string TombstoneCleanerIdentifier => "Periodic Backup";
 
-        public HashSet<string> GetDisabledSubscribers()
-        {
-            var disabledSubscribers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var periodicBackup in PeriodicBackups)
-            {
-                if (periodicBackup.Configuration.Disabled)
-                    disabledSubscribers.Add(periodicBackup.Configuration.Name);
-            }
-
-            return disabledSubscribers;
-        }
-
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             var minLastEtag = GetMinLastEtag();
@@ -1052,6 +1038,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return result;
+        }
+
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var periodicBackup in PeriodicBackups)
+            {
+                if (periodicBackup.Configuration.Disabled)
+                    dict[periodicBackup.Configuration.Name] = tombstoneCollections;
+            }
+
+            return dict;
         }
 
         public void HandleDatabaseValueChanged(string type, object changeState)

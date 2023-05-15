@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_10656 : ReplicationTestBase
+    public class RavenDB_10656 : ReplicationTestBase, ITombstoneAware
     {
         public RavenDB_10656(ITestOutputHelper output) : base(output)
         {
@@ -142,6 +142,11 @@ namespace SlowTests.Issues
                 ["Products"] = 0,
                 ["Users"] = 0
             };
+        }
+
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            throw new NotImplementedException();
         }
     }
 }

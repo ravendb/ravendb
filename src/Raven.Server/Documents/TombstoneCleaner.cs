@@ -5,23 +5,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.ElasticSearch;
-using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Client.Documents.Operations.ETL.Queue;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Util;
 using Raven.Server.Background;
-using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents
 {
@@ -135,22 +125,24 @@ namespace Raven.Server.Documents
             var currentBlockingTombstones = new Dictionary<(string, string), long>();
             bool needToWarn = false;
 
-            Dictionary<string, HashSet<string>> disabledSubscribers = GetDisabledSubscribersForCollections(_subscriptions, tombstoneCollections);
-
-            foreach (var disabledSubscriber in disabledSubscribers.Keys)
+            foreach (var subscription in _subscriptions)
             {
-                HashSet<string> blockedTombstoneCollections = disabledSubscribers[disabledSubscriber];
-
-                using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                var disabledSubscribers = subscription.GetDisabledSubscribersCollections(tombstoneCollections);
+                foreach (var disabledSubscriber in disabledSubscribers.Keys)
                 {
-                    foreach (var tombstoneCollection in blockedTombstoneCollections)
+                    HashSet<string> blockedTombstoneCollections = disabledSubscribers[disabledSubscriber];
+
+                    using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
                     {
-                        var tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, tombstoneCollection);
-                        if (tombstonesCount > 0)
+                        foreach (var tombstoneCollection in blockedTombstoneCollections)
                         {
-                            needToWarn = true;
-                            currentBlockingTombstones.Add((disabledSubscriber, tombstoneCollection), tombstonesCount);
+                            var tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, tombstoneCollection);
+                            if (tombstonesCount > 0)
+                            {
+                                needToWarn = true;
+                                currentBlockingTombstones.Add((disabledSubscriber, tombstoneCollection), tombstonesCount);
+                            }
                         }
                     }
                 }
@@ -160,79 +152,6 @@ namespace Raven.Server.Documents
                 _documentDatabase.NotificationCenter.TombstoneNotifications.Add(currentBlockingTombstones);
             else
                 _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones)));
-        }
-
-        private Dictionary<string, HashSet<string>> GetDisabledSubscribersForCollections(HashSet<ITombstoneAware> subscriptions, HashSet<string> tombstoneCollections)
-        {
-            Dictionary<string, HashSet<string>> dict = new Dictionary<string, HashSet<string>>();
-            foreach (var subscription in subscriptions)
-            {
-                switch (subscription)
-                { 
-                    case EtlLoader loader:
-                        foreach (ElasticSearchEtlConfiguration config in loader.ElasticSearchDestinations)
-                        {
-                            if (config.Disabled)
-                                dict[config.Name] = tombstoneCollections;
-                        }
-                        foreach (OlapEtlConfiguration config in loader.OlapDestinations)
-                        {
-                            if (config.Disabled)
-                                dict[config.Name] = tombstoneCollections;
-                        }
-                        foreach (QueueEtlConfiguration config in loader.QueueDestinations)
-                        {
-                            if (config.Disabled)
-                                dict[config.Name] = tombstoneCollections;
-                        }
-                        foreach (RavenEtlConfiguration config in loader.RavenDestinations)
-                        {
-                            if (config.Disabled)
-                                dict[config.Name] = tombstoneCollections;
-                        }
-                        foreach (SqlEtlConfiguration config in loader.SqlDestinations)
-                        {
-                            if (config.Disabled)
-                                dict[config.Name] = tombstoneCollections; // config name or subscription name
-                        }
-                        break;
-
-                    case ReplicationLoader loader:
-                        foreach (var replicationDestination in loader.Destinations)
-                        {
-                            if (replicationDestination.Disabled)
-                                dict[replicationDestination.FromString()] = tombstoneCollections;
-                        }
-                        using (_documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-                            var externals = _documentDatabase.ServerStore.Cluster.ReadRawDatabaseRecord(ctx, _documentDatabase.Name).ExternalReplications;
-                            foreach (var external in externals)
-                            {
-                                if (external.Disabled)
-                                {
-                                    dict[external.FromString()] = tombstoneCollections;
-                                }
-                            }
-                        }
-                        break;
-
-                    case PeriodicBackupRunner periodicBackupRunner:
-                        foreach (var periodicBackup in periodicBackupRunner.PeriodicBackups)
-                        {
-                            if (periodicBackup.Configuration.Disabled)
-                                dict[periodicBackup.Configuration.Name] = tombstoneCollections;
-                        }
-                        break;
-
-                    case Index index:
-                        if (index.State == IndexState.Disabled)
-                            dict[index.Name] = index?.Collections;
-                        break;
-                }
-            }
-
-            return dict;
         }
 
         internal TombstonesState GetState(bool addInfoForDebug = false)
@@ -269,7 +188,6 @@ namespace Raven.Server.Documents
                     foreach (var tombstoneType in _tombstoneTypes)
                     {
                         var subscriptionTombstones = subscription.GetLastProcessedTombstonesPerCollection(tombstoneType);
-
                         if (subscriptionTombstones == null)
                             continue;
 
@@ -557,7 +475,7 @@ namespace Raven.Server.Documents
 
         Dictionary<string, long> GetLastProcessedTombstonesPerCollection(TombstoneType type);
 
-        HashSet<string> GetDisabledSubscribers();
+        Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections);
 
         public enum TombstoneType
         {

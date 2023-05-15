@@ -1851,19 +1851,6 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<ReplicationNode, IncomingReplicationFailureToConnectReporter> IncomingReplicationConnectionErrored;
 
-        public HashSet<string> GetDisabledSubscribers()
-        {
-            var disabledSubscribers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            /*
-            foreach (var periodicBackup in PeriodicBackups)
-            {
-                if (periodicBackup.Configuration.Disabled)
-                    disabledSubscribers.Add(periodicBackup.Configuration.Name);
-            }
-            */
-            return disabledSubscribers;
-        }
-
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             var minEtag = Math.Min(GetMinimalEtagForTombstoneCleanupWithHubReplication(), GetMinimalEtagForReplication());
@@ -1928,6 +1915,30 @@ namespace Raven.Server.Documents.Replication
             }
 
             return result;
+        }
+
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var replicationDestination in Destinations)
+            {
+                if (replicationDestination.Disabled)
+                    dict[replicationDestination.FromString()] = tombstoneCollections;
+            }
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var externals = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name).ExternalReplications;
+                foreach (var external in externals)
+                {
+                    if (external.Disabled)
+                    {
+                        dict[external.Name] = tombstoneCollections;
+                    }
+                }
+            }
+
+            return dict;
         }
 
         public class IncomingConnectionRejectionInfo
