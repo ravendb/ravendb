@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide;
@@ -16,13 +15,12 @@ internal class ShardedStudioDatabaseTasksHandlerProcessorForRestartDatabase : Ab
     {
     }
 
-    protected override bool SupportsCurrentNode => false;
-
-    protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
+    protected override bool SupportsOptionalShardNumber => true;
 
     protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token)
     {
-        var shardNumber = GetShardNumber();
-        return RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
+        return TryGetShardNumber(out int shardNumber) 
+            ? RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token) 
+            : RequestHandler.DatabaseContext.AllOrchestratorNodesExecutor.ExecuteForNodeAsync(command, command.SelectedNodeTag, token.Token);
     }
 }

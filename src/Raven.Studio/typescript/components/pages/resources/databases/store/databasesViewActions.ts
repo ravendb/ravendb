@@ -206,3 +206,4 @@ export const compactDatabase = (database: DatabaseSharedInfo) => () => {
     }
     app.showBootstrapDialog(new compactDatabaseDialog(database));
 };
+

@@ -13,12 +13,5 @@ internal class StudioDatabaseTasksHandlerProcessorForRestartDatabase : AbstractS
     {
     }
 
-    protected override bool SupportsCurrentNode => true;
-
-    protected override async ValueTask HandleCurrentNodeAsync()
-    {
-        await ServerStore.DatabasesLandlord.RestartDatabase(RequestHandler.DatabaseName);
-    }
-
     protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 }

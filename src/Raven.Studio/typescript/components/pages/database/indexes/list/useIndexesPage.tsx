@@ -31,6 +31,8 @@ import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { useAsync } from "react-async-hook";
 import IndexChange = Raven.Client.Documents.Changes.IndexChange;
+import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
+import ActionContextUtils from "components/utils/actionContextUtils";
 
 export function useIndexesPage(database: database, stale: boolean) {
     //TODO: use DatabaseSharedInfo?
@@ -39,8 +41,8 @@ export function useIndexesPage(database: database, stale: boolean) {
     const [bulkOperationConfirm, setBulkOperationConfirm] = useState<{
         type: Parameters<typeof BulkIndexOperationConfirm>[0]["type"];
         indexes: IndexSharedInfo[];
-        locations: databaseLocationSpecifier[];
-        onConfirm: (locations: databaseLocationSpecifier[]) => void;
+        allActionContexts: DatabaseActionContexts[];
+        onConfirm: (contextPoints: DatabaseActionContexts[]) => void;
     }>();
 
     const { indexesService } = useServices();
@@ -202,27 +204,29 @@ export function useIndexesPage(database: database, stale: boolean) {
     );
 
     const onDisableIndexesConfirm = useCallback(
-        async (indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+        async (indexes: IndexSharedInfo[], contexts: DatabaseActionContexts[]) => {
             eventsCollector.reportEvent("index", "toggle-status");
 
-            for (let locationIdx = 0; locationIdx < locations.length; locationIdx++) {
-                for (let indexIdx = 0; indexIdx < indexes.length; indexIdx++) {
-                    const location = locations[locationIdx];
-                    const index = indexes[indexIdx];
+            for (const index of indexes) {
+                for (const { nodeTag, shardNumbers } of contexts) {
+                    const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
-                    const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details?.status;
+                    for (const location of locations) {
+                        const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details
+                            ?.status;
 
-                    if (indexStatus === "Disabled") {
-                        continue;
+                        if (indexStatus === "Disabled") {
+                            continue;
+                        }
+
+                        await indexesService.disable(index, database, location);
+
+                        dispatch({
+                            type: "DisableIndexing",
+                            indexName: index.name,
+                            location,
+                        });
                     }
-
-                    await indexesService.disable(index, database, location);
-
-                    dispatch({
-                        type: "DisableIndexing",
-                        indexName: index.name,
-                        location,
-                    });
                 }
             }
         },
@@ -234,35 +238,37 @@ export function useIndexesPage(database: database, stale: boolean) {
             setBulkOperationConfirm({
                 type: "disable",
                 indexes,
-                locations: database.getLocations(),
-                onConfirm: (locations: databaseLocationSpecifier[]) => onDisableIndexesConfirm(indexes, locations),
+                allActionContexts: ActionContextUtils.getContexts(database.getLocations()),
+                onConfirm: (contexts: DatabaseActionContexts[]) => onDisableIndexesConfirm(indexes, contexts),
             });
         },
         [setBulkOperationConfirm, onDisableIndexesConfirm, database]
     );
 
     const onPauseIndexesConfirm = useCallback(
-        async (indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+        async (indexes: IndexSharedInfo[], contexts: DatabaseActionContexts[]) => {
             eventsCollector.reportEvent("index", "toggle-status");
 
-            for (let locationIdx = 0; locationIdx < locations.length; locationIdx++) {
-                for (let indexIdx = 0; indexIdx < indexes.length; indexIdx++) {
-                    const location = locations[locationIdx];
-                    const index = indexes[indexIdx];
+            for (const index of indexes) {
+                for (const { nodeTag, shardNumbers } of contexts) {
+                    const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
-                    const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details?.status;
+                    for (const location of locations) {
+                        const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details
+                            ?.status;
 
-                    if (indexStatus === "Paused" || indexStatus === "Disabled") {
-                        continue;
+                        if (indexStatus === "Paused" || indexStatus === "Disabled") {
+                            continue;
+                        }
+
+                        await indexesService.pause(index, database, location);
+
+                        dispatch({
+                            type: "PauseIndexing",
+                            indexName: index.name,
+                            location,
+                        });
                     }
-
-                    await indexesService.pause(index, database, location);
-
-                    dispatch({
-                        type: "PauseIndexing",
-                        indexName: index.name,
-                        location,
-                    });
                 }
             }
         },
@@ -274,39 +280,41 @@ export function useIndexesPage(database: database, stale: boolean) {
             setBulkOperationConfirm({
                 type: "pause",
                 indexes,
-                locations: database.getLocations(),
-                onConfirm: (locations: databaseLocationSpecifier[]) => onPauseIndexesConfirm(indexes, locations),
+                allActionContexts: ActionContextUtils.getContexts(database.getLocations()),
+                onConfirm: (contexts: DatabaseActionContexts[]) => onPauseIndexesConfirm(indexes, contexts),
             });
         },
         [setBulkOperationConfirm, onPauseIndexesConfirm, database]
     );
 
     const onStartIndexesConfirm = useCallback(
-        async (indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+        async (indexes: IndexSharedInfo[], contexts: DatabaseActionContexts[]) => {
             eventsCollector.reportEvent("index", "toggle-status");
 
-            for (let locationIdx = 0; locationIdx < locations.length; locationIdx++) {
-                for (let indexIdx = 0; indexIdx < indexes.length; indexIdx++) {
-                    const location = locations[locationIdx];
-                    const index = indexes[indexIdx];
+            for (const index of indexes) {
+                for (const { nodeTag, shardNumbers } of contexts) {
+                    const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
 
-                    const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details?.status;
+                    for (const location of locations) {
+                        const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details
+                            ?.status;
 
-                    if (indexStatus !== "Disabled" && indexStatus !== "Paused") {
-                        continue;
+                        if (indexStatus !== "Disabled" && indexStatus !== "Paused") {
+                            continue;
+                        }
+
+                        if (indexStatus === "Disabled") {
+                            await indexesService.enable(index, database, location);
+                        } else {
+                            await indexesService.resume(index, database, location);
+                        }
+
+                        dispatch({
+                            type: indexStatus === "Disabled" ? "EnableIndexing" : "ResumeIndexing",
+                            indexName: index.name,
+                            location,
+                        });
                     }
-
-                    if (indexStatus === "Disabled") {
-                        await indexesService.enable(index, database, location);
-                    } else {
-                        await indexesService.resume(index, database, location);
-                    }
-
-                    dispatch({
-                        type: indexStatus === "Disabled" ? "EnableIndexing" : "ResumeIndexing",
-                        indexName: index.name,
-                        location,
-                    });
                 }
             }
         },
@@ -318,8 +326,8 @@ export function useIndexesPage(database: database, stale: boolean) {
             setBulkOperationConfirm({
                 type: "start",
                 indexes,
-                locations: database.getLocations(),
-                onConfirm: (locations: databaseLocationSpecifier[]) => onStartIndexesConfirm(indexes, locations),
+                allActionContexts: ActionContextUtils.getContexts(database.getLocations()),
+                onConfirm: (contexts: DatabaseActionContexts[]) => onStartIndexesConfirm(indexes, contexts),
             });
         },
         [database, onStartIndexesConfirm]

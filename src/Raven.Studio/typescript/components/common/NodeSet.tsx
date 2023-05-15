@@ -17,7 +17,7 @@ interface NodeSetProps {
 export function NodeSet(props: NodeSetProps) {
     const { children, className, color, onClick, title } = props;
 
-    const colorClass = color ? "bg-faded-" + color : "bg-faded-secondary";
+    const colorClass = color ? "bg-faded-" + color : null;
 
     return (
         <div className={classNames("node-set", colorClass, className)} onClick={onClick} title={title}>

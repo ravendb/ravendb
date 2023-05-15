@@ -1,11 +1,15 @@
 ﻿import React, { ReactNode, useState } from "react";
 import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { IndexSharedInfo } from "components/models/indexes";
-import { MultipleDatabaseLocationSelector } from "components/common/MultipleDatabaseLocationSelector";
+import {
+    DatabaseActionContexts,
+    MultipleDatabaseLocationSelector,
+} from "components/common/MultipleDatabaseLocationSelector";
 import { capitalize } from "lodash";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
+import ActionContextUtils from "components/utils/actionContextUtils";
 import IconName from "typings/server/icons";
 
 type operationType = "pause" | "disable" | "start";
@@ -33,27 +37,23 @@ interface BulkIndexOperationConfirmProps {
     type: operationType;
     indexes: IndexSharedInfo[];
     toggle: () => void;
-    locations: databaseLocationSpecifier[];
-    onConfirm: (locations: databaseLocationSpecifier[]) => void;
+    allActionContexts: DatabaseActionContexts[];
+    onConfirm: (contextPoints: DatabaseActionContexts[]) => void;
 }
 
 export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps) {
-    const { type, indexes, toggle, locations, onConfirm } = props;
+    const { type, indexes, toggle, allActionContexts, onConfirm } = props;
 
     const infinitive = getInfinitiveForType(type);
     const infinitiveLowerCase = infinitive.toLowerCase();
     const icon = getIcon(type);
 
-    const [selectedLocations, setSelectedLocations] = useState<databaseLocationSpecifier[]>(() => locations);
-
-    const title = "You're about to " + infinitiveLowerCase + " indexing";
-
-    const showContextSelector = locations.length > 1;
+    const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
 
     const indexGroups = getIndexGroups(type, indexes);
 
     const onSubmit = () => {
-        onConfirm(selectedLocations);
+        onConfirm(selectedActionContexts);
         toggle();
     };
 
@@ -122,13 +122,13 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                         </div>
                     );
                 })}
-                {showContextSelector && (
+                {ActionContextUtils.showContextSelector(allActionContexts) && (
                     <div>
                         <h4>Select context</h4>
                         <MultipleDatabaseLocationSelector
-                            locations={locations}
-                            selectedLocations={selectedLocations}
-                            setSelectedLocations={setSelectedLocations}
+                            allActionContexts={allActionContexts}
+                            selectedActionContexts={selectedActionContexts}
+                            setSelectedActionContexts={setSelectedActionContexts}
                         />
                     </div>
                 )}

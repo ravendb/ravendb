@@ -1,7 +1,5 @@
 ﻿import React, { useState } from "react";
-
 import "./CreateDatabase.scss";
-
 import {
     Alert,
     Button,
@@ -26,15 +24,15 @@ import {
     UncontrolledDropdown,
     UncontrolledPopover,
 } from "reactstrap";
-
 import { Checkbox, Switch } from "./Checkbox";
 import { FlexGrow } from "./FlexGrow";
 import { Icon } from "./Icon";
 import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "./PropSummary";
 import { Steps } from "./Steps";
 import { LicenseRestrictions } from "./LicenseRestrictions";
-import { MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
+import { DatabaseActionContexts, MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
 import classNames from "classnames";
+import ActionContextUtils from "components/utils/actionContextUtils";
 
 interface CreateDatabaseProps {
     createDatabaseModal: boolean;
@@ -805,7 +803,11 @@ export function StepNodeSelection(props: StepNodeSelectionProps) {
         return;
     }
 
-    const [orchestrators, setOrchestrators] = useState<databaseLocationSpecifier[]>([]);
+    // TODO: @kalczur - naming when we will implement the new CreateDatabase view
+
+    const allActionContexts = ActionContextUtils.getContexts(nodeList);
+    const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
+
     return (
         <div className="text-center">
             <h2 className="text-center">Manual Node Selection</h2>
@@ -865,9 +867,9 @@ export function StepNodeSelection(props: StepNodeSelectionProps) {
                 <small>minimum 1</small>
             </div>
             <MultipleDatabaseLocationSelector
-                locations={nodeList}
-                selectedLocations={orchestrators}
-                setSelectedLocations={setOrchestrators}
+                allActionContexts={allActionContexts}
+                selectedActionContexts={selectedActionContexts}
+                setSelectedActionContexts={setSelectedActionContexts}
             />
         </div>
     );

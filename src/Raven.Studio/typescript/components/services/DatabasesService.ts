@@ -17,6 +17,7 @@ import toggleDatabaseCommand from "commands/resources/toggleDatabaseCommand";
 import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState;
 import getDatabasesStateForStudioCommand from "commands/resources/getDatabasesStateForStudioCommand";
 import getDatabaseStateForStudioCommand from "commands/resources/getDatabaseStateForStudioCommand";
+import restartDatabaseCommand = require("commands/resources/restartDatabaseCommand");
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -64,5 +65,9 @@ export default class DatabasesService {
 
     async reorderNodesInGroup(db: DatabaseSharedInfo, tagsOrder: string[], fixOrder: boolean) {
         return new reorderNodesInDatabaseGroupCommand(db.name, tagsOrder, fixOrder).execute();
+    }
+
+    async restartDatabase(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {
+        return new restartDatabaseCommand(db, location).execute();
     }
 }

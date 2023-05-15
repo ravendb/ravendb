@@ -577,9 +577,7 @@ class databaseSettings extends shardViewModelBase {
                                                <ul>
                                                    <li class="margin-top-sm">
                                                        <small>
-                                                           Restart the database from the databases view in the Studio.<br>
-                                                           This will reload the database instance on the LOCAL node your browser is opened on.<br>
-                                                           Perform this action for each node in the cluster.
+                                                           Restart the database from the databases view in the Studio.
                                                        </small>
                                                    </li>
                                                    <li class="margin-top-sm">

@@ -800,14 +800,20 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public async Task RestartDatabase(string databaseName)
+        public async Task RestartDatabaseAsync(string databaseName)
         {
             using (await _disposing.ReaderLockAsync(_serverStore.ServerShutdown))
             {
                 UnloadDatabaseInternal(databaseName);
             }
 
-            await TryGetOrCreateResourceStore(databaseName);
+            var result = TryGetOrCreateDatabase(databaseName);
+            switch (result.DatabaseStatus)
+            {
+                case DatabaseSearchResult.Status.Database:
+                    await result.DatabaseTask;
+                    break;
+            }
         }
 
         internal static bool IsLockedDatabase(AggregateException exception)
