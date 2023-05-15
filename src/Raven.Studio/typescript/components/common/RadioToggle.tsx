@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect } from "react";
 import classNames from "classnames";
 import { Icon } from "./Icon";
 import IconName from "typings/server/icons";
@@ -9,23 +9,29 @@ export interface RadioToggleWithIconInputItem<T extends string | number = string
     iconName: IconName;
 }
 
-interface RadioToggleWithIconProps {
+export interface RadioToggleWithIconProps<T extends string | number = string> {
     name: string;
-    leftItem: RadioToggleWithIconInputItem;
-    rightItem: RadioToggleWithIconInputItem;
-    selectedItem: RadioToggleWithIconInputItem;
-    setSelectedItem: (x: RadioToggleWithIconInputItem) => void;
+    leftItem: RadioToggleWithIconInputItem<T>;
+    rightItem: RadioToggleWithIconInputItem<T>;
+    selectedValue: T;
+    setSelectedValue: (x: T) => void;
     className?: string;
 }
 
-export function RadioToggleWithIcon({
+export function RadioToggleWithIcon<T extends string | number = string>({
     name,
     leftItem,
     rightItem,
-    selectedItem,
-    setSelectedItem,
+    selectedValue,
+    setSelectedValue,
     className,
-}: RadioToggleWithIconProps) {
+}: RadioToggleWithIconProps<T>) {
+    useEffect(() => {
+        if (!selectedValue) {
+            setSelectedValue(leftItem.value);
+        }
+    }, [leftItem.value, selectedValue, setSelectedValue]);
+
     return (
         <div className={classNames("radio-toggle", className)}>
             <input
@@ -33,8 +39,8 @@ export function RadioToggleWithIcon({
                 id="radio-toggle-left"
                 name={name}
                 value={leftItem.value}
-                checked={selectedItem.value === leftItem.value}
-                onChange={() => setSelectedItem(leftItem)}
+                checked={selectedValue === leftItem.value}
+                onChange={() => setSelectedValue(leftItem.value)}
             />
             <label htmlFor="radio-toggle-left">{leftItem.label}</label>
 
@@ -43,8 +49,8 @@ export function RadioToggleWithIcon({
                 id="radio-toggle-right"
                 name={name}
                 value={rightItem.value}
-                checked={selectedItem.value === rightItem.value}
-                onChange={() => setSelectedItem(rightItem)}
+                checked={selectedValue === rightItem.value}
+                onChange={() => setSelectedValue(rightItem.value)}
             />
             <label htmlFor="radio-toggle-right">{rightItem.label}</label>
 

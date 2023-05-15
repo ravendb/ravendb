@@ -78,7 +78,7 @@ export function ReorderNodes(props: ReorderNodesProps) {
         iconName: "order",
     };
 
-    const radioToggleSelectedItem = fixOrder ? rightRadioToggleItem : leftRadioToggleItem;
+    const radioToggleSelectedItem = fixOrder ? rightRadioToggleItem.value : leftRadioToggleItem.value;
 
     return (
         <div ref={drop}>
@@ -87,8 +87,8 @@ export function ReorderNodes(props: ReorderNodesProps) {
                     name="after-recovery"
                     leftItem={leftRadioToggleItem}
                     rightItem={rightRadioToggleItem}
-                    selectedItem={radioToggleSelectedItem}
-                    setSelectedItem={(x) => setFixOrder(x !== leftRadioToggleItem)}
+                    selectedValue={radioToggleSelectedItem}
+                    setSelectedValue={(x) => setFixOrder(x !== leftRadioToggleItem.value)}
                 />
             </div>
             <DatabaseGroup>

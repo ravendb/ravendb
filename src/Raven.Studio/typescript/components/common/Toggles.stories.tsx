@@ -33,8 +33,7 @@ export function Toggles() {
         iconName: "experimental",
     };
 
-    const [radioToggleSelectedItem, setRadioToggleSelectedItem] =
-        useState<RadioToggleWithIconInputItem>(leftRadioToggleItem);
+    const [radioToggleSelectedValue, setRadioToggleSelectedValue] = useState(leftRadioToggleItem.value);
 
     const radioList: InputItem[] = [
         { value: "1hour", label: "1 Hour" },
@@ -60,8 +59,8 @@ export function Toggles() {
                     name="some-name"
                     leftItem={leftRadioToggleItem}
                     rightItem={rightRadioToggleItem}
-                    selectedItem={radioToggleSelectedItem}
-                    setSelectedItem={(x) => setRadioToggleSelectedItem(x)}
+                    selectedValue={radioToggleSelectedValue}
+                    setSelectedValue={(x) => setRadioToggleSelectedValue(x)}
                 />
             </div>
             <MultiRadioToggle
