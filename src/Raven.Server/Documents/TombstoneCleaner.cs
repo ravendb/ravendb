@@ -123,6 +123,7 @@ namespace Raven.Server.Documents
         private void CreateWarningIfThereAreBlockingTombstones(HashSet<string> tombstoneCollections)
         {
             var currentBlockingTombstones = new Dictionary<(string, string), long>();
+            var tombstonesPerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             bool needToWarn = false;
 
             foreach (var subscription in _subscriptions)
@@ -137,7 +138,12 @@ namespace Raven.Server.Documents
                     {
                         foreach (var tombstoneCollection in blockedTombstoneCollections)
                         {
-                            var tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, tombstoneCollection);
+                            if (tombstonesPerCollection.TryGetValue(tombstoneCollection, out var tombstonesCount) == false)
+                            {
+                                tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, tombstoneCollection);
+                                tombstonesPerCollection[tombstoneCollection] = tombstonesCount;
+                            }
+                            
                             if (tombstonesCount > 0)
                             {
                                 needToWarn = true;

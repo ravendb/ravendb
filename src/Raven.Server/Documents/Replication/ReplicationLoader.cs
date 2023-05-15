@@ -1925,15 +1925,19 @@ namespace Raven.Server.Documents.Replication
                 if (replicationDestination.Disabled)
                     dict[replicationDestination.FromString()] = tombstoneCollections;
             }
+
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 var externals = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name).ExternalReplications;
-                foreach (var external in externals)
+                if (externals != null)
                 {
-                    if (external.Disabled)
+                    foreach (var external in externals)
                     {
-                        dict[external.Name] = tombstoneCollections;
+                        if (external.Disabled)
+                        {
+                            dict[external.Name] = tombstoneCollections;
+                        }
                     }
                 }
             }

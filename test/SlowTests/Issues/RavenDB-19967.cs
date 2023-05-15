@@ -190,6 +190,11 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
+                var userIndex = new UserByName();
+                string indexName = userIndex.IndexName;
+                await userIndex.ExecuteAsync(store);
+                await store.Maintenance.SendAsync(new DisableIndexOperation(indexName));
+
                 var config = Backup.CreateBackupConfiguration(backupPath: backupPath, backupType: BackupType.Backup, incrementalBackupFrequency: "0 0 1 1 *");
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, isFullBackup: true);
 
@@ -207,6 +212,9 @@ namespace SlowTests.Issues
 
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+
+                WaitForUserToContinueTheTest(store);
+
                 Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
             }
         }

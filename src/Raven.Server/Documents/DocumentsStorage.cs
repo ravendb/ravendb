@@ -1334,16 +1334,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                CollectionName collectionName;
-                try
-                {
-                    collectionName = GetCollection(collection, throwIfDoesNotExist: false);
-                }
-                catch
-                {
-                    return 0;
-                }
-
+                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
                 tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
             }
 
