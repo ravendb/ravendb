@@ -525,8 +525,8 @@ namespace SlowTests.Client.TimeSeries.Replication
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
 
-                EnsureReplicating(storeA, storeB);
-                EnsureReplicating(storeB, storeA);
+                EnsureReplicating(storeA, storeB, "marker1$users/ayende");
+                EnsureReplicating(storeB, storeA, "marker2$users/ayende");
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
