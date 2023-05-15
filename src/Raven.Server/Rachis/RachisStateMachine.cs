@@ -91,13 +91,14 @@ namespace Raven.Server.Rachis
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
-        public abstract Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token);
+        public abstract Task<RachisConnection> ConnectToPeerAsync(string url, string tag, X509Certificate2 certificate, CancellationToken token);
 
-        public virtual async Task AfterSnapshotInstalledAsync(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
+        public virtual Task AfterSnapshotInstalledAsync(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
         {
+            return Task.CompletedTask;
         }
 
-        public virtual Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public virtual Task OnSnapshotInstalledAsync(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
             return Task.CompletedTask;
         }

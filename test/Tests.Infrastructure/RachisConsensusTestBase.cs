@@ -552,7 +552,7 @@ namespace Tests.Infrastructure
                 return slice.ToString() == "values";
             }
 
-            public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token)
+            public override async Task<RachisConnection> ConnectToPeerAsync(string url, string tag, X509Certificate2 certificate, CancellationToken token)
             {
                 TimeSpan time;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out ClusterOperationContext ctx))

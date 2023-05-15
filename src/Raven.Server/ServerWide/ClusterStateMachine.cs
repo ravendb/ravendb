@@ -3838,7 +3838,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token)
+        public override async Task<RachisConnection> ConnectToPeerAsync(string url, string tag, X509Certificate2 certificate, CancellationToken token)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
@@ -4478,7 +4478,7 @@ namespace Raven.Server.ServerWide
         
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public override Task OnSnapshotInstalledAsync(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
             var clusterCertificateKeys = GetCertificateThumbprintsFromCluster(context);
 
@@ -4554,7 +4554,7 @@ namespace Raven.Server.ServerWide
                 await onFullSnapshotInstalledTask.WaitAsync(token);
                 _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
             }
-            catch (OperationCanceledException ex)
+            catch (OperationCanceledException)
             {
                 // will not notify here
             }
