@@ -1616,14 +1616,21 @@ namespace Raven.Server.Json
                     continue;
                 }
 
-                totalDocumentsSizeInBytes += o.Size;
-
                 using (o)
                 {
                     writer.WriteObject(o);
+                    
+                    var writtenBytes = await writer.MaybeFlushAsync(token);
+                    
+                    if (o.HasParent)
+                    {
+                        // If blittable has a parent then its size is the parent's size
+                        // Let's use the number of actually written bytes then
+                        totalDocumentsSizeInBytes += writtenBytes;
+                    }
+                    else
+                        totalDocumentsSizeInBytes += o.Size;
                 }
-
-                await writer.MaybeFlushAsync(token);
             }
 
             writer.WriteEndArray();
