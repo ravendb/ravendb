@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents;
@@ -14,6 +15,13 @@ internal abstract class AbstractStudioDatabaseTasksHandlerProcessorForRestartDat
     protected AbstractStudioDatabaseTasksHandlerProcessorForRestartDatabase([NotNull] TRequestHandler requestHandler)
         : base(requestHandler)
     {
+    }
+
+    protected override bool SupportsCurrentNode => true;
+
+    protected override async ValueTask HandleCurrentNodeAsync()
+    {
+        await ServerStore.DatabasesLandlord.RestartDatabaseAsync(RequestHandler.DatabaseName);
     }
 
     protected override RavenCommand<object> CreateCommandForNode(string nodeTag) => new RestartDatabaseCommand(nodeTag);

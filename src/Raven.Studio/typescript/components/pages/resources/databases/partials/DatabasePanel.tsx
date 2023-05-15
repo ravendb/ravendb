@@ -52,6 +52,12 @@ import {
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
+import BulkDatabaseResetConfirm from "./BulkDatabaseResetConfirm";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
+import changesContext = require("common/changesContext");
+import { useServices } from "components/hooks/useServices";
+import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
+import ActionContextUtils from "components/utils/actionContextUtils";
 
 interface DatabasePanelProps {
     databaseName: string;
@@ -96,10 +102,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const dbState = useAppSelector(selectDatabaseState(db.name));
     const { appUrl } = useAppUrls();
     const dispatch = useAppDispatch();
+    const { databasesService } = useServices();
 
     //TODO: show commands errors!
 
     const dbAccess: databaseAccessLevel = useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name));
+    const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
 
     const { reportEvent } = useEventsCollector();
 
@@ -109,6 +117,11 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [inProgressAction, setInProgressAction] = useState<string>(null);
+    const {
+        value: isOpenDatabaseRestartConfirm,
+        setValue: setIsOpenDatabaseRestartConfirm,
+        toggle: toggleIsOpenDatabaseRestartConfirm,
+    } = useBoolean(false);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
     const documentsUrl = db.currentNode.relevant
@@ -132,6 +145,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     const canDisableIndexing = isOperatorOrAbove() && !indexingDisabled;
     const canEnableIndexing = isOperatorOrAbove() && indexingDisabled;
+
+    const canRestartDatabase = isAdminAccessOrAbove(db) && !db.disabled;
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -222,6 +237,35 @@ export function DatabasePanel(props: DatabasePanelProps) {
                 } finally {
                     await dispatch(reloadDatabaseDetails(db.name));
                 }
+            }
+        }
+    };
+
+    const getRestartDatabaseContextPoints = () => {
+        return ActionContextUtils.getContexts(
+            DatabaseUtils.getLocations(db),
+            db.nodes.map((x) => x.tag)
+        );
+    };
+
+    const showResetDatabaseConfirmation = async () => {
+        reportEvent("databases", "restart-database");
+        setIsOpenDatabaseRestartConfirm(true);
+    };
+
+    const onRestartDatabase = async (contextPoints: DatabaseActionContexts[]) => {
+        changesContext.default.disconnectIfCurrent(db, "DatabaseRestarted");
+
+        for (const { nodeTag, shardNumbers, includeOrchestrator: includeOrchestrator } of contextPoints) {
+            if (includeOrchestrator) {
+                await databasesService.restartDatabase(db, {
+                    nodeTag,
+                });
+            }
+
+            const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
+            for (const location of locations) {
+                await databasesService.restartDatabase(db, location);
             }
         }
     };
@@ -337,6 +381,25 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                         {isOperatorOrAbove() && (
                                             <>
                                                 <DropdownItem divider />
+                                                {isAdminAccessOrAbove(db) && (
+                                                    <>
+                                                        {isOpenDatabaseRestartConfirm && (
+                                                            <BulkDatabaseResetConfirm
+                                                                dbName={db.name}
+                                                                localNodeTag={localNodeTag}
+                                                                allActionContexts={getRestartDatabaseContextPoints()}
+                                                                toggleConfirmation={toggleIsOpenDatabaseRestartConfirm}
+                                                                onConfirm={onRestartDatabase}
+                                                            />
+                                                        )}
+                                                        <DropdownItem
+                                                            onClick={showResetDatabaseConfirmation}
+                                                            disabled={!canRestartDatabase}
+                                                        >
+                                                            <Icon icon="reset" /> Restart database
+                                                        </DropdownItem>
+                                                    </>
+                                                )}
                                                 <DropdownItem onClick={onCompactDatabase}>
                                                     <Icon icon="compact" /> Compact database
                                                 </DropdownItem>

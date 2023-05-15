@@ -1,167 +1,283 @@
-﻿import React, { useState } from "react";
+﻿import React, { useCallback, useEffect } from "react";
 import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetList } from "./NodeSet";
 import { Checkbox } from "./Checkbox";
-import { Card, Label } from "reactstrap";
+import { Card, Label, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "./Icon";
 import classNames from "classnames";
+import { produce } from "immer";
+import ActionContextUtils from "components/utils/actionContextUtils";
+
+export type DatabaseActionContexts =
+    | {
+          nodeTag: string;
+          shardNumbers: number[];
+          includeOrchestrator?: boolean;
+      }
+    | {
+          nodeTag: string;
+          shardNumbers?: never;
+          includeOrchestrator?: never;
+      };
 
 interface MultipleDatabaseLocationSelectorProps {
-    locations: databaseLocationSpecifier[];
-    selectedLocations: databaseLocationSpecifier[];
-    setSelectedLocations: React.Dispatch<React.SetStateAction<databaseLocationSpecifier[]>>;
+    allActionContexts: DatabaseActionContexts[];
+    selectedActionContexts: DatabaseActionContexts[];
+    setSelectedActionContexts: React.Dispatch<React.SetStateAction<DatabaseActionContexts[]>>;
     className?: string;
 }
 
 export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocationSelectorProps) {
-    const { locations, selectedLocations, setSelectedLocations, className } = props;
+    const { allActionContexts, selectedActionContexts, setSelectedActionContexts, className } = props;
 
-    const [uniqId] = useState(() => _.uniqueId("location-selector-"));
+    const isSharded: boolean = ActionContextUtils.isSharded(allActionContexts);
 
-    const isAllNodesSelected: boolean = locations.length === selectedLocations.length;
-    const isSomeNodesSelected: boolean = locations.length > selectedLocations.length && selectedLocations.length > 0;
+    const getSelectedContextsNode = useCallback(
+        (nodeTag: string) => selectedActionContexts?.find((x) => x.nodeTag === nodeTag),
+        [selectedActionContexts]
+    );
 
-    const isShardSelected = (location: databaseLocationSpecifier): boolean => selectedLocations.includes(location);
+    const isNodeSelected = useCallback(
+        (nodeTag: string): boolean => !!getSelectedContextsNode(nodeTag),
+        [getSelectedContextsNode]
+    );
 
-    const isNodeSelected = (nodeTag: string): boolean => {
+    const isOrchestratorSelected = (nodeTag: string): boolean => {
+        return !!getSelectedContextsNode(nodeTag)?.includeOrchestrator;
+    };
+
+    const isShardSelected = useCallback(
+        (nodeTag: string, shardNumber: number): boolean => {
+            return isNodeSelected(nodeTag) && !!getSelectedContextsNode(nodeTag).shardNumbers?.includes(shardNumber);
+        },
+        [getSelectedContextsNode, isNodeSelected]
+    );
+
+    const isAllNodeItemsSelected = (nodeTag: string): boolean => {
+        const contextNode = getSelectedContextsNode(nodeTag);
+
+        if (!contextNode) {
+            return false;
+        }
+
+        if (!isSharded) {
+            return true;
+        }
+
+        const initialContextNode = allActionContexts.find((x) => x.nodeTag === nodeTag);
+
         return (
-            selectedLocations.filter((x) => x.nodeTag === nodeTag).length ===
-            locations.filter((x) => x.nodeTag === nodeTag).length
+            contextNode.includeOrchestrator === initialContextNode.includeOrchestrator &&
+            _.isEqual([...contextNode.shardNumbers].sort(), [...initialContextNode.shardNumbers].sort())
         );
     };
+
+    const isAllSelected: boolean = allActionContexts.every((x) => isAllNodeItemsSelected(x.nodeTag));
+    const isSomeSelected: boolean = !isAllSelected && selectedActionContexts.length > 0;
 
     const isNodeIndeterminate = (nodeTag: string): boolean => {
-        return (
-            selectedLocations.some((x) => x.nodeTag === nodeTag) &&
-            selectedLocations.filter((x) => x.nodeTag === nodeTag).length <
-                locations.filter((x) => x.nodeTag === nodeTag).length
-        );
+        return isNodeSelected(nodeTag) && !isAllNodeItemsSelected(nodeTag);
     };
 
-    const toggleAllNodes = () => {
-        if (isAllNodesSelected || selectedLocations.length !== 0) {
-            setSelectedLocations([]);
+    const toggleAll = () => {
+        if (selectedActionContexts.length === 0) {
+            setSelectedActionContexts(allActionContexts);
         } else {
-            setSelectedLocations(locations);
-        }
-    };
-
-    const toggleShard = (location: databaseLocationSpecifier) => {
-        if (isShardSelected(location)) {
-            setSelectedLocations(selectedLocations.filter((x) => x !== location));
-        } else {
-            setSelectedLocations([...selectedLocations, location]);
+            setSelectedActionContexts([]);
         }
     };
 
     const toggleNode = (nodeTag: string) => {
-        setSelectedLocations((prev) => {
-            const filtered = prev.filter((x) => x.nodeTag !== nodeTag);
-
-            if (isNodeSelected(nodeTag) || isNodeIndeterminate(nodeTag)) {
-                return filtered;
-            } else {
-                return [...filtered, ...locations.filter((x) => x.nodeTag === nodeTag)];
-            }
-        });
+        if (isNodeSelected(nodeTag)) {
+            setSelectedActionContexts((contexts) => contexts.filter((x) => x.nodeTag !== nodeTag));
+        } else {
+            setSelectedActionContexts((contexts) => [
+                ...contexts,
+                allActionContexts.find((x) => x.nodeTag === nodeTag),
+            ]);
+        }
     };
 
-    const uniqueNodeTags = [...new Set(locations.map((x) => x.nodeTag))];
+    const toggleShard = (nodeTag: string, shardNumber: number) => {
+        if (isShardSelected(nodeTag, shardNumber)) {
+            setSelectedActionContexts((prevState) =>
+                produce(prevState, (draft) => {
+                    const contextNode = draft.find((x) => x.nodeTag === nodeTag);
+                    contextNode.shardNumbers = contextNode.shardNumbers.filter((x) => x !== shardNumber);
+                })
+            );
+        } else {
+            setSelectedActionContexts((prevState) =>
+                produce(prevState, (draft) => {
+                    const contextNode = draft.find((x) => x.nodeTag === nodeTag);
+
+                    if (contextNode) {
+                        contextNode.shardNumbers = contextNode.shardNumbers.filter((x) => x !== shardNumber);
+                        draft.find((x) => x.nodeTag === nodeTag).shardNumbers.push(shardNumber);
+                    } else {
+                        draft.push({
+                            nodeTag,
+                            shardNumbers: [shardNumber],
+                        });
+                    }
+                })
+            );
+        }
+    };
+
+    const toggleOrchestrator = (nodeTag: string) => {
+        if (isOrchestratorSelected(nodeTag)) {
+            setSelectedActionContexts((prevState) =>
+                produce(prevState, (draft) => {
+                    draft.find((x) => x.nodeTag === nodeTag).includeOrchestrator = false;
+                })
+            );
+        } else {
+            setSelectedActionContexts((prevState) =>
+                produce(prevState, (draft) => {
+                    const contextNode = draft.find((x) => x.nodeTag === nodeTag);
+
+                    if (contextNode) {
+                        draft.find((x) => x.nodeTag === nodeTag).includeOrchestrator = true;
+                    } else {
+                        draft.push({
+                            nodeTag,
+                            includeOrchestrator: true,
+                            shardNumbers: [],
+                        });
+                    }
+                })
+            );
+        }
+    };
+
+    useEffect(() => {
+        if (!isSharded) {
+            return;
+        }
+
+        selectedActionContexts.forEach((selectedContext) => {
+            if (selectedContext.shardNumbers.length === 0 && !selectedContext.includeOrchestrator) {
+                setSelectedActionContexts((contexts) => contexts.filter((x) => x.nodeTag !== selectedContext.nodeTag));
+            }
+        });
+    }, [isSharded, selectedActionContexts, setSelectedActionContexts]);
 
     return (
         <>
-            {locations[0].shardNumber == null ? (
+            {!isSharded ? (
+                <NodeSet className={classNames(className)}>
+                    <NodeSetLabel>
+                        <Checkbox
+                            size="lg"
+                            toggleSelection={toggleAll}
+                            indeterminate={isSomeSelected}
+                            selected={isAllSelected}
+                            title="Select all or none"
+                        />
+                    </NodeSetLabel>
+                    <NodeSetList>
+                        {allActionContexts.map(({ nodeTag }) => {
+                            const uniqueKey = getUniqueKey(nodeTag);
+                            return (
+                                <NodeSetItem key={nodeTag}>
+                                    <Label htmlFor={uniqueKey} title={"Node " + nodeTag}>
+                                        <Icon icon="node" color="node" />
+                                        {nodeTag}
+                                        <div className="d-flex justify-content-center">
+                                            <Checkbox
+                                                id={uniqueKey}
+                                                toggleSelection={() => toggleNode(nodeTag)}
+                                                selected={isNodeSelected(nodeTag)}
+                                            />
+                                        </div>
+                                    </Label>
+                                </NodeSetItem>
+                            );
+                        })}
+                    </NodeSetList>
+                </NodeSet>
+            ) : (
                 <>
-                    <NodeSet className={classNames(className)}>
-                        <NodeSetLabel>
-                            <Checkbox
-                                size="lg"
-                                toggleSelection={toggleAllNodes}
-                                indeterminate={isSomeNodesSelected}
-                                selected={isAllNodesSelected}
-                                title="Select all or none"
-                            />
-                        </NodeSetLabel>
-                        <NodeSetList>
-                            {uniqueNodeTags.map((nodeTag, idx) => {
-                                const nodeId = uniqId + idx;
-                                return (
-                                    <NodeSetItem key={nodeId}>
-                                        <Label htmlFor={nodeId}>
-                                            <Icon icon="node" color="node" />
+                    <Checkbox
+                        size="lg"
+                        toggleSelection={toggleAll}
+                        indeterminate={isSomeSelected}
+                        selected={isAllSelected}
+                        title="Select all or none"
+                    >
+                        <span className="small-label">
+                            {isAllSelected ? "Reset selection" : isSomeSelected ? "Deselect all" : "Select all"}
+                        </span>
+                    </Checkbox>
+
+                    {allActionContexts.map(({ nodeTag, shardNumbers, includeOrchestrator: includeOrchestrator }) => {
+                        const uniqueKey = getUniqueKey(nodeTag);
+                        return (
+                            <div key={uniqueKey}>
+                                <NodeSet className={classNames(className, "mt-1")}>
+                                    <NodeSetLabel>
+                                        <Label htmlFor={uniqueKey} className="text-node" title={"Node " + nodeTag}>
+                                            <Icon icon="node" />
                                             {nodeTag}
                                             <div className="d-flex justify-content-center">
                                                 <Checkbox
-                                                    id={nodeId}
+                                                    id={uniqueKey}
+                                                    indeterminate={isNodeIndeterminate(nodeTag)}
                                                     toggleSelection={() => toggleNode(nodeTag)}
                                                     selected={isNodeSelected(nodeTag)}
                                                 />
                                             </div>
                                         </Label>
-                                    </NodeSetItem>
-                                );
-                            })}
-                        </NodeSetList>
-                    </NodeSet>
-                </>
-            ) : (
-                <>
-                    <div className="d-flex align-items-center gap-1">
-                        <Checkbox
-                            size="lg"
-                            toggleSelection={toggleAllNodes}
-                            indeterminate={isSomeNodesSelected}
-                            selected={isAllNodesSelected}
-                            title="Select all or none"
-                        >
-                            <span className="small-label">
-                                {isAllNodesSelected
-                                    ? "Reset selection"
-                                    : isSomeNodesSelected
-                                    ? "Deselect all"
-                                    : "Select all"}
-                            </span>
-                        </Checkbox>
-                    </div>
-                    {uniqueNodeTags.map((nodeTag, idx) => {
-                        const nodeId = uniqId + idx;
-                        return (
-                            <div key={nodeId}>
-                                <NodeSet color="shard" className={classNames(className, "mt-1")}>
-                                    <Card>
-                                        <NodeSetLabel>
-                                            <Label htmlFor={nodeId}>
-                                                <Icon icon="node" color="node" />
-                                                {nodeTag}
-                                                <div className="d-flex justify-content-center">
-                                                    <Checkbox
-                                                        id={nodeId}
-                                                        indeterminate={isNodeIndeterminate(nodeTag)}
-                                                        toggleSelection={() => toggleNode(nodeTag)}
-                                                        selected={isNodeSelected(nodeTag)}
-                                                    />
-                                                </div>
-                                            </Label>
-                                        </NodeSetLabel>
-                                    </Card>
+                                    </NodeSetLabel>
+                                    <div className="node-set-separator" />
                                     <NodeSetList>
-                                        {locations
-                                            .filter((x) => x.nodeTag === nodeTag)
-                                            .map((location) => {
-                                                if (location.shardNumber == null) {
+                                        {includeOrchestrator && (
+                                            <NodeSetItem>
+                                                <Label
+                                                    htmlFor={getUniqueKey(nodeTag, true)}
+                                                    id={getUniqueKey(nodeTag, true) + "Tooltip"}
+                                                    title="Orchestrator"
+                                                >
+                                                    <Icon icon="orchestrator" color="orchestrator" className="ms-1" />
+                                                    <div className="d-flex justify-content-center">
+                                                        <Checkbox
+                                                            id={getUniqueKey(nodeTag, true)}
+                                                            selected={isOrchestratorSelected(nodeTag)}
+                                                            toggleSelection={() => toggleOrchestrator(nodeTag)}
+                                                            color="orchestrator"
+                                                        />
+                                                    </div>
+                                                </Label>
+                                                <UncontrolledTooltip
+                                                    placement="top"
+                                                    target={getUniqueKey(nodeTag, true) + "Tooltip"}
+                                                >
+                                                    Orchestrator
+                                                </UncontrolledTooltip>
+                                            </NodeSetItem>
+                                        )}
+
+                                        {shardNumbers.length > 0 &&
+                                            shardNumbers.map((shardNumber) => {
+                                                if (shardNumber == null) {
                                                     return null;
                                                 }
 
+                                                const uniqueKey = getUniqueKey(nodeTag, false, shardNumber);
+
                                                 return (
-                                                    <NodeSetItem key={nodeId + "-shard-" + location.shardNumber}>
-                                                        <Label htmlFor={nodeId + "-shard-" + location.shardNumber}>
-                                                            <Icon icon="shard" color="shard" />
-                                                            {location.shardNumber}
+                                                    <NodeSetItem key={uniqueKey}>
+                                                        <Label htmlFor={uniqueKey} title={"Shard " + shardNumber}>
+                                                            <Icon icon="shard" color="shard" title="Orchestrator" />
+                                                            {shardNumber}
                                                             <div className="d-flex justify-content-center">
                                                                 <Checkbox
-                                                                    selected={isShardSelected(location)}
-                                                                    toggleSelection={() => toggleShard(location)}
+                                                                    selected={isShardSelected(nodeTag, shardNumber)}
+                                                                    toggleSelection={() =>
+                                                                        toggleShard(nodeTag, shardNumber)
+                                                                    }
                                                                     color="shard"
-                                                                    id={nodeId + "-shard-" + location.shardNumber}
+                                                                    id={uniqueKey}
                                                                 />
                                                             </div>
                                                         </Label>
@@ -176,5 +292,14 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
                 </>
             )}
         </>
+    );
+}
+
+function getUniqueKey(nodeTag: string, isOrchestrator?: boolean, shardNumber?: number) {
+    return (
+        "location-selector-" +
+        nodeTag +
+        (isOrchestrator ? "-orchestrator" : "") +
+        (shardNumber > -1 ? `-${shardNumber}` : "")
     );
 }

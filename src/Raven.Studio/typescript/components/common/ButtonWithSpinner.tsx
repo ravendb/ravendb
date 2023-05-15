@@ -10,7 +10,7 @@ interface ButtonWithSpinnerProps extends ButtonProps {
 }
 
 export default function ButtonWithSpinner(props: ButtonWithSpinnerProps) {
-    const { isSpinning, icon, className, children, size, ...rest } = props;
+    const { isSpinning, icon, className, children, size, disabled, ...rest } = props;
 
     let IconElement: JSX.Element = null;
 
@@ -19,7 +19,12 @@ export default function ButtonWithSpinner(props: ButtonWithSpinnerProps) {
     }
 
     return (
-        <Button className={classNames("d-flex", "align-items-center", className)} size={size} {...rest}>
+        <Button
+            className={classNames("d-flex", "align-items-center", className)}
+            size={size}
+            disabled={isSpinning || disabled}
+            {...rest}
+        >
             {isSpinning ? <Spinner size="sm" className="me-1" /> : IconElement}
             {children}
         </Button>

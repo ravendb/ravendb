@@ -11,6 +11,7 @@ import EVENTS = require("common/constants/events");
 
 import notificationCenter = require("common/notifications/notificationCenter");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class changesContext {
     static default = new changesContext();
@@ -131,7 +132,7 @@ class changesContext {
         }
     }
 
-    disconnectIfCurrent(db: database, cause: databaseDisconnectionCause) {
+    disconnectIfCurrent(db: database | DatabaseSharedInfo, cause: databaseDisconnectionCause) {
         const currentChanges = this.databaseChangesApi();
 
         if (currentChanges && currentChanges.getDatabase().name === db.name) {

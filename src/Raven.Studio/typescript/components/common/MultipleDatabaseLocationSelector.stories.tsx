@@ -1,6 +1,6 @@
 import { ComponentMeta } from "@storybook/react";
 import React, { useState } from "react";
-import { MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
+import { DatabaseActionContexts, MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
 import { boundCopy } from "../utils/common";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 
@@ -10,55 +10,58 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof MultipleDatabaseLocationSelector>;
 
-const Template = (args: { locations: databaseLocationSpecifier[] }) => {
-    const [locations, setLocations] = useState<databaseLocationSpecifier[]>([]);
+const Template = (args: { allContexts: DatabaseActionContexts[] }) => {
+    const [selectedContexts, setSelectedContexts] = useState<DatabaseActionContexts[]>(args.allContexts);
 
     return (
         <MultipleDatabaseLocationSelector
-            locations={args.locations}
-            selectedLocations={locations}
-            setSelectedLocations={setLocations}
+            allActionContexts={args.allContexts}
+            selectedActionContexts={selectedContexts}
+            setSelectedActionContexts={setSelectedContexts}
         />
     );
 };
 
 export const ShardedDatabase = boundCopy(Template);
 ShardedDatabase.args = {
-    locations: [
+    allContexts: [
         {
             nodeTag: "A",
-            shardNumber: 0,
-        },
-        {
-            nodeTag: "A",
-            shardNumber: 1,
+            shardNumbers: [0, 1],
         },
         {
             nodeTag: "B",
-            shardNumber: 0,
-        },
-        {
-            nodeTag: "B",
-            shardNumber: 1,
-        },
-        {
-            nodeTag: "B",
-            shardNumber: 2,
+            shardNumbers: [0, 1, 2],
         },
         {
             nodeTag: "C",
-            shardNumber: 0,
+            shardNumbers: [0, 2],
+        },
+    ],
+};
+
+export const ShardedDatabaseWithOrchestrator = boundCopy(Template);
+ShardedDatabaseWithOrchestrator.args = {
+    allContexts: [
+        {
+            nodeTag: "A",
+            shardNumbers: [0, 1],
+            includeOrchestrator: true,
+        },
+        {
+            nodeTag: "B",
+            shardNumbers: [0, 1, 2],
         },
         {
             nodeTag: "C",
-            shardNumber: 2,
+            shardNumbers: [0, 2],
         },
     ],
 };
 
 export const NonShardedDatabase = boundCopy(Template);
 NonShardedDatabase.args = {
-    locations: [
+    allContexts: [
         {
             nodeTag: "A",
         },
