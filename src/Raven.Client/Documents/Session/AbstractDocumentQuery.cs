@@ -1049,14 +1049,27 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
                 case CloseSubclauseToken close:
                     string parameter = AddQueryParameter(boost);
+                    int openSubclauseToSkip = 0;
                     while (last != null)
                     {
                         last = last.Previous; // find the previous option
-                        if (last?.Value is OpenSubclauseToken open)
+                        
+                        switch (last?.Value)
                         {
-                            open.BoostParameterName = parameter;
-                            close.BoostParameterName = parameter;
-                            return;
+                            case CloseSubclauseToken prevClose:
+                            {
+                                // We have to count how many inner subclauses were inside current subclause
+                                openSubclauseToSkip++;
+                                continue;
+                            }
+                            case OpenSubclauseToken open when openSubclauseToSkip > 0:
+                                // Inner subclause open - we have to skip it because we want to match only the leftmost opening.
+                                openSubclauseToSkip--;
+                                continue;
+                            case OpenSubclauseToken open:
+                                open.BoostParameterName = parameter;
+                                close.BoostParameterName = parameter;
+                                return;
                         }
                     }
                     break;
