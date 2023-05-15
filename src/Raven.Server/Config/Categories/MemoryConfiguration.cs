@@ -72,5 +72,10 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Memory.TemporaryDirtyMemoryChecksPeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting TemporaryDirtyMemoryChecksPeriod { get; set; }
+
+        [Description("EXPERT: Force the compaction of Large Object Heap during the next generation 2 GC if its size exceeds the given threshold percentage of installed memory. Default: 25%")]
+        [DefaultValue(0.25f)]
+        [ConfigurationEntry("Memory.GC.LargeObjectHeapCompactionThresholdPercentage", ConfigurationEntryScope.ServerWideOnly)]
+        public float LargeObjectHeapCompactionThresholdPercentage { get; set; }
     }
 }
