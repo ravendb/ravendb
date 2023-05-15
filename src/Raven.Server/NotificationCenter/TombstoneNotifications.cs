@@ -6,7 +6,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class TombstoneNotifications // blockingTombstones ??????????
+    public class TombstoneNotifications
     {
         private readonly NotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
@@ -24,9 +24,9 @@ namespace Raven.Server.NotificationCenter
         public void Add(Dictionary<(string, string), long> blockingTombstones)
         {
             BlockingTombstonesDetails details = new BlockingTombstonesDetails(blockingTombstones);
-            var x = details.ToJson(); // to remove
+            string title = $"Blocking of tombstones deletion";
             string msg = $"We have detected blocking of tombstones deletion. Consider deleting or enabling the following processes:";
-            _notificationCenter.Add(AlertRaised.Create(_database, msg, msg, AlertType.BlockingTombstones,
+            _notificationCenter.Add(AlertRaised.Create(_database, title, msg, AlertType.BlockingTombstones,
                 NotificationSeverity.Warning,
                 nameof(AlertType.BlockingTombstones), details: details));
         }

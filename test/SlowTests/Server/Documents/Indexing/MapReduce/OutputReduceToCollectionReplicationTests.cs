@@ -12,8 +12,8 @@ using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
-{/*
-    public class OutputReduceToCollectionReplicationTests : ReplicationTestBase
+{
+    public class OutputReduceToCollectionReplicationTests : ReplicationTestBase, ITombstoneAware
     {
         public OutputReduceToCollectionReplicationTests(ITestOutputHelper output) : base(output)
         {
@@ -105,5 +105,10 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 ["DailyInvoices"] = 0
             };
         }
-    }*/
+
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

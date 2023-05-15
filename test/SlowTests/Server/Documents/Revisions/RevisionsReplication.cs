@@ -979,7 +979,7 @@ namespace SlowTests.Server.Documents.Revisions
             };
         }
 
-        public HashSet<string> GetDisabledSubscribers()
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
         {
             throw new NotImplementedException();
         }

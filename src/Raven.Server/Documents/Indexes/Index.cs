@@ -4151,35 +4151,6 @@ namespace Raven.Server.Documents.Indexes
 
         public string TombstoneCleanerIdentifier => $"Index '{Name}'";
 
-        public HashSet<string> GetDisabledSubscribers()
-        {
-            var disabledSubscribers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            if (State == IndexState.Disabled)
-                disabledSubscribers.Add(Name);
-
-            return disabledSubscribers;
-        }
-        /*
-        public Dictionary<string, long> GetBlockingTombstonesPerCollection()
-        {
-            if (State == IndexState.Disabled)
-            {
-                using (CurrentlyInUse())
-                {
-                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    {
-                        using (var tx = context.OpenReadTransaction())
-                        {
-                            return GetLastProcessedDocumentTombstonesPerCollection(tx);
-                        }
-                    }
-                }
-            }
-
-            return null;
-        }*/
-
         public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
@@ -4195,6 +4166,15 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
+        }
+
+        public Dictionary<string, HashSet<string>> GetDisabledSubscribersCollections(HashSet<string> tombstoneCollections)
+        {
+            var dict = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            if (State == IndexState.Disabled)
+                dict[Name] = Collections;
+
+            return dict;
         }
 
         internal Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)

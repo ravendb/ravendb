@@ -31,6 +31,41 @@ namespace SlowTests.Issues
         {
         }
 
+
+        [Fact]
+        public async Task DismissTombstoneNotification()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var user = new User { Name = "Yonatan" };
+                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                }
+
+                var userIndex = new UserByName();
+                string indexName = userIndex.IndexName;
+                await userIndex.ExecuteAsync(store);
+                await store.Maintenance.SendAsync(new DisableIndexOperation(indexName));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(user.Id);
+                    await session.SaveChangesAsync();
+                }
+
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
+
+                await store.Maintenance.SendAsync(new EnableIndexOperation(indexName));
+
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))) == false);
+            }
+        }
+
         [Fact]
         public async Task TombstoneCleaningAfterIndexDisabled()
         {
