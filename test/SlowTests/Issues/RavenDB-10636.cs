@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using FastTests;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,10 +21,11 @@ namespace SlowTests.Issues
               = new Dictionary<string, int>();
         }
 
-        [Fact]
-        public void CanProjectOnSelectOnDictionary()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanProjectOnSelectOnDictionary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

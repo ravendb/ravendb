@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -54,10 +55,11 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
-        public void CanProjectHasValuePropertyOfNullable()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanProjectHasValuePropertyOfNullable(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -81,10 +83,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectHasValuePropertyOfNullable2()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanProjectHasValuePropertyOfNullable2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
                 using (var s = store.OpenSession())
@@ -107,10 +110,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TestGreaterThanOrEqualToZero()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TestGreaterThanOrEqualToZero(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -135,10 +139,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void NullableDateTimeProjection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void NullableDateTimeProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -171,10 +176,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void NullableDateTimeValueProjection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void NullableDateTimeValueProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {

@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Static.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,12 +18,13 @@ public class GH_15634 : RavenTestBase
     public GH_15634(ITestOutputHelper output) : base(output)
     {
     }
-    
-    
-    [Fact]
-    public void CanProjectFromProjectInto()
+
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanProjectFromProjectInto(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         store.ExecuteIndex(new EntityBaseIndex());
 
         using (var session = store.OpenSession())

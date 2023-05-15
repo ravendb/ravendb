@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Order = Tests.Infrastructure.Entities.Order;
 using OrderLine = Tests.Infrastructure.Entities.OrderLine;
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseOrderByNumberInProjection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseOrderByNumberInProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

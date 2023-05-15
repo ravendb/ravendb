@@ -13,10 +13,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanProjectSingleCollectionProperty()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanProjectSingleCollectionProperty(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
                 using (var session = store.OpenSession())

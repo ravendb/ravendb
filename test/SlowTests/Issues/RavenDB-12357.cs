@@ -25,10 +25,11 @@ namespace SlowTests.Issues
             public string DocId;
         }
 
-        [Fact]
-        public void TestProjectingNullProperty1()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TestProjectingNullProperty1(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

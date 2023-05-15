@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,10 +24,11 @@ namespace SlowTests.Issues
             public object SomeProp;
         }
 
-        [Fact]
-        public void ProjectionReturnsAllNull()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ProjectionReturnsAllNull(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -52,10 +54,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TestHasValue()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TestHasValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
