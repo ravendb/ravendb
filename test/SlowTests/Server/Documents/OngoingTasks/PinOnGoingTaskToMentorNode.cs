@@ -16,6 +16,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Collections;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -133,10 +134,13 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 DataDirectory = originalResult.DataDirectory
             });
 
-            var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive,CancellationToken.None);
+            var stateChange = revivedServer.ServerStore.Engine._stateChanged;
+            var reason = new ConcurrentSet<string>();
+            var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState2(RachisState.Passive, stateChange, reason);
             Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(10)), 
-                $"{Cluster.CollectLogs(revivedServer)}{Environment.NewLine}" +
-                $"prev: {waitForNotPassive.Status}, current: {revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive,CancellationToken.None).Status}");
+                $"{string.Join(Environment.NewLine,reason)}{Environment.NewLine}{Cluster.CollectLogs(revivedServer)}{Environment.NewLine}" +
+                $"prev: {waitForNotPassive.Status}, current: {revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive,CancellationToken.None).Status}{Environment.NewLine}" +
+                $"wrapper:{stateChange}");
 
             using (var session = src.OpenSession())
             {

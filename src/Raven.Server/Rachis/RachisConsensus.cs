@@ -393,12 +393,52 @@ namespace Raven.Server.Rachis
         private Leader _currentLeader;
         public Leader CurrentLeader => _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-        private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSourceWrapper _stateChanged = new TaskCompletionSourceWrapper();
         private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim();
         private readonly Random _rand;
         private string _lastStateChangeReason;
         public Candidate Candidate { get; private set; }
+
+        public class TaskCompletionSourceWrapper
+        {
+            private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            public string Caller;
+            public string Complition;
+
+            public Task Task => _stateChanged.Task;
+
+            public TaskCompletionSourceWrapper()
+            {
+                Caller = Environment.StackTrace;
+            }
+
+            public void TrySetCanceled()
+            {
+                GC.SuppressFinalize(this);
+                _stateChanged.TrySetCanceled();
+                Complition = Environment.StackTrace;
+            }
+
+            public void TrySetResult(object obj)
+            {
+                GC.SuppressFinalize(this);
+                _stateChanged.TrySetResult(obj);
+                Complition = Environment.StackTrace;
+            }
+
+            public override string ToString()
+            {
+                return
+                    $"status: {_stateChanged.Task.Status}{Environment.NewLine}ctor:{Environment.NewLine}{Caller}{Environment.NewLine}set:{Environment.NewLine}{Complition}";
+            }
+
+            ~TaskCompletionSourceWrapper()
+            {
+                Console.WriteLine("Task set wasn't called");
+                Console.WriteLine(ToString());
+            }
+        }
 
         protected RachisConsensus(CipherSuitesPolicy cipherSuitesPolicy, int? seed = null)
         {
@@ -598,6 +638,25 @@ namespace Raven.Server.Rachis
                 var task = _stateChanged.Task.WithCancellation(cts);
 
                 if (CurrentState != rachisState)
+                    return;
+
+                await task;
+            }
+        }
+
+        public async Task WaitForLeaveState2(RachisState rachisState, TaskCompletionSourceWrapper wrapper, ConcurrentSet<string> log)
+        {
+            while (true)
+            {
+                // we setup the wait _before_ checking the state
+                log.Add($"[{DateTime.UtcNow}] get task");
+                var task = wrapper.Task;
+
+                var current = CurrentState;
+                
+                log.Add($"[{DateTime.UtcNow}] compare {current} vs {rachisState}");
+
+                if (current != rachisState)
                     return;
 
                 await task;
@@ -917,7 +976,9 @@ namespace Raven.Server.Rachis
                         }
                     }
 
-                    TaskExecutor.CompleteAndReplace(ref _stateChanged);
+                    var old = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSourceWrapper());
+                    old.TrySetResult(null);
+                    // TaskExecutor.CompleteAndReplace(ref _stateChanged);
 
                     if (disposeAsync)
                     {
@@ -982,7 +1043,9 @@ namespace Raven.Server.Rachis
                 return false;
 
             CurrentState = RachisState.Leader;
-            TaskExecutor.CompleteAndReplace(ref _stateChanged);
+            var old = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSourceWrapper());
+            old.TrySetResult(null);
+            // TaskExecutor.CompleteAndReplace(ref _stateChanged);
             return true;
         }
 
