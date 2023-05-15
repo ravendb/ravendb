@@ -4,6 +4,7 @@ import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkb
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
 import { Input, InputProps } from "reactstrap";
 import { InputType } from "reactstrap/types/lib/Input";
+import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "./RadioToggle";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -21,6 +22,15 @@ type FormToggleProps<TFieldValues extends FieldValues, TName extends FieldPath<T
     TName
 > &
     Omit<CheckboxProps, "selected" | "toggleSelection">;
+
+type FormRadioToggleWithIconProps<
+    TFieldValues extends FieldValues,
+    TName extends FieldPath<TFieldValues>
+> = FormElementProps<TFieldValues, TName> & {
+    leftItem: RadioToggleWithIconInputItem<TFieldValues[TName]>;
+    rightItem: RadioToggleWithIconInputItem<TFieldValues[TName]>;
+    className?: string;
+};
 
 export function FormInput<
     TFieldValues extends FieldValues = FieldValues,
@@ -65,6 +75,37 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
     props: FormToggleProps<TFieldValues, TName>
 ) {
     return <FormCheckbox type="radio" {...props} />;
+}
+
+export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
+    props: FormRadioToggleWithIconProps<TFieldValues, TName>
+) {
+    const { name, control, rules, defaultValue, shouldUnregister, leftItem, rightItem, className } = props;
+
+    const {
+        field: { onChange, value },
+        fieldState: { error, invalid },
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    return (
+        <div>
+            <RadioToggleWithIcon
+                name={name}
+                leftItem={leftItem}
+                rightItem={rightItem}
+                selectedValue={value}
+                setSelectedValue={onChange}
+                className={className}
+            />
+            {invalid && <div className="text-danger small">{error.message}</div>}
+        </div>
+    );
 }
 
 function FormInputGeneral<
