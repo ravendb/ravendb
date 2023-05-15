@@ -126,16 +126,15 @@ namespace Raven.Server.Documents
             var tombstonesPerCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             bool needToWarn = false;
 
-            foreach (var subscription in _subscriptions)
+            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                var disabledSubscribers = subscription.GetDisabledSubscribersCollections(tombstoneCollections);
-                foreach (var disabledSubscriber in disabledSubscribers.Keys)
+                foreach (var subscription in _subscriptions)
                 {
-                    HashSet<string> blockedTombstoneCollections = disabledSubscribers[disabledSubscriber];
-
-                    using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    var disabledSubscribers = subscription.GetDisabledSubscribersCollections(tombstoneCollections);
+                    foreach (var disabledSubscriber in disabledSubscribers.Keys)
                     {
+                        HashSet<string> blockedTombstoneCollections = disabledSubscribers[disabledSubscriber];
                         foreach (var tombstoneCollection in blockedTombstoneCollections)
                         {
                             if (tombstonesPerCollection.TryGetValue(tombstoneCollection, out var tombstonesCount) == false)
@@ -143,7 +142,7 @@ namespace Raven.Server.Documents
                                 tombstonesCount = _documentDatabase.DocumentsStorage.TombstonesCountForCollection(context, tombstoneCollection);
                                 tombstonesPerCollection[tombstoneCollection] = tombstonesCount;
                             }
-                            
+
                             if (tombstonesCount > 0)
                             {
                                 needToWarn = true;
@@ -153,7 +152,7 @@ namespace Raven.Server.Documents
                     }
                 }
             }
-
+            
             if (needToWarn)
                 _documentDatabase.NotificationCenter.TombstoneNotifications.Add(currentBlockingTombstones);
             else
