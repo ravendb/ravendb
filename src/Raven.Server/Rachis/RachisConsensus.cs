@@ -100,14 +100,14 @@ namespace Raven.Server.Rachis
             return StateMachine.ShouldSnapshot(slice, type);
         }
 
-        public override Task AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
+        public override Task AfterSnapshotInstalledAsync(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
         {
             return StateMachine.AfterSnapshotInstalledAsync(lastIncludedIndex, onFullSnapshotInstalledTask, token);
         }
 
         public override Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
-            return StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, token);
+            return StateMachine.OnSnapshotInstalledAsync(context, lastIncludedIndex, token);
         }
 
         public override Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
@@ -120,7 +120,7 @@ namespace Raven.Server.Rachis
                 throw new InvalidOperationException($"Exception was thrown for disconnecting  node {tag} - For testing purposes.");
             }
 
-            return StateMachine.ConnectToPeer(url, tag, certificate, _serverStore.ServerShutdown);
+            return StateMachine.ConnectToPeerAsync(url, tag, certificate, _serverStore.ServerShutdown);
         }
 
         private class NullDisposable : IDisposable
@@ -2223,7 +2223,7 @@ namespace Raven.Server.Rachis
 
         public abstract long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
-        public abstract Task AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token);
+        public abstract Task AfterSnapshotInstalledAsync(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token);
         public abstract Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token);
 
         internal readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();

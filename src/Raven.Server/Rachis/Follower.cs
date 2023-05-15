@@ -428,7 +428,7 @@ namespace Raven.Server.Rachis
             // going on
             using (var cts = new CancellationTokenSource())
             {
-                KeepAliveAndExecuteAction(() => _engine.AfterSnapshotInstalled(snapshot.LastIncludedIndex, onFullSnapshotInstalledTask, cts.Token)
+                KeepAliveAndExecuteAction(() => _engine.AfterSnapshotInstalledAsync(snapshot.LastIncludedIndex, onFullSnapshotInstalledTask, cts.Token)
                 , cts, "SnapshotInstalledAsync");
             }
 
