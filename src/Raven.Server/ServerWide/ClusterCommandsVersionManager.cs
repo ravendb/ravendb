@@ -27,6 +27,8 @@ namespace Raven.Server.ServerWide
 
         public static readonly int MyCommandsVersion;
 
+        public static Action AfterFirstClusterVersionSetting;
+
         public static int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;
         private static int _currentClusterMinimalVersion;
 
@@ -166,6 +168,7 @@ namespace Raven.Server.ServerWide
             if (MyCommandsVersion < version)
                 ThrowInvalidClusterVersion(version);
 
+            int fromVersion = _currentClusterMinimalVersion;
             int currentVersion;
             while (true)
             {
@@ -175,10 +178,14 @@ namespace Raven.Server.ServerWide
                 Interlocked.CompareExchange(ref _currentClusterMinimalVersion, version, currentVersion);
             }
 
-            if (currentVersion != version && Log.IsInfoEnabled)
-            {
+            if (fromVersion == version) 
+                return;
+
+            if (fromVersion == 0 && AfterFirstClusterVersionSetting?.GetInvocationList().Length > 0)
+                AfterFirstClusterVersionSetting?.Invoke();
+
+            if (Log.IsInfoEnabled)
                 Log.Info($"Cluster version was changed from {currentVersion} to {version}");
-            }
         }
 
         public static void SetMinimalClusterVersion(int version)
@@ -193,7 +200,7 @@ namespace Raven.Server.ServerWide
                     break;
                 Interlocked.CompareExchange(ref _currentClusterMinimalVersion, minimalVersion, currentVersion);
             }
-
+        
             if (fromVersion != currentVersion && Log.IsInfoEnabled)
             {
                 Log.Info($"Cluster version was changed from {fromVersion} to {currentVersion}");

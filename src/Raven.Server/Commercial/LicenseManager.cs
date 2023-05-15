@@ -138,7 +138,11 @@ namespace Raven.Server.Commercial
                 ReloadLicense(firstRun: true);
                 ReloadLicenseLimits(firstRun: true);
 
-                Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
+                if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion == 0)
+                    ClusterCommandsVersionManager.AfterFirstClusterVersionSetting += OnFirstClusterVersionSet;
+                else
+                    Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
+
             }
             catch (Exception e)
             {
@@ -152,6 +156,12 @@ namespace Raven.Server.Commercial
                     (int)TimeSpan.FromMinutes(1).TotalMilliseconds,
                     (int)TimeSpan.FromHours(24).TotalMilliseconds);
             }
+        }
+
+        public void OnFirstClusterVersionSet()
+        {
+            Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
+            ClusterCommandsVersionManager.AfterFirstClusterVersionSetting -= OnFirstClusterVersionSet;
         }
 
         public async Task PutMyNodeInfoAsync()
