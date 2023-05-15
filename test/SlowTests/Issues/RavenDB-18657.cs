@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_Get_Fields_With_Different_Casing(Options options)
         {
             using var store = GetDocumentStore(options);

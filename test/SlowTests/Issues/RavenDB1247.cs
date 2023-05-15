@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,12 +30,13 @@ namespace SlowTests.Issues
             public int Property2 { get; set; }
         }
 
-        [Fact]
-        public void DocumentWithoutIdPropertyIsStored_HashSymbolInId_HashSymbolNotRemovedFromId()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DocumentWithoutIdPropertyIsStored_HashSymbolInId_HashSymbolNotRemovedFromId(Options options)
         {
             const string TEST_DOCUMENT_ID = "FooDocument/#123";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var newDocument = new FooDocumentWithoutIdProperty()
                 {

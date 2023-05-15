@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,8 +13,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void InQueryOnMultipleIdsShouldNotThrowTooManyBooleanClauses()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void InQueryOnMultipleIdsShouldNotThrowTooManyBooleanClauses(Options options)
         {
             var numOfIds = 10_000;
             var ids = Enumerable.Range(0, numOfIds).Select(x => x.ToString()).ToArray();

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Issues
             public TimeSpan Bar { get; set; }
         }
 
-        [Fact]
-        public void TimeSpan_Can_Sort_By_Range_Value()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSpan_Can_Sort_By_Range_Value(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -67,10 +69,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TimeSpan_Can_Filter_By_Value()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TimeSpan_Can_Filter_By_Value(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {

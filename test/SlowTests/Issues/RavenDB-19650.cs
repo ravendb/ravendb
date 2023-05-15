@@ -146,7 +146,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanLoadDocumentFromReferenceExistingOnlyInIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -154,13 +154,13 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var m1 = new Manager() { Name = "CoolName", Age = 21};
-                    session.Store(m1);
+                    session.Store(m1, "managers/1");
 
                     var e1 = new Employee() { ManId = m1.Id, Salary = 37};
-                    session.Store(e1);
+                    session.Store(e1, "employees/1$managers/1");
 
                     var o1 = new Order() { EmpId = e1.Id, Price = 44, Name = "OrderName"};
-                    session.Store(o1);
+                    session.Store(o1, "orders/1$managers/1");
                     
                     session.SaveChanges();
                     
