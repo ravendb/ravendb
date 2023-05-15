@@ -65,34 +65,9 @@ namespace Sparrow.LowMemory
                         _logger.Operations($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
                                            $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo)}");
                     }
+
 #if NET7_0_OR_GREATER
-                    if (now - _lastLohCompactionRequest > _lohCompactionInterval && GCSettings.LargeObjectHeapCompactionMode != GCLargeObjectHeapCompactionMode.CompactOnce)
-                    {
-                        var threshold = LargeObjectHeapCompactionThresholdPercentage;
-
-                        var envVariableThreshold = Environment.GetEnvironmentVariable("RAVEN_LOH_COMPACTION_THRESHOLD");
-
-                        if (string.IsNullOrEmpty(envVariableThreshold) == false)
-                            float.TryParse(envVariableThreshold, out threshold);
-
-                        if (threshold > 0)
-                        {
-                            var info = GC.GetGCMemoryInfo(GCKind.Any);
-
-                            var lohSizeAfter = new Size(info.GenerationInfo[3].SizeAfterBytes, SizeUnit.Bytes);
-                            
-                            if (lohSizeAfter > threshold * memoryInfo.TotalPhysicalMemory)
-                            {
-                                GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-
-                                _lastLohCompactionRequest = now;
-
-                                if (_logger.IsOperationsEnabled)
-                                    _logger.Operations(
-                                        $"Forcing LOH compaction during next blocking generation 2 GC. LOH size after last GC: {lohSizeAfter} (threshold: {threshold})");
-                            }
-                        }
-                    }
+                    RequestLohCompactionIfNeeded(memoryInfo, now);
 #endif
                 }
                 catch
@@ -145,6 +120,39 @@ namespace Sparrow.LowMemory
                 _inactiveHandlers.Clear();
             }
         }
+
+#if NET7_0_OR_GREATER
+        private void RequestLohCompactionIfNeeded(MemoryInfoResult memoryInfo, DateTime now)
+        {
+            if (now - _lastLohCompactionRequest > _lohCompactionInterval && GCSettings.LargeObjectHeapCompactionMode != GCLargeObjectHeapCompactionMode.CompactOnce)
+            {
+                var threshold = LargeObjectHeapCompactionThresholdPercentage;
+
+                var envVariableThreshold = Environment.GetEnvironmentVariable("RAVEN_LOH_COMPACTION_THRESHOLD");
+
+                if (string.IsNullOrEmpty(envVariableThreshold) == false)
+                    float.TryParse(envVariableThreshold, out threshold);
+
+                if (threshold > 0)
+                {
+                    var info = GC.GetGCMemoryInfo(GCKind.Any);
+
+                    var lohSizeAfter = new Size(info.GenerationInfo[3].SizeAfterBytes, SizeUnit.Bytes);
+
+                    if (lohSizeAfter > threshold * memoryInfo.TotalPhysicalMemory)
+                    {
+                        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+
+                        _lastLohCompactionRequest = now;
+
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations(
+                                $"Forcing LOH compaction during next blocking generation 2 GC. LOH size after last GC: {lohSizeAfter} (threshold: {threshold})");
+                    }
+                }
+            }
+        }
+#endif
 
         private void ClearInactiveHandlers()
         {
