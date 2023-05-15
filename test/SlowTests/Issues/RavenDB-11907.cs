@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,19 +15,19 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanProjectFromCollectionNotInJson()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanProjectFromCollectionNotInJson(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
+                s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
-                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                    {
-                        CustomizeJsonDeserializer = des => des.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
-                    };
-                }
-            }))
+                    CustomizeJsonDeserializer = des => des.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                };
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -93,10 +94,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void ChainPropagationOnMissingCollection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ChainPropagationOnMissingCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
