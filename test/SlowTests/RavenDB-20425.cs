@@ -10,6 +10,7 @@ using FastTests.Utils;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide;
 using Xunit;
@@ -449,32 +450,77 @@ namespace SlowTests
         public async Task NotDeletingOutOfDateRevisionsBecauseTheyOrderedByEtag()
         {
             using var src = GetDocumentStore();
-            using var dst = GetDocumentStore();
+            using var dst = GetDocumentStore(
+                new Options()
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        {
+                            {
+                                "Users", new ScriptResolver()
+                                {
+                                    Script = @"var oldestDoc = docs[0];
+for (var i = 0; i < docs.length; i++) {
+    var curDate = Date.parse(docs[i]['@metadata']['@last-modified']);
+    var oldDate = Date.parse(oldestDoc['@metadata']['@last-modified']);
+    if(curDate < oldDate){
+        oldestDoc = docs[i];
+    }
+}
+return oldestDoc;"
+                                }
+                            }
+                        }
+                    };
+                }
+            });
 
-            var db1 = await Databases.GetDocumentDatabaseInstanceFor(src);
-            var db2 = await Databases.GetDocumentDatabaseInstanceFor(dst);
+            var dbSrc = await Databases.GetDocumentDatabaseInstanceFor(src);
+            var dbDst = await Databases.GetDocumentDatabaseInstanceFor(dst);
+            dbDst.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-1);
+            var configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
+                }
+            };
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, dst.Database, configuration: configuration);
 
-            db1.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-1);
+
+            Console.WriteLine(DateTime.UtcNow.AddDays(-1));
 
             using (var session = src.OpenAsyncSession())
             {
-                await session.StoreAsync(new User { Name = "Old" }, "Docs/1");
+                await session.StoreAsync(new User { Name = "Src" }, "Docs/1");
                 await session.SaveChangesAsync();
             }
 
             using (var session = dst.OpenAsyncSession())
             {
-                await session.StoreAsync(new User { Name = "New" }, "Docs/1");
+                await session.StoreAsync(new User { Name = "Dst1" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = dst.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Dst2" }, "Docs/1");
                 await session.SaveChangesAsync();
             }
 
             await SetupReplicationAsync(src, dst); // Conflicts resolved
-            await SetupReplicationAsync(dst, src); // Conflicts resolved
             await EnsureReplicatingAsync(src, dst);
-            await EnsureReplicatingAsync(dst, src);
 
-            DateTime previusTime = DateTime.MinValue;
-            using (var session = src.OpenAsyncSession())
+            WaitForUserToContinueTheTest(dst);
+
+
+            // Ensure revisions arent ordered by "last modified".
+            using (var session = dst.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
                 Assert.Equal(4, doc1RevCount);
@@ -482,37 +528,60 @@ namespace SlowTests
                 var times = (await session.Advanced.Revisions.GetMetadataForAsync("Docs/1"))
                     .Select(metadata => DateTime.Parse(metadata["@last-modified"].ToString()));
 
+                DateTime previousTime = DateTime.MinValue;
                 var orderedByTime = true;
                 foreach (var currentTime in times)
                 {
-                    Console.WriteLine(currentTime.ToString("dd-MM-yyyy HH:mm:ss.fffffff"));
+                    // Console.WriteLine(currentTime.ToString("dd-MM-yyyy HH:mm:ss.fffffff"));
 
-                    if (currentTime < previusTime)
+                    if (currentTime < previousTime)
                     {
                         orderedByTime = false;
-                        previusTime = currentTime;
-                        // break;
+                        previousTime = currentTime;
+                        break;
                     }
 
-                    previusTime = currentTime;
+                    previousTime = currentTime;
                 }
                 Assert.False(orderedByTime);
             }
 
-            var dstConfig = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionAgeToKeep = TimeSpan.FromHours(1) };
-            await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+            // var dstConfig = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionAgeToKeep = TimeSpan.FromHours(1) };
+            // await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+            var configuration2 = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionAgeToKeep = TimeSpan.FromHours(1)
+                }
+            };
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, dst.Database, configuration: configuration2);
 
-            await TriggerRevisionsDelete(ChangingType.UpdateDocument, src, "Docs/1");
-
-            // WaitForUserToContinueTheTest(src);
-
+            await TriggerRevisionsDelete(ChangingType.EnforceConfiguration, dst);
             using (var session = dst.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
-                Assert.Equal(3, doc1RevCount);
+                Assert.Equal(4, doc1RevCount); // NEW, NEWER, NEW, NEW
             }
-        }
 
+            dbDst.Time.UtcDateTime = () => DateTime.UtcNow;
+            await TriggerRevisionsDelete(ChangingType.EnforceConfiguration, dst);
+            using (var session = dst.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(3, doc1RevCount); // OLD (DELETED) , NEW, OLD, OLD
+            }
+
+            dbDst.Time.UtcDateTime = () => DateTime.UtcNow.AddHours(2);
+            await TriggerRevisionsDelete(ChangingType.EnforceConfiguration, dst);
+            using (var session = dst.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(0, doc1RevCount); // OLDER (DELETED EARLIER) , OLD (DELETED), OLDER (DELETED), OLDER (DELETED)
+            }
+
+        }
 
     }
 }
