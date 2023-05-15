@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
@@ -607,8 +606,8 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 await Task.Delay(3000); // wait for replication ping-pong to settle down
 
-                EnsureReplicating(storeA, storeB);
-                EnsureReplicating(storeB, storeA);
+                EnsureReplicating(storeA, storeB, "marker1$users/ayende");
+                EnsureReplicating(storeB, storeA, "marker2$users/ayende");
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
