@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ public class RavenDB_18399 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void DateAndTimeOnlyTestInIndex(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -44,7 +45,7 @@ public class RavenDB_18399 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void IndexWithLetQueries(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -64,7 +65,7 @@ public class RavenDB_18399 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void UsingFilter(Options options)
     {
         var dateOnly = default(DateOnly).AddDays(300);
@@ -86,7 +87,7 @@ public class RavenDB_18399 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void DateTimeToDateOnlyWithLet(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -187,7 +188,7 @@ from DateAndTimeOnlies where DateOnly != null update { this.DateOnly = modifyDat
 
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void DateAndTimeOnlyInQuery(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -411,8 +412,12 @@ from DateAndTimeOnlies where DateOnly != null update { this.DateOnly = modifyDat
         var index = new TIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store);
-        var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] {index.IndexName}));
-        Assert.Equal(0, indexErrors[0].Errors.Length);
+
+        store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { index.IndexName })).AssertAll((key, indexErrors) =>
+        {
+            Assert.Equal(0, indexErrors[0].Errors.Length);
+        });
+
         return index;
     }
 

@@ -131,10 +131,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void DeleteByQuery()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DeleteByQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

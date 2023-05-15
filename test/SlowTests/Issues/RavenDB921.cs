@@ -40,7 +40,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void LowLevelRemoteStream(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -111,7 +111,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void HighLevelLocalStreamWithFilter(Options options)
         {
             using (var store = GetDocumentStore(options))

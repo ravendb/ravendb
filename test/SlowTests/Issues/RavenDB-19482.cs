@@ -1,6 +1,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ public class RavenDB_19482 : RavenTestBase
         public string Order { get; set; }
     }
 
-    [Fact]
-    public void Can_Project_Into()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Can_Project_Into(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             const string name = "Grisha";
             const string order = "orders/1";

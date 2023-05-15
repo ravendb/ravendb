@@ -64,7 +64,7 @@ public class RavenDB_19205 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void CanProduceTicksFromTimeOnlyDateOnlyViaAutoIndex(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -93,7 +93,7 @@ public class RavenDB_19205 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void BackwardCompatibilityForDateOnlyInAutoIndexes(Options options)
     {
         var backupPath = NewDataPath(forceCreateDir: true);

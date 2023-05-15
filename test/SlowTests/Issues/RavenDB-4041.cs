@@ -90,10 +90,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void streaming_query_returns_metadata()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void streaming_query_returns_metadata(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Customers_ByName();
                 index.Execute(store);

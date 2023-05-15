@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_RQL()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_RQL(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -58,10 +60,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Javascript()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Javascript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -101,10 +104,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Both_RQL_and_Javascript()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Both_RQL_and_Javascript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -145,10 +149,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_Let_with_From_Alias_thats_a_Reserved_Word_in_RQL()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Use_Let_with_From_Alias_thats_a_Reserved_Word_in_RQL(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

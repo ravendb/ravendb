@@ -275,7 +275,10 @@ function execute(doc, args){
 
                     _queryData = new QueryData(fields, projections, fromAlias: Query.From.Alias?.Value);
                 }
-
+                else if (Query.SelectFunctionBody.FunctionText != null && _queryData == null)
+                {
+                    _queryData = QueryData.CustomFunction(Query.From.Alias?.Value, Query.SelectFunctionBody.FunctionText);
+                }
                 return _queryData;
             }
         }

@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseOffsetWithCollectionQuery(Options options)
         {
             using var store = GetDocumentStore(options);

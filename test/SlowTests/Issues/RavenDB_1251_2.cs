@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,20 +24,17 @@ namespace SlowTests.Issues
             public Duration Bar { get; set; }
         }
 
-        [Fact]
-        public void Duration_Can_Sort_By_Range_Value()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Duration_Can_Sort_By_Range_Value(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = str =>
             {
-                ModifyDocumentStore = str =>
-                {
-                    str.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                    {
-                        CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter())
-                    };
-                    str.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter, RangeType.Long);
-                }
-            }))
+                str.Conventions.Serialization = new NewtonsoftJsonSerializationConventions {CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter())};
+                str.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter, RangeType.Long);
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
