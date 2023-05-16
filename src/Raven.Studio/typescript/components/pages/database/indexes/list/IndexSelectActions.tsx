@@ -1,6 +1,4 @@
-﻿import React, { useCallback, useState } from "react";
-
-import { withPreventDefault } from "components/utils/common";
+﻿import React, { useState } from "react";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import {
     Button,
@@ -19,10 +17,9 @@ interface IndexSelectActionProps {
     indexesCount: number;
     selectedIndexes: string[];
     deleteSelectedIndexes: () => Promise<void>;
-    enableSelectedIndexes: () => Promise<void>;
+    startSelectedIndexes: () => Promise<void>;
     disableSelectedIndexes: () => Promise<void>;
     pauseSelectedIndexes: () => Promise<void>;
-    resumeSelectedIndexes: () => Promise<void>;
     setLockModeSelectedIndexes: (lockMode: IndexLockMode) => Promise<void>;
     toggleSelectAll: () => void;
 }
@@ -32,37 +29,12 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
         indexesCount,
         selectedIndexes,
         deleteSelectedIndexes,
-        enableSelectedIndexes,
+        startSelectedIndexes,
         disableSelectedIndexes,
         pauseSelectedIndexes,
-        resumeSelectedIndexes,
         setLockModeSelectedIndexes,
         toggleSelectAll,
     } = props;
-
-    const unlockSelectedIndexes = useCallback(
-        async (e: React.MouseEvent<HTMLElement>) => {
-            e.preventDefault();
-            await setLockModeSelectedIndexes("Unlock");
-        },
-        [setLockModeSelectedIndexes]
-    );
-
-    const lockSelectedIndexes = useCallback(
-        async (e: React.MouseEvent<HTMLElement>) => {
-            e.preventDefault();
-            await setLockModeSelectedIndexes("LockedIgnore");
-        },
-        [setLockModeSelectedIndexes]
-    );
-
-    const lockErrorSelectedIndexes = useCallback(
-        async (e: React.MouseEvent<HTMLElement>) => {
-            e.preventDefault();
-            await setLockModeSelectedIndexes("LockedError");
-        },
-        [setLockModeSelectedIndexes]
-    );
 
     const [globalLockChanges] = useState(false);
     // TODO: IDK I just wanted it to compile
@@ -99,29 +71,15 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                                 {!globalLockChanges && <Icon icon="play" />}
                                 Set indexing state
                             </DropdownToggle>
-
                             <DropdownMenu>
-                                <DropdownItem
-                                    onClick={withPreventDefault(enableSelectedIndexes)}
-                                    title="Enable indexing"
-                                >
-                                    <Icon icon="play" /> <span>Enable</span>
+                                <DropdownItem onClick={startSelectedIndexes} title="Start indexing">
+                                    <Icon icon="play" /> <span>Start indexing</span>
                                 </DropdownItem>
-                                <DropdownItem
-                                    onClick={withPreventDefault(disableSelectedIndexes)}
-                                    title="Disable indexing"
-                                >
-                                    <Icon icon="stop" color="danger" /> <span>Disable</span>
+                                <DropdownItem onClick={disableSelectedIndexes} title="Disable indexing">
+                                    <Icon icon="stop" color="danger" /> <span>Disable indexing</span>
                                 </DropdownItem>
-                                <DropdownItem divider />
-                                <DropdownItem
-                                    onClick={withPreventDefault(resumeSelectedIndexes)}
-                                    title="Resume indexing"
-                                >
-                                    <Icon icon="play" /> <span>Resume</span>
-                                </DropdownItem>
-                                <DropdownItem onClick={withPreventDefault(pauseSelectedIndexes)} title="Pause indexing">
-                                    <Icon icon="pause" color="warning" /> <span>Pause</span>
+                                <DropdownItem onClick={pauseSelectedIndexes} title="Pause indexing until restart">
+                                    <Icon icon="pause" color="warning" /> <span>Pause indexing until restart</span>
                                 </DropdownItem>
                             </DropdownMenu>
                         </UncontrolledDropdown>
@@ -140,14 +98,23 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                             </DropdownToggle>
 
                             <DropdownMenu>
-                                <DropdownItem onClick={unlockSelectedIndexes} title="Unlock selected indexes">
+                                <DropdownItem
+                                    onClick={() => setLockModeSelectedIndexes("Unlock")}
+                                    title="Unlock selected indexes"
+                                >
                                     <Icon icon="unlock" /> <span>Unlock</span>
                                 </DropdownItem>
-                                <DropdownItem onClick={lockSelectedIndexes} title="Lock selected indexes">
+                                <DropdownItem
+                                    onClick={() => setLockModeSelectedIndexes("LockedIgnore")}
+                                    title="Lock selected indexes"
+                                >
                                     <Icon icon="lock" /> <span>Lock</span>
                                 </DropdownItem>
                                 <DropdownItem divider />
-                                <DropdownItem onClick={lockErrorSelectedIndexes} title="Lock (Error) selected indexes">
+                                <DropdownItem
+                                    onClick={() => setLockModeSelectedIndexes("LockedError")}
+                                    title="Lock (Error) selected indexes"
+                                >
                                     <Icon icon="lock-error" /> <span>Lock (Error)</span>
                                 </DropdownItem>
                             </DropdownMenu>

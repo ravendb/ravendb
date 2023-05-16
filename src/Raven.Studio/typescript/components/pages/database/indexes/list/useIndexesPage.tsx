@@ -271,6 +271,50 @@ export function useIndexesPage(database: database, stale: boolean) {
         [eventsCollector, indexesService, database]
     );
 
+    const onStartIndexesConfirm = useCallback(
+        async (indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+            eventsCollector.reportEvent("index", "toggle-status");
+
+            for (let locationIdx = 0; locationIdx < locations.length; locationIdx++) {
+                for (let indexIdx = 0; indexIdx < indexes.length; indexIdx++) {
+                    const location = locations[locationIdx];
+                    const index = indexes[indexIdx];
+
+                    const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details?.status;
+
+                    if (indexStatus !== "Disabled" && indexStatus !== "Paused") {
+                        continue;
+                    }
+
+                    if (indexStatus === "Disabled") {
+                        await indexesService.enable(index, database, location);
+                    } else {
+                        await indexesService.resume(index, database, location);
+                    }
+
+                    dispatch({
+                        type: indexStatus === "Disabled" ? "EnableIndexing" : "ResumeIndexing",
+                        indexName: index.name,
+                        location,
+                    });
+                }
+            }
+        },
+        [eventsCollector, indexesService, database]
+    );
+
+    const startIndexes = useCallback(
+        async (indexes: IndexSharedInfo[]) => {
+            setBulkOperationConfirm({
+                type: "start",
+                indexes,
+                locations: database.getLocations(),
+                onConfirm: (locations: databaseLocationSpecifier[]) => onStartIndexesConfirm(indexes, locations),
+            });
+        },
+        [database, onStartIndexesConfirm]
+    );
+
     const togglePauseIndexes = useCallback(
         async (resume: boolean, indexes: IndexSharedInfo[]) => {
             setBulkOperationConfirm({
@@ -503,6 +547,7 @@ export function useIndexesPage(database: database, stale: boolean) {
         indexesCount,
         setIndexPriority,
         getSelectedIndexes,
+        startIndexes,
         toggleDisableIndexes,
         togglePauseIndexes,
         setIndexLockMode,

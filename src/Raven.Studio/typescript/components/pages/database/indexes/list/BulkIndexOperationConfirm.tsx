@@ -7,7 +7,7 @@ import { capitalize } from "lodash";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
 
-type operationType = "pause" | "resume" | "enable" | "disable";
+type operationType = "pause" | "resume" | "enable" | "disable" | "start";
 
 interface BulkIndexOperationConfirmProps {
     type: operationType;
@@ -92,6 +92,8 @@ function getGerund(type: operationType) {
             return "pausing";
         case "resume":
             return "resuming";
+        case "start":
+            return "starting";
         default:
             assertUnreachable(type);
     }
@@ -106,6 +108,8 @@ function getIcon(type: operationType) {
         case "pause":
             return "pause";
         case "resume":
+            return "play";
+        case "start":
             return "play";
         default:
             assertUnreachable(type);
