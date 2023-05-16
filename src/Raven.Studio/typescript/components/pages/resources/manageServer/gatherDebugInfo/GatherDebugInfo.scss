@@ -1,0 +1,44 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.gather-debug-info {
+    @function assign-icon-color($index) {
+        $colors: (
+            1: colors.$color-1-1,
+            2: colors.$color-1-3,
+            3: colors.$color-2-1,
+            4: colors.$color-2-3,
+            5: colors.$color-3-1,
+            6: colors.$color-3-3,
+        );
+
+        @return map-get($colors, $index);
+    }
+    .half-width-section {
+        flex-grow: 1;
+        flex-wrap: wrap;
+        .package-download-section {
+            top: sizes.$gutter-sm;
+        }
+    }
+    .icons-list {
+        i {
+            display: block;
+            margin: auto;
+            width: 64px;
+            height: 64px;
+            border-radius: sizes.$gutter-sm;
+            font-size: 24px;
+            line-height: 64px;
+            background: colors.$well-bg;
+            margin-bottom: sizes.$gutter-sm;
+        }
+        @for $i from 1 through 6 {
+            :nth-child(#{$i}) {
+                i {
+                    color: assign-icon-color($i);
+                }
+            }
+        }
+    }
+}
