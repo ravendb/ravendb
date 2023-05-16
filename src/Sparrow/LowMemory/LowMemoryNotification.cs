@@ -127,32 +127,35 @@ namespace Sparrow.LowMemory
         
         private void RequestLohCompactionIfNeeded(MemoryInfoResult memoryInfo, DateTime now)
         {
-            if (now - _lastLohCompactionRequest > _lohCompactionInterval && GCSettings.LargeObjectHeapCompactionMode != GCLargeObjectHeapCompactionMode.CompactOnce)
+            if (now - _lastLohCompactionRequest <= _lohCompactionInterval ||
+                GCSettings.LargeObjectHeapCompactionMode == GCLargeObjectHeapCompactionMode.CompactOnce)
+                return;
+            
+            var threshold = LargeObjectHeapCompactionThresholdPercentage;
+
+            var envVariableThreshold = Environment.GetEnvironmentVariable("RAVEN_LOH_COMPACTION_THRESHOLD");
+
+            if (string.IsNullOrEmpty(envVariableThreshold) == false && float.TryParse(envVariableThreshold, out var parsedValue))
+                threshold = parsedValue;
+
+            if (threshold <= 0)
+                return;
+            
+            var info = GC.GetGCMemoryInfo(GCKind.Any);
+
+            if (info.Index == 0) // no GC was run
+                return;
+
+            var lohSizeAfter = new Size(info.GenerationInfo[3].SizeAfterBytes, SizeUnit.Bytes);
+
+            if (lohSizeAfter > threshold * memoryInfo.TotalPhysicalMemory)
             {
-                var threshold = LargeObjectHeapCompactionThresholdPercentage;
+                GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
 
-                var envVariableThreshold = Environment.GetEnvironmentVariable("RAVEN_LOH_COMPACTION_THRESHOLD");
+                _lastLohCompactionRequest = now;
 
-                if (string.IsNullOrEmpty(envVariableThreshold) == false)
-                    float.TryParse(envVariableThreshold, out threshold);
-
-                if (threshold > 0)
-                {
-                    var info = GC.GetGCMemoryInfo(GCKind.Any);
-
-                    var lohSizeAfter = new Size(info.GenerationInfo[3].SizeAfterBytes, SizeUnit.Bytes);
-
-                    if (lohSizeAfter > threshold * memoryInfo.TotalPhysicalMemory)
-                    {
-                        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-
-                        _lastLohCompactionRequest = now;
-
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations(
-                                $"Forcing LOH compaction during next blocking generation 2 GC. LOH size after last GC: {lohSizeAfter} (threshold: {threshold})");
-                    }
-                }
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Forcing LOH compaction during next blocking generation 2 GC. LOH size after last GC: {lohSizeAfter} (threshold: {threshold})");
             }
         }
 #endif
