@@ -22,7 +22,7 @@ public class DatabaseIndexActions : IIndexActions
         _time = time ?? throw new ArgumentNullException(nameof(time));
         _configuration = controller.GetDatabaseConfiguration();
 
-        if (AbstractIndexCreateController.CanUseIndexBatch())
+        if (_controller.CanUseIndexBatch())
             _batch = _controller.CreateIndexBatch();
     }
 

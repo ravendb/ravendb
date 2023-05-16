@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -19,8 +18,6 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
-using Raven.Server.Monitoring.Snmp.Objects.Cluster;
-using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
@@ -35,7 +32,6 @@ using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
-using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
@@ -93,7 +89,7 @@ namespace Tests.Infrastructure
                 }
                 var follower = RachisConsensuses[i + initialCount];
                 await leader.AddToClusterAsync(follower.Url, asWatcher: watcherCluster, nodeTag: allowedNodeTags[i]);
-                var done = await follower.WaitForTopology(watcherCluster? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
+                var done = await follower.WaitForTopology(watcherCluster ? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
                 Assert.True(done, "Waited for node to become a follower for too long");
             }
             var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;
@@ -208,7 +204,7 @@ namespace Tests.Infrastructure
             return sb.ToString();
         }
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null, bool shouldRunInMemory = true, string nodeTag=null)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null, bool shouldRunInMemory = true, string nodeTag = null)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
@@ -488,6 +484,10 @@ namespace Tests.Infrastructure
 
         public class CountingValidator : RachisVersionValidation
         {
+            public CountingValidator(ClusterCommandsVersionManager commandsVersionManager) : base(commandsVersionManager)
+            {
+            }
+
             public override void AssertPutCommandToLeader(CommandBase cmd)
             {
             }
@@ -544,7 +544,7 @@ namespace Tests.Infrastructure
 
             protected override RachisVersionValidation InitializeValidator()
             {
-                return new CountingValidator();
+                return new CountingValidator(_parent.CommandsVersionManager);
             }
 
             public override bool ShouldSnapshot(Slice slice, RootObjectType type)

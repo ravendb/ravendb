@@ -108,7 +108,7 @@ namespace Raven.Server.Rachis
                         return;
                     }
 
-                    ClusterCommandsVersionManager.SetClusterVersion(appendEntries.MinCommandVersion);
+                    _engine.CommandsVersionManager.SetClusterVersion(appendEntries.MinCommandVersion);
 
                     _debugRecorder.Record("Got entries");
                     _engine.Timeout.Defer(_connection.Source);

@@ -858,7 +858,7 @@ namespace Raven.Server.ServerWide
                     if (IsPassive())
                         await Engine.WaitForLeaveState(RachisState.Passive, ServerShutdown);
 
-                    if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < 60_000)
+                    if (Engine.CommandsVersionManager.CurrentClusterMinimalVersion < 60_000)
                     {
                         await Task.Delay(TimeSpan.FromSeconds(15), ServerShutdown);
                         continue;
@@ -1631,7 +1631,7 @@ namespace Raven.Server.ServerWide
                     if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
                         throw new InvalidOperationException($"Failed to get the command version of '{nameof(ConfirmServerCertificateReplacedCommand)}'.");
 
-                    if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < commandVersion)
+                    if (Engine.CommandsVersionManager.CurrentClusterMinimalVersion < commandVersion)
                     {
                         // If some nodes run the old version of the command, this node (newer version) will finish here and delete 'server/cert'
                         // because the last stage of the new version (ConfirmServerCertificateReplacedCommand where we delete 'server/cert') will not happen

@@ -173,9 +173,9 @@ public abstract class AbstractIndexCreateController
         return index;
     }
 
-    public static bool CanUseIndexBatch()
+    public bool CanUseIndexBatch()
     {
-        return ClusterCommandsVersionManager.CanPutCommand(nameof(PutIndexesCommand));
+        return ServerStore.Engine.CommandsVersionManager.CanPutCommand(nameof(PutIndexesCommand));
     }
 
     public IndexBatchScope CreateIndexBatch()

@@ -1105,10 +1105,10 @@ namespace Raven.Server
             if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
                 throw new InvalidOperationException($"Failed to get the command version of '{nameof(ConfirmServerCertificateReplacedCommand)}'.");
 
-            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < commandVersion)
+            if (ServerStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion < commandVersion)
                 throw new ClusterNodesVersionMismatchException(
                     "It is not possible to refresh/replace the cluster certificate in the current cluster topology. Please make sure that all the cluster nodes have an equal or newer version than the command version." +
-                    $"Cluster Version: {ClusterCommandsVersionManager.CurrentClusterMinimalVersion}, Command Version: {commandVersion}.");
+                    $"Cluster Version: {ServerStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion}, Command Version: {commandVersion}.");
 
             // we need to see if there is already an ongoing process
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

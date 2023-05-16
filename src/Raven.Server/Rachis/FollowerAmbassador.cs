@@ -286,7 +286,7 @@ namespace Raven.Server.Rachis
                                             PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
                                             PrevLogIndex = _followerMatchIndex,
                                             TimeAsLeader = _leader.LeaderShipDuration,
-                                            MinCommandVersion = ClusterCommandsVersionManager.CurrentClusterMinimalVersion
+                                            MinCommandVersion = _engine.CommandsVersionManager.CurrentClusterMinimalVersion
                                         };
                                     }
                                 }
@@ -843,8 +843,8 @@ namespace Raven.Server.Rachis
 
                 FollowerCommandsVersion = GetFollowerVersion(llr);
                 _leader.PeersVersion[_tag] = FollowerCommandsVersion;
-                var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(_leader.PeersVersion.Values.ToList(), _engine.MaximalVersion);
-                ClusterCommandsVersionManager.SetClusterVersion(minimalVersion);
+                var minimalVersion = _engine.CommandsVersionManager.GetClusterMinimalVersion(_leader.PeersVersion.Values.ToList(), _engine.MaximalVersion);
+                _engine.CommandsVersionManager.SetClusterVersion(minimalVersion);
 
                 if (_engine.Log.IsInfoEnabled)
                 {
