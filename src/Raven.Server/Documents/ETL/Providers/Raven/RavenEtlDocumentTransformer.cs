@@ -472,8 +472,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
                 else
                 {
-                    doc.TryGetMetadata(out var metadata);
-                    var collection = metadata[Constants.Documents.Metadata.Collection].ToString();
+                    var collection = Database.DocumentsStorage.ExtractCollectionName(Context, doc.Data).Name;
                     
                     var etlExtractedItem = new RavenEtlItem(doc, collection);
                     var attachments = GetAttachmentsFor(etlExtractedItem);
