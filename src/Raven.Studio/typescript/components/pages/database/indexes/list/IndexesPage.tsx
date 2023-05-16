@@ -53,8 +53,8 @@ export function IndexesPage(props: IndexesPageProps) {
         indexesCount,
         setIndexPriority,
         startIndexes,
-        toggleDisableIndexes,
-        togglePauseIndexes,
+        disableIndexes,
+        pauseIndexes,
         setIndexLockMode,
         resetIndex,
         toggleSelection,
@@ -71,10 +71,8 @@ export function IndexesPage(props: IndexesPageProps) {
     };
 
     const startSelectedIndexes = () => startIndexes(getSelectedIndexes());
-    // TODO: kalczur - remove toggle - just disable
-    const disableSelectedIndexes = () => toggleDisableIndexes(false, getSelectedIndexes());
-    // TODO: kalczur - same
-    const pauseSelectedIndexes = () => togglePauseIndexes(false, getSelectedIndexes());
+    const disableSelectedIndexes = () => disableIndexes(getSelectedIndexes());
+    const pauseSelectedIndexes = () => pauseIndexes(getSelectedIndexes());
 
     if (loading) {
         return <LoadingView />;
@@ -142,10 +140,9 @@ export function IndexesPage(props: IndexesPageProps) {
                                                 openFaulty={(location: databaseLocationSpecifier) =>
                                                     openFaulty(index, location)
                                                 }
-                                                enableIndexing={() => toggleDisableIndexes(true, [index])}
-                                                disableIndexing={() => toggleDisableIndexes(false, [index])}
-                                                pauseIndexing={() => togglePauseIndexes(false, [index])}
-                                                resumeIndexing={() => togglePauseIndexes(true, [index])}
+                                                startIndexing={() => startIndexes([index])}
+                                                disableIndexing={() => disableIndexes([index])}
+                                                pauseIndexing={() => pauseIndexes([index])}
                                                 index={index}
                                                 hasReplacement={!!replacement}
                                                 database={database}
@@ -187,10 +184,9 @@ export function IndexesPage(props: IndexesPageProps) {
                                                     openFaulty={(location: databaseLocationSpecifier) =>
                                                         openFaulty(replacement, location)
                                                     }
-                                                    enableIndexing={() => toggleDisableIndexes(true, [replacement])}
-                                                    disableIndexing={() => toggleDisableIndexes(false, [replacement])}
-                                                    pauseIndexing={() => togglePauseIndexes(false, [replacement])}
-                                                    resumeIndexing={() => togglePauseIndexes(true, [replacement])}
+                                                    startIndexing={() => startIndexes([replacement])}
+                                                    disableIndexing={() => disableIndexes([replacement])}
+                                                    pauseIndexing={() => pauseIndexes([replacement])}
                                                     index={replacement}
                                                     database={database}
                                                     deleteIndex={() => confirmDeleteIndexes(database, [replacement])}
