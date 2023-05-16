@@ -176,7 +176,8 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
 
                         do
                         {
-                            var value = await GetNextMessage();
+                            using var message = await GetNextMessage();
+                            var value = message.Value;
                             if (value == null || DisposeToken.IsCancellationRequested)
                                 break;
 
@@ -191,10 +192,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
                                     context.Write(writer, djv);
                                     break;
                                 case BlittableJsonReaderObject bjro:
-                                    using (bjro)
-                                    {
-                                        context.Write(writer, bjro.CloneForConcurrentRead(context));
-                                    }
+                                    context.Write(writer, bjro.CloneForConcurrentRead(context));
                                     break;
                             }
                             messagesCount++;
@@ -285,7 +283,23 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
         }
     }
 
-    private async ValueTask<object> GetNextMessage()
+    public readonly struct Message : IDisposable
+    {
+        public readonly object Value;
+        private readonly Action<object> _onDispose;
+
+        public Message(object value, Action<object> onDispose)
+        {
+            Value = value;
+            _onDispose = onDispose;
+        }
+
+        public void Dispose() => _onDispose?.Invoke(Value);
+    }
+
+    protected virtual Message CreateMessage(object message) => new Message(message, onDispose: null);
+
+    private async ValueTask<Message> GetNextMessage()
     {
         while (true)
         {
@@ -294,7 +308,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
             {
                 var dynamicJsonValue = _skippedMessage;
                 _skippedMessage = null;
-                return dynamicJsonValue;
+                return CreateMessage(dynamicJsonValue);
             }
             var msg = nextMessage.Item2;
             if (_throttleConnection && msg.AllowSkip)
@@ -307,7 +321,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
             }
             _skippedMessage = null;
             _lastSendMessage = DateTime.UtcNow;
-            return msg.ValueToSend;
+            return CreateMessage(msg.ValueToSend);
         }
     }
 
