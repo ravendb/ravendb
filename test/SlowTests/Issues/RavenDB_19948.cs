@@ -9,8 +9,8 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server;
 using Xunit;
 using Xunit.Abstractions;
 using Sparrow.Platform;
@@ -112,7 +112,7 @@ namespace SlowTests.Issues
 
                 var exception = Assert.Throws<RavenException>(act);
                 Assert.Contains(
-                    $"Bad security clearance: '{AuthenticationStatus.Allowed}'. The current user does not have the necessary security clearance. External script execution is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.",
+                    $"Bad security clearance: '{RavenServer.AuthenticationStatus.Allowed}'. The current user does not have the necessary security clearance. This operation is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.",
                     exception.Message);
             }
 
@@ -208,7 +208,7 @@ namespace SlowTests.Issues
 
                 var exception = Assert.Throws<RavenException>(act);
                 Assert.Contains(
-                    $"Bad security clearance: '{AuthenticationStatus.Allowed}'. The current user does not have the necessary security clearance. External script execution is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.",
+                    $"Bad security clearance: '{RavenServer.AuthenticationStatus.Allowed}'. The current user does not have the necessary security clearance. This operation is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.",
                     exception.Message);
             }
 
@@ -303,7 +303,7 @@ namespace SlowTests.Issues
                 var exception = Assert.Throws<RavenException>(() =>
                     store.Maintenance.ForDatabase(dbName).Send(new PutConnectionStringOperation<OlapConnectionString>(olapConnStr)));
                 Assert.Contains(
-                    $"Bad security clearance: '{AuthenticationStatus.Allowed}'. The current user does not have the necessary security clearance. External script execution is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.",
+                    $"Bad security clearance: '{RavenServer.AuthenticationStatus.Allowed}'. The current user does not have the necessary security clearance. This operation is only allowed for users with '{SecurityClearance.Operator}' or higher security clearance.",
                     exception.Message);
             }
         }

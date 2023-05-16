@@ -58,9 +58,10 @@ namespace Raven.Client.Documents.Operations.Backups
             TimeoutInMs = script.TimeoutInMs;
         }
 
-        [SecurityClearance(AuthenticationStatus.Allowed)]
+        [SecurityClearance(SecurityClearance.Operator)]
         public string Exec { get; set; }
-        [SecurityClearance(AuthenticationStatus.Allowed)]
+
+        [SecurityClearance(SecurityClearance.Operator)]
         public string Arguments { get; set; }
 
         public int TimeoutInMs { get; set; }

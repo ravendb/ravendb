@@ -7,25 +7,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
+    [AttributeUsage(AttributeTargets.Property)]
+    internal class SecurityClearanceAttribute : Attribute
+    {
+        public SecurityClearance SecurityClearanceLevel { get; set; }
 
-    public enum AuthenticationStatus
-    {
-        None,
-        NoCertificateProvided,
-        UnfamiliarCertificate,
-        UnfamiliarIssuer,
-        Allowed,
-        Operator,
-        ClusterAdmin,
-        Expired,
-        NotYetValid
-    }
-    public class SecurityClearanceAttribute : Attribute
-    {
-        public AuthenticationStatus SecurityClearanceLevel { get; set; }
-        public SecurityClearanceAttribute(AuthenticationStatus name)
+        public SecurityClearanceAttribute(SecurityClearance level)
         {
-            SecurityClearanceLevel = name;
+            SecurityClearanceLevel = level;
         }
     }
 }
