@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
@@ -57,8 +58,9 @@ namespace Raven.Client.Documents.Operations.Backups
             TimeoutInMs = script.TimeoutInMs;
         }
 
+        [SecurityClearance(AuthenticationStatus.Allowed)]
         public string Exec { get; set; }
-
+        [SecurityClearance(AuthenticationStatus.Allowed)]
         public string Arguments { get; set; }
 
         public int TimeoutInMs { get; set; }
