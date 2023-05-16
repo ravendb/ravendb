@@ -59,6 +59,7 @@ namespace SlowTests.Core.Streaming
                         Assert.IsType<User>(reader.Current.Document);
                     }
                 }
+                
                 Assert.Equal(200, count);
                 count = 0;
 
@@ -71,6 +72,67 @@ namespace SlowTests.Core.Streaming
                         count++;
                         Assert.IsType<User>(reader.Current.Document);
 
+                    }
+                }
+
+                Assert.Equal(200, count);
+            }
+        }
+        
+        [Fact]
+        public void CanStreamQueryResults_CustomizeAfterStreamExecuted()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Users_ByName().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 200; i++)
+                    {
+                        session.Store(new User());
+                    }
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                long count = 0;
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session
+                        .Query<User, Users_ByName>()
+                        .Customize(x => x
+                            .AfterStreamExecuted(streamResult =>
+                            {
+                                count++;
+                            }));
+
+                    var reader = session.Advanced.Stream(query);
+
+                    while (reader.MoveNext())
+                    {
+                        Assert.IsType<User>(reader.Current.Document);
+                    }
+                }
+                
+                Assert.Equal(200, count);
+                count = 0;
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced
+                        .DocumentQuery<User, Users_ByName>()
+                        .AfterStreamExecuted(streamResult =>
+                        {
+                            count++;
+                        });
+                    
+                    var reader = session.Advanced.Stream(query);
+                    while (reader.MoveNext())
+                    {
+                        Assert.IsType<User>(reader.Current.Document);
                     }
                 }
 
