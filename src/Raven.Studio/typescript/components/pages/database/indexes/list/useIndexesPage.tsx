@@ -201,26 +201,25 @@ export function useIndexesPage(database: database, stale: boolean) {
         [selectedIndexes, stats]
     );
 
-    const disableIndexes = useCallback(
-        async (enableIndex: boolean, indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
-            eventsCollector.reportEvent("index", "toggle-status", status);
+    const onDisableIndexesConfirm = useCallback(
+        async (indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+            eventsCollector.reportEvent("index", "toggle-status");
 
-            const locationsToApply = [...locations];
+            for (let locationIdx = 0; locationIdx < locations.length; locationIdx++) {
+                for (let indexIdx = 0; indexIdx < indexes.length; indexIdx++) {
+                    const location = locations[locationIdx];
+                    const index = indexes[indexIdx];
 
-            while (locationsToApply.length > 0) {
-                const location = locationsToApply.pop();
+                    const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details?.status;
 
-                const indexesToApply = [...indexes];
-                while (indexesToApply.length > 0) {
-                    const index = indexesToApply.pop();
-                    if (enableIndex) {
-                        await indexesService.enable(index, database, location);
-                    } else {
-                        await indexesService.disable(index, database, location);
+                    if (indexStatus === "Disabled") {
+                        continue;
                     }
 
+                    await indexesService.disable(index, database, location);
+
                     dispatch({
-                        type: enableIndex ? "EnableIndexing" : "DisableIndexing",
+                        type: "DisableIndexing",
                         indexName: index.name,
                         location,
                     });
@@ -230,38 +229,37 @@ export function useIndexesPage(database: database, stale: boolean) {
         [indexesService, database, eventsCollector]
     );
 
-    const toggleDisableIndexes = useCallback(
-        async (enableIndex: boolean, indexes: IndexSharedInfo[]) => {
+    const disableIndexes = useCallback(
+        async (indexes: IndexSharedInfo[]) => {
             setBulkOperationConfirm({
-                type: enableIndex ? "enable" : "disable",
+                type: "disable",
                 indexes,
                 locations: database.getLocations(),
-                onConfirm: (locations: databaseLocationSpecifier[]) => disableIndexes(enableIndex, indexes, locations),
+                onConfirm: (locations: databaseLocationSpecifier[]) => onDisableIndexesConfirm(indexes, locations),
             });
         },
-        [setBulkOperationConfirm, disableIndexes, database]
+        [setBulkOperationConfirm, onDisableIndexesConfirm, database]
     );
 
-    const pauseIndexes = useCallback(
-        async (resume: boolean, indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
-            eventsCollector.reportEvent("index", "toggle-status", status);
+    const onPauseIndexesConfirm = useCallback(
+        async (indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+            eventsCollector.reportEvent("index", "toggle-status");
 
-            const locationsToApply = [...locations];
+            for (let locationIdx = 0; locationIdx < locations.length; locationIdx++) {
+                for (let indexIdx = 0; indexIdx < indexes.length; indexIdx++) {
+                    const location = locations[locationIdx];
+                    const index = indexes[indexIdx];
 
-            while (locationsToApply.length > 0) {
-                const location = locationsToApply.pop();
+                    const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details?.status;
 
-                const indexesToApply = [...indexes];
-                while (indexesToApply.length > 0) {
-                    const index = indexesToApply.pop();
-                    if (resume) {
-                        await indexesService.resume(index, database, location);
-                    } else {
-                        await indexesService.pause(index, database, location);
+                    if (indexStatus === "Paused") {
+                        continue;
                     }
 
+                    await indexesService.pause(index, database, location);
+
                     dispatch({
-                        type: resume ? "ResumeIndexing" : "PauseIndexing",
+                        type: "PauseIndexing",
                         indexName: index.name,
                         location,
                     });
@@ -269,6 +267,18 @@ export function useIndexesPage(database: database, stale: boolean) {
             }
         },
         [eventsCollector, indexesService, database]
+    );
+
+    const pauseIndexes = useCallback(
+        async (indexes: IndexSharedInfo[]) => {
+            setBulkOperationConfirm({
+                type: "pause",
+                indexes,
+                locations: database.getLocations(),
+                onConfirm: (locations: databaseLocationSpecifier[]) => onPauseIndexesConfirm(indexes, locations),
+            });
+        },
+        [setBulkOperationConfirm, onPauseIndexesConfirm, database]
     );
 
     const onStartIndexesConfirm = useCallback(
@@ -313,18 +323,6 @@ export function useIndexesPage(database: database, stale: boolean) {
             });
         },
         [database, onStartIndexesConfirm]
-    );
-
-    const togglePauseIndexes = useCallback(
-        async (resume: boolean, indexes: IndexSharedInfo[]) => {
-            setBulkOperationConfirm({
-                type: resume ? "resume" : "pause",
-                indexes,
-                locations: database.getLocations(),
-                onConfirm: (locations: databaseLocationSpecifier[]) => pauseIndexes(resume, indexes, locations),
-            });
-        },
-        [setBulkOperationConfirm, pauseIndexes, database]
     );
 
     const setIndexLockModeInternal = useCallback(
@@ -548,8 +546,8 @@ export function useIndexesPage(database: database, stale: boolean) {
         setIndexPriority,
         getSelectedIndexes,
         startIndexes,
-        toggleDisableIndexes,
-        togglePauseIndexes,
+        disableIndexes,
+        pauseIndexes,
         setIndexLockMode,
         resetIndex,
         toggleSelection,

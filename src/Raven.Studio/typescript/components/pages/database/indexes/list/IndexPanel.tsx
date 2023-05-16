@@ -47,10 +47,9 @@ interface IndexPanelProps {
     globalIndexingStatus: IndexRunningStatus;
     setPriority: (priority: IndexPriority) => Promise<void>;
     setLockMode: (lockMode: IndexLockMode) => Promise<void>;
-    enableIndexing: () => Promise<void>;
+    startIndexing: () => Promise<void>;
     disableIndexing: () => Promise<void>;
     pauseIndexing: () => Promise<void>;
-    resumeIndexing: () => Promise<void>;
     deleteIndex: () => Promise<void>;
     resetIndex: () => Promise<void>;
     openFaulty: (location: databaseLocationSpecifier) => Promise<void>;
@@ -128,12 +127,12 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
         }
     };
 
-    const enableIndexing = async (e: MouseEvent) => {
+    const startIndexing = async (e: MouseEvent) => {
         e.preventDefault();
         eventsCollector.reportEvent("indexes", "set-state", "enabled");
         setUpdatingState(true);
         try {
-            await props.enableIndexing();
+            await props.startIndexing();
         } finally {
             setUpdatingState(false);
         }
@@ -156,17 +155,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
         setUpdatingState(true);
         try {
             await props.pauseIndexing();
-        } finally {
-            setUpdatingState(false);
-        }
-    };
-
-    const resumeIndexing = async (e: MouseEvent) => {
-        e.preventDefault();
-        eventsCollector.reportEvent("indexes", "pause");
-        setUpdatingState(true);
-        try {
-            await props.resumeIndexing();
         } finally {
             setUpdatingState(false);
         }
@@ -329,15 +317,11 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 </DropdownToggle>
 
                                 <DropdownMenu>
-                                    <DropdownItem onClick={enableIndexing} title="Enable indexing">
-                                        <Icon icon="play" /> <span>Enable indexing</span>
+                                    <DropdownItem onClick={startIndexing} title="Start indexing">
+                                        <Icon icon="play" /> <span>Start indexing</span>
                                     </DropdownItem>
                                     <DropdownItem onClick={disableIndexing} title="Disable indexing">
                                         <Icon icon="stop" color="danger" /> <span>Disable indexing</span>
-                                    </DropdownItem>
-                                    <DropdownItem divider />
-                                    <DropdownItem onClick={resumeIndexing} title="Resume indexing">
-                                        <Icon icon="play" /> <span>Resume indexing</span>
                                     </DropdownItem>
                                     <DropdownItem onClick={pauseIndexing} title="Pause until restart">
                                         <Icon icon="pause" color="warning" /> <span>Pause indexing until restart</span>
