@@ -21,6 +21,7 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
@@ -45,6 +46,8 @@ namespace Raven.Server
             UseOnlyInvariantCultureInRavenDB();
 
             SetCurrentDirectoryToServerPath();
+
+            LowMemoryNotification.Instance.SupportsCompactionOfLargeObjectHeap = true;
 
             string[] configurationArgs;
             try

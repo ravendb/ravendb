@@ -67,7 +67,8 @@ namespace Sparrow.LowMemory
                     }
 
 #if NET7_0_OR_GREATER
-                    RequestLohCompactionIfNeeded(memoryInfo, now);
+                    if (SupportsCompactionOfLargeObjectHeap)
+                        RequestLohCompactionIfNeeded(memoryInfo, now);
 #endif
                 }
                 catch
@@ -122,6 +123,8 @@ namespace Sparrow.LowMemory
         }
 
 #if NET7_0_OR_GREATER
+        internal bool SupportsCompactionOfLargeObjectHeap { get; set; }
+        
         private void RequestLohCompactionIfNeeded(MemoryInfoResult memoryInfo, DateTime now)
         {
             if (now - _lastLohCompactionRequest > _lohCompactionInterval && GCSettings.LargeObjectHeapCompactionMode != GCLargeObjectHeapCompactionMode.CompactOnce)
