@@ -41,6 +41,9 @@
                         <ul class="dropdown-menu" data-bind="foreach: backupOptions">
                             <li><a href="#" data-bind="text: $data, click: $parent.useBackupType.bind($parent, $data)"></a></li>
                         </ul>
+                        <div class="bg-warning padding-left-xxs" data-bind="visible: isSnapshot">
+                            <small>Snapshot is not supported in <i class="icon-sharding text-shard"></i> Sharded Databases</small>
+                        </div>
                     </div>
                     <span class="help-block" data-bind="validationMessage: backupType"></span>
                 </div>
@@ -124,38 +127,50 @@
                     </div>
                 </div>
                 <div class="row margin-bottom margin-bottom-xs">
-                    <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4" data-bind="collapse: exclude">
-                        <div class="flex-horizontal">
-                            <div class="flex-grow">
-                                <div class="dropdown btn-block flex-grow" data-bind="validationElement: databasesToExclude">
-                                    <input class="form-control dropdown-toggle" placeholder="Select (or enter) a database to exclude" data-toggle="dropdown" autocomplete="off"
-                                           data-bind="textInput: inputDatabaseToExclude, attr: { id: 'databaseNameInput' }" />
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu" role="menu" style="display: none;"
-                                        data-bind="autoComplete: '#databaseNameInput', foreach: createDatabaseNameAutocompleter()">
-                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
-                                            <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind="text: $data"></span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                    <span class="help-block" data-bind="validationMessage: databasesToExclude"></span>
+                    <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4">
+                        <div data-bind="collapse: exclude">
+                            <div class="flex-horizontal">
+                                <div class="flex-grow">
+                                    <div class="dropdown btn-block flex-grow" data-bind="validationElement: databasesToExclude">
+                                        <input class="form-control dropdown-toggle" placeholder="Select (or enter) a database to exclude" data-toggle="dropdown" autocomplete="off"
+                                            data-bind="textInput: inputDatabaseToExclude, attr: { id: 'databaseNameInput' }" />
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                        <ul class="dropdown-menu" role="menu" style="display: none;"
+                                            data-bind="autoComplete: '#databaseNameInput', foreach: createDatabaseNameAutocompleter()">
+                                            <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                                <a role="menuitem" tabindex="-1" href="#">
+                                                    <span data-bind="text: $data"></span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                        <span class="help-block" data-bind="validationMessage: databasesToExclude"></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-info" data-bind="click: addDatabase, enable: inputDatabaseToExclude() && canAddDatabase()">
+                                        <i class="icon-plus"></i><span>Add Database</span>
+                                    </button>
                                 </div>
                             </div>
-                            <div>
-                                <button class="btn btn-info" data-bind="click: addDatabase, enable: inputDatabaseToExclude() && canAddDatabase()">
-                                    <i class="icon-plus"></i><span>Add Database</span>
-                                </button>
+                            <div data-bind="visible: databasesToExclude() && databasesToExclude().length || $parent.isSnapshot" class="margin-top-sm">
+                                <label><strong>Excluded Databases:</strong></label>
+                                <ul class="well collection-list" data-bind="foreach: databasesToExclude, visible: databasesToExclude() && databasesToExclude().length">
+                                    <li>
+                                        <div class="name" data-bind="text: $data"></div>
+                                        <a title="Remove database" href="#" data-bind="click: $parent.removeDatabase.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                    </li>
+                                </ul>
+                                <ul class="well collection-list" data-bind="visible: $parent.isSnapshot">
+                                    <li>
+                                        <div class="bg-warning name">
+                                            <small data-placement="top" data-toggle="tooltip" title="Snapshot is not supported in sharded databases. Existing and new sharded databases will be excluded from this task." data-animation="true" data-bind="visible: isSnapshot"><i class="icon-info"></i><span>All sharded databases listed below are <strong>automatically excluded</strong> as Snapshot is not supported</small>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <div class="name"><i class="icon-sharding text-shard"></i><span>Sharded #1</span></div>
+                                    </li>
+                                </ul>
                             </div>
-                        </div>
-                        <div data-bind="visible: databasesToExclude() && databasesToExclude().length" class="margin-top">
-                            <label><strong>Excluded Databases:</strong></label>
-                            <ul class="well collection-list" data-bind="foreach: databasesToExclude">
-                                <li>
-                                    <div class="name" data-bind="text: $data"></div>
-                                    <a title="Remove database" href="#" data-bind="click: $parent.removeDatabase.bind($parent, $data)"><i class="icon-trash"></i></a>
-                                </li>
-                            </ul>
                         </div>
                     </div>
                 </div>

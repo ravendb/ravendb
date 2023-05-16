@@ -1,7 +1,7 @@
 ﻿class tasksCommonContent {
         
     static readonly generalBackupInfo =
-        `<div class="margin-bottom">Differences between Backup and Snapshot:</div> 
+        `<div class="margin-bottom-xs">Differences between Backup and Snapshot:</div> 
         <ul>
             <li>Data
                 <small><ul>
@@ -11,7 +11,7 @@
                 </ul></small>
             </li>
         </ul>
-        <div class="margin-bottom">Differences when Snapshot backs up both index definitions and index data:</div>
+        <div class="margin-bottom-xs">Differences when Snapshot backs up both index definitions and index data:</div>
         <ul>
             <li>Speed
                 <small><ul>
