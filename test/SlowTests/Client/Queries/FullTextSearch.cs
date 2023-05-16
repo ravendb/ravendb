@@ -24,8 +24,8 @@ namespace SlowTests.Client.Queries
             public ICollection<string> Tags { get; set; }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanSearchUsingPhrase(Options options)
         {
             using (var store = GetDocumentStore(options))

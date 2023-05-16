@@ -22,8 +22,8 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicSorting(Options options)
         {
             using (var store = GetDocumentStore(options))

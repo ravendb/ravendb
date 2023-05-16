@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,10 +25,11 @@ namespace SlowTests.Bugs
         }
 
 
-        [Fact]
-        public void CanCastInsideWhereClause()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanCastInsideWhereClause(Options options)
         {
-            using (var document = GetDocumentStore())
+            using (var document = GetDocumentStore(options))
             {
                 const string entityId = "SampleId";
 

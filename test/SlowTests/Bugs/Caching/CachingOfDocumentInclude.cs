@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Caching
@@ -218,10 +219,11 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
-        public void New_query_returns_correct_value_when_cache_is_enabled_and_data_changes()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void New_query_returns_correct_value_when_cache_is_enabled_and_data_changes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Bugs
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void ShouldSelectIndexWhenNoSortingSpecified()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldSelectIndexWhenNoSortingSpecified(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 QueryStatistics stats;
                 using (var session = store.OpenSession())

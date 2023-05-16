@@ -282,8 +282,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void TestFailingProjection(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -3,6 +3,7 @@ using System.Runtime.Serialization;
 using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -34,10 +35,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void PropertiesCanHaveAttributes()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void PropertiesCanHaveAttributes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
