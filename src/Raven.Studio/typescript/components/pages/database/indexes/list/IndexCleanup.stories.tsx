@@ -25,6 +25,49 @@ export const EmptyView: ComponentStory<typeof IndexCleanup> = () => {
     );
 };
 
+export const SomeEmpty: ComponentStory<typeof IndexCleanup> = () => {
+    const mergableIndexes: IndexInfo[][] = [];
+    const subIndexes: IndexInfo[] = [
+        {
+            indexName: "Emp1",
+            containingIndexName: "Emp2",
+            lastQuery: new Date("2023-05-09"),
+            lastIndexing: new Date("2023-05-08"),
+        },
+        {
+            indexName: "Emp3",
+            containingIndexName: "Emp4",
+            lastQuery: new Date("2023-05-09"),
+            lastIndexing: new Date("2023-05-08"),
+        },
+    ];
+
+    const unusedIndexes: IndexInfo[] = [
+        {
+            indexName: "Emp1",
+            containingIndexName: "Emp2",
+            lastQuery: new Date("2023-05-09"),
+            lastIndexing: new Date("2023-05-08"),
+        },
+        {
+            indexName: "Emp3",
+            containingIndexName: "Emp4",
+            lastQuery: new Date("2023-05-09"),
+            lastIndexing: new Date("2023-05-08"),
+        },
+    ];
+    const unmergableIndexes: UnmergableIndexInfo[] = [];
+
+    return (
+        <IndexCleanup
+            mergableIndexes={mergableIndexes}
+            subIndexes={subIndexes}
+            unusedIndexes={unusedIndexes}
+            unmergableIndexes={unmergableIndexes}
+        />
+    );
+};
+
 export const CleanupSugestions: ComponentStory<typeof IndexCleanup> = () => {
     const mergableIndexes: IndexInfo[][] = [
         [
@@ -108,11 +151,14 @@ export const CleanupSugestions: ComponentStory<typeof IndexCleanup> = () => {
     ];
 
     return (
-        <IndexCleanup
-            mergableIndexes={mergableIndexes}
-            subIndexes={subIndexes}
-            unusedIndexes={unusedIndexes}
-            unmergableIndexes={unmergableIndexes}
-        />
+        <>
+            <IndexCleanup
+                mergableIndexes={mergableIndexes}
+                subIndexes={subIndexes}
+                unusedIndexes={unusedIndexes}
+                unmergableIndexes={unmergableIndexes}
+            />
+            <h1>*** Height check ***</h1>
+        </>
     );
 };

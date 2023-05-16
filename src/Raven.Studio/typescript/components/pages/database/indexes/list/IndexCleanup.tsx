@@ -1,27 +1,13 @@
-﻿import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+﻿import React, { useRef, useState } from "react";
 
 import { Icon } from "components/common/Icon";
-import {
-    Alert,
-    Badge,
-    Button,
-    Card,
-    Carousel,
-    CarouselControl,
-    CarouselItem,
-    Collapse,
-    Nav,
-    NavItem,
-    NavLink,
-    TabContent,
-    TabPane,
-    Table,
-} from "reactstrap";
-import { RichPanel, RichPanelDetails, RichPanelHeader } from "components/common/RichPanel";
+import { Badge, Button, Card, Carousel, CarouselItem, Nav, NavItem, Table } from "reactstrap";
+import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
 import { Checkbox } from "components/common/Checkbox";
 
 import moment from "moment";
 import { EmptySet } from "components/common/EmptySet";
+import classNames from "classnames";
 
 export interface IndexInfo {
     indexName: string;
@@ -50,11 +36,22 @@ interface IndexCleanupProps {
     unusedIndexes: IndexInfo[];
     unmergableIndexes: UnmergableIndexInfo[];
 }
-
 export function IndexCleanup(props: IndexCleanupProps) {
     const { mergableIndexes, subIndexes, unusedIndexes, unmergableIndexes } = props;
 
-    const [currentActiveTab, setCurrentActiveTab] = useState(0);
+    function activeNonEmpty() {
+        if (mergableIndexes.length !== 0) return 0;
+        if (subIndexes.length !== 0) return 1;
+        if (unusedIndexes.length !== 0) return 2;
+        if (unmergableIndexes.length !== 0) return 3;
+        return 0;
+    }
+    const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
+    const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
+    const removeUnusedImg = require("Content/img/pages/indexCleanup/remove-unused.svg");
+    const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-indexes.svg");
+
+    const [currentActiveTab, setCurrentActiveTab] = useState(activeNonEmpty());
     const [carouselHeight, setCarouselHeight] = useState(null);
     const carouselRefs = useRef([]);
 
@@ -81,11 +78,11 @@ export function IndexCleanup(props: IndexCleanupProps) {
     };
 
     return (
-        <>
+        <div className="p-4">
             <h2 className="mb-4">
                 <Icon icon="clean" /> Index Cleanup
             </h2>
-            <div className="text-limit-width">
+            <div className="text-limit-width mb-5">
                 <p>
                     Maintaining multiple indexes can lower performance. Every time data is inserted, updated, or
                     deleted, the corresponding indexes need to be updated as well, which can lead to increased write
@@ -97,52 +94,77 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 </p>
             </div>
 
-            <Nav className="d-flex gap-4">
+            <Nav className="card-tabs gap-3 card-tabs">
                 <NavItem>
-                    <Card className="active p-3" onClick={() => toggleTab(0)}>
-                        <h2>
+                    <Card
+                        className={classNames("p-3", "card-tab", { active: currentActiveTab === 0 })}
+                        onClick={() => toggleTab(0)}
+                    >
+                        <img src={mergeIndexesImg} alt="" />
+                        <Badge
+                            className="rounded-pill fs-5"
+                            color={mergableIndexes.length !== 0 ? "primary" : "secondary"}
+                        >
+                            {mergableIndexes.length}
+                        </Badge>
+                        <h4 className="text-center">
                             Merge
                             <br />
                             indexes
-                            <small className="text-muted ms-2">
-                                <Badge className="rounded-pill">{mergableIndexes.length}</Badge>
-                            </small>
-                        </h2>
+                        </h4>
                     </Card>
                 </NavItem>
                 <NavItem>
-                    <Card className="p-3" onClick={() => toggleTab(1)}>
-                        <h2>
+                    <Card
+                        className={classNames("p-3", "card-tab", { active: currentActiveTab === 1 })}
+                        onClick={() => toggleTab(1)}
+                    >
+                        <img src={removeSubindexesImg} alt="" />
+                        <Badge className="rounded-pill fs-5" color={subIndexes.length !== 0 ? "primary" : "secondary"}>
+                            {subIndexes.length}
+                        </Badge>
+                        <h4 className="text-center">
                             Remove
                             <br />
                             sub-indexes
-                            <small>
-                                <Badge className="rounded-pill ms-2">{subIndexes.length}</Badge>
-                            </small>
-                        </h2>
+                        </h4>
                     </Card>
                 </NavItem>
                 <NavItem>
-                    <Card className="p-3" onClick={() => toggleTab(2)}>
-                        <h2>
+                    <Card
+                        className={classNames("p-3", "card-tab", { active: currentActiveTab === 2 })}
+                        onClick={() => toggleTab(2)}
+                    >
+                        <img src={removeUnusedImg} alt="" />
+                        <Badge
+                            className="rounded-pill fs-5"
+                            color={unusedIndexes.length !== 0 ? "primary" : "secondary"}
+                        >
+                            {unusedIndexes.length}
+                        </Badge>
+                        <h4 className="text-center">
                             Remove <br />
-                            unused indexes{" "}
-                            <small>
-                                <Badge className="rounded-pill ms-2">{unusedIndexes.length}</Badge>
-                            </small>
-                        </h2>
+                            unused indexes
+                        </h4>
                     </Card>
                 </NavItem>
                 <NavItem>
-                    <Card className="p-3" onClick={() => toggleTab(3)}>
-                        <h2>
+                    <Card
+                        className={classNames("p-3", "card-tab", { active: currentActiveTab === 3 })}
+                        onClick={() => toggleTab(3)}
+                    >
+                        <img src={unmergableIndexesImg} alt="" />
+                        <Badge
+                            className="rounded-pill fs-5"
+                            color={unmergableIndexes.length !== 0 ? "primary" : "secondary"}
+                        >
+                            {unmergableIndexes.length}
+                        </Badge>
+                        <h4 className="text-center">
                             Unmergable
                             <br />
-                            indexes{" "}
-                            <small>
-                                <Badge className="rounded-pill ms-2">{unmergableIndexes.length}</Badge>
-                            </small>
-                        </h2>
+                            indexes
+                        </h4>
                     </Card>
                 </NavItem>
             </Nav>
@@ -153,20 +175,22 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 interval={null}
                 keyboard={false}
                 ride="carousel"
-                className="carousel-auto-height my-4"
+                className="carousel-auto-height mt-3 mb-4"
                 style={{ height: carouselHeight }}
                 next={() => console.log(carouselRefs.current[currentActiveTab].clientHeight)}
                 previous={() => console.log("previous")}
             >
                 <CarouselItem onExiting={onCarouselExiting} onExited={onCarouselExited} key={"carousel-1"}>
                     <div ref={(el) => (carouselRefs.current[0] = el)}>
-                        <RichPanel>
+                        <Card>
                             <Card className="bg-faded-primary p-4 d-block">
-                                Combining several indexes with similar purposes into a single index can reduce the
-                                number of times that data needs to be scanned.
-                                <br />
-                                Indexes will merged into a <strong>NEW</strong> index definition. The original indexes
-                                can then be removed.
+                                <div className="text-limit-width">
+                                    <h2>Merge indexes</h2>
+                                    Combining several indexes with similar purposes into a single index can reduce the
+                                    number of times that data needs to be scanned.
+                                    <br />A <strong>NEW</strong> merged index definition is created. The original
+                                    indexes can then be removed.
+                                </div>
                             </Card>
                             <div className="p-2">
                                 {mergableIndexes.length === 0 ? (
@@ -229,206 +253,230 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                     </>
                                 )}
                             </div>
-                        </RichPanel>
+                        </Card>
                     </div>
                 </CarouselItem>
                 <CarouselItem onExiting={onCarouselExiting} onExited={onCarouselExited} key={"carousel-2"}>
-                    <div ref={(el) => (carouselRefs.current[1] = el)} className="p-4">
-                        <Alert color="info">
-                            Indexes with index-fields that are a subset of other indexes. Please review index usage
-                            before deleting selected items.
-                        </Alert>
-                        {subIndexes.length === 0 ? (
-                            <EmptySet>No subset indexes</EmptySet>
-                        ) : (
-                            <>
-                                <Button color="primary" className="mb-2">
-                                    Delete selected sub-indexes{" "}
-                                    <Badge color="faded-primary" className="rounded-pill ms-1">
-                                        2
-                                    </Badge>
-                                </Button>
+                    <div ref={(el) => (carouselRefs.current[1] = el)}>
+                        <Card>
+                            <Card className="bg-faded-primary p-4">
+                                <div className="text-limit-width">
+                                    <h2>Remove sub-indexes</h2>
+                                    If an index is completely covered by another index (i.e., all its fields are present
+                                    in the larger index) maintaining it does not provide any value and only adds
+                                    unnecessary overhead. You can remove the subset index without losing any query
+                                    optimization benefits.
+                                </div>
+                            </Card>
+                            {subIndexes.length === 0 ? (
+                                <EmptySet>No subset indexes</EmptySet>
+                            ) : (
+                                <div className="p-2">
+                                    <Button color="primary" className="mb-2 rounded-pill">
+                                        Delete selected sub-indexes{" "}
+                                        <Badge color="faded-primary" className="rounded-pill ms-1">
+                                            2
+                                        </Badge>
+                                    </Button>
 
-                                <RichPanel hover>
-                                    <RichPanelHeader className="px-3 py-2">
-                                        <Table responsive className="m-0 table-inner-border">
-                                            <thead>
-                                                <tr>
-                                                    <td width={50}></td>
-                                                    <td>
-                                                        <div className="small-label">Sub-index</div>
-                                                    </td>
-                                                    <td width={50}></td>
-                                                    <td>
-                                                        <div className="small-label">Containing index</div>
-                                                    </td>
-                                                    <td>
-                                                        <div className="small-label">Last query time (sub-index)</div>
-                                                    </td>
-                                                    <td>
-                                                        <div className="small-label">
-                                                            Last indexing time (sub-index)
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {subIndexes.map((index, indexKey) => (
-                                                    <tr key={"subindex-" + indexKey}>
+                                    <RichPanel hover>
+                                        <RichPanelHeader className="px-3 py-2 d-block">
+                                            <Table responsive className="m-0 table-inner-border">
+                                                <thead>
+                                                    <tr>
+                                                        <td width={50}></td>
                                                         <td>
-                                                            <Checkbox
-                                                                size="lg"
-                                                                selected={null}
-                                                                toggleSelection={null}
-                                                            />
+                                                            <div className="small-label">Sub-index</div>
+                                                        </td>
+                                                        <td width={50}></td>
+                                                        <td>
+                                                            <div className="small-label">Containing index</div>
                                                         </td>
                                                         <td>
-                                                            <div>
-                                                                <a href="#">
-                                                                    {index.indexName}{" "}
-                                                                    <Icon icon="newtab" margin="ms-1" />
-                                                                </a>
+                                                            <div className="small-label">
+                                                                Last query time (sub-index)
                                                             </div>
                                                         </td>
                                                         <td>
-                                                            <div>⊇</div>
-                                                        </td>
-                                                        <td>
-                                                            <div>
-                                                                <a href="#">
-                                                                    {index.containingIndexName}{" "}
-                                                                    <Icon icon="newtab" margin="ms-1" />
-                                                                </a>
+                                                            <div className="small-label">
+                                                                Last indexing time (sub-index)
                                                             </div>
-                                                        </td>
-                                                        <td width={300}>
-                                                            <div>{formatDate(index.lastQuery)}</div>
-                                                        </td>
-                                                        <td width={300}>
-                                                            <div>{formatDate(index.lastIndexing)}</div>
                                                         </td>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </Table>
-                                    </RichPanelHeader>
-                                </RichPanel>
-                            </>
-                        )}
+                                                </thead>
+                                                <tbody>
+                                                    {subIndexes.map((index, indexKey) => (
+                                                        <tr key={"subindex-" + indexKey}>
+                                                            <td>
+                                                                <Checkbox
+                                                                    size="lg"
+                                                                    selected={null}
+                                                                    toggleSelection={null}
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <div>
+                                                                    <a href="#">
+                                                                        {index.indexName}{" "}
+                                                                        <Icon icon="newtab" margin="ms-1" />
+                                                                    </a>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <div>⊇</div>
+                                                            </td>
+                                                            <td>
+                                                                <div>
+                                                                    <a href="#">
+                                                                        {index.containingIndexName}{" "}
+                                                                        <Icon icon="newtab" margin="ms-1" />
+                                                                    </a>
+                                                                </div>
+                                                            </td>
+                                                            <td width={300}>
+                                                                <div>{formatDate(index.lastQuery)}</div>
+                                                            </td>
+                                                            <td width={300}>
+                                                                <div>{formatDate(index.lastIndexing)}</div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </Table>
+                                        </RichPanelHeader>
+                                    </RichPanel>
+                                </div>
+                            )}
+                        </Card>
                     </div>
                 </CarouselItem>
                 <CarouselItem onExiting={onCarouselExiting} onExited={onCarouselExited} key={"carousel-3"}>
-                    <div ref={(el) => (carouselRefs.current[2] = el)} className="p-4">
-                        <Alert color="info">
-                            Indexes that were not queried for over a week. Please review index usage before deleting
-                            selected items.
-                        </Alert>
-                        {unusedIndexes.length === 0 ? (
-                            <EmptySet>No unused indexes</EmptySet>
-                        ) : (
-                            <>
-                                <Button color="primary" className="mb-2">
-                                    Delete selected indexes
-                                    <Badge color="faded-primary" className="rounded-pill ms-1">
-                                        2
-                                    </Badge>
-                                </Button>
-                                <RichPanel hover>
-                                    <RichPanelHeader className="px-3 py-2">
-                                        <Table responsive className="m-0 table-inner-border">
-                                            <thead>
-                                                <tr>
-                                                    <td width={50}></td>
-                                                    <td>
-                                                        <div className="small-label">Unused index</div>
-                                                    </td>
+                    <div ref={(el) => (carouselRefs.current[2] = el)}>
+                        <Card>
+                            <Card className="bg-faded-primary p-4">
+                                <div className="text-limit-width">
+                                    <h2>Remove unused indexes</h2>
+                                    Unused indexes still consume resources. We provide a list of indexes that have not
+                                    been queried for over a week for you to review and/or delete them.
+                                </div>
+                            </Card>
+                            {unusedIndexes.length === 0 ? (
+                                <EmptySet>No unused indexes</EmptySet>
+                            ) : (
+                                <div className="p-2">
+                                    <Button color="primary" className="mb-2">
+                                        Delete selected indexes
+                                        <Badge color="faded-primary" className="rounded-pill ms-1">
+                                            2
+                                        </Badge>
+                                    </Button>
+                                    <RichPanel hover>
+                                        <RichPanelHeader className="px-3 py-2 d-block">
+                                            <Table responsive className="m-0 table-inner-border">
+                                                <thead>
+                                                    <tr>
+                                                        <td width={50}></td>
+                                                        <td>
+                                                            <div className="small-label">Unused index</div>
+                                                        </td>
 
-                                                    <td>
-                                                        <div className="small-label">Last query time</div>
-                                                    </td>
-                                                    <td>
-                                                        <div className="small-label">Last indexing time</div>
-                                                    </td>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {unusedIndexes.map((index, indexKey) => (
-                                                    <tr key={"unusedIndex-" + indexKey}>
                                                         <td>
-                                                            <Checkbox
-                                                                size="lg"
-                                                                selected={null}
-                                                                toggleSelection={null}
-                                                            />
+                                                            <div className="small-label">Last query time</div>
                                                         </td>
                                                         <td>
-                                                            <div>
-                                                                <a href="#">
-                                                                    {index.indexName}{" "}
-                                                                    <Icon icon="newtab" margin="ms-1" />
-                                                                </a>
-                                                            </div>
-                                                        </td>
-                                                        <td width={300}>
-                                                            <div>{formatDate(index.lastQuery)}</div>
-                                                        </td>
-                                                        <td width={300}>
-                                                            <div>{formatDate(index.lastIndexing)}</div>
+                                                            <div className="small-label">Last indexing time</div>
                                                         </td>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </Table>
-                                    </RichPanelHeader>
-                                </RichPanel>
-                            </>
-                        )}
+                                                </thead>
+                                                <tbody>
+                                                    {unusedIndexes.map((index, indexKey) => (
+                                                        <tr key={"unusedIndex-" + indexKey}>
+                                                            <td>
+                                                                <Checkbox
+                                                                    size="lg"
+                                                                    selected={null}
+                                                                    toggleSelection={null}
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <div>
+                                                                    <a href="#">
+                                                                        {index.indexName}{" "}
+                                                                        <Icon icon="newtab" margin="ms-1" />
+                                                                    </a>
+                                                                </div>
+                                                            </td>
+                                                            <td width={300}>
+                                                                <div>{formatDate(index.lastQuery)}</div>
+                                                            </td>
+                                                            <td width={300}>
+                                                                <div>{formatDate(index.lastIndexing)}</div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </Table>
+                                        </RichPanelHeader>
+                                    </RichPanel>
+                                </div>
+                            )}
+                        </Card>
                     </div>
                 </CarouselItem>
                 <CarouselItem onExiting={onCarouselExiting} onExited={onCarouselExited} key={"carousel-4"}>
-                    <div ref={(el) => (carouselRefs.current[3] = el)} className="p-4">
-                        {unmergableIndexes.length === 0 ? (
-                            <EmptySet>No unmergable indexes</EmptySet>
-                        ) : (
-                            <RichPanel hover>
-                                <RichPanelHeader className="px-3 py-2">
-                                    <Table responsive className="m-0 table-inner-border">
-                                        <thead>
-                                            <tr>
-                                                <td>
-                                                    <div className="small-label">Index name</div>
-                                                </td>
+                    <div ref={(el) => (carouselRefs.current[3] = el)}>
+                        <Card>
+                            <Card className="bg-faded-primary p-4">
+                                <div className="text-limit-width">
+                                    <h2>Unmergable indexes</h2>
+                                    TODO: Add description
+                                </div>
+                            </Card>
 
-                                                <td>
-                                                    <div className="small-label">Unmergable reason</div>
-                                                </td>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {unmergableIndexes.map((index, indexKey) => (
-                                                <tr key={"unmergable-" + indexKey}>
-                                                    <td>
-                                                        <div>
-                                                            <a href="#">
-                                                                {index.indexName}
-                                                                <Icon icon="newtab" margin="ms-1" />
-                                                            </a>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <div>{index.unmergableReason}</div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </Table>
-                                </RichPanelHeader>
-                            </RichPanel>
-                        )}
+                            {unmergableIndexes.length === 0 ? (
+                                <EmptySet>No unmergable indexes</EmptySet>
+                            ) : (
+                                <div className="p-2">
+                                    <RichPanel hover>
+                                        <RichPanelHeader className="px-3 py-2 d-block">
+                                            <Table responsive className="m-0 table-inner-border">
+                                                <thead>
+                                                    <tr>
+                                                        <td>
+                                                            <div className="small-label">Index name</div>
+                                                        </td>
+
+                                                        <td>
+                                                            <div className="small-label">Unmergable reason</div>
+                                                        </td>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {unmergableIndexes.map((index, indexKey) => (
+                                                        <tr key={"unmergable-" + indexKey}>
+                                                            <td>
+                                                                <div>
+                                                                    <a href="#">
+                                                                        {index.indexName}
+                                                                        <Icon icon="newtab" margin="ms-1" />
+                                                                    </a>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <div>{index.unmergableReason}</div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </Table>
+                                        </RichPanelHeader>
+                                    </RichPanel>
+                                </div>
+                            )}
+                        </Card>
                     </div>
                 </CarouselItem>
             </Carousel>
-            <h1>*** Height check ***</h1>
-        </>
+        </div>
     );
 }
