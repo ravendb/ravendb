@@ -320,7 +320,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     {
     }
 
-    private static readonly object _queueContextUsageLocker = new object();
+    private readonly object _queueContextUsageLocker = new object();
 
     public void OnNext(BlittableJsonReaderObject value)
     {
@@ -339,7 +339,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override Message CreateMessage(object message) => new Message(message, OnDispose);
 
-    private static void OnDispose(object m)
+    private void OnDispose(object m)
     {
         if (m is BlittableJsonReaderObject bjro)
         {

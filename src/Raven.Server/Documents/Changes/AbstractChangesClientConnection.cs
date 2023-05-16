@@ -283,20 +283,6 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
         }
     }
 
-    public readonly struct Message : IDisposable
-    {
-        public readonly object Value;
-        private readonly Action<object> _onDispose;
-
-        public Message(object value, Action<object> onDispose)
-        {
-            Value = value;
-            _onDispose = onDispose;
-        }
-
-        public void Dispose() => _onDispose?.Invoke(Value);
-    }
-
     protected virtual Message CreateMessage(object message) => new Message(message, onDispose: null);
 
     private async ValueTask<Message> GetNextMessage()
@@ -676,5 +662,19 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
     {
         public object ValueToSend;
         public bool AllowSkip;
+    }
+
+    protected readonly struct Message : IDisposable
+    {
+        public readonly object Value;
+        private readonly Action<object> _onDispose;
+
+        public Message(object value, Action<object> onDispose)
+        {
+            Value = value;
+            _onDispose = onDispose;
+        }
+
+        public void Dispose() => _onDispose?.Invoke(Value);
     }
 }
