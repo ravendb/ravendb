@@ -106,7 +106,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA, storeB);
+                EnsureReplicating(storeA, storeB, "marker1$users/1");
 
                 foreach (var store in new[] { storeA, storeB })
                 {
@@ -155,10 +155,10 @@ namespace SlowTests.Client.TimeSeries.Issues
                 }
 
 
-                EnsureReplicating(storeA, storeB);
+                EnsureReplicating(storeA, storeB, "marker2$users/1");
 
                 await SetupReplicationAsync(storeB, storeA);
-                EnsureReplicating(storeB, storeA);
+                EnsureReplicating(storeB, storeA, "marker3$users/1");
 
                 using (var sessionB = storeB.OpenAsyncSession())
                 using (var sessionA = storeA.OpenAsyncSession())
