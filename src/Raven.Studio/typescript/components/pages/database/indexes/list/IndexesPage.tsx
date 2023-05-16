@@ -52,6 +52,7 @@ export function IndexesPage(props: IndexesPageProps) {
         confirmSetLockModeSelectedIndexes,
         indexesCount,
         setIndexPriority,
+        startIndexes,
         toggleDisableIndexes,
         togglePauseIndexes,
         setIndexLockMode,
@@ -69,9 +70,10 @@ export function IndexesPage(props: IndexesPageProps) {
         return confirmDeleteIndexes(database, getSelectedIndexes());
     };
 
-    const enableSelectedIndexes = () => toggleDisableIndexes(true, getSelectedIndexes());
+    const startSelectedIndexes = () => startIndexes(getSelectedIndexes());
+    // TODO: kalczur - remove toggle - just disable
     const disableSelectedIndexes = () => toggleDisableIndexes(false, getSelectedIndexes());
-    const resumeSelectedIndexes = () => togglePauseIndexes(true, getSelectedIndexes());
+    // TODO: kalczur - same
     const pauseSelectedIndexes = () => togglePauseIndexes(false, getSelectedIndexes());
 
     if (loading) {
@@ -108,10 +110,9 @@ export function IndexesPage(props: IndexesPageProps) {
                             indexesCount={indexesCount}
                             selectedIndexes={selectedIndexes}
                             deleteSelectedIndexes={deleteSelectedIndexes}
-                            enableSelectedIndexes={enableSelectedIndexes}
+                            startSelectedIndexes={startSelectedIndexes}
                             disableSelectedIndexes={disableSelectedIndexes}
                             pauseSelectedIndexes={pauseSelectedIndexes}
-                            resumeSelectedIndexes={resumeSelectedIndexes}
                             setLockModeSelectedIndexes={confirmSetLockModeSelectedIndexes}
                             toggleSelectAll={toggleSelectAll}
                         />
