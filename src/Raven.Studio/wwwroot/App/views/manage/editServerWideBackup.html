@@ -41,6 +41,9 @@
                         <ul class="dropdown-menu" data-bind="foreach: backupOptions">
                             <li><a href="#" data-bind="text: $data, click: $parent.useBackupType.bind($parent, $data)"></a></li>
                         </ul>
+                        <div class="bg-info padding-left-xxs" data-bind="visible: isSnapshot">
+                            <small>Snapshot is not supported in sharded databases</small>
+                        </div>
                     </div>
                     <span class="help-block" data-bind="validationMessage: backupType"></span>
                 </div>
