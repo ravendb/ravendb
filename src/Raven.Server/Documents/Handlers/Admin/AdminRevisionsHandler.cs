@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 foreach (var id in _ids)
                 {
-                    _database.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id);
+                    _database.DocumentsStorage.RevisionsStorage.DeleteAllRevisionsFor(context, id);
                 }
                 return 1;
             }

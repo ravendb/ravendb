@@ -1802,15 +1802,36 @@ namespace Raven.Server.Documents
 
                     if (shouldVersion)
                     {
-                        if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, local.Document.Data, local.Document.ChangeVector, collectionName))
+                        if (configuration.MinimumRevisionsToKeep == 0)
                         {
-                            DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data, flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
-                                local.Document.ChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
+                            var revisionsCountAfterDelete = DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id, fromDelete: true);
+                            if (revisionsCountAfterDelete == 0)
+                                flags = flags.Strip(DocumentFlags.HasRevisions);
                         }
 
-                        flags |= DocumentFlags.HasRevisions;
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                            modifiedTicks, nonPersistentFlags, documentFlags);
+                        else if (configuration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue)
+                        {
+                            if (DocumentDatabase.Time.GetUtcNow().Ticks - lastModifiedTicks.Value > configuration.MinimumRevisionAgeToKeep.Value.Ticks)
+                            {
+                                var revisionsCountAfterDelete = DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id, fromDelete: true);
+                                if (revisionsCountAfterDelete == 0)
+                                    flags = flags.Strip(DocumentFlags.HasRevisions);
+                            }
+                        }
+                        else
+                        {
+                            if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, local.Document.Data,
+                                    local.Document.ChangeVector, collectionName))
+                            {
+                                DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data,
+                                    flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
+                                    local.Document.ChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
+                            }
+
+                            flags |= DocumentFlags.HasRevisions;
+                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                                modifiedTicks, nonPersistentFlags, documentFlags);
+                        }
                     }
                 }
 
@@ -1818,7 +1839,7 @@ namespace Raven.Server.Documents
                     revisionsStorage.Configuration == null &&
                     flags.Contain(DocumentFlags.Resolved) == false &&
                     nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
-                    revisionsStorage.DeleteRevisionsFor(context, id);
+                    revisionsStorage.DeleteRevisionsFor(context, id, fromDelete: true);
 
                 if (flags.Contain(DocumentFlags.HasRevisions) &&
                     revisionsStorage.Configuration != null &&

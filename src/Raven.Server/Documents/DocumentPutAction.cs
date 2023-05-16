@@ -228,17 +228,40 @@ namespace Raven.Server.Documents
                     
                     if (shouldVersion)
                     {
-                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
+                        if (configuration.MinimumRevisionsToKeep == 0)
                         {
-                            var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
-                            var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
-                            
-                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc, oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
-                                oldChangeVector, oldTicks.Ticks, configuration, collectionName);
+                            var revisionsCountAfterDelete = _documentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id);
+                            if(revisionsCountAfterDelete==0)
+                                flags = flags.Strip(DocumentFlags.HasRevisions);
                         }
-                        
-                        flags |= DocumentFlags.HasRevisions;
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
+
+                        else if (configuration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue)
+                        {
+                            if (_documentDatabase.Time.GetUtcNow().Ticks - lastModifiedTicks.Value > configuration.MinimumRevisionAgeToKeep.Value.Ticks)
+                            {
+                                var revisionsCountAfterDelete = _documentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id);
+                                if (revisionsCountAfterDelete == 0)
+                                    flags = flags.Strip(DocumentFlags.HasRevisions);
+                            }
+                        }
+                        else
+                        {
+
+
+                            if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, oldDoc, oldChangeVector, collectionName))
+                            {
+                                var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
+                                var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
+
+                                _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc,
+                                    oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
+                                    oldChangeVector, oldTicks.Ticks, configuration, collectionName);
+                            }
+
+                            flags |= DocumentFlags.HasRevisions;
+                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks,
+                                configuration, collectionName);
+                        }
                     }
                 }
 
