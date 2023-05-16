@@ -74,7 +74,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -138,7 +138,7 @@ loadToOrders(partitionBy(key),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -458,7 +458,7 @@ loadToOrders(partitionBy(key), orderData);
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -539,7 +539,7 @@ loadToOrders(partitionBy(['order_date', key]),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 loadToOrders(noPartition(),
@@ -665,7 +665,7 @@ loadToOrders(noPartition(),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -793,7 +793,7 @@ loadToOrders(partitionBy(
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -841,9 +841,9 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
                 {
                     await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 loadToOrders(noPartition(), {
@@ -947,7 +947,7 @@ loadToOrders(noPartition(), {
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 for (var i = 0; i < this.Lines.length; i++){
@@ -1006,7 +1006,7 @@ for (var i = 0; i < this.Lines.length; i++){
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
     loadToOrders(partitionBy(['Company', this.Company]), {
@@ -1069,7 +1069,7 @@ for (var i = 0; i < this.Lines.length; i++){
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -1188,7 +1188,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
                     Assert.NotNull(update.RaftCommandIndex);
 
-                    etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    etlDone = Etl.WaitForEtlToComplete(store);
                     Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                     using (var s3Client = new RavenAwsS3Client(settings2, EtlTestBase_New.DefaultBackupConfiguration))
@@ -1236,7 +1236,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
     loadToOrders(partitionBy(['Company', this.Company]), {

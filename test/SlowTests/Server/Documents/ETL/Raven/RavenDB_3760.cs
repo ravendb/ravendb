@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
             {
-                var etlDone = Etl.WaitForEtlToComplete(master, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(master);
 
                 Etl.AddEtl(master, slave, "Users", @"
                         this.Name =  this['@metadata']['User'];
@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
             {
-                var etlDone = Etl.WaitForEtlToComplete(master, (n, statistics) => statistics.LoadSuccesses != 0, numOfProcessesToWaitFor: 3);
+                var etlDone = Etl.WaitForEtlToComplete(master, numOfProcessesToWaitFor: 3);
 
                 Etl.AddEtl(master, slave, "users", @"
 if (this.Age % 2 == 0) 
@@ -115,7 +115,7 @@ loadToUsers(this);");
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
             {
-                var etlDone = Etl.WaitForEtlToComplete(master, (n, statistics) => statistics.LoadSuccesses != 0, numOfProcessesToWaitFor: 2);
+                var etlDone = Etl.WaitForEtlToComplete(master, numOfProcessesToWaitFor: 2);
 
                 Etl.AddEtl(master, slave, "Users", null);
 

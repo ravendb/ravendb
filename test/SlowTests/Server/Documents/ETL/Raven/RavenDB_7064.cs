@@ -45,7 +45,7 @@ var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
 person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
 "
 );
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -77,7 +77,7 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                     personId = session.Advanced.LoadStartingWith<Person>("users/1/people/")[0].Id;
                 }
 
-                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -188,7 +188,7 @@ for (var i = 0; i < attachments.length; i++) {
 }
 "
 );
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -243,7 +243,7 @@ if (hasAttachment('photo2.jpg')) {
 
 "
                 );
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {

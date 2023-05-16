@@ -2,22 +2,26 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_13220 : EtlTestBase
+    public class RavenDB_13220 : RavenTestBase
     {
         public RavenDB_13220(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void Etl_from_encrypted_to_non_encrypted_db_will_work()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Etl_from_encrypted_to_non_encrypted_db_will_work(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -45,20 +49,19 @@ namespace SlowTests.Server.Documents.ETL
 
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
 
-            using (var src = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                ModifyDatabaseName = s => dbName,
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = adminCert;
+            options.ModifyDatabaseRecord += record => record.Encrypted = true;
+            options.ModifyDatabaseName = s => dbName;
+
+            using (var src = GetDocumentStore(options))
             using (var dstServer = GetNewServer())
             using (var dest = GetDocumentStore(new Options()
             {
                 Server = dstServer
             }))
             {
-                AddEtl(src, new RavenEtlConfiguration()
+                Etl.AddEtl(src, new RavenEtlConfiguration()
                 {
                     ConnectionStringName = "test",
                     Name = "myFirstEtl",
@@ -82,18 +85,19 @@ namespace SlowTests.Server.Documents.ETL
                     Database = dest.Database,
                 });
 
-                var db = GetDatabase(src.Database).Result;
+                const string docId = "users/1-A";
+                var db = await Etl.GetDatabaseFor(src, docId);
 
                 Assert.Equal(1, db.EtlLoader.Processes.Length);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
                     {
                         Name = "Joe Doe"
-                    });
+                    }, docId);
 
                     session.SaveChanges();
                 }
@@ -102,7 +106,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/1-A");
+                    var user = session.Load<User>(docId);
 
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);
@@ -110,8 +114,9 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
-        public void Etl_from_encrypted_to_encrypted_db_will_work_even_if_AllowEtlOnNonEncryptedChannel_is_set()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Etl_from_encrypted_to_encrypted_db_will_work_even_if_AllowEtlOnNonEncryptedChannel_is_set(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var srcDbName = GetDatabaseName();
@@ -143,13 +148,12 @@ namespace SlowTests.Server.Documents.ETL
             Server.ServerStore.PutSecretKey(srcBase64Key, srcDbName, true);
             Server.ServerStore.PutSecretKey(dstBase64Key, dstDbName, true);
 
-            using (var src = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
-                ModifyDatabaseName = s => srcDbName,
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = adminCert;
+            options.ModifyDatabaseRecord += record => record.Encrypted = true;
+            options.ModifyDatabaseName = _ => srcDbName;
+
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(new Options
             {
                 AdminCertificate = adminCert,
@@ -158,7 +162,7 @@ namespace SlowTests.Server.Documents.ETL
                 ModifyDatabaseName = s => dstDbName,
             }))
             {
-                AddEtl(src, new RavenEtlConfiguration()
+                Etl.AddEtl(src, new RavenEtlConfiguration()
                 {
                     ConnectionStringName = "test",
                     Name = "myFirstEtl",
@@ -182,18 +186,19 @@ namespace SlowTests.Server.Documents.ETL
                     Database = dest.Database,
                 });
 
-                var db = GetDatabase(src.Database).Result;
+                const string docId = "users/1-A";
+                var db = await Etl.GetDatabaseFor(src, docId);
 
                 Assert.Equal(1, db.EtlLoader.Processes.Length);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
                     {
                         Name = "Joe Doe"
-                    });
+                    }, docId);
 
                     session.SaveChanges();
                 }
@@ -202,7 +207,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 using (var session = dest.OpenSession())
                 {
-                    var user = session.Load<User>("users/1-A");
+                    var user = session.Load<User>(docId);
 
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);

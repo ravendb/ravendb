@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
             {
-                var etlDone = Etl.WaitForEtlToComplete(master, (n, statistics) => statistics.LoadSuccesses != 0, numOfProcessesToWaitFor: 2);
+                var etlDone = Etl.WaitForEtlToComplete(master, numOfProcessesToWaitFor: 2);
 
                 Etl.AddEtl(master, slave, "users",
                     @"this.Name = 'patched ' + this.Name;

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -44,7 +46,7 @@ function loadCountersOfUsersBehavior(doc, counter)
                 else
                     Etl.AddEtl(src, dest, collection, script: script);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -126,7 +128,7 @@ function loadCountersOfUsersBehavior(doc, counter)
                 Etl.AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -184,7 +186,7 @@ var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
 person.addCounter(loadCounter('down'));
 "
 );
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -270,27 +272,6 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        internal static void AssertCounters(IDocumentStore store, params (string DocId, string CounterName, long CounterValue, bool LoadUsingStartingWith)[] items)
-        {
-            using (var session = store.OpenSession())
-            {
-                foreach (var item in items)
-                {
-                    var doc = item.LoadUsingStartingWith ? session.Advanced.LoadStartingWith<User>(item.DocId)[0] : session.Load<User>(item.DocId);
-                    Assert.NotNull(doc);
-
-                    var metadata = session.Advanced.GetMetadataFor(doc);
-
-                    Assert.True(metadata.ContainsKey(Constants.Documents.Metadata.Counters));
-
-                    var value = session.CountersFor(doc.Id).Get(item.CounterName);
-
-                    Assert.NotNull(value);
-                    Assert.Equal(item.CounterValue, value);
-                }
-            }
-        }
-
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_use_get_counters(Options options)
@@ -313,7 +294,7 @@ for (var i = 0; i < counters.length; i++) {
 }
 "
 );
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -359,7 +340,7 @@ var doc = loadToUsers(this);
 doc.addCounter(loadCounter('likes'));
 "
                 );
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -400,7 +381,7 @@ doc.addCounter(loadCounter('likes'));
                     ("users/2", "likes", 1L, false)
                 });
 
-                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -439,7 +420,7 @@ if (hasCounter('down')) {
 }
 "
                 );
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -482,7 +463,7 @@ if (hasCounter('down')) {
             {
                 Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = dest.OpenSession())
                 {
@@ -546,7 +527,7 @@ if (hasCounter('down')) {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -586,7 +567,7 @@ if (hasCounter('down')) {
             {
                 Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccessesInCurrentBatch > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -634,7 +615,7 @@ if (hasCounter('down')) {
             {
                 Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -648,7 +629,7 @@ if (hasCounter('down')) {
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 3);
+                etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 3);
 
                 using (var session = src.OpenSession())
                 {
@@ -712,7 +693,7 @@ if (hasCounter('down')) {
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData("Users", DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(null, DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_send_all_counters_on_doc_update(Options options, string collection)
+        public async Task Should_send_all_counters_on_doc_update(Options options, string collection)
         {
             options.ModifyDatabaseRecord +=
                 x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2";
@@ -744,18 +725,16 @@ if (hasCounter('down')) {
                 else
                     Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LastProcessedEtag >= 10);
-
-                etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                using (var session = dest.OpenSession())
+                await Etl.AssertEtlReachedDestination(() =>
                 {
-                    Assert.NotNull(session.Load<User>("users/1"));
-
-                    long? value = session.CountersFor("users/1").Get("likes");
-
-                    Assert.Equal(1, value);
-                }
+                    using (var session = dest.OpenSession())
+                    {
+                        var user = session.Load<User>("users/1");
+                        Assert.NotNull(user);
+                        long? value = session.CountersFor("users/1").Get("likes");
+                        Assert.Equal(1, value);
+                    }
+                });
             }
         }
 
@@ -782,7 +761,7 @@ function loadCountersOfUsersBehavior(docId, counter)
         return true;
     }
 }");
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
                 
                 using (var session = src.OpenSession())
                 {
@@ -859,7 +838,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     @"
 loadToUsers(this);");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -899,7 +878,7 @@ loadToUsers(this);");
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set(Options options)
+        public async Task Should_send_all_counters_on_doc_update_if_load_counters_behavior_set(Options options)
         {
             using (var src = GetDocumentStore(new Options()
             {
@@ -933,19 +912,17 @@ function loadCountersOfUsersBehavior(docId, counter)
 {
     return true;
 }");
-
-                var etlDone = Etl.WaitForEtl(src, (n, s) => s.LastProcessedEtag >= 10);
-
-                etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                using (var session = dest.OpenSession())
+                await Etl.AssertEtlReachedDestination(() =>
                 {
-                    Assert.NotNull(session.Load<User>("users/1"));
+                    using (var session = dest.OpenSession())
+                    {
+                        var doc = session.Load<User>("users/1");
+                        Assert.NotNull(doc);
+                        long? value = session.CountersFor("users/1").Get("likes");
+                        Assert.Equal(1, value);
+                    }
+                });
 
-                    long? value = session.CountersFor("users/1").Get("likes");
-
-                    Assert.Equal(1, value);
-                }
             }
         }
 
@@ -1009,7 +986,7 @@ function loadCountersOfUsersBehavior(docId, counter)
     return loadAllCounters();
 }");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -1039,7 +1016,7 @@ function loadCountersOfUsersBehavior(docId, counter)
             {
                 Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -1110,7 +1087,7 @@ function loadCountersOfUsersBehavior(docId, counter)
     }
 ");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -1139,7 +1116,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     Assert.Equal(1, session.CountersFor("employees/1").Get("likes"));
                 }
 
-                etlDone.Reset();
+                etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -1155,6 +1132,26 @@ function loadCountersOfUsersBehavior(docId, counter)
                 {
                     Assert.Equal(2, session.CountersFor("users/1").Get("likes"));
                     Assert.Equal(2, session.CountersFor("employees/1").Get("likes"));
+                }
+            }
+        }
+        internal static void AssertCounters(IDocumentStore store, params (string DocId, string CounterName, long CounterValue, bool LoadUsingStartingWith)[] items)
+        {
+            using (var session = store.OpenSession())
+            {
+                foreach (var item in items)
+                {
+                    var doc = item.LoadUsingStartingWith ? session.Advanced.LoadStartingWith<User>(item.DocId)[0] : session.Load<User>(item.DocId);
+                    Assert.NotNull(doc);
+
+                    var metadata = session.Advanced.GetMetadataFor(doc);
+
+                    Assert.True(metadata.ContainsKey(Constants.Documents.Metadata.Counters));
+
+                    var value = session.CountersFor(doc.Id).Get(item.CounterName);
+
+                    Assert.NotNull(value);
+                    Assert.Equal(item.CounterValue, value);
                 }
             }
         }

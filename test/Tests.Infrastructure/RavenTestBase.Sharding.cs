@@ -145,7 +145,7 @@ public partial class RavenTestBase
             return toShard;
         }
 
-        public async ValueTask<string> GetShardDatabaseNameForDocAsync(DocumentStore store, string docId, string databaseName = null)
+        public async ValueTask<string> GetShardDatabaseNameForDocAsync(IDocumentStore store, string docId, string databaseName = null)
         {
             var shard = await GetShardNumberForAsync(store, docId);
             return ShardHelper.ToShardName(databaseName ?? store.Database, shard);

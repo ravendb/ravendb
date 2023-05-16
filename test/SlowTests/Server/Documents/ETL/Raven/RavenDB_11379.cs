@@ -1,36 +1,42 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Documents;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static SlowTests.Issues.RavenDB_13335;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_11379 : EtlTestBase
+    public class RavenDB_11379 : RavenTestBase
     {
         public RavenDB_11379(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Theory]
-        [InlineData(null, false, "photo", "photo")]
-        [InlineData(null, true, "photo", "photo")]
-        [InlineData(@"
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(null, false, "photo", "photo", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(null, true, "photo", "photo", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(@"
 
 var doc = loadToUsers(this);
 
 doc.addAttachment(loadAttachment('photo'));
 
-", false, "photo", "photo")]
-        [InlineData(@"
+", false, "photo", "photo", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(@"
 
 var doc = loadToUsers(this);
 
 doc.addAttachment('image', loadAttachment('photo'));
 
-", false, "photo", "image")]
-        [InlineData(@"
+", false, "photo", "image", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(@"
 
 var doc = loadToUsers(this);
 
@@ -40,18 +46,19 @@ for (var i = 0; i < attachments.length; i++) {
     if (attachments[i].Name.endsWith('.png'))
         doc.addAttachment(loadAttachment(attachments[i].Name));
 }
-", false, "photo.png", "photo.png")]
-        public void Should_remove_attachment(string script, bool applyToAllDocuments, string attachmentSourceName, string attachmentDestinationName)
+", false, "photo.png", "photo.png", DatabaseMode = RavenDatabaseMode.All)]
+
+        public void Should_remove_attachment(Options options, string script, bool applyToAllDocuments, string attachmentSourceName, string attachmentDestinationName)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 if (applyToAllDocuments)
-                    AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
+                    Etl.AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
                 else
-                    AddEtl(src, dest, "Users", script: script);
+                    Etl.AddEtl(src, dest, "Users", script: script);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -93,19 +100,46 @@ for (var i = 0; i < attachments.length; i++) {
             }
         }
 
-        [Fact]
-        public void Should_remove_attachment2()
+        private static async Task<bool> WaitForETlAsync(Action act, long timeout = 30_000)
+        {
+            /*if (Debugger.IsAttached)
+                timeout *= 100;*/
+
+            var sw = Stopwatch.StartNew();
+            while (true)
+            {
+                try
+                {
+                    act.Invoke();
+                    return true;
+                }
+                catch
+                {
+                    if (sw.ElapsedMilliseconds > timeout)
+                    {
+                        throw;
+                    }
+                }
+                await Task.Delay(100);
+            }
+        }
+
+
+
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Should_remove_attachment2(Options options)
         {
             var attachmentSourceName = "photo";
             var attachmentDestinationName = "photo";
-            using (var src = GetDocumentStore(new Options()
+
+            options.ModifyDatabaseRecord += x =>
             {
-                ModifyDatabaseRecord = x =>
-                {
-                    x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "1";
-                    x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedItems)] = "1";
-                }
-            }))
+                x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "1";
+                x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedItems)] = "1";
+            };
+
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 var numberOfDocs = 10;
@@ -114,73 +148,66 @@ for (var i = 0; i < attachments.length; i++) {
                 {
                     using (var session = src.OpenSession())
                     {
-                    
                         session.Store(new User(), "users/" + i);
 
                         session.Advanced.Attachments.Store("users/" + i, attachmentSourceName, new MemoryStream(new byte[] { (byte)i }));
 
                         session.SaveChanges();
-                    }   
-                }
-
-                AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
-
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 2 * numberOfDocs);
-
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
-                
-                etlDone.Reset();
-
-                for (int i = 0; i < numberOfDocs; i++)
-                {
-                    using (var session = dest.OpenSession())
-                    {
-                        using (var attachment = session.Advanced.Attachments.Get("users/" + i, attachmentDestinationName))
-                        {
-                            Assert.NotNull(attachment);
-                        }
                     }
                 }
+
+                Etl.AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
+
+                await Etl.AssertEtlReachedDestination(() =>
+                {
+                    for (int i = 0; i < numberOfDocs; i++)
+                    {
+                        using (var session = dest.OpenSession())
+                        {
+                            using (var attachment = session.Advanced.Attachments.Get("users/" + i, attachmentDestinationName))
+                            {
+                                Assert.NotNull(attachment);
+                            }
+                        }
+                    }
+                });
 
                 for (int i = 0; i < numberOfDocs; i++)
                 {
                     using (var session = src.OpenSession())
                     {
-                        session.Advanced.Attachments.Delete("users/"+i, attachmentSourceName);
+                        session.Advanced.Attachments.Delete("users/" + i, attachmentSourceName);
 
                         session.SaveChanges();
                     }
                 }
-                WaitForUserToContinueTheTest(dest);
-                var etlDone2 = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 4);
-                Assert.True(etlDone2.Wait(TimeSpan.FromMinutes(1)));
 
-                etlDone.Reset();
-
-                for (int i = 0; i < numberOfDocs; i++)
+                await Etl.AssertEtlReachedDestination(() =>
                 {
-                    using (var session = dest.OpenSession())
+                    for (int i = 0; i < numberOfDocs; i++)
                     {
-                        using (var attachment = session.Advanced.Attachments.Get("users/" + i, attachmentDestinationName))
+                        using (var session = dest.OpenSession())
                         {
-                            Assert.Null(attachment);
+                            using (var attachment = session.Advanced.Attachments.Get("users/" + i, attachmentDestinationName))
+                            {
+                                Assert.Null(attachment);
+                            }
                         }
                     }
-                }
+                });
             }
         }
 
-        [Fact]
-        public void Should_send_tombstones()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Should_send_tombstones(Options options)
         {
-            using (var src = GetDocumentStore(new Options()
+            options.ModifyDatabaseRecord += x =>
             {
-                ModifyDatabaseRecord = x =>
-                {
-                    x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "1";
-                    x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedItems)] = "1";
-                }
-            }))
+                x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "1";
+                x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedItems)] = "1";
+            };
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 var numberOfDocs = 10;
@@ -196,24 +223,21 @@ for (var i = 0; i < attachments.length; i++) {
                     }   
                 }
 
-                AddEtl(src, dest, "Users", script: null);
+                Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs);
-
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
-                
-                etlDone.Reset();
-
-                for (int i = 0; i < numberOfDocs; i++)
+                await Etl.AssertEtlReachedDestination(() =>
                 {
-                    using (var session = dest.OpenSession())
+                    for (int i = 0; i < numberOfDocs; i++)
                     {
-                        var user = session.Load<User>("users/" + i);
+                        using (var session = dest.OpenSession())
+                        {
+                            var user = session.Load<User>("users/" + i);
 
-                        Assert.NotNull(user);
+                            Assert.NotNull(user);
+                        }
                     }
-                }
-                
+                });
+
                 using (var session = src.OpenSession())
                 {
                     for (int i = 0; i < numberOfDocs; i++)
@@ -228,19 +252,18 @@ for (var i = 0; i < attachments.length; i++) {
 
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(dest);
 
-                var etlDone2 = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 2);
-                Assert.True(etlDone2.Wait(TimeSpan.FromMinutes(1)));
-
-                for (int i = 0; i < numberOfDocs; i++)
+                await Etl.AssertEtlReachedDestination(() =>
                 {
-                    using (var session = dest.OpenSession())
+                    for (int i = 0; i < numberOfDocs; i++)
                     {
-                        var user = session.Load<User>("users/" + i);
-                        Assert.Null(user);
+                        using (var session = dest.OpenSession())
+                        {
+                            var user = session.Load<User>("users/" + i);
+                            Assert.Null(user);
+                        }
                     }
-                }
+                });
             }
         }
     }

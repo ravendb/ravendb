@@ -1,21 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_6711_RavenEtl : EtlTestBase
+    public class RavenDB_6711_RavenEtl : RavenTestBase
     {
         public RavenDB_6711_RavenEtl(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Error_if_script_has_both_apply_to_all_documents_and_collections_specified()
         {
             var config = new RavenEtlConfiguration
@@ -43,15 +47,16 @@ namespace SlowTests.Server.Documents.ETL.Raven
             Assert.Equal("Collections cannot be specified when ApplyToAllDocuments is set. Script name: 'test'", errors[0]);
         }
 
-        [Fact]
-        public void No_script_and_applied_to_all_documents()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task No_script_and_applied_to_all_documents(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
+                Etl.AddEtl(src, dest, collections: new string[0], script: null, applyToAllDocuments: true);
 
-                AddEtl(src, dest, collections: new string[0], script: null, applyToAllDocuments: true);
+                //var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -78,27 +83,28 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
-
-                using (var session = dest.OpenSession())
+                await Etl.AssertEtlReachedDestination(() =>
                 {
-                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                    using (var session = dest.OpenSession())
+                    {
+                        var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
-                    Assert.Equal(5, stats.CountOfDocuments); // 3 docs and 2 HiLo 
+                        Assert.Equal(5, stats.CountOfDocuments); // 3 docs and 2 HiLo 
 
-                    var user = session.Load<User>("users/1-A");
-                    Assert.NotNull(user);
+                        var user = session.Load<User>("users/1-A");
+                        Assert.NotNull(user);
 
-                    var address = session.Load<Address>("addresses/1-A");
-                    Assert.NotNull(address);
+                        var address = session.Load<Address>("addresses/1-A");
+                        Assert.NotNull(address);
 
-                    var order = session.Load<Order>("orders/1-A");
-                    Assert.NotNull(order);
-                }
+                        var order = session.Load<Order>("orders/1-A");
+                        Assert.NotNull(order);
+                    }
+                });
 
                 // update
 
-                etlDone.Reset();
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -109,7 +115,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -134,7 +140,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -148,15 +154,17 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void Script_defined_for_all_documents()
+
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Script_defined_for_all_documents(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
+                Etl.AddEtl(src, dest, collections: new string[0], script: "loadToAuditItems({DocumentId:id(this)})", applyToAllDocuments: true);
 
-                AddEtl(src, dest, collections: new string[0], script: "loadToAuditItems({DocumentId:id(this)})", applyToAllDocuments: true);
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -183,11 +191,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
+                DatabaseStatistics stats;
                 using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                    stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(3, stats.CountOfDocuments);
 
@@ -205,8 +214,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 }
 
                 // update
-
-                etlDone.Reset();
+                etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -217,16 +225,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
-                {
-                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
-
-                    Assert.Equal(3, stats.CountOfDocuments);
-                }
+                stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                Assert.Equal(3, stats.CountOfDocuments);
 
                 // delete
-
                 etlDone.Reset();
 
                 using (var session = src.OpenSession())
@@ -238,29 +242,32 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
-
-                    Assert.Equal(2, stats.CountOfDocuments);
+                    var doc = session.Advanced.LoadStartingWith<AuditItem>("users/1-A/AuditItems/").FirstOrDefault();
+                    Assert.Null(doc);
                 }
+
+                stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                Assert.Equal(2, stats.CountOfDocuments);
             }
         }
 
-        [Fact]
-        public void Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
-
-                AddEtl(src, dest, collections: new string[0], script: @"
+                Etl.AddEtl(src, dest, collections: new string[0], script: @"
 if (this['@metadata']['@collection'] != 'Orders')
     loadToPeople({Name: this.Name})"
                     , applyToAllDocuments: true);
+
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -282,11 +289,12 @@ if (this['@metadata']['@collection'] != 'Orders')
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
+                DatabaseStatistics stats;
                 using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                    stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(2, stats.CountOfDocuments);
 
@@ -298,8 +306,7 @@ if (this['@metadata']['@collection'] != 'Orders')
                 }
 
                 // update
-
-                etlDone.Reset();
+                etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -310,16 +317,12 @@ if (this['@metadata']['@collection'] != 'Orders')
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
-                {
-                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
-
-                    Assert.Equal(2, stats.CountOfDocuments);
-                }
+                stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                Assert.Equal(2, stats.CountOfDocuments);
 
                 // delete
-
                 etlDone.Reset();
 
                 using (var session = src.OpenSession())
@@ -331,13 +334,16 @@ if (this['@metadata']['@collection'] != 'Orders')
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
+                using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
-
-                    Assert.Equal(1, stats.CountOfDocuments);
+                    var doc = session.Advanced.LoadStartingWith<Person>("users/1-A/people").FirstOrDefault();
+                    Assert.Null(doc);
                 }
+
+                stats = dest.Maintenance.Send(new GetStatisticsOperation());
+                Assert.Equal(1, stats.CountOfDocuments);
             }
         }
 
