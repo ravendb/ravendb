@@ -2753,7 +2753,7 @@ namespace Raven.Server.ServerWide
                 switch (entry.Type)
                 {
                     case SnapshotEntryType.Command:
-                        return ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= entry.Version;
+                        return _parent.CommandsVersionManager.CurrentClusterMinimalVersion >= entry.Version;
 
                     case SnapshotEntryType.Core:
                         return ClusterCommandsVersionManager.ClusterEngineVersion >= entry.Version;
@@ -4566,7 +4566,7 @@ namespace Raven.Server.ServerWide
 
         protected override RachisVersionValidation InitializeValidator()
         {
-            return new ClusterValidator();
+            return new ClusterValidator(_parent.CommandsVersionManager);
         }
 
         public IEnumerable<BlittableJsonReaderObject> GetReplicationHubCertificateByHub(ClusterOperationContext context, string database, string hub, string filter, int start, int pageSize)
@@ -4704,7 +4704,7 @@ namespace Raven.Server.ServerWide
             Subscriptions = new SubscriptionsClusterStorage(this);
         }
 
-        public SubscriptionsClusterStorage Subscriptions;
+        public readonly SubscriptionsClusterStorage Subscriptions;
     }
 
     public class RachisLogIndexNotifications : IDisposable

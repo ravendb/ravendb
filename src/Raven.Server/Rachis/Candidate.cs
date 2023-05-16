@@ -63,7 +63,7 @@ namespace Raven.Server.Rachis
                     if (clusterTopology.Members.Count == 1)
                     {
                         CastVoteForSelf(ElectionTerm + 1, "Single member cluster, natural leader");
-                        _engine.SwitchToLeaderState(ElectionTerm, ClusterCommandsVersionManager.CurrentClusterMinimalVersion,
+                        _engine.SwitchToLeaderState(ElectionTerm, _engine.CommandsVersionManager.CurrentClusterMinimalVersion,
                             "I'm the only one in the cluster, so no need for elections, I rule.");
                         return;
                     }
@@ -169,7 +169,7 @@ namespace Raven.Server.Rachis
                             }
                             StateChange();
 
-                            var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(versions, _engine.MaximalVersion);
+                            var minimalVersion = _engine.CommandsVersionManager.GetClusterMinimalVersion(versions, _engine.MaximalVersion);
                             string msg = $"Was elected by {realElectionsCount} nodes for leadership in term {ElectionTerm} with cluster version of {minimalVersion}";
 
                             _engine.SwitchToLeaderState(ElectionTerm, minimalVersion, msg, connections);

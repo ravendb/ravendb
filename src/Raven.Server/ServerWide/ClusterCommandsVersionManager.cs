@@ -17,7 +17,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide
 {
-    public static class ClusterCommandsVersionManager
+    public class ClusterCommandsVersionManager
     {
         public const int Base40CommandsVersion = 40_000;
 
@@ -29,8 +29,8 @@ namespace Raven.Server.ServerWide
 
         public static readonly int MyCommandsVersion;
 
-        public static int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;
-        private static int _currentClusterMinimalVersion;
+        public int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;
+        private int _currentClusterMinimalVersion;
 
         private static readonly Logger Log = LoggingSource.Instance.GetLogger(typeof(ClusterCommandsVersionManager).FullName, typeof(ClusterCommandsVersionManager).FullName);
 
@@ -173,7 +173,7 @@ namespace Raven.Server.ServerWide
             [nameof(PutShardedSubscriptionBatchCommand)] = 60_000
         };
 
-        public static bool CanPutCommand(string command)
+        public bool CanPutCommand(string command)
         {
             if (ClusterCommandsVersions.TryGetValue(command, out var myVersion) == false)
                 return false;
@@ -183,16 +183,16 @@ namespace Raven.Server.ServerWide
 
         static ClusterCommandsVersionManager()
         {
-            MyCommandsVersion = Enumerable.Max(ClusterCommandsVersions.Values);
+            MyCommandsVersion = ClusterCommandsVersions.Values.Max();
         }
 
-        public static void ThrowInvalidClusterVersion(int version)
+        private static void ThrowInvalidClusterVersion(int version)
         {
             throw new InvalidOperationException($"Can't set cluster version '{version}' that is higher then my version '{MyCommandsVersion}', " +
                                                 $"this is an indication that your are running in a mixed cluster and this node is not with the latest version.");
         }
 
-        public static void SetClusterVersion(int version)
+        public void SetClusterVersion(int version)
         {
             if (MyCommandsVersion < version)
                 ThrowInvalidClusterVersion(version);
@@ -212,26 +212,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static void SetMinimalClusterVersion(int version)
-        {
-            var fromVersion = _currentClusterMinimalVersion;
-            int currentVersion;
-            while (true)
-            {
-                currentVersion = _currentClusterMinimalVersion;
-                var minimalVersion = Math.Min(currentVersion, version);
-                if (currentVersion <= minimalVersion)
-                    break;
-                Interlocked.CompareExchange(ref _currentClusterMinimalVersion, minimalVersion, currentVersion);
-            }
-
-            if (fromVersion != currentVersion && Log.IsInfoEnabled)
-            {
-                Log.Info($"Cluster version was changed from {fromVersion} to {currentVersion}");
-            }
-        }
-
-        public static int GetClusterMinimalVersion(List<int> versions, int? maximalVersion)
+        public int GetClusterMinimalVersion(List<int> versions, int? maximalVersion)
         {
             var minVersion = versions.Min();
             if (maximalVersion < minVersion)

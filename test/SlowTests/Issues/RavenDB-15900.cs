@@ -3,28 +3,21 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
-using System.Runtime.Intrinsics.X86;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace SlowTests.Issues
 {
@@ -36,6 +29,10 @@ namespace SlowTests.Issues
 
         public class TestCommandValidator : RachisVersionValidation
         {
+            public TestCommandValidator(ClusterCommandsVersionManager commandsVersionManager) : base(commandsVersionManager)
+            {
+            }
+
             public override void AssertPutCommandToLeader(CommandBase cmd)
             {
             }
@@ -50,13 +47,13 @@ namespace SlowTests.Issues
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
 
-            await ActionWithLeader(l => l.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator());
+            await ActionWithLeader(l => l.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator(l.ServerStore.Engine.CommandsVersionManager));
 
             using var store = GetDocumentStore(new Options() { Server = leader, ReplicationFactor = 1 });
 
             // Stuck leader on this command
 
-            var testCmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId()); 
+            var testCmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
             await Assert.ThrowsAsync<UnknownClusterCommandException>(() => leader.ServerStore.Engine.CurrentLeader.PutAsync(testCmd, TimeSpan.FromSeconds(2)));
 
             // Get last raft index from leader
@@ -168,7 +165,7 @@ namespace SlowTests.Issues
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
 
-            await ActionWithLeader(l => l.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator());
+            await ActionWithLeader(l => l.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator(l.ServerStore.Engine.CommandsVersionManager));
 
             // Stuck leader on this command
             var testCmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
@@ -204,7 +201,7 @@ namespace SlowTests.Issues
                 Assert.True(res);
             }
 
-            
+
             foreach (var server in Servers)
             {
                 long lastCommittedIndex = 0;
