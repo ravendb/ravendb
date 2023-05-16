@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly int MyCommandsVersion;
 
-        public static Action AfterFirstClusterVersionSetting;
+        public static event EventHandler<AfterClusterVersionSettingEventArgs> AfterClusterVersionSetting;
 
         public static int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;
         private static int _currentClusterMinimalVersion;
@@ -168,7 +168,7 @@ namespace Raven.Server.ServerWide
             if (MyCommandsVersion < version)
                 ThrowInvalidClusterVersion(version);
 
-            int fromVersion = _currentClusterMinimalVersion;
+            var previousVersion = _currentClusterMinimalVersion;
             int currentVersion;
             while (true)
             {
@@ -177,15 +177,11 @@ namespace Raven.Server.ServerWide
                     break;
                 Interlocked.CompareExchange(ref _currentClusterMinimalVersion, version, currentVersion);
             }
-
-            if (fromVersion == version) 
-                return;
-
-            if (fromVersion == 0 && AfterFirstClusterVersionSetting?.GetInvocationList().Length > 0)
-                AfterFirstClusterVersionSetting?.Invoke();
-
-            if (Log.IsInfoEnabled)
+            
+            if (Log.IsInfoEnabled && previousVersion != version) 
                 Log.Info($"Cluster version was changed from {currentVersion} to {version}");
+
+            AfterClusterVersionSetting?.Invoke(null, new AfterClusterVersionSettingEventArgs(previousVersion, currentVersion));
         }
 
         public static void SetMinimalClusterVersion(int version)
@@ -238,6 +234,19 @@ namespace Raven.Server.ServerWide
 
         public UnknownClusterCommandException(string message, Exception innerException) : base(message, innerException)
         {
+        }
+    }
+
+    public class AfterClusterVersionSettingEventArgs : EventArgs
+    {
+        public int PreviousClusterVersion { get; }
+
+        public int CurrentClusterVersion { get; }
+
+        public AfterClusterVersionSettingEventArgs(int previousClusterVersion, int currentClusterVersion)
+        {
+            PreviousClusterVersion = previousClusterVersion;
+            CurrentClusterVersion = currentClusterVersion;
         }
     }
 }
