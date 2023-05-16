@@ -29,6 +29,7 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Features;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Platform;
@@ -105,6 +106,8 @@ namespace FastTests
             {
                 Console.WriteLine($"Execution of GC due to IO failure on path '{x.Path}' took {x.Duration} (attempt: {x.Attempt})");
             };
+
+            LowMemoryNotification.Instance.SupportsCompactionOfLargeObjectHeap = true;
 
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
