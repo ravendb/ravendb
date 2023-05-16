@@ -21,7 +21,7 @@ namespace SlowTests.Bugs.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void LuceneQueryWithIndexIsCaseInsensitive(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -59,7 +59,7 @@ namespace SlowTests.Bugs.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void LinqQueryWithIndexIsCaseInsensitive(Options options)
         {
             using (var store = GetDocumentStore(options))

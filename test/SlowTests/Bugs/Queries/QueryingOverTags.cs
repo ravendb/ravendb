@@ -13,7 +13,7 @@ namespace SlowTests.Bugs.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_chain_wheres_when_querying_collection_with_any(Options options)
         {
             var entity = new EntityWithTags

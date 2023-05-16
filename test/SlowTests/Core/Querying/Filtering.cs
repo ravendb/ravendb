@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -23,10 +24,11 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Fact]
-        public void BasicFiltering()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void BasicFiltering(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -45,15 +47,15 @@ namespace SlowTests.Core.Querying
                         .Where(x => x.Contacts.Any(contact => contact.FirstName == "First Name"))
                         .ToArray();
                     Assert.Equal(2, companies.Length);
-                    Assert.Equal(3, companies[0].Contacts.Count);
-                    Assert.Equal(1, companies[1].Contacts.Count);
+                    Assert.Contains(3, companies.Select(x => x.Contacts.Count));
+                    Assert.Contains(1, companies.Select(x => x.Contacts.Count));
 
                     companies = session.Query<Company>()
                         .Where(c => c.Name.In(new[] { "Company1", "Company3" }))
                         .ToArray();
                     Assert.Equal(2, companies.Length);
-                    Assert.Equal("Company1", companies[0].Name);
-                    Assert.Equal("Company3", companies[1].Name);
+                    Assert.Contains("Company1", companies.Select(x => x.Name));
+                    Assert.Contains("Company3", companies.Select(x => x.Name));
                 }
             }
         }

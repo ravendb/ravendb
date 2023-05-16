@@ -17,7 +17,7 @@ namespace SlowTests.Bugs.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanCreateQuery(Options options)
         {
             using (var store = GetDocumentStore(options))

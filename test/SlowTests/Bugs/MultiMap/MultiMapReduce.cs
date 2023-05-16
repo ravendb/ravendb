@@ -15,7 +15,7 @@ namespace SlowTests.Bugs.MultiMap
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetDataFromMultipleDocumentSources(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -58,7 +58,7 @@ namespace SlowTests.Bugs.MultiMap
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryFromMultipleSources(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -79,7 +79,7 @@ namespace SlowTests.Bugs.MultiMap
                         {
                             AuthorId = user.Id,
                             Title = "blah"
-                        });
+                        }, $"posts/{i}${user.Id}");
                     }
 
                     session.SaveChanges();
@@ -101,7 +101,7 @@ namespace SlowTests.Bugs.MultiMap
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryFromMultipleSources2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -122,8 +122,9 @@ namespace SlowTests.Bugs.MultiMap
                         {
                             AuthorId = user.Id,
                             Title = "blah"
-                        });
+                        }, $"posts/{i}${user.Id}");
                     }
+
 
                     session.SaveChanges();
                 }
@@ -143,7 +144,7 @@ namespace SlowTests.Bugs.MultiMap
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void JustQuerying(Options options)
         {
             using (var store = GetDocumentStore(options))

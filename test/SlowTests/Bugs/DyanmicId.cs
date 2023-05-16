@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,18 +28,17 @@ namespace SlowTests.Bugs
             public DateTime PublishDate { get; set; }
         }
 
-        [Fact]
-        public void AddEntity()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void AddEntity(Options options)
         {
-            //SetUp
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
-                {
-                    s.Conventions.FindIdentityPropertyNameFromCollectionName = (typeName) => "ID";
-                    s.Conventions.FindIdentityProperty = prop => prop.Name == "ID";
-                }
-            }))
+                s.Conventions.FindIdentityPropertyNameFromCollectionName = (typeName) => "ID";
+                s.Conventions.FindIdentityProperty = prop => prop.Name == "ID";
+            };
+            //SetUp
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

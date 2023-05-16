@@ -19,8 +19,8 @@ namespace SlowTests.Bugs
 
         private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Search };
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void FromQuery(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -14,7 +14,7 @@ namespace SlowTests.Bugs.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WillGiveStats(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -43,7 +43,7 @@ namespace SlowTests.Bugs.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void WillGiveStatsForLuceneQuery(Options options)
         {
             using (var store = GetDocumentStore(options))

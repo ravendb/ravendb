@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,21 +18,19 @@ namespace SlowTests.Bugs.Stacey
         {
         }
 
-        private readonly Options _options = new Options
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Aspects_Can_Be_Installed(Options options)
         {
-            ModifyDocumentStore = documentStore =>
+            options.ModifyDocumentStore = documentStore =>
             {
                 documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
                     CustomizeJsonSerializer = serializer => serializer.TypeNameHandling = TypeNameHandling.All
                 };
-            }
-        };
+            };
 
-        [Fact]
-        public void Aspects_Can_Be_Installed()
-        {
-            using (var store = GetDocumentStore(_options))
+            using (var store = GetDocumentStore(options))
             {
                 // currency
                 var currency = new[]

@@ -20,7 +20,7 @@ namespace SlowTests.Client.Counters
         }
 
         [RavenTheory(RavenTestCategory.Counters)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void RawQuerySelectSingleCounter(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -53,7 +53,7 @@ namespace SlowTests.Client.Counters
         }
 
         [RavenTheory(RavenTestCategory.Counters)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void RawQuerySelectSingleCounterWithDocAlias(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -86,7 +86,7 @@ namespace SlowTests.Client.Counters
         }
 
         [RavenTheory(RavenTestCategory.Counters)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void RawQuerySelectSingleCounterWithCounterAlias(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -119,7 +119,7 @@ namespace SlowTests.Client.Counters
         }
 
         [RavenTheory(RavenTestCategory.Counters)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
         public void RawQuerySelectSingleCounterRawValues(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -153,7 +153,7 @@ namespace SlowTests.Client.Counters
         }
 
         [RavenTheory(RavenTestCategory.Counters)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void RawQuerySelectMultipuleCounters(Options options)
         {
             using (var store = GetDocumentStore(options))

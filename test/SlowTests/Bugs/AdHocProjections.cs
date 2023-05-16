@@ -13,7 +13,7 @@ namespace SlowTests.Bugs
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Query_can_project_to_a_different_model(Options options)
         {
             using (var documentStore = GetDocumentStore(options))

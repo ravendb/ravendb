@@ -19,7 +19,7 @@ namespace SlowTests.Bugs.Iulian
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Load_entities_with_id_containing_url(Options options)
         {
             var id = @"mssage@msmq://local/Sample.AppService";

@@ -23,7 +23,7 @@ namespace SlowTests.Bugs.Iulian
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Generate_Correct_Temporary_Index(Options options)
         {
             using (var store = GetDocumentStore(options))

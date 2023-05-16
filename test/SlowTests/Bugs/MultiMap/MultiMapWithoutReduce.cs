@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MultiMap
@@ -11,10 +12,11 @@ namespace SlowTests.Bugs.MultiMap
         {
         }
 
-        [Fact]
-        public void CanQueryFromMultipleSources()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryFromMultipleSources(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
