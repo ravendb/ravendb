@@ -320,10 +320,12 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     {
     }
 
+    private static readonly object _queueContextUsageLocker = new object();
+
     public void OnNext(BlittableJsonReaderObject value)
     {
         BlittableJsonReaderObject copy;
-        lock (this)
+        lock (_queueContextUsageLocker)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Major, "avoid this lock here");
             copy = value.Clone(_queueContext);
@@ -333,6 +335,20 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         {
             ValueToSend = copy
         });
+    }
+
+    protected override Message CreateMessage(object message) => new Message(message, OnDispose);
+
+    private static void OnDispose(object m)
+    {
+        if (m is BlittableJsonReaderObject bjro)
+        {
+            lock (_queueContextUsageLocker)
+            {
+                // this blittable is held by the _queueContext and we need to sync it's release
+                bjro.Dispose();
+            }
+        }
     }
 
     public override void Dispose()

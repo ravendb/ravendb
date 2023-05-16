@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Changes;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -16,8 +17,6 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     where TChangesClientConnection : AbstractChangesClientConnection<TOperationContext>
 {
-    private const string StudioMarker = "fromStudio";
-
     protected AbstractChangesHandlerProcessorForGetChanges([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
@@ -32,7 +31,7 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
     {
         using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
         {
-            var fromStudio = RequestHandler.GetBoolValueQueryString(StudioMarker, false) ?? false;
+            var fromStudio = RequestHandler.HttpContext.Request.IsFromStudio();
             var throttleConnection = RequestHandler.GetBoolValueQueryString("throttleConnection", false).GetValueOrDefault(false);
 
             var connection = CreateChangesClientConnection(webSocket, throttleConnection, fromStudio);
