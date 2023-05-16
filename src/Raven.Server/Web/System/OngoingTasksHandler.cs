@@ -359,9 +359,8 @@ namespace Raven.Server.Web.System
                     BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
                     BackupConfigurationHelper.AssertBackupConfiguration(configuration);
                     BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
-                    if (feature != null)
-                        SecurityClearanceValidator.AssertSecurityClearance(configuration, feature.Status);
-
+                    SecurityClearanceValidator.AssertSecurityClearance(configuration, feature?.Status);
+                    
                     readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
                 },
                 fillJson: (json, readerObject, index) =>
@@ -457,8 +456,7 @@ namespace Raven.Server.Web.System
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
                 BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);
-                if (feature != null)
-                    SecurityClearanceValidator.AssertSecurityClearance(backupConfiguration, feature.Status);
+                SecurityClearanceValidator.AssertSecurityClearance(backupConfiguration, feature?.Status);
 
                 var sw = Stopwatch.StartNew();
                 ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
@@ -691,7 +689,6 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var result = new GetConnectionStringsResult
@@ -780,9 +777,7 @@ namespace Raven.Server.Web.System
                 beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
                 {
                     var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-                    if (feature != null)
-                        SecurityClearanceValidator.AssertSecurityClearance(JsonDeserializationClient.OlapConnectionString(readerObject),
-                            feature.Status);
+                    SecurityClearanceValidator.AssertSecurityClearance(JsonDeserializationClient.OlapConnectionString(readerObject),feature?.Status);
                 });
         }
 
