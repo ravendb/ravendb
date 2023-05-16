@@ -29,6 +29,7 @@ namespace FastTests.Server
                 Assert.Equal(defaultConfiguration.MinimumDurationInMs, 0);
                 Assert.Equal(defaultConfiguration.HttpMethods, new List<string>());
                 Assert.Equal(defaultConfiguration.ChangeTypes, new List<TrafficWatchChangeType>());
+                Assert.Equal(defaultConfiguration.CertificateThumbprints, new List<string>());
 
                 var configuration1 = new PutTrafficWatchConfigurationOperation.Parameters()
                 {
@@ -42,7 +43,8 @@ namespace FastTests.Server
                     ChangeTypes = new List<TrafficWatchChangeType>
                     {
                         TrafficWatchChangeType.Queries, TrafficWatchChangeType.Counters, TrafficWatchChangeType.BulkDocs
-                    }
+                    },
+                    CertificateThumbprints = new List<string>{ "0123456789ABCDEF0123456789ABCDEF01234567", "FEDCBA9876543210FEDCBA9876543210FEDCBA98" }
                 };
 
                 await store.Maintenance.Server.SendAsync(new PutTrafficWatchConfigurationOperation(configuration1));
@@ -57,6 +59,7 @@ namespace FastTests.Server
                 Assert.Equal(configuration1.MinimumDurationInMs, configuration2.MinimumDurationInMs);
                 Assert.Equal(configuration1.HttpMethods, configuration2.HttpMethods);
                 Assert.Equal(configuration1.ChangeTypes, configuration2.ChangeTypes);
+                Assert.Equal(configuration1.CertificateThumbprints, configuration2.CertificateThumbprints);
             }
         }
     }
