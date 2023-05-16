@@ -7,7 +7,7 @@ import { capitalize } from "lodash";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
 
-type operationType = "pause" | "resume" | "enable" | "disable" | "start";
+type operationType = "pause" | "disable" | "start";
 
 interface BulkIndexOperationConfirmProps {
     type: operationType;
@@ -42,6 +42,8 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
         onConfirm(selectedLocations);
         toggle();
     };
+
+    // TODO: @kwiato display indexes name ordered by state
 
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5">
@@ -86,12 +88,8 @@ function getGerund(type: operationType) {
     switch (type) {
         case "disable":
             return "disabling";
-        case "enable":
-            return "enabling";
         case "pause":
             return "pausing";
-        case "resume":
-            return "resuming";
         case "start":
             return "starting";
         default:
@@ -103,12 +101,8 @@ function getIcon(type: operationType) {
     switch (type) {
         case "disable":
             return "stop";
-        case "enable":
-            return "play";
         case "pause":
             return "pause";
-        case "resume":
-            return "play";
         case "start":
             return "play";
         default:
