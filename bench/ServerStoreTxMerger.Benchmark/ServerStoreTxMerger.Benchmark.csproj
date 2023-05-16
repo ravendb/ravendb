@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.3</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.5</RuntimeFrameworkVersion>
     <AssemblyName>ServerStoreTxMerger.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>ServerStoreTxMerger.Benchmark</PackageId>
