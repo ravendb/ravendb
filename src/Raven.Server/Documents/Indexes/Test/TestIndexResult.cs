@@ -15,7 +15,7 @@ public class TestIndexResult
     public bool HasDynamicFields;
     public bool IsStale;
     
-    public async Task WriteTestIndexResult(Stream responseBodyStream, DocumentsOperationContext context)
+    public async Task WriteTestIndexResultAsync(Stream responseBodyStream, DocumentsOperationContext context)
     {
         await using (var writer = new AsyncBlittableJsonTextWriter(context, responseBodyStream))
         {
