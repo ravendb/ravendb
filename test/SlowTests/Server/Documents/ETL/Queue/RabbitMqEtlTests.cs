@@ -32,7 +32,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         using (var store = GetDocumentStore())
         {
             var config = SetupQueueEtlToRabbitMq(store, DefaultScript, DefaultCollections);
-            var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = Etl.WaitForEtlToComplete(store);
 
             using (var session = store.OpenSession())
             {
@@ -93,7 +93,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + ExchangeSuffix + @"(userData, this['@metadata']['@collection'])",
             new[] { "Users", "People" }, skipAutomaticQueueDeclaration: false);
 
-        var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+        var etlDone = Etl.WaitForEtlToComplete(store);
 
         using (var session = store.OpenSession())
         {
@@ -154,7 +154,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + ExchangeSuffix + @"(userData, this['@metadata']['@collection'])",
             new[] { "Users", "People" }, skipAutomaticQueueDeclaration: true);
 
-        var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+        var etlDone = Etl.WaitForEtlToComplete(store);
 
         using (var session = store.OpenSession())
         {
@@ -200,7 +200,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             @$"loadTo('', {{ UserId: id(this), Name: this.Name }}, 'Users{ExchangeSuffix}')",
             new[] { "Users" }, new List<EtlQueue>() { new EtlQueue() { Name = $"Users{ExchangeSuffix}" } });
 
-        var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+        var etlDone = Etl.WaitForEtlToComplete(store);
 
         using (var session = store.OpenSession())
         {
@@ -233,7 +233,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         using (var store = GetDocumentStore())
         {
             var config = SetupQueueEtlToRabbitMq(store, DefaultScript, DefaultCollections);
-            var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = Etl.WaitForEtlToComplete(store);
 
             using (var session = store.OpenSession())
             {
@@ -280,7 +280,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         var numberOfLinesPerOrder = 2;
 
         var config = SetupQueueEtlToRabbitMq(store, DefaultScript, DefaultCollections);
-        var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
+        var etlDone = Etl.WaitForEtlToComplete(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
 
         for (int i = 0; i < numberOfOrders; i++)
         {
@@ -330,7 +330,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         var config = SetupQueueEtlToRabbitMq(store,
             @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + ExchangeSuffix + @"(userData)",
             new[] { "Users", "People" });
-        var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+        var etlDone = Etl.WaitForEtlToComplete(store);
 
         using (var session = store.OpenSession())
         {
@@ -526,7 +526,7 @@ output('test output')"
                                                             Source: '/registrations/direct-signup',
                                                      }})", new[] { "Users" });
 
-            var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = Etl.WaitForEtlToComplete(store);
 
             using (var session = store.OpenSession())
             {
@@ -569,7 +569,7 @@ output('test output')"
                 @$"loadToUsers{ExchangeSuffix}(this)", new[] { "Users" },
                 new[] { new EtlQueue { Name = $"Users{ExchangeSuffix}", DeleteProcessedDocuments = true } });
 
-            var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = Etl.WaitForEtlToComplete(store);
 
             using (var session = store.OpenSession())
             {

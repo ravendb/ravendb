@@ -29,6 +29,7 @@ using Sparrow.Json;
 using Tests.Infrastructure.ConnectionString;
 using Tests.Infrastructure.Utils;
 using Xunit;
+using Raven.Server.Documents;
 
 namespace FastTests
 {
@@ -130,15 +131,25 @@ namespace FastTests
                 return (_src, dest, result);
             }
 
-            public ManualResetEventSlim WaitForEtlToComplete(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, int numOfProcessesToWaitFor = 1)
+            public ManualResetEventSlim WaitForEtlToComplete(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate = null, int numOfProcessesToWaitFor = 1)
             {
+                predicate ??= (n, statistics) => statistics.LoadSuccesses > 0;
                 var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                 return record.IsSharded
                     ? _parent.Sharding.Etl.WaitForEtl(store, predicate, numOfProcessesToWaitFor)
                     : WaitForEtl(store, predicate);
             }
 
-            public ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
+            public Task AssertEtlReachedDestination(Action act, int timeout = 30000, int interval = 100)
+            {
+                return AssertWaitForTrueAsync(() =>
+                {
+                    act.Invoke();
+                    return Task.FromResult(true);
+                }, timeout, interval);
+            }
+
+            private ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
             {
                 var database = _parent.GetDatabase(store.Database).Result;
 
@@ -280,6 +291,16 @@ namespace FastTests
                 error = null;
                 return false;
             }
+
+            public async Task<DocumentDatabase> GetDatabaseFor(IDocumentStore store, string docId)
+            {
+                var databaseName = store.Database;
+                var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName));
+                if (record.IsSharded)
+                    databaseName = await _parent.Sharding.GetShardDatabaseNameForDocAsync(store, docId);
+                return await _parent.GetDocumentDatabaseInstanceFor(store, databaseName);
+            }
+
 
             public void Dispose()
             {

@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -91,7 +91,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 Etl.AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {

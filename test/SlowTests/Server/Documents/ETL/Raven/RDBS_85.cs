@@ -2,29 +2,30 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Documents.ETL;
+using FastTests;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RDBS_85 : EtlTestBase
+    public class RDBS_85 : RavenTestBase
     {
         public RDBS_85(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task MustNotSkipAnyDocumentsIfTaskIsCanceledDuringLoad()
         {
             using (var src = GetDocumentStore())
             using (var dst = GetDocumentStore())
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
-                AddEtl(src, dst, "users",
+                Etl.AddEtl(src, dst, "users",
                     @"loadToUsers(this)");
 
                 var srcDb = await GetDatabase(src.Database);
@@ -82,15 +83,15 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task MustNotSkipAnyDocumentsIfLoadFailsAndThereWereSomeInternalFiltering()
         {
             using (var src = GetDocumentStore())
             using (var dst = GetDocumentStore())
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
-                AddEtl(src, dst, new string[0],
+                Etl.AddEtl(src, dst, new string[0],
                     @"loadToUsers(this)", applyToAllDocuments: true); // this will filter our HiLo docs under the covers
 
                 var srcDb = await GetDatabase(src.Database);

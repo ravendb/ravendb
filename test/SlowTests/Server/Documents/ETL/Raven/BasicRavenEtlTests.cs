@@ -36,7 +36,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 Etl.AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -196,7 +196,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 Assert.Equal("C",database.EtlLoader.RavenDestinations[0].MentorNode);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -250,7 +250,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 Etl.AddEtl(src, dest, "Users", script: null);
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -299,7 +299,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore(dstOptions))
             {
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 Etl.AddEtl(src, dest, "users", @"
 if (this.Age % 4 == 0) 
@@ -396,7 +396,7 @@ loadToUsers(
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore(dstOptions))
             {
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0, numOfProcessesToWaitFor: 3);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 Etl.AddEtl(src, dest, "users", @"
 loadToUsers(this);
@@ -498,7 +498,7 @@ loadToAddresses(load(this.AddressId));
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0, numOfProcessesToWaitFor: 3);
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 3);
 
                 Etl.AddEtl(src, dest, "Employees", @"
 loadToPeople(this);
@@ -551,7 +551,7 @@ loadToAddresses(this.Address);
 
                 Assert.Equal(10, docsCount);
 
-                etlDone = Etl.WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -587,7 +587,7 @@ loadToAddresses(this.Address);
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 Etl.AddEtl(src, dest, "users", @"
 loadToUsers({Name: this.Name + ' ' + this.LastName });
@@ -632,7 +632,7 @@ loadToUsers({Name: this.Name + ' ' + this.LastName });
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 Etl.AddEtl(src, dest, "Orders", @"
 var orderData = {
@@ -762,7 +762,7 @@ loadToOrders(orderData);
             {
                 Etl.AddEtl(src, dest, "Users", "this.Name = id(this); loadToUsers(this);");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -861,7 +861,7 @@ loadToOrders(orderData);
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
             {
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 Etl.AddEtl(src, dest, new string[0], script: @"
 loadToUsers(this);
@@ -910,7 +910,6 @@ loadToUsers(this);
 
             return docsCount;
         }
-
 
         private class UserWithAddress : User
         {

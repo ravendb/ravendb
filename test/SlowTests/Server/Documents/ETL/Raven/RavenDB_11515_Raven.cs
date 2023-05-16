@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
     }
 ");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -85,7 +85,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
     }
 ");
 
-                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
 
                 using (var session = src.OpenSession())
                 {
@@ -110,7 +110,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     Assert.NotEmpty(session.Advanced.LoadStartingWith<User>("employees/1"));
                 }
 
-                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses > 0, numOfProcessesToWaitFor: 2);
+                etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
                 
                 using (var session = src.OpenSession())
                 {

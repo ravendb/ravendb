@@ -1,21 +1,23 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using FastTests;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
-    public class RavenDB_12800 : EtlTestBase
+    public class RavenDB_12800 : RavenTestBase
     {
         public RavenDB_12800(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(@"
             var doc = loadToUsers(this);
 
@@ -36,7 +38,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 using (var session = src.OpenSession())
                 {
-
                     for (int i = 0; i < 6; i++)
                     {
                         var user = new User();
@@ -54,9 +55,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                AddEtl(src, dest, "Users", script: script);
+                Etl.AddEtl(src, dest, "Users", script: script);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 5);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses >= 5);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -68,9 +69,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
 
-                etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 6);
+                etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses >= 6);
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
             }
         }
     }

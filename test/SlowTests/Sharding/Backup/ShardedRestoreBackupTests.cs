@@ -62,7 +62,7 @@ namespace SlowTests.Sharding.Backup
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
 
             var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
-            using (var store = Sharding.GetDocumentStore(options))
+            using (var store = GetDocumentStore(options))
             {
                 var record = await Sharding.GetShardingConfigurationAsync(store);
                 using (var session = store.OpenSession())

@@ -91,7 +91,7 @@ loadToOrders(orderData);
                         }
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, s) => GetOrdersCount(connectionString) == testCount);
+                    var etlDone = Etl.WaitForEtlToComplete(store, (n, s) => GetOrdersCount(connectionString) == testCount);
 
                     SetupSqlEtl(store, connectionString, defaultScript);
 
@@ -178,7 +178,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, defaultScript);
 
@@ -222,7 +222,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     string script = @"
 var orderData = {
@@ -270,7 +270,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var tableNameWithSchema = $"{schemaName}.Orders";
 
@@ -340,7 +340,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, @"var orderData = {
     Id: id(this),
@@ -384,13 +384,13 @@ loadToOrders(orderData);");
                             Address = null,
                             OrderLines = new List<OrderLine>
                             {
-                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Beer", Quantity = 2},
                             }
                         });
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, @"var orderData = {
     Id: id(this),
@@ -433,7 +433,7 @@ loadToOrders(orderData);");
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
 
@@ -492,7 +492,7 @@ loadToOrders(orderData);");
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, defaultScript);
 
@@ -536,7 +536,7 @@ loadToOrders(orderData);");
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, defaultScript);
 
@@ -577,7 +577,7 @@ loadToOrders(orderData);");
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, defaultScript, insertOnly: true);
 
@@ -856,7 +856,7 @@ CREATE TABLE [dbo].[Orders]
 
                     store.Operations.Send(new PutAttachmentOperation("orders/1-A", "test-attachment", new MemoryStream(attachmentBytes), "image/png"));
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, @"
 var orderData = {
@@ -929,7 +929,7 @@ CREATE TABLE [dbo].[Orders]
                     store.Operations.Send(new PutAttachmentOperation("orders/1-A", "abc.jpg", new MemoryStream(attachmentBytes), "image/png"));
                     store.Operations.Send(new PutAttachmentOperation("orders/2-A", "photo.jpg", new MemoryStream(attachmentBytes), "image/png"));
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, @"
 var orderData = {
@@ -998,7 +998,7 @@ CREATE TABLE [dbo].[Attachments]
                     store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile.jpg", new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7 }), "image/jpeg"));
                     store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile-small.jpg", new MemoryStream(new byte[] { 1, 2, 3 }), "image/jpeg"));
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     Etl.AddEtl(store, new SqlEtlConfiguration()
                     {
@@ -1068,7 +1068,7 @@ CREATE TABLE [dbo].[Orders]
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, @"
 
@@ -1128,7 +1128,7 @@ loadToOrders(orderData);
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     SetupSqlEtl(store, connectionString, defaultScript, collections: new List<string> { "Orders", "FavouriteOrders" });
 
@@ -1175,7 +1175,7 @@ CREATE TABLE [dbo].[Users]
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     Etl.AddEtl(store, new SqlEtlConfiguration()
                     {
@@ -1255,7 +1255,7 @@ CREATE TABLE [dbo].[Orders]
                         session.SaveChanges();
                     }
 
-                    var etlDone = Etl.WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses >= 5);
+                    var etlDone = Etl.WaitForEtlToComplete(store, (n, statistics) => statistics.LoadSuccesses >= 5);
 
                     SetupSqlEtl(store, connectionString, @"
 
@@ -1277,9 +1277,9 @@ loadToOrders(orderData);
 
                     Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
 
-                    etlDone = Etl.WaitForEtl(store, (n, s) => s.LoadSuccesses >= 6);
+                    etlDone = Etl.WaitForEtlToComplete(store, (n, s) => s.LoadSuccesses >= 6);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
                 }
             }
         }

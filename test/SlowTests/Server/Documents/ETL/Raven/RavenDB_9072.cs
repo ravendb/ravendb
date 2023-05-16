@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,11 +21,14 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Fact]
-        public async Task CanTestScript()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanTestScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
+                const string docId = "orders/1-A";
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order
@@ -34,28 +38,28 @@ namespace SlowTests.Server.Documents.ETL.Raven
                             new OrderLine{PricePerUnit = 3, Product = "Milk", Quantity = 3},
                             new OrderLine{PricePerUnit = 4, Product = "Bear", Quantity = 2},
                         }
-                    });
+                    }, docId);
 
                     await session.SaveChangesAsync();
 
-                    var database = GetDatabase(store.Database).Result;
+                    var database = await Etl.GetDatabaseFor(store, docId);
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         using (RavenEtl.TestScript(new TestRavenEtlScript
-                        {
-                            DocumentId = "orders/1-A",
-                            Configuration = new RavenEtlConfiguration()
-                            {
-                                Name = "simulate",
-                                Transforms =
-                                {
-                                    new Transformation()
-                                    {
-                                        Collections = {"Orders"},
-                                        Name = "OrdersAndLines",
-                                        Script =
-                                            @"
+                               {
+                                   DocumentId = docId,
+                                   Configuration = new RavenEtlConfiguration()
+                                   {
+                                       Name = "simulate",
+                                       Transforms =
+                                       {
+                                           new Transformation()
+                                           {
+                                               Collections = {"Orders"},
+                                               Name = "OrdersAndLines",
+                                               Script =
+                                                   @"
 var orderData = {
     Id: id(this),
     LinesCount: this.Lines.length,
@@ -76,10 +80,10 @@ for (var i = 0; i < this.Lines.length; i++) {
 output('test output');
 
 loadToOrders(orderData);"
-                                    }
-                                }
-                            }
-                        }, database, database.ServerStore, context, out var testResult))
+                                           }
+                                       }
+                                   }
+                               }, database, database.ServerStore, context, out var testResult))
                         {
                             var result = (RavenEtlTestScriptResult)testResult;
 
@@ -97,26 +101,27 @@ loadToOrders(orderData);"
             }
         }
 
-        [Fact]
-        public void CanTestScriptSpecifiedOnMultipleCollections()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanTestScriptSpecifiedOnMultipleCollections(Options options)
         {
-            using (var store = GetDocumentStore())
-            {
+            const string documentId = "orders/1-A";
 
+            using (var store = GetDocumentStore(options))
+            {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order());
-
+                    session.Store(new Order(), documentId);
                     session.SaveChanges();
                 }
 
-                var database = GetDatabase(store.Database).Result;
+                var database = await Etl.GetDatabaseFor(store, documentId);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     RavenEtl.TestScript(new TestRavenEtlScript
                     {
-                        DocumentId = "orders/1-A",
+                        DocumentId = documentId,
                         Configuration = new RavenEtlConfiguration()
                         {
                             Name = "simulate",
@@ -141,45 +146,46 @@ loadToOrders(this);"
             }
         }
 
-        [Fact]
-        public void ShouldThrowIfTestingOnDocumentBelongingToDifferentCollection()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldThrowIfTestingOnDocumentBelongingToDifferentCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
+                const string documentId = "orders/1-A";
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order());
-
+                    session.Store(new Order(), documentId);
                     session.SaveChanges();
                 }
 
-                var database = GetDatabase(store.Database).Result;
+                var database = await Etl.GetDatabaseFor(store, documentId);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    var ex = Assert.Throws<InvalidOperationException>(() => RavenEtl.TestScript(new TestRavenEtlScript
+                    var ex = Assert.Throws<InvalidOperationException>(() =>
                     {
-                        DocumentId = "orders/1-A",
-                        Configuration = new RavenEtlConfiguration()
+                        return RavenEtl.TestScript(new TestRavenEtlScript
                         {
-                            Name = "simulate",
-                            Transforms =
+                            DocumentId = documentId,
+                            Configuration = new RavenEtlConfiguration()
                             {
-                                new Transformation()
+                                Name = "simulate",
+                                Transforms =
                                 {
-                                    Collections =
+                                    new Transformation()
                                     {
-                                        "DifferentCollection"
-                                    },
-                                    Name = "test",
-                                    Script =
-                                        @"
+                                        Collections = { "DifferentCollection" },
+                                        Name = "test",
+                                        Script =
+                                            @"
 loadToDifferentCollection(this);"
+                                    }
                                 }
                             }
-                        }
-                    }, database, database.ServerStore, context, out _));
+                        }, database, database.ServerStore, context, out _);
+                    });
 
                     Assert.Contains(
                         "Document 'orders/1-A' belongs to Orders collection while tested ETL script works on the following collections: DifferentCollection",
@@ -188,43 +194,50 @@ loadToDifferentCollection(this);"
             }
         }
 
-        [Fact]
-        public async Task CanTestEmptyScript()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanTestEmptyScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            const string documentId = "orders/1-A";
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Order());
-
+                    await session.StoreAsync(new Order(), documentId);
                     await session.SaveChangesAsync();
+                }
 
-                    var database = GetDatabase(store.Database).Result;
+                var database = await Etl.GetDatabaseFor(store, documentId);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (RavenEtl.TestScript(
+                   new TestRavenEtlScript
+                   {
+                       DocumentId = documentId,
+                       Configuration = new RavenEtlConfiguration()
+                       {
+                           Name = "simulate", 
+                           Transforms =
+                           {
+                               new Transformation()
+                               {
+                                   Collections = { "Orders" }, 
+                                   Name = "OrdersAndLines", 
+                                   Script = null
+                               }
+                           }
+                       }
+                   }, database, database.ServerStore, context, out var testResult))
+                {
 
-                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    {
-                        using (RavenEtl.TestScript(
-                            new TestRavenEtlScript
-                            {
-                                DocumentId = "orders/1-A",
-                                Configuration = new RavenEtlConfiguration()
-                                {
-                                    Name = "simulate", Transforms = {new Transformation() {Collections = {"Orders"}, Name = "OrdersAndLines", Script = null}}
-                                }
-                            }, database, database.ServerStore, context, out var testResult))
-                        {
+                    var result = (RavenEtlTestScriptResult)testResult;
 
-                            var result = (RavenEtlTestScriptResult)testResult;
+                    Assert.Equal(0, result.TransformationErrors.Count);
 
-                            Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(1, result.Commands.Count);
 
-                            Assert.Equal(1, result.Commands.Count);
+                    Assert.IsType(typeof(PutCommandDataWithBlittableJson), result.Commands[0]);
 
-                            Assert.IsType(typeof(PutCommandDataWithBlittableJson), result.Commands[0]);
-
-                            Assert.Empty(result.DebugOutput);
-                        }
-                    }
+                    Assert.Empty(result.DebugOutput);
                 }
             }
         }

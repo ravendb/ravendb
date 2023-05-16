@@ -4,8 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -19,7 +17,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task ShouldSendCounterChangeMadeInCluster()
         {
             var srcDb = "13288-src";
@@ -41,37 +39,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 Database = dstDb,
             }.Initialize())
             {
-                var connectionStringName = "my-etl";
-                var urls = new[] { destNode.Servers[0].WebUrl };
-                var config = new RavenEtlConfiguration()
-                {
-                    Name = connectionStringName,
-                    ConnectionStringName = connectionStringName,
-                    Transforms =
-                    {
-                        new Transformation
-                        {
-                            Name = $"ETL : {connectionStringName}",
-                            Collections = new List<string>(new[] {"Users"}),
-                            Script = null,
-                            ApplyToAllDocuments = false,
-                            Disabled = false
-                        }
-                    },
-                    LoadRequestTimeoutInSec = 30,
-                    MentorNode = "A"
-                };
-                var connectionString = new RavenConnectionString
-                {
-                    Name = connectionStringName,
-                    Database = dest.Database,
-                    TopologyDiscoveryUrls = urls,
-                };
-
-                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
-                Assert.NotNull(result.RaftCommandIndex);
-
-                src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
+                Etl.AddEtl((DocumentStore)src, (DocumentStore)dest, "Users", script: null);
 
                 var aNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == "A");
                 var bNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == "B");

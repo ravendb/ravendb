@@ -2,12 +2,16 @@
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,11 +23,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Fact]
-        public async Task CanTestDeletion()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanTestDeletion(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
+                const string docId = "orders/1-A";
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order
@@ -31,19 +37,19 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         Lines = new List<OrderLine>
                         {
                             new OrderLine{PricePerUnit = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{PricePerUnit = 4, Product = "Bear", Quantity = 2},
+                            new OrderLine{PricePerUnit = 4, Product = "Beer", Quantity = 2}
                         }
-                    });
+                    }, docId);
 
                     await session.SaveChangesAsync();
 
-                    var database = GetDatabase(store.Database).Result;
+                    var database = await Etl.GetDatabaseFor(store, docId);
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         using (RavenEtl.TestScript(new TestRavenEtlScript
                         {
-                            DocumentId = "orders/1-A",
+                            DocumentId = docId,
                             IsDelete = true,
                             Configuration = new RavenEtlConfiguration()
                             {
@@ -94,32 +100,33 @@ loadToOrders(orderData);
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    Assert.NotNull(session.Query<Order>("orders/1-A"));
+                    Assert.NotNull(session.Query<Order>(docId));
                 }
             }
         }
 
-        [Fact]
-        public async Task CanOutputInDeleteBehaviorFunction()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanOutputInDeleteBehaviorFunction(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
+                const string docId = "users/1";
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User()
                     {
                         Name = "Joe"
-                    }, "users/1");
+                    }, docId);
 
                     await session.SaveChangesAsync();
-
-                    var database = GetDatabase(store.Database).Result;
+                    var database = await Etl.GetDatabaseFor(store, docId);
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         using (RavenEtl.TestScript(new TestRavenEtlScript
                         {
-                            DocumentId = "users/1",
+                            DocumentId = docId,
                             IsDelete = true,
                             Configuration = new RavenEtlConfiguration()
                             {
@@ -157,7 +164,7 @@ function deleteDocumentsOfUsersBehavior(docId) {
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    Assert.NotNull(session.Query<Order>("users/1"));
+                    Assert.NotNull(session.Query<Order>(docId));
                 }
             }
         }
