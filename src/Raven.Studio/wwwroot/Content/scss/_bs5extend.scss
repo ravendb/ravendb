@@ -212,6 +212,42 @@
 .carousel-auto-height {
     transition: height 0.5s $global-easing-in-out;
 }
+.card-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, max-content));
+
+    .card-tab {
+        $border-offset: 2px;
+        $bulge-width: 3px;
+        cursor: pointer;
+        position: relative;
+
+        .badge {
+            position: absolute;
+            top: $gutter-sm;
+            right: $gutter-sm;
+        }
+
+        img {
+            width: 61%;
+            margin: auto;
+            margin-top: $gutter-xs;
+            margin-bottom: $gutter-sm;
+        }
+
+        transition: box-shadow 0.25s $global-easing;
+        &:hover,
+        &.active {
+            filter: $hover-filter;
+        }
+
+        &.active {
+            box-shadow: 0px 0px 0px $border-offset rgba($body-bg-var, 1),
+                0px 0px 0px ($border-offset + $border-width) $primary-var,
+                0px (($bulge-width + $border-offset)) 0px ($border-offset + $border-width) $primary-var;
+        }
+    }
+}
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
