@@ -559,8 +559,7 @@ public class RavenIntegration : RavenTestBase
         }
 
         Indexes.WaitForIndexing(store);
-        long entriesCount = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount;
-        Assert.Equal(count, entriesCount);
+        Assert.Equal(count, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, count));
 
         using (var session = store.OpenAsyncSession())
         {
@@ -572,8 +571,7 @@ public class RavenIntegration : RavenTestBase
         }
 
         Indexes.WaitForIndexing(store);
-        entriesCount = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount;
-        Assert.Equal(count/2, entriesCount);
+        Assert.Equal(count/2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, count/2));
     }
 
 
