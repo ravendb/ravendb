@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Search;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Extensions;
@@ -11,8 +12,8 @@ namespace Raven.Server.Documents.Queries
     {
         private readonly OperatorType _operator;
 
-        public bool AnyBoost => Boost.AlmostEquals(1.0f) == false;
-
+        public bool IsBoosted => Boost.AlmostEquals(1.0f) == false;
+        
         public RavenBooleanQuery(OperatorType @operator)
         {
             _operator = @operator;
@@ -25,13 +26,11 @@ namespace Raven.Server.Documents.Queries
             switch (@operator)
             {
                 case OperatorType.And:
-                    AddInternal(left, Occur.MUST, OperatorType.And, buildSteps);
-                    TryAnd(right, buildSteps);
+                    And(left, right, buildSteps);
                     break;
 
                 case OperatorType.Or:
-                    AddInternal(left, Occur.SHOULD, OperatorType.Or, buildSteps);
-                    TryOr(right, buildSteps);
+                    Or(left, right, buildSteps);
                     break;
 
                 default:
@@ -42,7 +41,26 @@ namespace Raven.Server.Documents.Queries
 
         public bool TryAnd(Query right, List<string> buildSteps)
         {
-            if (_operator == OperatorType.And)
+            var canMergeClauses = true;
+            if (_operator is not OperatorType.And)
+            {
+                canMergeClauses = false;
+                buildSteps?.Add($"Cannot perform merging `{right}` into `{ToString()}` since this {nameof(RavenBooleanQuery)} has operator `{_operator}.");
+            }
+            else if (right is RavenBooleanQuery rightRbq && rightRbq._operator != _operator)
+            {
+                canMergeClauses = false;
+                buildSteps?.Add($"Cannot perform merging `{rightRbq}` into `{ToString()}` since this {nameof(rightRbq)} has operator `{rightRbq._operator} and this {nameof(RavenBooleanQuery)} has {_operator}.");
+            }
+            // If this RavenBooleanQuery or the incoming Rbq has a boost, we cannot merge it.
+            // When the right query is not a RavenBooleanQuery, we can merge it since it won't be boosted by this parent. 
+            else if (IsBoosted || right is RavenBooleanQuery {IsBoosted: true}) 
+            {
+                canMergeClauses = false;
+                buildSteps?.Add($"Cannot perform merging `{right}` into `{ToString()}` since boost is non-default. Left: {Boost} Right: {right.Boost}");
+            }
+
+            if (canMergeClauses)
             {
                 AddInternal(right, Occur.MUST, OperatorType.And, buildSteps);
                 return true;
@@ -59,10 +77,27 @@ namespace Raven.Server.Documents.Queries
             AddInternal(left, Occur.MUST, OperatorType.And, buildSteps);
             AddInternal(right, Occur.MUST, OperatorType.And, buildSteps);
         }
-
+        
         public bool TryOr(Query right, List<string> buildSteps)
         {
-            if (_operator == OperatorType.Or)
+            var canMergeClauses = true;
+            if (_operator is not OperatorType.Or)
+            {
+                canMergeClauses = false;
+                buildSteps?.Add($"Cannot perform merging `{right}` into `{ToString()}` since this {nameof(RavenBooleanQuery)} has operator `{_operator}.");
+            }
+            else if (right is RavenBooleanQuery rightRbq && rightRbq._operator != _operator)
+            {
+                canMergeClauses = false;
+                buildSteps?.Add($"Cannot perform merging `{rightRbq}` into `{ToString()}` since this {nameof(rightRbq)} has operator `{rightRbq._operator} and this {nameof(RavenBooleanQuery)} has {_operator}.");
+            }
+            else if (IsBoosted || right is RavenBooleanQuery {IsBoosted: true})
+            {
+                canMergeClauses = false;
+                buildSteps?.Add($"Cannot perform merging `{right}` into `{ToString()}` since boost is non-default. Left: {Boost} Right: {right.Boost}");
+            }
+            
+            if (canMergeClauses)
             {
                 AddInternal(right, Occur.SHOULD, OperatorType.Or, buildSteps);
                 return true;
@@ -84,7 +119,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (query is RavenBooleanQuery booleanQuery)
             {
-                if (booleanQuery._operator == @operator && booleanQuery.AnyBoost == false)
+                if (booleanQuery._operator == @operator && booleanQuery.IsBoosted == false && IsBoosted == false)
                 {
                     foreach (var booleanClause in booleanQuery.Clauses)
                         Add(booleanClause);
@@ -93,7 +128,8 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    buildSteps?.Add($"Cannot apply query optimization because operator is {@operator}, but we got {booleanQuery._operator} with boosting '{booleanQuery.AnyBoost}' ({booleanQuery.Boost} - {SingleToInt32Bits(booleanQuery.Boost)})");
+                    buildSteps?.Add(
+                        $"Cannot apply query optimization because operator is {@operator}, but we got {booleanQuery._operator} with boosting '{booleanQuery.IsBoosted}' ({booleanQuery.Boost} - {SingleToInt32Bits(booleanQuery.Boost)})");
                 }
             }
 
