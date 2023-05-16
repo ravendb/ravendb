@@ -174,6 +174,10 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("GC information for {0}. Gets the total committed MB of the managed heap.")]
             public const string GcTotalCommitted = "1.6.11.{0}.15";
 
+            [SnmpEnumIndex(typeof(GCKind))]
+            [Description("GC information for {0}. Gets the large object heap size (in MB) after the last garbage collection of given kind occurred.")]
+            public const string GcLohSize = "1.6.11.{0}.16.3";
+
             public const string MemInfoPrefix = "1.6.12.{0}";
 
             public const string AvailableMemoryForProcessing = "1.6.13";

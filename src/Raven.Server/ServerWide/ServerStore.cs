@@ -590,6 +590,7 @@ namespace Raven.Server.ServerWide
                 Configuration.Memory.UseTotalDirtyMemInsteadOfMemUsage,
                 Configuration.Memory.EnableHighTemporaryDirtyMemoryUse,
                 Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage,
+                Configuration.Memory.LargeObjectHeapCompactionThresholdPercentage,
                 new LowMemoryMonitor(), ServerShutdown);
 
             MemoryInformation.SetFreeCommittedMemory(
