@@ -177,6 +177,14 @@
     bottom: 0;
 }
 
+.well {
+    background-color: $well-bg;
+}
+
+.border-radius-xs {
+    border-radius: $gutter-xs;
+}
+
 .btn .kbd {
     font-size: 10px;
     kbd {
