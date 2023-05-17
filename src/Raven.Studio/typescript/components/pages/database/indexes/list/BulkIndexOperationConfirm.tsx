@@ -1,6 +1,5 @@
 ﻿import React, { useState } from "react";
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
-import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { IndexSharedInfo } from "components/models/indexes";
 import { MultipleDatabaseLocationSelector } from "components/common/MultipleDatabaseLocationSelector";
 import { capitalize } from "lodash";
@@ -38,8 +37,7 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
 
     const [selectedLocations, setSelectedLocations] = useState<databaseLocationSpecifier[]>(() => locations);
 
-    const title = infinitive + " " + pluralizeHelpers.pluralize(indexes.length, "index", "indexes", true) + "?";
-
+    const title = infinitive + " indexing?";
     const showContextSelector = locations.length > 1;
 
     // TODO: @kwiato styling indexes list
@@ -112,10 +110,6 @@ function getIcon(type: operationType) {
     }
 }
 
-function getActionTitleSuffix(length: number) {
-    return `${length} ${length === 1 ? "index" : "indexes"}`;
-}
-
 function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexGroup[] {
     switch (type) {
         case "disable": {
@@ -137,10 +131,10 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
 
             return [
                 {
-                    title: `You're disabling ${getActionTitleSuffix(affectedIndexGrouped.disabling.length)}:`,
+                    title: "The following indexes will be disabled:",
                     indexesNames: affectedIndexGrouped.disabling,
                 },
-                { title: "Skipped indexes:", indexesNames: affectedIndexGrouped.skipping },
+                { title: "The following indexes are already disabled:", indexesNames: affectedIndexGrouped.skipping },
             ];
         }
         case "pause": {
@@ -165,10 +159,13 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
 
             return [
                 {
-                    title: `You're pausing ${getActionTitleSuffix(affectedIndexGrouped.pausing.length)}:`,
+                    title: "The following indexes will be paused:",
                     indexesNames: affectedIndexGrouped.pausing,
                 },
-                { title: "Skipped indexes:", indexesNames: affectedIndexGrouped.skipping },
+                {
+                    title: "The following indexes are already paused od disabled:",
+                    indexesNames: affectedIndexGrouped.skipping,
+                },
             ];
         }
         case "start": {
@@ -192,14 +189,14 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
             );
             return [
                 {
-                    title: `You're enabling ${getActionTitleSuffix(affectedIndexGrouped.enabling.length)}:`,
+                    title: "The following indexes will be enabled:",
                     indexesNames: affectedIndexGrouped.enabling,
                 },
                 {
-                    title: `You're resuming ${getActionTitleSuffix(affectedIndexGrouped.resuming.length)}:`,
+                    title: "The following indexes will be resumed:",
                     indexesNames: affectedIndexGrouped.resuming,
                 },
-                { title: "Skipped indexes:", indexesNames: affectedIndexGrouped.skipping },
+                { title: "The following indexes are already running:", indexesNames: affectedIndexGrouped.skipping },
             ];
         }
         default:
