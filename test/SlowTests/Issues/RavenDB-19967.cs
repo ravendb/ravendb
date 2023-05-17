@@ -96,6 +96,43 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public async Task TombstoneCleaningMoreThan10K_AfterIndexDisabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10_001; i++)
+                    {
+                        var user = new User { Name = "Yonatan", Id = $"{i}"};
+                        await session.StoreAsync(user);
+                    }
+                    
+                    await session.SaveChangesAsync();
+                }
+
+                var userIndex = new UserByName();
+                string indexName = userIndex.IndexName;
+                await userIndex.ExecuteAsync(store);
+                await store.Maintenance.SendAsync(new DisableIndexOperation(indexName));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10_001; i++)
+                    {
+                        session.Delete($"{i}");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
+            }
+        }
+
+        [Fact]
         public async Task TombstoneCleaningAfterReplicationLoaderDisabled()
         {
             using (var store1 = GetDocumentStore())
@@ -190,11 +227,6 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var userIndex = new UserByName();
-                string indexName = userIndex.IndexName;
-                await userIndex.ExecuteAsync(store);
-                await store.Maintenance.SendAsync(new DisableIndexOperation(indexName));
-
                 var config = Backup.CreateBackupConfiguration(backupPath: backupPath, backupType: BackupType.Backup, incrementalBackupFrequency: "0 0 1 1 *");
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, isFullBackup: true);
 
@@ -212,9 +244,6 @@ namespace SlowTests.Issues
 
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-
-                WaitForUserToContinueTheTest(store);
-
                 Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
             }
         }

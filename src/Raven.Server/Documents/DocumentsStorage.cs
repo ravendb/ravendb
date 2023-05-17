@@ -1323,9 +1323,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long TombstonesCountForCollection(DocumentsOperationContext context, string collection)
+        public TombstonesCount TombstonesCountForCollection(DocumentsOperationContext context, string collection)
         {
             string tableName;
+            TombstonesCount tombstonesCount = new TombstonesCount()
+            {
+                Count = 0,
+                Accuracy = TombstonesCount.TombstonesAccuracy.Exact
+            };
 
             if (collection == AttachmentsStorage.AttachmentsTombstones ||
                 collection == RevisionsStorage.RevisionsTombstones)
@@ -1340,15 +1345,36 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
             if (table == null)
-                return 0;
+                return tombstonesCount;
 
             long count = 0;
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], 0, 0))
             {
                 count++;
+                if (count > 10_000)
+                {
+                    tombstonesCount.Count = count;
+                    tombstonesCount.Accuracy = TombstonesCount.TombstonesAccuracy.MoreThan;
+
+                    return tombstonesCount;
+                }
             }
 
-            return count;
+            tombstonesCount.Count = count;
+
+            return tombstonesCount;
+        }
+
+        public class TombstonesCount
+        {
+            public long Count;
+            public TombstonesAccuracy Accuracy;
+
+            public enum TombstonesAccuracy
+            {
+                Exact,
+                MoreThan
+            }
         }
 
         public IEnumerable<Tombstone> GetTombstonesFrom(
