@@ -362,14 +362,12 @@ namespace Raven.Server.Documents.Patch
             return value;
         }
 
-        internal JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o)
+        internal JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o, bool needsClone = true)
         {
             if (o is TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult tsrr)
             { 
                 // we are passing a streaming value to the JS engine, so we need
-                // // to materialize all the results
-                
-                
+                // to materialize all the results
                 var results = new DynamicJsonArray(tsrr.Stream);
                 var djv = new DynamicJsonValue
                 {
@@ -400,7 +398,9 @@ namespace Raven.Server.Documents.Patch
 
             if (o is BlittableJsonReaderObject json)
             {
-                return new BlittableObjectInstance(engine, null, Clone(json, context), null, null, null);
+                // check if clone is really required, we don't want to clone patch arguments
+                BlittableJsonReaderObject blittable = needsClone ? Clone(json, context) : json;
+                return new BlittableObjectInstance(engine, null, blittable, null, null, null);
             }
 
             if (o == null)
