@@ -1,29 +1,30 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Client;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
-    public class RavenDB_16311 : EtlTestBase
+    public class RavenDB_16311 : RavenTestBase
     {
         public RavenDB_16311(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public async Task CanTestOlapEtlScript()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanTestOlapEtlScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -54,7 +55,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                     await session.SaveChangesAsync();
                 }
 
-                var database = await GetDatabase(store.Database);
+                var database = await Etl.GetDatabaseFor(store, "orders/1");
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {

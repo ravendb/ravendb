@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task OlapTaskShouldBeHighlyAvailable()
         {
             var cluster = await CreateRaftCluster(3);
@@ -107,7 +107,7 @@ loadToOrders(partitionBy(key),
                 },
                 MentorNode = mentorTag
             };
-            var task = AddOlapEtl(store,
+            var task = Etl.AddEtl(store,
                 configuration,
                 new OlapConnectionString
                 {
@@ -175,14 +175,6 @@ loadToOrders(partitionBy(key),
             return mre;
         }
 
-        internal static AddEtlOperationResult AddOlapEtl(IDocumentStore src, OlapEtlConfiguration configuration, OlapConnectionString connectionString)
-        {
-            var putResult = src.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(connectionString));
-            Assert.NotNull(putResult.RaftCommandIndex);
-
-            var addResult = src.Maintenance.Send(new AddEtlOperation<OlapConnectionString>(configuration));
-            return addResult;
-        }
 
         private static async Task<string> GetPerformanceStats(RavenServer server, string database, TimeSpan timeout)
         {

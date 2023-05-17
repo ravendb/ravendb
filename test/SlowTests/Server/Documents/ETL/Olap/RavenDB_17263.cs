@@ -1,26 +1,29 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
-    public class RavenDB_17263 : EtlTestBase
+    public class RavenDB_17263 : RavenTestBase
     {
         public RavenDB_17263(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public async Task ShouldNotReuseCustomPartitionFromPreviousTestRun()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldNotReuseCustomPartitionFromPreviousTestRun(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -51,7 +54,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                     await session.SaveChangesAsync();
                 }
 
-                var database = await GetDatabase(store.Database);
+                var database = await Etl.GetDatabaseFor(store, "orders/1");
                 var configuration = new OlapEtlConfiguration
                 {
                     Name = "simulate",

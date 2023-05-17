@@ -1,22 +1,25 @@
 ﻿using System.Collections.Generic;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
-    public class NameTests : EtlTestBase
+    public class NameTests : RavenTestBase
     {
         public NameTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void NameUniqueness()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void NameUniqueness(Options options)
         {
             var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -33,7 +36,7 @@ loadToOrders(partitionBy(key),
 
             var path = NewDataPath();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupLocalOlapEtl(store, script, path);
                 SetupLocalOlapEtl(store, script, path);
@@ -78,7 +81,7 @@ loadToOrders(partitionBy(key),
                 }
             };
 
-            AddEtl(store, configuration, connectionString);
+            Etl.AddEtl(store, configuration, connectionString);
         }
     }
 }
