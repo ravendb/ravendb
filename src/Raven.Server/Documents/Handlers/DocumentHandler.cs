@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.Handlers
                 var addedIdsCount = 0;
                 var first = true;
 
-                while (sb.Length < 1024)
+                while (sb.Length < 1024 && addedIdsCount < ids.Count)
                 {
                     if (first == false)
                         sb.Append(", ");
