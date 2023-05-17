@@ -1976,7 +1976,7 @@ namespace Raven.Server.Documents.Patch
                 if (_args.Length != args.Length)
                     _args = new JsValue[args.Length];
                 for (var i = 0; i < args.Length; i++)
-                    _args[i] = JavaScriptUtils.TranslateToJs(ScriptEngine, jsonCtx, args[i]);
+                    _args[i] = JavaScriptUtils.TranslateToJs(ScriptEngine, jsonCtx, args[i], needsClone: false);
 
                 if (method != QueryMetadata.SelectOutput &&
                     _args.Length == 2 &&
