@@ -135,7 +135,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
 
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
             {
-                var waitForNotPassive = await mentorNode.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, cts.Token);
+                var waitForNotPassive = await revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, cts.Token);
                 Assert.True(waitForNotPassive);
             }
 
