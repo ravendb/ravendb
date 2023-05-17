@@ -413,7 +413,7 @@ namespace Raven.Client.Documents.Changes
         public long RequestSizeInBytes { get; set; }
         public long ResponseSizeInBytes { get; set; }
         public TrafficWatchChangeType Type { get; set; }
-        public QueryTimings Timings { get; set; }
+        public QueryTimings QueryTimings { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -427,7 +427,10 @@ namespace Raven.Client.Documents.Changes
             json[nameof(RequestSizeInBytes)] = RequestSizeInBytes;
             json[nameof(ResponseSizeInBytes)] = ResponseSizeInBytes;
             json[nameof(Type)] = Type;
-            json[nameof(Timings)] = Timings;
+            
+            if(QueryTimings != null)
+                json[nameof(QueryTimings)] = QueryTimings.ToJson();
+
             return json;
         }
     }

@@ -112,6 +112,8 @@ namespace Raven.Server.Documents.Handlers
             
             if (ShouldAddPagingPerformanceHint(numberOfResults))
                 AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs, -1);
+
+            AddQueryTimingsToTrafficWatch(indexQuery);
         }
 
         private async Task Query(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
@@ -132,7 +134,6 @@ namespace Raven.Server.Documents.Handlers
             if (indexQuery.Metadata.HasFacet)
             {
                 await FacetedQuery(indexQuery, queryContext, token);
-                AddQueryTimingsToTrafficWatch(indexQuery);
                 return;
             }
 
@@ -149,7 +150,6 @@ namespace Raven.Server.Documents.Handlers
             try
             {
                 result = await Database.QueryRunner.ExecuteQuery(indexQuery, queryContext, existingResultEtag, token).ConfigureAwait(false);
-                AddQueryTimingsToTrafficWatch(indexQuery);
             }
             catch (IndexDoesNotExistException)
             {
@@ -177,9 +177,11 @@ namespace Raven.Server.Documents.Handlers
             
             if (ShouldAddPagingPerformanceHint(numberOfResults))
                 AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
+
+            AddQueryTimingsToTrafficWatch(indexQuery);
         }
 
-        private void AddQueryTimingsToTrafficWatch(IndexQueryServerSide indexQuery) // IndexQueryServerSide ???
+        private void AddQueryTimingsToTrafficWatch(IndexQueryServerSide indexQuery)
         {
             if (TrafficWatchManager.HasRegisteredClients && indexQuery.Timings != null)
                 HttpContext.Items[nameof(QueryTimings)] = indexQuery.Timings.ToTimings();

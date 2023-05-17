@@ -289,7 +289,7 @@ namespace Raven.Server.Documents.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void SetupTimings(IndexQueryServerSide indexQuery)
         {
-            if (indexQuery.Metadata.HasTimings)
+            if (indexQuery.Metadata.HasTimings || TrafficWatchManager.HasRegisteredClients)
                 indexQuery.Timings = new QueryTimingsScope(start: false);
         }
 
