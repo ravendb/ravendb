@@ -313,7 +313,7 @@ namespace Raven.Server
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
                 CustomInfo = twTuple.CustomInfo,
-                Timings = timings != null ? (QueryTimings)timings : null,
+                QueryTimings = timings != null ? (QueryTimings)timings : null,
                 Type = twTuple.Type,
                 ClientIP = context.Connection.RemoteIpAddress?.ToString(),
                 CertificateThumbprint = context.Connection.ClientCertificate?.Thumbprint,
