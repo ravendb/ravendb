@@ -16,14 +16,14 @@
         .dbgroup-item {
             min-width: 150px;
             margin: sizes.$gutter-xs/2;
-            background-color: colors.$panel-bg-2;
+            background-color: colors.$panel-bg-2-var;
             border-radius: sizes.$gutter-xxs;
             max-width: 200px;
             & > div {
                 text-align: center;
                 padding: sizes.$gutter-xs sizes.$gutter-sm;
                 & + div {
-                    border-top: sizes.$border-width solid colors.$border-color-light;
+                    border-top: sizes.$border-width solid colors.$border-color-light-var;
                 }
             }
 
@@ -39,14 +39,14 @@
 
             strong {
                 font-weight: 800;
-                color: colors.$text-emphasis-color;
+                color: colors.$text-emphasis-var;
             }
 
             &.item-new {
                 .dbgroup-node {
                     min-height: 90px;
                     font-size: 40px;
-                    color: colors.$text-emphasis-color;
+                    color: colors.$text-emphasis-var;
                 }
             }
         }

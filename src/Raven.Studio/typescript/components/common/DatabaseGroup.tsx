@@ -105,7 +105,7 @@ export function DatabaseGroupType(props: DatabaseGroupTypeProps) {
                 <Icon icon={cssIcon(node)} /> {node.type}
             </div>
             <div>
-                <Badge color={nodeBadgeColor(node)} className="ms-1">
+                <Badge color={nodeBadgeColor(node)}>
                     {nodeBadgeText(node)}
                     {node.responsibleNode && (
                         <span

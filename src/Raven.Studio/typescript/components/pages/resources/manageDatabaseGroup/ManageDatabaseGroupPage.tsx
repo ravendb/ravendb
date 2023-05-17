@@ -86,7 +86,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                         <UncontrolledButtonWithDropdownPanel buttonText="Settings">
                             <>
                                 <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
-                                    <div className="form-switch form-check-reverse">
+                                    <div className="d-flex gap-3 form-switch">
                                         <Input
                                             id={settingsUniqueId}
                                             type="switch"
