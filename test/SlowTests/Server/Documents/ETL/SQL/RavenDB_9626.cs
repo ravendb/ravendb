@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Error_if_script_does_not_contain_any_loadTo_method_and_uses_legacy_replicateTo()
         {
             var config = new SqlEtlConfiguration
@@ -49,7 +50,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Error_if_script_is_empty()
         {
             var config = new SqlEtlConfiguration
