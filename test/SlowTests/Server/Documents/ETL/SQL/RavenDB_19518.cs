@@ -16,7 +16,6 @@ using System.Threading;
 using System;
 using Tests.Infrastructure;
 using Npgsql;
-using xRetry;
 
 namespace SlowTests.Server.Documents.ETL.SQL;
 
@@ -33,52 +32,53 @@ public class RavenDB_19518 : SqlAwareTestBase
         public string[] Companies { get; set; }
     }
 
-    [Fact]
-    public async Task CanTestSqlEtlScriptWithPostgresSpecificTypes()
+    [RavenTheory(RavenTestCategory.Etl)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanTestSqlEtlScriptWithPostgresSpecificTypes(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
+            const string docId = "items/1-A";
+            using (var session = store.OpenAsyncSession())
             {
-                using (var session = store.OpenAsyncSession())
+                await session.StoreAsync(new Item
                 {
-                    await session.StoreAsync(new Item
-                    {
-                        Companies = new[] { "DHL", "UPS" },
-                    });
-                    await session.SaveChangesAsync();
-                }
+                    Companies = new[] { "DHL", "UPS" },
+                }, docId);
+                await session.SaveChangesAsync();
+            }
 
-                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
-                {
-                    Name = "simulate",
-                    ConnectionString = "Server=127.0.0.1;Port=2345;Database=myDataBase;User Id=foo;Password=bar;",
-                    FactoryName = "Npgsql",
-                }));
+            var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+            {
+                Name = "simulate",
+                ConnectionString = "Server=127.0.0.1;Port=2345;Database=myDataBase;User Id=foo;Password=bar;",
+                FactoryName = "Npgsql",
+            }));
 
-                Assert.NotNull(result1.RaftCommandIndex);
+            Assert.NotNull(result1.RaftCommandIndex);
 
-                var database = GetDatabase(store.Database).Result;
+            var database = await Etl.GetDatabaseFor(store, docId);
 
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                {
-                    using (SqlEtl.TestScript(
-                        new TestSqlEtlScript
-                        {
-                            PerformRolledBackTransaction = false,
-                            DocumentId = "items/1-A",
-                            Configuration = new SqlEtlConfiguration()
-                            {
-                                Name = "simulate",
-                                ConnectionStringName = "simulate",
-                                SqlTables =
-                                {
-                                    new SqlEtlTable {TableName = "Items", DocumentIdColumn = "Id"}
-                                },
-                                Transforms =
-                                {
-                                        new Transformation()
-                                        {
-                                            Collections = {"Items"}, Name = "Items", Script = @"
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (SqlEtl.TestScript(
+                           new TestSqlEtlScript
+                           {
+                               PerformRolledBackTransaction = false,
+                               DocumentId = docId,
+                               Configuration = new SqlEtlConfiguration()
+                               {
+                                   Name = "simulate",
+                                   ConnectionStringName = "simulate",
+                                   SqlTables =
+                                   {
+                                       new SqlEtlTable { TableName = "Items", DocumentIdColumn = "Id" }
+                                   },
+                                   Transforms =
+                                   {
+                                       new Transformation()
+                                       {
+                                           Collections = { "Items" }, Name = "Items", Script = @"
 var data = {
     Companies:  {
         Type : 'Array | Text',
@@ -86,22 +86,21 @@ var data = {
     }
 };
 loadToItems(data);"
-                                        }
-                                }
-                            }
-                        }, database, database.ServerStore, context, out var testResult))
-                    {
-                        var result = (SqlEtlTestScriptResult)testResult;
-                        Assert.Equal(0, result.TransformationErrors.Count);
-                        Assert.Equal(0, result.LoadErrors.Count);
-                        Assert.Equal(0, result.SlowSqlWarnings.Count);
+                                       }
+                                   }
+                               }
+                           }, database, database.ServerStore, context, out var testResult))
+                {
+                    var result = (SqlEtlTestScriptResult)testResult;
+                    Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(0, result.LoadErrors.Count);
+                    Assert.Equal(0, result.SlowSqlWarnings.Count);
 
-                        Assert.Equal(1, result.Summary.Count);
+                    Assert.Equal(1, result.Summary.Count);
 
-                        var orderLines = result.Summary.First(x => x.TableName == "Items");
+                    var orderLines = result.Summary.First(x => x.TableName == "Items");
 
-                        Assert.Equal(2, orderLines.Commands.Length); // delete and insert
-                    }
+                    Assert.Equal(2, orderLines.Commands.Length); // delete and insert
                 }
             }
         }
