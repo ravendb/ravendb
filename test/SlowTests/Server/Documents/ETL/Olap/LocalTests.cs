@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Newtonsoft.Json;
 using Parquet;
 using Parquet.Data;
@@ -24,7 +25,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
-    public class LocalTests : EtlTestBase
+    public class LocalTests : RavenTestBase
     {
         internal const string DefaultFrequency = "* * * * *"; // every minute
         internal const string AllFilesPattern = "*.*";
@@ -34,7 +35,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public Task SimpleTransformation()
         {
             var script = @"
@@ -52,7 +53,7 @@ loadToOrders(partitionBy(key),
             return SimpleTransformationInternal(script);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public Task SimpleTransformation_DifferentLoadTo_Syntax1()
         {
             var script = @"
@@ -71,7 +72,7 @@ loadTo('Orders', partitionBy(key),
             return SimpleTransformationInternal(script);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public Task SimpleTransformation_DifferentLoadTo_Syntax2()
         {
             var script = @"
@@ -127,7 +128,7 @@ loadTo(""Orders"", partitionBy(key),
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
                 var path = NewDataPath(forceCreateDir: true);
                 SetupLocalOlapEtl(store, script, path);
 
@@ -180,7 +181,7 @@ loadTo(""Orders"", partitionBy(key),
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task SimpleTransformation2()
         {
             using (var store = GetDocumentStore())
@@ -213,7 +214,7 @@ loadTo(""Orders"", partitionBy(key),
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var o = {
@@ -289,7 +290,7 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task SimpleTransformation_PartitionByDay()
         {
             using (var store = GetDocumentStore())
@@ -322,7 +323,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var o = {
@@ -374,7 +375,7 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task SimpleTransformation_PartitionByHour()
         {
             using (var store = GetDocumentStore())
@@ -407,7 +408,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var o = {
@@ -463,7 +464,7 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanHandleMissingFieldsOnSomeDocuments()
         {
             using (var store = GetDocumentStore())
@@ -490,7 +491,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var o = {
@@ -561,7 +562,7 @@ loadToOrders(partitionBy(key), o);
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanHandleNullFieldValuesOnSomeDocument()
         {
             using (var store = GetDocumentStore())
@@ -587,7 +588,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var o = {
@@ -652,7 +653,7 @@ loadToOrders(partitionBy(key), o);
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanUseSettingFromScript()
         {
             using (var store = GetDocumentStore())
@@ -685,7 +686,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var transformationScript = @"
 var o = {
@@ -740,7 +741,7 @@ loadToOrders(partitionBy(key), o);
                         }
                 };
 
-                AddEtl(store, configuration, connectionString);
+                Etl.AddEtl(store, configuration, connectionString);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -749,7 +750,7 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task LastModifiedTicksShouldMatch()
         {
             using (var store = GetDocumentStore())
@@ -786,7 +787,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var o = {
@@ -800,7 +801,6 @@ var key = new Date(year, month);
 
 loadToOrders(partitionBy(key), o);
 ";
-
 
                 var path = NewDataPath(forceCreateDir: true);
                 SetupLocalOlapEtl(store, script, path);
@@ -865,7 +865,7 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanModifyIdColumnName()
         {
             using (var store = GetDocumentStore())
@@ -900,7 +900,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var o = {
@@ -1002,7 +1002,7 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task SimpleTransformation_NoPartition()
         {
             using (var store = GetDocumentStore())
@@ -1025,7 +1025,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 loadToOrders(noPartition(),
@@ -1098,7 +1098,7 @@ loadToOrders(noPartition(),
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task SimpleTransformation_MultiplePartitions()
         {
             using (var store = GetDocumentStore())
@@ -1139,7 +1139,7 @@ loadToOrders(noPartition(),
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -1208,7 +1208,7 @@ loadToOrders(partitionBy(
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanHandleLazyNumbersWithTypeChanges()
         {
             using (var store = GetDocumentStore())
@@ -1248,7 +1248,7 @@ loadToOrders(partitionBy(
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
     loadToUsers(noPartition(), {
@@ -1315,14 +1315,15 @@ loadToOrders(partitionBy(
 
         }
 
-        [Fact]
-        public async Task SimpleTransformation_CanUseSampleData()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SimpleTransformation_CanUseSampleData(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 long expectedCount;
                 using (var session = store.OpenAsyncSession())
@@ -1337,7 +1338,7 @@ loadToOrders(partitionBy(
                     expectedCount = await query.CountAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 3);
 
                 var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -1367,10 +1368,11 @@ for (var i = 0; i < this.Lines.length; i++) {
             }
         }
 
-        [Fact]
-        public async Task CanSpecifyColumnTypeInScript()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanSpecifyColumnTypeInScript(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1404,7 +1406,7 @@ for (var i = 0; i < this.Lines.length; i++) {
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 for (var i = 0; i < this.Lines.length; i++) {
@@ -1464,10 +1466,11 @@ for (var i = 0; i < this.Lines.length; i++) {
             }
         }
 
-        [Fact]
-        public async Task CanSpecifyColumnTypeInScript2()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanSpecifyColumnTypeInScript2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1489,7 +1492,7 @@ for (var i = 0; i < this.Lines.length; i++) {
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 loadToUsers(noPartition(), {
@@ -1605,12 +1608,13 @@ loadToUsers(noPartition(), {
 
         }
 
-        [Fact]
-        public async Task LocalOlapShouldCreateSubFoldersAccordingToPartition()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task LocalOlapShouldCreateSubFoldersAccordingToPartition(Options options)
         {
             var countries = new[] { "Argentina", "Brazil", "Israel", "Poland", "United States" };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -1638,7 +1642,7 @@ loadToUsers(noPartition(), {
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 3);
 
                 var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -1748,12 +1752,13 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
             }
         }
 
-        [Fact]
-        public async Task ShouldCreateLocalFolderIfNotExists()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldCreateLocalFolderIfNotExists(Options options)
         {
             // RavenDB-16663
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -1777,7 +1782,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 3);
 
                 var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -1814,10 +1819,12 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [NightlyBuildFact]
-        public async Task CanUpdateDocIdColumnName()
+        [NightlyBuildTheory]
+        [InlineData(RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded)]
+        public async Task CanUpdateDocIdColumnName(RavenDatabaseMode databaseMode)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -1841,7 +1848,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 3);
 
                 var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -1881,7 +1888,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     }
                 };
 
-                var result = AddEtl(store, configuration, connectionString);
+                var result = Etl.AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
                 Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
@@ -1933,7 +1940,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     await session.SaveChangesAsync();
                 }
 
-                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
                 Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
@@ -1961,10 +1968,12 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [NightlyBuildFact]
-        public async Task CanUpdateRunFrequency()
+        [NightlyBuildTheory]
+        [InlineData(RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded)]
+        public async Task CanUpdateRunFrequency(RavenDatabaseMode databaseMode)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -1988,7 +1997,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 3);
 
                 var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -2028,7 +2037,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     }
                 };
 
-                var result = AddEtl(store, configuration, connectionString);
+                var result = Etl.AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
                 var database = await GetDatabase(store.Database);
@@ -2075,7 +2084,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     await session.SaveChangesAsync();
                 }
 
-                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
                 Assert.True(etlDone.Wait(timeout), await GetPerformanceStats(store.Database, timeout));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
@@ -2089,10 +2098,12 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [NightlyBuildFact]
-        public async Task CanUpdateCustomPartitionValue()
+        [NightlyBuildTheory]
+        [InlineData(RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded)]
+        public async Task CanUpdateCustomPartitionValue(RavenDatabaseMode databaseMode)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -2116,7 +2127,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 3);
 
                 var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -2159,7 +2170,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                     }
                 };
 
-                var result = AddEtl(store, configuration, connectionString);
+                var result = Etl.AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
                 Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
@@ -2200,7 +2211,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                     await session.SaveChangesAsync();
                 }
 
-                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
                 Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
@@ -2213,10 +2224,12 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
             }
         }
 
-        [NightlyBuildFact]
-        public async Task CanUpdateLocalSettings()
+        [NightlyBuildTheory]
+        [InlineData(RavenDatabaseMode.Single)]
+        [InlineData(RavenDatabaseMode.Sharded)]
+        public async Task CanUpdateLocalSettings(RavenDatabaseMode databaseMode)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
                 var dt = new DateTime(2020, 1, 1);
 
@@ -2240,7 +2253,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 3);
 
                 var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -2281,7 +2294,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                         FolderPath = path
                     }
                 };
-                var result = AddEtl(store, configuration, connectionString);
+                var result = Etl.AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
                 Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
@@ -2343,7 +2356,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     await session.SaveChangesAsync();
                 }
 
-                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
                 Assert.True(etlDone.Wait(_defaultTimeout), await GetPerformanceStats(store.Database, _defaultTimeout));
 
                 files = Directory.GetFiles(newPath, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
@@ -2357,12 +2370,12 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [Fact]
-        public async Task LastModifiedShouldBeMillisecondsSinceUnixEpoch()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task LastModifiedShouldBeMillisecondsSinceUnixEpoch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-
                 var dt = new DateTime(2020, 1, 1);
 
                 using (var session = store.OpenAsyncSession())
@@ -2377,7 +2390,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -2464,7 +2477,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             return scriptPath;
         }
 
-        internal static AddEtlOperationResult SetupLocalOlapEtl(DocumentStore store, string script, string path, string name = "olap-test", string frequency = null, string transformationName = null)
+        internal AddEtlOperationResult SetupLocalOlapEtl(DocumentStore store, string script, string path, string name = "olap-test", string frequency = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to local";
             var configuration = new OlapEtlConfiguration
@@ -2486,7 +2499,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             return SetupLocalOlapEtl(store, configuration, path, connectionStringName);
         }
 
-        private static AddEtlOperationResult SetupLocalOlapEtl(DocumentStore store, OlapEtlConfiguration configuration, string path, string connectionStringName)
+        private AddEtlOperationResult SetupLocalOlapEtl(DocumentStore store, OlapEtlConfiguration configuration, string path, string connectionStringName)
         {
             var connectionString = new OlapConnectionString
             {
@@ -2497,7 +2510,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
             };
 
-            return FailoverTests.AddOlapEtl(store, configuration, connectionString);
+            return Etl.AddEtl(store, configuration, connectionString);
         }
 
         private async Task<string> GetPerformanceStats(string database, TimeSpan timeout)

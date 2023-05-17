@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
@@ -14,19 +15,21 @@ using Raven.Client.Json;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
-    public class BackupTests : EtlTestBase
+    public class BackupTests : RavenTestBase
     {
         public BackupTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public async Task CanExportAndImportOlapEtl()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanExportAndImportOlapEtl(Options options)
         {
             var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -43,7 +46,7 @@ loadToOrders(partitionBy(key),
 
             var path = NewDataPath();
 
-            using (var source = GetDocumentStore())
+            using (var source = GetDocumentStore(options))
             using (var destination1 = GetDocumentStore())
             using (var destination2 = GetDocumentStore())
             using (var destination3 = GetDocumentStore())
@@ -107,7 +110,7 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(BackupType.Backup)]
         [InlineData(BackupType.Snapshot)]
         public async Task CanBackupAndRestoreOlapEtl(BackupType backupType)
@@ -183,7 +186,7 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(true, true)]
         [InlineData(true, false)]
         [InlineData(false, true)]
@@ -267,7 +270,7 @@ loadToOrders(partitionBy(key),
                 }
             };
 
-            AddEtl(store, configuration, connectionString);
+            Etl.AddEtl(store, configuration, connectionString);
         }
     }
 }
