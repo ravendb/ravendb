@@ -4,7 +4,7 @@ import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { IndexInfo, IndexCleanup, UnmergableIndexInfo } from "./IndexCleanup";
 
 export default {
-    title: "Pages/Index Cleanup",
+    title: "Pages/Indexes/Index Cleanup",
     component: IndexCleanup,
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof IndexCleanup>;
@@ -68,7 +68,7 @@ export const SomeEmpty: ComponentStory<typeof IndexCleanup> = () => {
     );
 };
 
-export const CleanupSugestions: ComponentStory<typeof IndexCleanup> = () => {
+export const CleanupSuggestions: ComponentStory<typeof IndexCleanup> = () => {
     const mergableIndexes: IndexInfo[][] = [
         [
             {
