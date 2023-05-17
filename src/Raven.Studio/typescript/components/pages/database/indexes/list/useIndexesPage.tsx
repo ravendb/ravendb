@@ -252,7 +252,7 @@ export function useIndexesPage(database: database, stale: boolean) {
 
                     const indexStatus = index.nodesInfo.find((x) => _.isEqual(x.location, location))?.details?.status;
 
-                    if (indexStatus === "Paused") {
+                    if (indexStatus === "Paused" || indexStatus === "Disabled") {
                         continue;
                     }
 
