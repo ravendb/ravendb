@@ -54,7 +54,7 @@ namespace SlowTests.Issues
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreated(_ => { }, token);
                 }
 
 
@@ -122,7 +122,7 @@ namespace SlowTests.Issues
                 db = await Databases.GetDocumentDatabaseInstanceFor(store1, store1.Database);
                 IOperationResult enforceResult;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    enforceResult = await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+                    enforceResult = await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreated(_ => { }, token);
                 
                 var val = await WaitForValueAsync(() =>
                     {
@@ -227,7 +227,7 @@ namespace SlowTests.Issues
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store1, store1.Database);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreated(_ => { }, token);
 
                 await UpdateConflictResolver(store1, resolveToLatest: true);
 
