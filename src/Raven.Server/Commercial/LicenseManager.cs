@@ -112,8 +112,6 @@ namespace Raven.Server.Commercial
             _serverStore = serverStore;
             _licenseHelper = new LicenseHelper(serverStore);
             _skipLeasingErrorsLogging = serverStore.Configuration.Licensing.SkipLeasingErrorsLogging;
-
-            ClusterCommandsVersionManager.AfterClusterVersionSetting += PutMyNodeInfoAfterClusterVersionSetting;
         }
 
         public bool IsEulaAccepted => _eulaAcceptedButHasPendingRestart || _serverStore.Configuration.Licensing.EulaAccepted;
@@ -139,6 +137,11 @@ namespace Raven.Server.Commercial
                 // on a fresh server we are setting the amount of cores in the default license (3)
                 ReloadLicense(firstRun: true);
                 ReloadLicenseLimits(firstRun: true);
+
+                if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion > 0)
+                    Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
+                else
+                    ClusterCommandsVersionManager.OnClusterVersionChange += PutMyNodeInfoClusterVersionChange;
             }
             catch (Exception e)
             {
@@ -154,13 +157,13 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public void PutMyNodeInfoAfterClusterVersionSetting(object sender, AfterClusterVersionSettingEventArgs args)
+        public void PutMyNodeInfoClusterVersionChange(object sender, ClusterVersionChangeEventArgs args)
         {
-            if (args.PreviousClusterVersion >= args.CurrentClusterVersion)
+            if (args.PreviousClusterVersion != 0)
                 return;
 
             Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
-            ClusterCommandsVersionManager.AfterClusterVersionSetting -= PutMyNodeInfoAfterClusterVersionSetting;
+            ClusterCommandsVersionManager.OnClusterVersionChange -= PutMyNodeInfoClusterVersionChange;
         }
 
         public async Task PutMyNodeInfoAsync()

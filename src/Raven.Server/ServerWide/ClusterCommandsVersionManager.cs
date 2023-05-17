@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly int MyCommandsVersion;
 
-        public static event EventHandler<AfterClusterVersionSettingEventArgs> AfterClusterVersionSetting;
+        public static event EventHandler<ClusterVersionChangeEventArgs> OnClusterVersionChange;
 
         public static int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;
         private static int _currentClusterMinimalVersion;
@@ -169,38 +169,21 @@ namespace Raven.Server.ServerWide
                 ThrowInvalidClusterVersion(version);
 
             var previousVersion = _currentClusterMinimalVersion;
-            int currentVersion;
             while (true)
             {
-                currentVersion = _currentClusterMinimalVersion;
+                int currentVersion = _currentClusterMinimalVersion;
                 if (currentVersion == version)
                     break;
                 Interlocked.CompareExchange(ref _currentClusterMinimalVersion, version, currentVersion);
             }
+
+            if (previousVersion == version)
+                return;
             
-            if (Log.IsInfoEnabled && previousVersion != version) 
-                Log.Info($"Cluster version was changed from {currentVersion} to {version}");
-
-            AfterClusterVersionSetting?.Invoke(null, new AfterClusterVersionSettingEventArgs(previousVersion, currentVersion));
-        }
-
-        public static void SetMinimalClusterVersion(int version)
-        {
-            var fromVersion = _currentClusterMinimalVersion;
-            int currentVersion;
-            while (true)
-            {
-                currentVersion = _currentClusterMinimalVersion;
-                var minimalVersion = Math.Min(currentVersion, version);
-                if (currentVersion <= minimalVersion)
-                    break;
-                Interlocked.CompareExchange(ref _currentClusterMinimalVersion, minimalVersion, currentVersion);
-            }
-        
-            if (fromVersion != currentVersion && Log.IsInfoEnabled)
-            {
-                Log.Info($"Cluster version was changed from {fromVersion} to {currentVersion}");
-            }
+            OnClusterVersionChange?.Invoke(null, new ClusterVersionChangeEventArgs(previousVersion, version));
+            
+            if (Log.IsInfoEnabled) 
+                Log.Info($"Cluster version was changed from {previousVersion} to {version}");
         }
 
         public static int GetClusterMinimalVersion(List<int> versions, int? maximalVersion)
@@ -237,13 +220,13 @@ namespace Raven.Server.ServerWide
         }
     }
 
-    public class AfterClusterVersionSettingEventArgs : EventArgs
+    public class ClusterVersionChangeEventArgs : EventArgs
     {
         public int PreviousClusterVersion { get; }
 
         public int CurrentClusterVersion { get; }
 
-        public AfterClusterVersionSettingEventArgs(int previousClusterVersion, int currentClusterVersion)
+        public ClusterVersionChangeEventArgs(int previousClusterVersion, int currentClusterVersion)
         {
             PreviousClusterVersion = previousClusterVersion;
             CurrentClusterVersion = currentClusterVersion;
