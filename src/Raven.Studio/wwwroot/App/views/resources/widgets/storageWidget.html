@@ -37,7 +37,7 @@
                                     data-bind="text: $root.sizeFormatter(totalCapacity())"></div>
                             </div>
                             <div class="storage-chart" data-bind="style: { width: scaleFactor() + '%' }">
-                                <div class="storage-used" data-bind="style: { width: usedSpacePercentage() + '%' }">
+                                <div class="storage-used d-flex align-items-center" data-bind="style: { width: usedSpacePercentage() + '%' }">
                                     <div class="storage-ravendb" data-bind="style: { width: ravendbToUsedSpacePercentage() + '%' }"></div>
                                     <div class="storage-ravendb-temp-buffers" data-bind="style: { width: ravendbTempBuffersToUsedSpacePercentage() + '%' }"></div>
                                 </div>
