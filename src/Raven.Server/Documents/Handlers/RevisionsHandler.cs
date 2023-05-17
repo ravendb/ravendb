@@ -132,12 +132,13 @@ namespace Raven.Server.Documents.Handlers
         {
             var token = CreateTimeLimitedBackgroundOperationToken();
             var operationId = ServerStore.Operations.GetNextOperationId();
+            bool includeForceCreated = GetBoolValueQueryString("includeForceCreated", required: true) ?? true;
 
             var t = Database.Operations.AddOperation(
                 Database,
                 $"Enforce revision configuration in database '{Database.Name}'.",
                 Operations.Operations.OperationType.EnforceRevisionConfiguration,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress, token),
+                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress, includeForceCreated, token),
                 operationId,
                 token: token);
 

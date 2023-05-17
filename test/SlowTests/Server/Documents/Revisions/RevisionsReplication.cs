@@ -281,7 +281,7 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreated(_ => { }, token);
 
                 WaitForMarker(store1, store2);
 
@@ -935,7 +935,7 @@ namespace SlowTests.Server.Documents.Revisions
                 EnforceConfigurationResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
-                    result = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress: null, token: token);
+                    result = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreated(onProgress: null, token: token);
                 }
 
                 Assert.Equal(11, result.ScannedRevisions);

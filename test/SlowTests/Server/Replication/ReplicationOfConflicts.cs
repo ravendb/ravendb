@@ -458,7 +458,7 @@ namespace SlowTests.Server.Replication
 
                 var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 var token = new OperationCancelToken(TimeSpan.FromSeconds(60), CancellationToken.None, CancellationToken.None);
-                await db1.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress: null, token);
+                await db1.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreated(onProgress: null, token);
 
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store3);
