@@ -647,24 +647,24 @@ namespace Raven.Server.Documents.Revisions
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return false;
 
-            if (configuration.MinimumRevisionsToKeep.HasValue == false &&
-                configuration.MinimumRevisionAgeToKeep.HasValue == false)
-                return false;
-
             long numberOfRevisionsToDelete;
-
-            if (configuration == ConflictConfiguration.Default || 
-                configuration == ZeroConfiguration)
+            if (deletedDoc && configuration.PurgeOnDelete)
+            {
+                numberOfRevisionsToDelete = long.MaxValue;
+                moreRevisionToDelete = false;
+            }
+            else if (configuration == ConflictConfiguration.Default || 
+                     configuration == ZeroConfiguration)
             {
                 var handleNotConflicted = nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
                 var deletedCount = HandleConflictRevisionsDelete(context, table, prefixSlice, collectionName, changeVector, revisionsCount, lastModifiedTicks, handleNotConflicted, skipForceCreated, out var moreWork);
                 IncrementCountOfRevisions(context, prefixSlice, -deletedCount);
                 return moreWork;
             }
-            else if (deletedDoc && configuration.PurgeOnDelete)
+            else if (configuration.MinimumRevisionsToKeep.HasValue == false &&
+                     configuration.MinimumRevisionAgeToKeep.HasValue == false)
             {
-                numberOfRevisionsToDelete = long.MaxValue;
-                moreRevisionToDelete = false;
+                return false;
             }
             else if (configuration.MinimumRevisionsToKeep.HasValue)
             {
