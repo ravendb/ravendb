@@ -852,7 +852,7 @@ namespace Raven.Server.Documents.Revisions
             string changeVector, long lastModifiedTicks, 
             List<(string ChangeVector, long Etag, DocumentFlags Flags, string CollectionName)> revisionsToRemove)
         {
-            Table writeTable = null;
+            var writeTables = new Dictionary<string, Table>();
             long maxEtagDeleted = 0;
             string currentCollection = null;
 
@@ -865,27 +865,23 @@ namespace Raven.Server.Documents.Revisions
                     maxEtagDeleted = Math.Max(maxEtagDeleted, revisionInfo.Etag);
                     if ((revisionInfo.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     {
-                        using (DocumentIdWorker.GetSliceFromId(context, revisionInfo.ChangeVector, out var cvSlice))
-                        using (GetKeyPrefix(context, cvSlice, out var cvPrefixSlice))
+                        if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr))
                         {
-                            if (table.SeekOnePrimaryKeyPrefix(cvPrefixSlice, out TableValueReader tvr))
-                            {
-                                using (var revision = TableValueToRevision(context, ref tvr))
-                                    _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
-                            }
-                            else
-                            {
-                                throw new VoronErrorException($"Failed to remove revision with change vector {revisionInfo.ChangeVector}");
-                            }
+                            using (var revision = TableValueToRevision(context, ref tvr))
+                                _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
+                        }
+                        else
+                        {
+                            throw new VoronErrorException($"Failed to remove revision with change vector {revisionInfo.ChangeVector}");
                         }
                     }
 
-                    if (writeTable == null || revisionInfo.CollectionName != currentCollection)
+                    Table writeTable = null;
+                    if (writeTables.TryGetValue(revisionInfo.CollectionName, out writeTable) == false)
                     {
-                        currentCollection = revisionInfo.CollectionName;
                         writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(revisionInfo.CollectionName));
+                        writeTables[revisionInfo.CollectionName] = writeTable;
                     }
-
                     writeTable.DeleteByKey(keySlice);
                 }
             }
