@@ -1,13 +1,16 @@
 ﻿import React, { useRef, useState } from "react";
-
 import { Icon } from "components/common/Icon";
 import { Badge, Button, Card, Carousel, CarouselItem, Nav, NavItem, Table } from "reactstrap";
 import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
 import { Checkbox } from "components/common/Checkbox";
-
 import moment from "moment";
 import { EmptySet } from "components/common/EmptySet";
 import classNames from "classnames";
+
+const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
+const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
+const removeUnusedImg = require("Content/img/pages/indexCleanup/remove-unused.svg");
+const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-indexes.svg");
 
 export interface IndexInfo {
     indexName: string;
@@ -21,21 +24,13 @@ export interface UnmergableIndexInfo {
     unmergableReason: string;
 }
 
-const formatDate = (date: Date) => {
-    return (
-        <>
-            {moment.utc(date).local().fromNow()}{" "}
-            <small className="text-muted">({moment.utc(date).format("MM/DD/YY, h:mma")})</small>
-        </>
-    );
-};
-
 interface IndexCleanupProps {
     mergableIndexes: IndexInfo[][];
     subIndexes: IndexInfo[];
     unusedIndexes: IndexInfo[];
     unmergableIndexes: UnmergableIndexInfo[];
 }
+
 export function IndexCleanup(props: IndexCleanupProps) {
     const { mergableIndexes, subIndexes, unusedIndexes, unmergableIndexes } = props;
 
@@ -46,21 +41,10 @@ export function IndexCleanup(props: IndexCleanupProps) {
         if (unmergableIndexes.length !== 0) return 3;
         return 0;
     }
-    const mergeIndexesImg = require("Content/img/pages/indexCleanup/merge-indexes.svg");
-    const removeSubindexesImg = require("Content/img/pages/indexCleanup/remove-subindexes.svg");
-    const removeUnusedImg = require("Content/img/pages/indexCleanup/remove-unused.svg");
-    const unmergableIndexesImg = require("Content/img/pages/indexCleanup/unmergable-indexes.svg");
 
     const [currentActiveTab, setCurrentActiveTab] = useState(activeNonEmpty());
     const [carouselHeight, setCarouselHeight] = useState(null);
     const carouselRefs = useRef([]);
-
-    const toggleTab = (tab: number) => {
-        if (currentActiveTab !== tab) {
-            setHeight();
-            setCurrentActiveTab(tab);
-        }
-    };
 
     const setHeight = () => {
         const activeCarouselItem = carouselRefs.current[currentActiveTab];
@@ -69,8 +53,11 @@ export function IndexCleanup(props: IndexCleanupProps) {
         }
     };
 
-    const onCarouselExiting = () => {
-        setHeight();
+    const toggleTab = (tab: number) => {
+        if (currentActiveTab !== tab) {
+            setHeight();
+            setCurrentActiveTab(tab);
+        }
     };
 
     const onCarouselExited = () => {
@@ -180,7 +167,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                 next={() => console.log(carouselRefs.current[currentActiveTab].clientHeight)}
                 previous={() => console.log("previous")}
             >
-                <CarouselItem onExiting={onCarouselExiting} onExited={onCarouselExited} key={"carousel-1"}>
+                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key={"carousel-1"}>
                     <div ref={(el) => (carouselRefs.current[0] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4 d-block">
@@ -188,8 +175,9 @@ export function IndexCleanup(props: IndexCleanupProps) {
                                     <h2>Merge indexes</h2>
                                     Combining several indexes with similar purposes into a single index can reduce the
                                     number of times that data needs to be scanned.
-                                    <br />A <strong>NEW</strong> merged index definition is created. The original
-                                    indexes can then be removed.
+                                    <br />
+                                    Once a <strong>NEW</strong> merged index definition is created, the original indexes
+                                    can be removed.
                                 </div>
                             </Card>
                             <div className="p-2">
@@ -256,7 +244,7 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem onExiting={onCarouselExiting} onExited={onCarouselExited} key={"carousel-2"}>
+                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key={"carousel-2"}>
                     <div ref={(el) => (carouselRefs.current[1] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
@@ -350,14 +338,17 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem onExiting={onCarouselExiting} onExited={onCarouselExited} key={"carousel-3"}>
+                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key={"carousel-3"}>
                     <div ref={(el) => (carouselRefs.current[2] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
                                 <div className="text-limit-width">
                                     <h2>Remove unused indexes</h2>
-                                    Unused indexes still consume resources. We provide a list of indexes that have not
-                                    been queried for over a week for you to review and/or delete them.
+                                    Unused indexes still consume resources.
+                                    <br />
+                                    Indexes that have not been queried for over a week are listed below.
+                                    <br />
+                                    Review the list and consider deleting any unnecessary indexes.
                                 </div>
                             </Card>
                             {unusedIndexes.length === 0 ? (
@@ -423,13 +414,14 @@ export function IndexCleanup(props: IndexCleanupProps) {
                         </Card>
                     </div>
                 </CarouselItem>
-                <CarouselItem onExiting={onCarouselExiting} onExited={onCarouselExited} key={"carousel-4"}>
+                <CarouselItem onExiting={setHeight} onExited={onCarouselExited} key={"carousel-4"}>
                     <div ref={(el) => (carouselRefs.current[3] = el)}>
                         <Card>
                             <Card className="bg-faded-primary p-4">
                                 <div className="text-limit-width">
                                     <h2>Unmergable indexes</h2>
-                                    TODO: Add description
+                                    The following indexes cannot be merged. <br />
+                                    See the specific reason explanation provided for each index.
                                 </div>
                             </Card>
 
@@ -480,3 +472,12 @@ export function IndexCleanup(props: IndexCleanupProps) {
         </div>
     );
 }
+
+const formatDate = (date: Date) => {
+    return (
+        <>
+            {moment.utc(date).local().fromNow()}{" "}
+            <small className="text-muted">({moment.utc(date).format("MM/DD/YY, h:mma")})</small>
+        </>
+    );
+};

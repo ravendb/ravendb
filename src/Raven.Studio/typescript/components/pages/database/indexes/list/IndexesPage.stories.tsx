@@ -9,7 +9,7 @@ import { IndexesStubs } from "test/stubs/IndexesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Indexes page",
+    title: "Pages/Indexes/List of indexes",
     component: IndexesPage,
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof IndexesPage>;
