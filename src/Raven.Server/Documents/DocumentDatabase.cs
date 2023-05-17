@@ -1816,8 +1816,24 @@ namespace Raven.Server.Documents
 
         public void CheckWriteRateAndNotifyIfNecessary(IoChange ioChange)
         {
-            if (ioChange.MeterItem.Duration.TotalMilliseconds < 500 ||  // we don't want to raise the error too often
-                ioChange.MeterItem.RateOfWritesInMbPerSec > 1) 
+            switch (ioChange.MeterItem.Type)
+            {
+                case IoMetrics.MeterType.Compression:
+                    return; // In-memory operation, no action required.
+
+                case IoMetrics.MeterType.JournalWrite:
+                    if (ioChange.MeterItem.Duration.TotalMilliseconds < 500)
+                        return;
+                    break;
+
+                case IoMetrics.MeterType.DataFlush:
+                case IoMetrics.MeterType.DataSync:
+                    if (ioChange.MeterItem.Duration.TotalMilliseconds < 120_000)
+                        return;
+                    break;
+            }
+            
+            if (ioChange.MeterItem.RateOfWritesInMbPerSec > 1) 
                 return;
 
             NotificationCenter.SlowWrites.Add(ioChange);
