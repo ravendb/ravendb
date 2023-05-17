@@ -134,8 +134,12 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 DataDirectory = originalResult.DataDirectory
             });
 
-            var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
-            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(10_000)));
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
+            {
+                var waitForNotPassive = await revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, cts.Token);
+                Assert.True(waitForNotPassive);
+            }
+
             using (var session = src.OpenSession())
             {
                 session.Store(new User()
@@ -231,8 +235,11 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
 
             await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(responsibleNodeNodeTag));
 
-            var waitForPassive = mentorNode.ServerStore.Engine.WaitForState(RachisState.Passive, CancellationToken.None);
-            Assert.True(waitForPassive.Wait(TimeSpan.FromSeconds(10_000)));
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
+            {
+                var waitForNotPassive = await mentorNode.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, cts.Token);
+                Assert.True(waitForNotPassive);
+            }
 
             var val = await WaitForValueAsync(async () =>
                 {
@@ -396,8 +403,13 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                     RunInMemory = true,
                     DataDirectory = disposedServer.DataDirectory
                 });
-                var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
-                Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20_000)));
+
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
+            {
+                var waitForNotPassive = await revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, cts.Token);
+                Assert.True(waitForNotPassive);
+            }
+
                 Assert.True(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2", 30_000));
                 Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 3));
                 Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
