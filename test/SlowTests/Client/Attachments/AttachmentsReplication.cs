@@ -614,8 +614,7 @@ namespace SlowTests.Client.Attachments
                 await SetupAttachmentReplicationAsync(store1, store2);
                 await SetupAttachmentReplicationAsync(store2, store1);
 
-                await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
-                await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "foo", 15_000);
 
                 var stats1 = await GetDatabaseStatisticsAsync(store1);
                 var stats2 = await GetDatabaseStatisticsAsync(store2);
@@ -632,11 +631,13 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                WaitForMarker(store1, store2, "marker/1$users/1");
-                WaitForMarker(store2, store1, "marker/2$users/1");
-
+                Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Age == 30, 15_000));
+                
                 await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+
+                WaitForMarker(store1, store2);
+                WaitForMarker(store2, store1);
 
                 stats1 = await GetDatabaseStatisticsAsync(store1);
                 stats2 = await GetDatabaseStatisticsAsync(store2);
@@ -653,13 +654,11 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "bar", fileStream, null));
                     Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", result.Hash);
                 }
-
 
                 using (var session = store1.OpenSession())
                 {
@@ -675,11 +674,13 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                WaitForMarker(store1, store2, "marker/3$users/1");
-                WaitForMarker(store2, store1, "marker/4$users/1");
+                Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Age == 60, 15_000));
 
                 await store1.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
                 await store2.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+
+                WaitForMarker(store1, store2);
+                WaitForMarker(store2, store1);
 
                 stats1 = await GetDatabaseStatisticsAsync(store1);
                 stats2 = await GetDatabaseStatisticsAsync(store2);
