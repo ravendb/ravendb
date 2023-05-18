@@ -1,24 +1,31 @@
-﻿import React, { useState } from "react";
+﻿import React, { ReactNode, useState } from "react";
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import { IndexSharedInfo } from "components/models/indexes";
 import { MultipleDatabaseLocationSelector } from "components/common/MultipleDatabaseLocationSelector";
 import { capitalize } from "lodash";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
+import classNames from "classnames";
 
 type operationType = "pause" | "disable" | "start";
 
 interface IndexGroup {
-    title: string;
-    indexesNames: string[];
+    title: string | ReactNode;
+    indexes: IndexInfo[];
+    destinationStatus?: Raven.Client.Documents.Indexes.IndexRunningStatus;
+}
+
+interface IndexInfo {
+    name: string;
+    currentStatus: Raven.Client.Documents.Indexes.IndexRunningStatus;
 }
 
 interface AffectedIndexesGrouped {
-    disabling?: string[];
-    pausing?: string[];
-    enabling?: string[];
-    resuming?: string[];
-    skipping?: string[];
+    disabling?: IndexInfo[];
+    pausing?: IndexInfo[];
+    enabling?: IndexInfo[];
+    resuming?: IndexInfo[];
+    skipping?: IndexInfo[];
 }
 
 interface BulkIndexOperationConfirmProps {
@@ -38,9 +45,9 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
     const [selectedLocations, setSelectedLocations] = useState<databaseLocationSpecifier[]>(() => locations);
 
     const title = infinitive + " indexing?";
+
     const showContextSelector = locations.length > 1;
 
-    // TODO: @kwiato styling indexes list
     const indexGroups = getIndexGroups(type, indexes);
 
     const onSubmit = () => {
@@ -51,28 +58,49 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5">
             <ModalHeader toggle={toggle}>{title}</ModalHeader>
-            <ModalBody>
-                {indexGroups.map((indexGroup) => {
-                    if (indexGroup.indexesNames.length === 0) {
+            <ModalBody className="vstack gap-4">
+                {indexGroups.map((indexGroup, index) => {
+                    if (indexGroup.indexes.length === 0) {
                         return;
                     }
 
                     return (
-                        <div key={indexGroup.title}>
-                            <span>{indexGroup.title}</span>
-                            <ul>
-                                {indexGroup.indexesNames.map((indexName) => (
-                                    <li key={indexName} className="padding-xxs">
-                                        {indexName}
-                                    </li>
+                        <div key={"indexGroup" + index}>
+                            <div className="lead mb-2">{indexGroup.title}</div>
+                            <div className="vstack gap-1">
+                                {indexGroup.indexes.map((index) => (
+                                    <div key={index.name} className="d-flex">
+                                        <div
+                                            className={classNames(
+                                                "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
+                                            )}
+                                        >
+                                            <Icon
+                                                icon={getStatusIcon(index.currentStatus)}
+                                                color={getStatusColor(index.currentStatus)}
+                                                margin="m-0"
+                                            />
+                                            {indexGroup.destinationStatus && (
+                                                <>
+                                                    <Icon icon="arrow-thin-right" margin="mx-1" className="fs-6" />
+                                                    <Icon
+                                                        icon={getStatusIcon(indexGroup.destinationStatus)}
+                                                        color={getStatusColor(indexGroup.destinationStatus)}
+                                                        margin="m-0"
+                                                    />
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className="word-break align-self-center">{index.name}</div>
+                                    </div>
                                 ))}
-                            </ul>
+                            </div>
                         </div>
                     );
                 })}
                 {showContextSelector && (
                     <div>
-                        <p>Select context:</p>
+                        <h4>Select context:</h4>
                         <MultipleDatabaseLocationSelector
                             locations={locations}
                             selectedLocations={selectedLocations}
@@ -85,7 +113,7 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
                 <Button color="secondary" onClick={toggle}>
                     Cancel
                 </Button>
-                <Button color="danger" onClick={onSubmit}>
+                <Button color={getColorForType(type)} onClick={onSubmit}>
                     <Icon icon={icon} /> {infinitive}
                 </Button>
             </ModalFooter>
@@ -95,6 +123,44 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
 
 function getInfinitiveForType(type: operationType) {
     return capitalize(type);
+}
+
+function getColorForType(type: operationType) {
+    switch (type) {
+        case "pause":
+            return "warning";
+        case "disable":
+            return "danger";
+        case "start":
+            return "success";
+        default:
+            "primary";
+    }
+}
+
+function getStatusIcon(status: Raven.Client.Documents.Indexes.IndexRunningStatus) {
+    switch (status) {
+        case "Disabled":
+            return "stop";
+        case "Paused":
+            return "pause";
+        case "Running":
+            return "play";
+        default:
+            return "index";
+    }
+}
+function getStatusColor(status: Raven.Client.Documents.Indexes.IndexRunningStatus) {
+    switch (status) {
+        case "Disabled":
+            return "danger";
+        case "Paused":
+            return "warning";
+        case "Running":
+            return "success";
+        default:
+            return "primary";
+    }
 }
 
 function getIcon(type: operationType) {
@@ -116,9 +182,13 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
             const affectedIndexGrouped: AffectedIndexesGrouped = indexes.reduce(
                 (accumulator: AffectedIndexesGrouped, currentValue: IndexSharedInfo) => {
                     if (currentValue.nodesInfo.every((x) => x.details?.status === "Disabled")) {
-                        accumulator.skipping.push(currentValue.name);
+                        accumulator.skipping.push({ name: currentValue.name, currentStatus: "Disabled" });
                     } else {
-                        accumulator.disabling.push(currentValue.name);
+                        if (currentValue.nodesInfo.every((x) => x.details?.status === "Paused")) {
+                            accumulator.disabling.push({ name: currentValue.name, currentStatus: "Paused" });
+                        } else {
+                            accumulator.disabling.push({ name: currentValue.name, currentStatus: "Running" });
+                        }
                     }
 
                     return accumulator;
@@ -131,22 +201,30 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
 
             return [
                 {
-                    title: "The following indexes will be disabled:",
-                    indexesNames: affectedIndexGrouped.disabling,
+                    title: (
+                        <>
+                            <strong className="text-danger">Disabling</strong> indexes:
+                        </>
+                    ),
+                    indexes: affectedIndexGrouped.disabling,
+
+                    destinationStatus: "Disabled",
                 },
-                { title: "The following indexes are already disabled:", indexesNames: affectedIndexGrouped.skipping },
+                {
+                    title: "Skipping already disabled indexes:",
+                    indexes: affectedIndexGrouped.skipping,
+                },
             ];
         }
         case "pause": {
             const affectedIndexGrouped: AffectedIndexesGrouped = indexes.reduce(
                 (accumulator: AffectedIndexesGrouped, currentValue: IndexSharedInfo) => {
-                    if (
-                        currentValue.nodesInfo.every((x) => x.details?.status === "Paused") ||
-                        currentValue.nodesInfo.every((x) => x.details?.status === "Disabled")
-                    ) {
-                        accumulator.skipping.push(currentValue.name);
+                    if (currentValue.nodesInfo.every((x) => x.details?.status === "Paused")) {
+                        accumulator.skipping.push({ name: currentValue.name, currentStatus: "Paused" });
+                    } else if (currentValue.nodesInfo.every((x) => x.details?.status === "Disabled")) {
+                        accumulator.skipping.push({ name: currentValue.name, currentStatus: "Disabled" });
                     } else {
-                        accumulator.pausing.push(currentValue.name);
+                        accumulator.pausing.push({ name: currentValue.name, currentStatus: "Running" });
                     }
 
                     return accumulator;
@@ -159,12 +237,18 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
 
             return [
                 {
-                    title: "The following indexes will be paused:",
-                    indexesNames: affectedIndexGrouped.pausing,
+                    title: (
+                        <>
+                            <strong className="text-warning">Pausing</strong> indexes:
+                        </>
+                    ),
+                    indexes: affectedIndexGrouped.pausing,
+
+                    destinationStatus: "Paused",
                 },
                 {
-                    title: "The following indexes are already paused od disabled:",
-                    indexesNames: affectedIndexGrouped.skipping,
+                    title: "Skipping already paused or disabled indexes:",
+                    indexes: affectedIndexGrouped.skipping,
                 },
             ];
         }
@@ -172,11 +256,11 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
             const affectedIndexGrouped: AffectedIndexesGrouped = indexes.reduce(
                 (accumulator: AffectedIndexesGrouped, currentValue: IndexSharedInfo) => {
                     if (currentValue.nodesInfo.some((x) => x.details?.status === "Paused")) {
-                        accumulator.resuming.push(currentValue.name);
+                        accumulator.resuming.push({ name: currentValue.name, currentStatus: "Paused" });
                     } else if (currentValue.nodesInfo.some((x) => x.details?.status === "Disabled")) {
-                        accumulator.enabling.push(currentValue.name);
+                        accumulator.enabling.push({ name: currentValue.name, currentStatus: "Disabled" });
                     } else {
-                        accumulator.skipping.push(currentValue.name);
+                        accumulator.skipping.push({ name: currentValue.name, currentStatus: "Running" });
                     }
 
                     return accumulator;
@@ -189,14 +273,29 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
             );
             return [
                 {
-                    title: "The following indexes will be enabled:",
-                    indexesNames: affectedIndexGrouped.enabling,
+                    title: (
+                        <>
+                            <strong className="text-success">Enabling</strong> indexes:
+                        </>
+                    ),
+                    indexes: affectedIndexGrouped.enabling,
+
+                    destinationStatus: "Running",
                 },
                 {
-                    title: "The following indexes will be resumed:",
-                    indexesNames: affectedIndexGrouped.resuming,
+                    title: (
+                        <>
+                            <strong className="text-success">Resuming</strong> indexes:
+                        </>
+                    ),
+                    indexes: affectedIndexGrouped.resuming,
+
+                    destinationStatus: "Running",
                 },
-                { title: "The following indexes are already running:", indexesNames: affectedIndexGrouped.skipping },
+                {
+                    title: "Skipping already running indexes:",
+                    indexes: affectedIndexGrouped.skipping,
+                },
             ];
         }
         default:

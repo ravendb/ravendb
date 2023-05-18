@@ -121,11 +121,11 @@ export function DatabasesSelectActions({
             </Checkbox>
 
             <SelectionActions active={anythingSelected && !toggleChanges}>
-                <div className="d-flex align-items-center">
-                    <div className="lead me-4 text-nowrap">
+                <div className="d-flex align-items-center justify-content-center flex-wrap gap-2">
+                    <div className="lead text-nowrap">
                         <strong className="text-emphasis me-1">{selectedDatabases.length}</strong> selected
                     </div>
-                    <ButtonGroup className="gap-2">
+                    <ButtonGroup className="gap-2 flex-wrap justify-content-center">
                         {isOperatorOrAbove() && (
                             <UncontrolledDropdown>
                                 <DropdownToggle
@@ -189,17 +189,16 @@ export function DatabasesSelectActions({
                                 color="danger"
                                 onClick={onDelete}
                                 disabled={!canDeleteSelection || deleteChanges}
-                                className="rounded-pill"
+                                className="rounded-pill flex-grow-0"
                             >
                                 {deleteChanges ? <Spinner size="sm" /> : <i className="icon-trash" />}
                                 Delete
                             </Button>
                         )}
-
-                        <Button onClick={toggleSelectAll} color="link" className="ms-2">
-                            Cancel
-                        </Button>
                     </ButtonGroup>
+                    <Button onClick={toggleSelectAll} color="link">
+                        Cancel
+                    </Button>
                 </div>
             </SelectionActions>
         </div>
