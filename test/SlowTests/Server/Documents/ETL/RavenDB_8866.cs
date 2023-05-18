@@ -2,22 +2,24 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Index = SlowTests.Issues.Index;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_8866 : EtlTestBase
+    public class RavenDB_8866 : RavenTestBase
     {
         public RavenDB_8866(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void CanResetEtl()
         {
             using (var src = GetDocumentStore())
@@ -31,9 +33,9 @@ namespace SlowTests.Server.Documents.ETL
 
                 var runs = 0;
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
-                var resetDone = WaitForEtl(src, (n, statistics) => ++runs >= 2);
+                var resetDone = Etl.WaitForEtlToComplete(src, (n, statistics) => ++runs >= 2);
 
                 var configuration = new RavenEtlConfiguration()
                 {
@@ -49,7 +51,7 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                AddEtl(src, configuration, new RavenConnectionString
+                Etl.AddEtl(src, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = dest.Urls,
@@ -64,7 +66,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void CanResetEtl2()
         {
             using (var src = GetDocumentStore())
@@ -92,7 +94,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 var mre = new ManualResetEvent(true);
                 var mre2 = new ManualResetEvent(false);
-                var etlDone = WaitForEtl(src, (n, s) =>
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) =>
                 {
                     Assert.True(mre.WaitOne(TimeSpan.FromMinutes(1)));
                     mre.Reset();
@@ -102,7 +104,7 @@ namespace SlowTests.Server.Documents.ETL
                     return true;
                 });
 
-                AddEtl(src, configuration, new RavenConnectionString
+                Etl.AddEtl(src, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = dest.Urls,
@@ -147,7 +149,7 @@ namespace SlowTests.Server.Documents.ETL
                     Transforms = { new Transformation() { Name = "allUsers", Collections = { "Users" } } }
                 };
 
-                AddEtl(src, configuration, new RavenConnectionString { Name = "test", TopologyDiscoveryUrls = dest.Urls, Database = dest.Database, });
+                Etl.AddEtl(src, configuration, new RavenConnectionString { Name = "test", TopologyDiscoveryUrls = dest.Urls, Database = dest.Database, });
 
                 var t = Task.Run(async () =>
                 {

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Orders;
 using Parquet;
 using Parquet.Data;
@@ -16,13 +17,13 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.OLAP;
-using SlowTests.Server.Documents.ETL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.ETL.Olap
 {
-    public class LocalTestsStress : EtlTestBase
+    public class LocalTestsStress : RavenTestBase
     {
         internal const string DefaultFrequency = "* * * * *"; // every minute
         private const string AllFilesPattern = "*.*";
@@ -32,7 +33,7 @@ namespace StressTests.Server.Documents.ETL.Olap
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task ShouldRespectEtlRunFrequency()
         {
             using (var store = GetDocumentStore())
@@ -56,7 +57,7 @@ namespace StressTests.Server.Documents.ETL.Olap
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var o = {
@@ -139,7 +140,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                etlDone = Etl.WaitForEtlToComplete(store);
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(60)));
 
                 var secondBatchTime = DateTime.UtcNow;
@@ -157,7 +158,7 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task AfterDatabaseRestartEtlShouldRespectRunFrequency()
         {
             using (var store = GetDocumentStore())
@@ -181,7 +182,7 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var script = @"
 var o = {
@@ -334,7 +335,7 @@ loadToOrders(partitionBy(key), o);
                 }
             };
 
-            AddEtl(store, configuration, connectionString);
+            Etl.AddEtl(store, configuration, connectionString);
         }
 
     }

@@ -1,21 +1,23 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class EtlLoaderTests : EtlTestBase
+    public class EtlLoaderTests : RavenTestBase
     {
         public EtlLoaderTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task Raises_alert_if_script_has_invalid_name()
         {
             using (var store = GetDocumentStore())
@@ -25,7 +27,7 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    var e = Assert.ThrowsAny<Exception>(() => AddEtl(store, new RavenEtlConfiguration
+                    var e = Assert.ThrowsAny<Exception>(() => Etl.AddEtl(store, new RavenEtlConfiguration
                     {
                         ConnectionStringName = "test",
                         Name = "myEtl",
@@ -51,12 +53,13 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
-        public void Raises_alert_if_scipts_have_non_unique_names()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Raises_alert_if_scipts_have_non_unique_names(Options optionsS)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(optionsS))
             {
-                var e = Assert.ThrowsAny<Exception>(() => AddEtl(store, new RavenEtlConfiguration
+                var e = Assert.ThrowsAny<Exception>(() => Etl.AddEtl(store, new RavenEtlConfiguration
                 {
                     ConnectionStringName = "test",
                     Name = "myEtl",
@@ -90,7 +93,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task EnsureETLsHaveUniqueNamesAndThrowsIfNotUnique()
         {
             using (var store = GetDocumentStore())
@@ -101,7 +104,7 @@ namespace SlowTests.Server.Documents.ETL
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
 
-                    AddEtl(store, new RavenEtlConfiguration
+                    Etl.AddEtl(store, new RavenEtlConfiguration
                     {
                         ConnectionStringName = "test",
                         Name = "myEtl",
@@ -123,7 +126,7 @@ namespace SlowTests.Server.Documents.ETL
 
                     Assert.Throws<RavenException>(() =>
                     {
-                        AddEtl(store, new RavenEtlConfiguration
+                        Etl.AddEtl(store, new RavenEtlConfiguration
                         {
                             ConnectionStringName = "test",
                             Name = "myEtl",
@@ -149,7 +152,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task Raises_alert_if_connection_string_was_not_found()
         {
             using (var store = GetDocumentStore())

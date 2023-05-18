@@ -1431,7 +1431,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     var waitHandles = etlDone.Select(mre => mre.WaitHandle).ToArray();
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
-                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/Orders";
                         var forJanuary = $"{prefix}/{partitionColumn}=2020-01-01";
@@ -1475,7 +1475,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                         }
                     }
 
-                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase_New.DefaultBackupConfiguration))
+                    using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{salesTableName}";
 

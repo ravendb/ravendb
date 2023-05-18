@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL;
@@ -7,24 +8,25 @@ using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.LowMemory;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_12079 : EtlTestBase
+    public class RavenDB_12079 : RavenTestBase
     {
         public RavenDB_12079(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Processing_in_low_memory_mode()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: null);
+                Etl.AddEtl(src, dest, "Users", script: null);
 
                 var database = GetDatabase(src.Database).Result;
 
@@ -34,7 +36,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 var numberOfDocs = EtlProcess<RavenEtlItem, ICommandData, RavenEtlConfiguration, RavenConnectionString, EtlStatsScope, EtlPerformanceOperation>.MinBatchSize + 50;
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses >= numberOfDocs);
 
                 using (var session = src.OpenSession())
                 {

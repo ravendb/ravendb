@@ -47,7 +47,7 @@ loadTo" + OrdersIndexName + @"(orderData);",
 
                 var alert = await AssertWaitForNotNullAsync(() =>
                 {
-                    TryGetLoadError(store.Database, config, out var error);
+                    Etl.TryGetLoadError(store.Database, config, out var error);
 
                     return Task.FromResult(error);
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);

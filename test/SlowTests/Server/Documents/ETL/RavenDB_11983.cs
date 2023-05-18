@@ -1,19 +1,21 @@
 ﻿using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_11983 : EtlTestBase
+    public class RavenDB_11983 : RavenTestBase
     {
         public RavenDB_11983(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task Should_have_process_per_transformation_script()
         {
             using (var store = GetDocumentStore())
@@ -23,7 +25,7 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    AddEtl(store, new RavenEtlConfiguration()
+                    Etl.AddEtl(store, new RavenEtlConfiguration()
                     {
                         ConnectionStringName = "test",
                         Name = "myFirstEtl",
@@ -51,7 +53,7 @@ namespace SlowTests.Server.Documents.ETL
 
                     Assert.Equal(2, database.EtlLoader.Processes.Length);
 
-                    AddEtl(store, new RavenEtlConfiguration()
+                    Etl.AddEtl(store, new RavenEtlConfiguration()
                     {
                         ConnectionStringName = "test",
                         Name = "mySecondEtl",

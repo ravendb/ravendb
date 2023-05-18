@@ -1,12 +1,14 @@
 ﻿using System;
 using System.IO;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_11891 : EtlTestBase
+    public class RavenDB_11891 : RavenTestBase
     {
         public RavenDB_11891(ITestOutputHelper output) : base(output)
         {
@@ -18,7 +20,7 @@ namespace SlowTests.Server.Documents.ETL
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: new string[0], script:
+                Etl.AddEtl(src, dest, collections: new string[0], script:
                     @"
     
     function deleteDocumentsBehavior(docId, collection) {
@@ -26,7 +28,7 @@ namespace SlowTests.Server.Documents.ETL
     }
 ", applyToAllDocuments: true);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -112,7 +114,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(new string[0], true)]
         [InlineData(new[] { "Users", "Employees" }, false)]
         public void Should_filter_out_deletions_using_generic_delete_behavior_function_and_marker_document(string[] collections, bool applyToAllDocuments)
@@ -120,7 +122,7 @@ namespace SlowTests.Server.Documents.ETL
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: collections, script:
+                Etl.AddEtl(src, dest, collections: collections, script:
                     @"
 function deleteDocumentsBehavior(docId, collection) {    
     var deletionCheck = load('DeletionLocalOnly/' + docId);
@@ -131,7 +133,7 @@ function deleteDocumentsBehavior(docId, collection) {
 }
 ", applyToAllDocuments: applyToAllDocuments);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -178,13 +180,13 @@ function deleteDocumentsBehavior(docId, collection) {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Should_filter_out_deletions_using_delete_behavior_function_and_marker_document()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: new[] { "Employees" }, script:
+                Etl.AddEtl(src, dest, collections: new[] { "Employees" }, script:
                     @"
 function deleteDocumentsOfEmployeesBehavior(docId) {    
     var deletionCheck = load('DeletionLocalOnly/' + docId);
@@ -196,7 +198,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
 
 ");
                 var last = 0;
-                var etlDone = WaitForEtl(src, (n, s) =>
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) =>
                 {
                     var check = s.LoadSuccesses > last;
                     last = s.LoadSuccesses;
@@ -240,7 +242,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(@"
     loadToUsers(this);
 
@@ -275,9 +277,9 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script: script);
+                Etl.AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script: script);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {

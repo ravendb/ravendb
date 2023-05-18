@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -7,7 +8,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_10674 : EtlTestBase
+    public class RavenDB_10674 : RavenTestBase
     {
         public RavenDB_10674(ITestOutputHelper output) : base(output)
         {
@@ -39,7 +40,7 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                AddEtl(src, configuration, new RavenConnectionString
+                Etl.AddEtl(src, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new []{ "http://abc.localhost:1234"},

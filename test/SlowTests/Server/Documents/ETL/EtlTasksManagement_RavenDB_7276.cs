@@ -1,20 +1,23 @@
-﻿using Raven.Client.Documents.Operations.ETL;
+﻿using FastTests;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class EtlTasksManagement_RavenDB_7276 : EtlTestBase
+    public class EtlTasksManagement_RavenDB_7276 : RavenTestBase
     {
         public EtlTasksManagement_RavenDB_7276(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void CanDeleteEtl()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanDeleteEtl(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var configuration = new RavenEtlConfiguration
                 {
@@ -30,7 +33,7 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                var result = AddEtl(store, configuration, new RavenConnectionString
+                var result = Etl.AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
@@ -45,10 +48,11 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
-        public void CanUpdateEtl()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUpdateEtl(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var configuration = new RavenEtlConfiguration
                 {
@@ -69,7 +73,7 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                var result = AddEtl(store, configuration, new RavenConnectionString
+                var result = Etl.AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
@@ -86,10 +90,11 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
-        public void CanDisableEtl()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanDisableEtl(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var configuration = new RavenEtlConfiguration
                 {
@@ -105,7 +110,7 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                var result = AddEtl(store, configuration, new RavenConnectionString
+                var result = Etl.AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },

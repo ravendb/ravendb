@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Linq;
-using Raven.Client.Documents.Indexes;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
@@ -11,19 +9,20 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_11196 : EtlTestBase
+    public class RavenDB_11196 : RavenTestBase
     {
         public RavenDB_11196(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void Should_be_James()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_be_James(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
+                Etl.AddEtl(src, dest, "Users", script:
                     @"
 this.Name = 'James';
 
@@ -35,7 +34,7 @@ loadToPeople(person);
 "
                 );
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {

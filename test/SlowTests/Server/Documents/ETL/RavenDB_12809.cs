@@ -2,20 +2,22 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_12809 : EtlTestBase
+    public class RavenDB_12809 : RavenTestBase
     {
         public RavenDB_12809(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Can_setup_etl_from_encrypted_to_non_encrypted_db()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -52,7 +54,7 @@ namespace SlowTests.Server.Documents.ETL
                 ModifyDatabaseName = s => dbName,
             }))
             {
-                AddEtl(src, new RavenEtlConfiguration()
+                Etl.AddEtl(src, new RavenEtlConfiguration()
                 {
                     ConnectionStringName = "test",
                     Name = "myFirstEtl",

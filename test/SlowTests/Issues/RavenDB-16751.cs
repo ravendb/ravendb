@@ -1,22 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Utils;
 using SlowTests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_16751:EtlTestBase
+public class RavenDB_16751 : RavenTestBase
 {
     public RavenDB_16751(ITestOutputHelper output) : base(output)
     {
         
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Etl)]
     public async Task CanGetRevisionsCountInEtlScript()
     {
         // Arrange
@@ -44,11 +45,11 @@ public class RavenDB_16751:EtlTestBase
                 session.SaveChanges();
             }
             
-            AddEtl(src, dest, "Users", script: @"var metadata = getMetadata(this);
+            Etl.AddEtl(src, dest, "Users", script: @"var metadata = getMetadata(this);
                                                             metadata[""RevisionsCountFromEtl""] = getRevisionsCount();
                                                             loadToUsers(this);");
-                
-            var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+            var etlDone = Etl.WaitForEtlToComplete(src);
             etlDone.Wait(TimeSpan.FromMinutes(1));
             
             // Assert

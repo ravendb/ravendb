@@ -13,10 +13,10 @@ namespace Tests.Infrastructure;
 
 public class KafkaEtlTestBase
 {
-    private readonly RavenTestBase.EtlTestBase_New _parent;
+    private readonly RavenTestBase.EtlTestBase _parent;
     private readonly HashSet<string> _definedTopics = new HashSet<string>();
 
-    public KafkaEtlTestBase(RavenTestBase.EtlTestBase_New parent)
+    public KafkaEtlTestBase(RavenTestBase.EtlTestBase parent)
     {
         _parent = parent;
         TopicSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty);

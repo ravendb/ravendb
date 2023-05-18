@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -10,7 +11,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class EtlCountersTests : EtlTestBase
+    public class EtlCountersTests : RavenTestBase
     {
         private const int _waitInterval = 1000;
 
@@ -33,7 +34,7 @@ var counters = this['@metadata']['@counters'];
 for (var i = 0; i < counters.length; i++) {
     doc.addCounter(loadCounter(counters[i]));
 }";
-            var (src, dest, _) = CreateSrcDestAndAddEtl("Users", script, srcOptions:_options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl("Users", script, srcOptions:_options);
 
             var entity = new User();
             var counters = Enumerable.Range(0, count).Select(i => "Likes" + i).ToArray();
@@ -81,7 +82,7 @@ var counters = this['@metadata']['@counters'];
 for (var i = 0; i < counters.length; i++) {
     doc.addCounter(loadCounter(counters[i]));
 }";
-            var (src, dest, _) = CreateSrcDestAndAddEtl("Users", script, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl("Users", script, srcOptions: _options);
 
             var entity = new User();
             var counters = Enumerable.Range(0, count).Select(i => "Likes" + i).ToArray();

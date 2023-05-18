@@ -1,19 +1,21 @@
 ﻿using System;
+using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_13218 : EtlTestBase
+    public class RavenDB_13218 : RavenTestBase
     {
         public RavenDB_13218(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [InlineData("Orders", null)]
         [InlineData(null, null)]
         [InlineData("Orders", @"
@@ -54,14 +56,14 @@ function loadCountersOfOrdersBehavior(doc, counter)
 
                 if (collection == null)
                 {
-                    AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
+                    Etl.AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
                 }
                 else
                 {
-                    AddEtl(src, dest, collection, script: script);
+                    Etl.AddEtl(src, dest, collection, script: script);
                 }
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 2);
 
                 etlDone.Wait(TimeSpan.FromSeconds(60));
 

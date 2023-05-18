@@ -1,32 +1,34 @@
 ﻿using System;
+using FastTests;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using SlowTests.Server.Documents.ETL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_20059 : EtlTestBase
+    public class RavenDB_20059 : RavenTestBase
     {
         public RavenDB_20059(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void CanModifyGlobalObjectUsingEtlTransformScriptWithDeleteDocumentsBehaviorFunction()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanModifyGlobalObjectUsingEtlTransformScriptWithDeleteDocumentsBehaviorFunction(Options options)
         {
-            using (var srcStore = GetDocumentStore())
+            using (var srcStore = GetDocumentStore(options))
             using (var destStore = GetDocumentStore())
             {
-                AddEtl(srcStore, destStore, "Contracts", script:
+                Etl.AddEtl(srcStore, destStore, "Contracts", script:
 @"this.Contact.AdditionalInfo = 13;	
 loadToContractsTemp(this);
 function deleteDocumentsOfContractsBehavior(docId) {
     return false;
     }");
 
-                var etlDone = WaitForEtl(srcStore, (_, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(srcStore);
 
                 using (var session = srcStore.OpenSession())
                 {
@@ -49,7 +51,7 @@ function deleteDocumentsOfContractsBehavior(docId) {
                     session.SaveChanges();
                 }
 
-                etlDone = WaitForEtl(srcStore, (_, s) => s.LoadSuccesses > 0);
+                etlDone = Etl.WaitForEtlToComplete(srcStore);
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 using (var session = destStore.OpenSession())
@@ -62,7 +64,7 @@ function deleteDocumentsOfContractsBehavior(docId) {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void WeStillShouldGetErrorWhenEtlProcessRunsBehaviorFunctionWithInvalidSyntax()
         {
             using (var srcStore = GetDocumentStore())
@@ -74,7 +76,7 @@ loadToContractsTemp(this);
 function deleteDocumentsOfContractsBehavior(docId) {
     return false;
     }";
-                AddEtl(srcStore, destStore, new[] { "Contracts" }, script, out var config);
+                Etl.AddEtl(srcStore, destStore, new[] { "Contracts" }, script, out var config);
 
                 using (var session = srcStore.OpenSession())
                 {
@@ -85,7 +87,7 @@ function deleteDocumentsOfContractsBehavior(docId) {
                 var timeout = (int)TimeSpan.FromSeconds(15).TotalMilliseconds;
 
                 EtlErrorInfo error = null;
-                Assert.True(WaitForValue(() => TryGetTransformationError(srcStore.Database, config, out error), true, timeout: timeout));
+                Assert.True(WaitForValue(() => Etl.TryGetTransformationError(srcStore.Database, config, out error), true, timeout: timeout));
 
                 Assert.NotNull(error);
                 Assert.True(error.Error.Contains($"{nameof(JavaScriptParseException)}: Failed to parse:"));

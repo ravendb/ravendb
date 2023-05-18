@@ -1,31 +1,33 @@
 ﻿using System;
+using FastTests;
 using SlowTests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_19466:EtlTestBase 
+public class RavenDB_19466 : RavenTestBase 
 {
     public RavenDB_19466(ITestOutputHelper output) : base(output)
     {
     }
 
-    [Fact]
-    public void CanModifyDocumentMetadataUsingEtlTransformScriptWithDeleteDocumentsBehaviorFunction()
+    [RavenTheory(RavenTestCategory.Etl)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public void CanModifyDocumentMetadataUsingEtlTransformScriptWithDeleteDocumentsBehaviorFunction(Options options)
     {
-        using (var src = GetDocumentStore())
+        using (var src = GetDocumentStore(options))
         using (var dest = GetDocumentStore())
         {
-            AddEtl(src, dest, "Users", script: @"function deleteDocumentsBehavior(docId, collection, deleted) {
+            Etl.AddEtl(src, dest, "Users", script: @"function deleteDocumentsBehavior(docId, collection, deleted) {
                                                                 return false; // don't send any deletes to the other side
                                                             }
                                                             var metadata = getMetadata(this);
                                                             metadata[""TestETLMetadataReference""] = ""HelloFromTransformScript"";
                                                             loadToUsers(this);");
 
-            var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+            var etlDone = Etl.WaitForEtlToComplete(src);
 
             using (var session = src.OpenSession())
             {
@@ -47,8 +49,8 @@ public class RavenDB_19466:EtlTestBase
                 session.Delete("users/1-A");
                 session.SaveChanges();
             }
-            
-            etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+            etlDone = Etl.WaitForEtlToComplete(src);
             etlDone.Wait(TimeSpan.FromMinutes(1));
             
             using (var session = dest.OpenSession())

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using FastTests;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -33,7 +34,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class EtlTimeSeriesTests : EtlTestBase
+    public class EtlTimeSeriesTests : RavenTestBase
     {
         private const int _waitInterval = 1000;
 
@@ -161,7 +162,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void RavenEtlWithTimeSeries_WhenDefinedLoadBehaviorOfUnEtledCollection_ShouldThrow()
         {
             XunitLogging.EnableExceptionCapture();
@@ -172,10 +173,10 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 {
     return true;
 }";
-            Assert.Throws<RavenException>(() => CreateSrcDestAndAddEtl("People", script));
+            Assert.Throws<RavenException>(() => Etl.CreateSrcDestAndAddEtl("People", script));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<SuccessTestDataType>))]
         [ClassData(typeof(TestDataForDocChangeTracking<SuccessTestDataType>))]
         [ClassData(typeof(FailedTestDataForDocAndTimeSeriesChangeTracking<FailTestDataType>))]
@@ -272,7 +273,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             WaitForUserToContinueTheTest(src);
 
@@ -304,9 +305,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
             var baseline = DateTime.UtcNow;
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new[] { "Users" }, script: null);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections: new[] { "Users" }, script: null);
 
-            var etlDone = WaitForEtl(src, (s, statistics) => statistics.LastProcessedEtag > 21);
+            var etlDone = Etl.WaitForEtlToComplete(src, (s, statistics) => statistics.LastProcessedEtag > 21);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -337,14 +338,14 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task BlockRavenEtlWithIncrementalTimeSeries()
         {
             const string docId = "users/1";
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
             var baseline = DateTime.UtcNow;
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new[] { "Users" }, script: null);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections: new[] { "Users" }, script: null);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -367,7 +368,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.Contains("System.NotSupportedException: Load isn't support for incremental time series 'INC:HeartRate' at document 'users/1'", err!.Error);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesAndLoadToAnotherCollectionToo_ShouldSrcBeAsDest()
         {
             string[] collections = { "Users" };
@@ -387,7 +388,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -410,7 +411,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.Equal(value, timeSeries.Value);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenLoadToDifferentCollectionAndScriptCheckForTimeSeriesExistence()
         {
             const string collection = "Users";
@@ -429,7 +430,7 @@ if(timeSeries !== null){
             const double value = 58d;
             var users = Enumerable.Range(0, 3).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
             using (var session = src.OpenAsyncSession())
             {
                 foreach (var user in users)
@@ -467,7 +468,7 @@ if(timeSeries !== null){
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenLoadTwoRangeAndAdd()
         {
             string[] collections = { "Users" };
@@ -493,7 +494,7 @@ user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 20), new Date(2
             const double value = 58d;
             var user = new User();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
             using (var session = src.OpenAsyncSession())
             {
                 await session.StoreAsync(user);
@@ -516,7 +517,7 @@ user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 20), new Date(2
             }, interval: _waitInterval);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenUpdateTimeSeriesOfUnloadedDocument()
         {
             string[] collections = { "Users" };
@@ -543,7 +544,7 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
             const double value = 58d;
             var users = new[] { new User { Name = "Mar" }, new User { Name = "Nar" } };
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -586,7 +587,7 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 
             // //TODO To remove below and uncomment above when RavenDB-15147 is fixed
             {
-                var processBatch = WaitForEtlAsync(src, (n, s) =>
+                var processBatch = Etl.WaitForEtlAsync(src, (n, s) =>
                 {
                     if (s.LoadErrors > 0)
                         throw new Exception($"{s.LoadErrors} errors in Etl process");
@@ -641,7 +642,7 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
             const double value = 58d;
             var users = Enumerable.Range(0, batchSize + 1).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
             using (var session = src.OpenAsyncSession())
             {
                 foreach (var user in users)
@@ -727,7 +728,7 @@ function loadCountersOfUsersBehavior(docId, counter)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -753,7 +754,7 @@ function loadCountersOfUsersBehavior(docId, counter)
             }, 2);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndCounters2()
         {
             const string collection = "Users";
@@ -772,7 +773,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collection, script, collection.Length == 0);
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -799,7 +800,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }, 2);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndAttachment()
         {
             const string collection = "Users";
@@ -819,7 +820,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const string documentId = "users/1";
             string attachmentSourceName = "photo";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -848,7 +849,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }, 2);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenUseAddAttachmentAndLoadTimeSeriesBehaviorFunctionTogether()
         {
             const string collection = "Users";
@@ -877,7 +878,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -917,7 +918,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.DoesNotContain(ts, t => t.Timestamp == notInRange[1]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenUseTimeSeriesExplicitlyWithNoRange()
         {
             const string collection = "Users";
@@ -932,7 +933,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
 
             var time = new DateTime(2020, 04, 27);
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -974,7 +975,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1023,7 +1024,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
 
             var users = Enumerable.Range(0, 2).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1084,9 +1085,9 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId))
             {
                 using var session = src.OpenAsyncSession();
                 foreach (var user in users)
@@ -1126,7 +1127,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
 
             await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 3);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId, true))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId, true))
             {
                 using var session = src.OpenAsyncSession();
                 foreach (var user in users)
@@ -1158,7 +1159,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
             Assert.Equal(20, progress.TotalNumberOfTimeSeriesDeletedRanges);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFromTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange()
         {
             const string script = @"
@@ -1184,9 +1185,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: options);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId))
             {
                 using var session = src.OpenAsyncSession();
                 foreach (var user in users)
@@ -1212,7 +1213,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 2);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenFilterByRangeTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange()
         {
             const string script = @"
@@ -1238,9 +1239,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: options);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId))
             {
                 using var session = src.OpenAsyncSession();
                 foreach (var user in users)
@@ -1266,7 +1267,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 2);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFrom_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange()
         {
             const string script = @"
@@ -1292,9 +1293,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: options);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId))
             {
                 using var session = src.OpenAsyncSession();
 
@@ -1345,9 +1346,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId))
             {
                 using (var session = src.OpenAsyncSession())
                 {
@@ -1423,7 +1424,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1477,7 +1478,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1541,7 +1542,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1591,7 +1592,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1609,7 +1610,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 return (await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(firstTime, secondTime))?.Count();
             }, 2, interval: _waitInterval);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId, true))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId, true))
             {
                 using var session = src.OpenAsyncSession();
                 session.TimeSeriesFor(documentId, timeSeriesName).Delete(firstTime, firstTime);
@@ -1649,7 +1650,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1667,7 +1668,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 return (await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(firstTime, secondTime))?.Count();
             }, 2, interval: _waitInterval);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId, true))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId, true))
             {
                 using var session = src.OpenAsyncSession();
                 session.TimeSeriesFor(documentId, timeSeriesName).Delete(firstTime, firstTime);
@@ -1706,7 +1707,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             random = new Random(0);
             var randomOrder = timeSeriesEntries.OrderBy(_ => random.Next()).ToList();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1798,8 +1799,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     lastEtag = db.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(context);
                 }
 
-                var etlDone = WaitForEtl(src, (_, statistics) => statistics.LastProcessedEtag >= lastEtag);
-                AddEtl(src, dest, collections, script, applyToAllDocuments: collections.Length == 0);
+                var etlDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LastProcessedEtag >= lastEtag);
+                Etl.AddEtl(src, dest, collections, script, applyToAllDocuments: collections.Length == 0);
 
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
@@ -1838,7 +1839,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             var database = GetDatabase(src.Database).Result;
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
@@ -1896,10 +1897,10 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             var users = new[] { new User { Id = "users/1" }, new User { Id = "users/2" }, };
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             var srcDatabase = await GetDatabase(src.Database);
-            await using (OpenEtlOffArea(src, etlResult.TaskId))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId))
             {
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(srcDatabase))
                 using (var tr = context.OpenWriteTransaction())
@@ -1954,7 +1955,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             await AssertWaitForTimeSeriesEntry(dest, users[0].Id, timeSeriesName, time);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenConditionallyLoadOneDocumentAndOneNot()
         {
             const string script = @"
@@ -1977,7 +1978,7 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
             var users = new[] { yang, old };
             var time = new DateTime(2020, 04, 27);
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -2028,7 +2029,7 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
             }, true, interval: 1000);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenLoadDocWithoutTimeSeries_ShouldNotSendCountersMetadata()
         {
             const string timeSeriesName = "Heartrate";
@@ -2040,9 +2041,9 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
 this.Name = 'James Doe';
 loadToUsers(this);";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl("Users", script, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl("Users", script, srcOptions: _options);
 
-            WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+            Etl.WaitForEtlToComplete(src);
 
             using (var session = src.OpenSession())
             {
@@ -2069,7 +2070,7 @@ loadToUsers(this);";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenDefineTwoLoadBehaviorFunctions()
         {
             string[] collections = { "Users", "Employees" };
@@ -2098,7 +2099,7 @@ function loadTimeSeriesOfEmployeesBehavior(doc, timeSeries)
             var user = new User();
             var employee = new Employee();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -2135,7 +2136,7 @@ function loadTimeSeriesOfEmployeesBehavior(doc, timeSeries)
             public string[] TimeSeriesNames { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task RavenEtlWithTimeSeries_WhenUseHasTimeSeriesAndGetTimeSeriesInScript()
         {
             string[] collections = { "Users", "Employees" };
@@ -2157,7 +2158,7 @@ loadToUsers({
 
             var user = new User();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, srcOptions: _options);
 
             using (var session = src.OpenAsyncSession())
             {

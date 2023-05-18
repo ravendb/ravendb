@@ -1,17 +1,19 @@
 ﻿using System;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_15637 : EtlTestBase
+    public class RavenDB_15637 : RavenTestBase
     {
         public RavenDB_15637(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(@"if(this.Age % 2 === 0)
     return;
 if(this.Name == 'Sus')
@@ -47,8 +49,8 @@ return deleted;
                     session.Store(new User() {Name = "Sus", Age = 31});
                     session.SaveChanges();
 
-                    AddEtl(src, dest, "Users", script);
-                    var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                    Etl.AddEtl(src, dest, "Users", script);
+                    var etlDone = Etl.WaitForEtlToComplete(src);
                     etlDone.Wait(timeout:TimeSpan.FromSeconds(10));
                 }
 
@@ -59,7 +61,7 @@ return deleted;
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(@"if(this.Age % 2 === 0)
     return;
 if(this.Name == 'Sus')
@@ -97,8 +99,8 @@ return !deleted;
                     session.SaveChanges();
                 }
 
-                AddEtl(src, dest, "Users", script);
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                Etl.AddEtl(src, dest, "Users", script);
+                var etlDone = Etl.WaitForEtlToComplete(src);
                 etlDone.Wait(timeout:TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())

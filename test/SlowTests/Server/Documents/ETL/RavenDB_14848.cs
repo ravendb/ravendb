@@ -1,22 +1,25 @@
 ﻿using System;
+using FastTests;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_14848 : EtlTestBase
+    public class RavenDB_14848 : RavenTestBase
     {
         public RavenDB_14848(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void ShouldThrowOnInvalidConfigOnUpdate()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldThrowOnInvalidConfigOnUpdate(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 using (var session = src.OpenSession())
@@ -58,10 +61,11 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
-        public void ShouldResetEtl()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldResetEtl(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 using (var session = src.OpenSession())
@@ -86,7 +90,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 var addResult = src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(configuration));
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -108,8 +112,6 @@ namespace SlowTests.Server.Documents.ETL
                 etlDone.Reset();
 
                 src.Maintenance.Send(new ResetEtlOperation("myConfiguration", "allDocs"));
-
-                WaitForUserToContinueTheTest(src);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 

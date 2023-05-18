@@ -1,22 +1,25 @@
 ﻿using System;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_7284 : EtlTestBase
+    public class RavenDB_7284 : RavenTestBase
     {
         public RavenDB_7284(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void EtlTaskDeletionShouldDeleteItsState()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void EtlTaskDeletionShouldDeleteItsState(Options options)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
             {
                 using (var session = src.OpenSession())
@@ -25,7 +28,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 var configuration = new RavenEtlConfiguration()
                 {
@@ -41,7 +44,7 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                var result = AddEtl(src, configuration, new RavenConnectionString()
+                var result = Etl.AddEtl(src, configuration, new RavenConnectionString()
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = dest.Urls,
@@ -54,7 +57,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 etlDone.Reset();
                 
-                AddEtl(src, configuration, new RavenConnectionString()
+                Etl.AddEtl(src, configuration, new RavenConnectionString()
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = dest.Urls,
