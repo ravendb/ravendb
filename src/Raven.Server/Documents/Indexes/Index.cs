@@ -1777,6 +1777,10 @@ namespace Raven.Server.Documents.Indexes
                                 }
                             }
                         }
+                        catch (Exception e) when (e.IsOutOfMemory())
+                        {
+                            HandleOutOfMemoryException(null, storageEnvironment, e);
+                        }
                         catch (OperationCanceledException)
                         {
                             return;
@@ -2174,7 +2178,7 @@ namespace Raven.Server.Documents.Indexes
                     exception = new OutOfMemoryException("The paging file is too small for this operation to complete, consider increasing the size of the page file", exception);
                 }
 
-                scope.AddMemoryError(exception);
+                scope?.AddMemoryError(exception);
                 var outOfMemoryErrors = Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
                 _lowMemoryFlag.Raise();
 
