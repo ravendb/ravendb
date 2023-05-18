@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -14,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class ConnectionStringTests : EtlTestBase
+    public class ConnectionStringTests : RavenTestBase
     {
         public ConnectionStringTests(ITestOutputHelper output) : base(output)
         {

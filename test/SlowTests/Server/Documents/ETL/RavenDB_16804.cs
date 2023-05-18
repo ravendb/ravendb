@@ -1,21 +1,23 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_16804 : EtlTestBase
+    public class RavenDB_16804 : RavenTestBase
     {
         public RavenDB_16804(ITestOutputHelper output) : base(output)
         {
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanGetBatchStopReasonFromEtlPerformanceStats()
         {
             using (var src = GetDocumentStore())
@@ -35,14 +37,14 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                AddEtl(src, configuration, new RavenConnectionString
+                Etl.AddEtl(src, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = dst.Urls,
                     Database = dst.Database,
                 });
 
-                var etlDone = WaitForEtl(src, (_, statistics) => statistics.LoadSuccesses == 10);
+                var etlDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 10);
 
                 using (var session = src.OpenAsyncSession())
                 {

@@ -50,7 +50,7 @@ namespace FastTests
             Indexes = new IndexesTestBase(this);
             Replication = new ReplicationTestBase2(this);
             Databases = new DatabasesTestBase(this);
-            Etl = new EtlTestBase_New(this);
+            Etl = new EtlTestBase(this);
         }
 
         public async ValueTask<DatabaseRecord> GetDatabaseRecordAsync(IDocumentStore store, string database = null)

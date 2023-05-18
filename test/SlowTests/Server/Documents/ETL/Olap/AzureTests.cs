@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using FastTests;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -21,7 +22,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
-    public class AzureTests : EtlTestBase
+    public class AzureTests : RavenTestBase
     {
         public AzureTests(ITestOutputHelper output) : base(output)
         {
@@ -68,7 +69,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -86,7 +87,7 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -134,7 +135,7 @@ loadToOrders(partitionBy(key),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -152,7 +153,7 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -285,7 +286,7 @@ loadToOrders(partitionBy(key),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderData = {
@@ -321,7 +322,7 @@ loadToOrders(partitionBy(key), orderData);
                     SetupAzureEtl(store, script, settings);
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -354,7 +355,7 @@ loadToOrders(partitionBy(key), orderData);
                     }
 
                     //sales
-                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{salesTableName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -434,7 +435,7 @@ loadToOrders(partitionBy(key), orderData);
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -470,7 +471,7 @@ loadToOrders(partitionBy(['order_date', key]),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListBlobsAsync(prefix, string.Empty, false);
@@ -515,7 +516,7 @@ loadToOrders(partitionBy(['order_date', key]),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
 
                     var script = @"
 loadToOrders(noPartition(),
@@ -529,7 +530,7 @@ loadToOrders(noPartition(),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
 
@@ -644,7 +645,7 @@ loadToOrders(noPartition(),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0 && statistics.LoadErrors == 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store, (n, statistics) => statistics.LoadSuccesses != 0 && statistics.LoadErrors == 0);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -665,7 +666,7 @@ loadToOrders(partitionBy(
 
                     var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
-                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var cloudObjects = await client.ListBlobsAsync(prefix, delimiter: "/", listFolders: true);
                         var list = cloudObjects.List.ToList();
@@ -784,12 +785,12 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 });
 ";
                     const string customPartition = "shop-16";
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = Etl.WaitForEtlToComplete(store);
                     SetupAzureEtl(store, script, settings, customPartition);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
+                    using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -828,7 +829,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
                     }
                 }
             };
-            AddEtl(store, configuration, new OlapConnectionString
+            Etl.AddEtl(store, configuration, new OlapConnectionString
             {
                 Name = connectionStringName,
                 AzureSettings = settings
@@ -838,7 +839,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
         private void SetupAzureEtl(DocumentStore store, AzureSettings settings, OlapEtlConfiguration configuration)
         {
             var connectionStringName = $"{store.Database} to Azure";
-            AddEtl(store, configuration, new OlapConnectionString
+            Etl.AddEtl(store, configuration, new OlapConnectionString
             {
                 Name = connectionStringName,
                 AzureSettings = settings
@@ -888,7 +889,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 
             try
             {
-                using (var client = RavenAzureClient.Create(azureSettings, DefaultBackupConfiguration))
+                using (var client = RavenAzureClient.Create(azureSettings, EtlTestBase.DefaultBackupConfiguration))
                 {
                     var result = await client.ListBlobsAsync(prefix, delimiter, listFolder);
                     List<string> filesToDelete;

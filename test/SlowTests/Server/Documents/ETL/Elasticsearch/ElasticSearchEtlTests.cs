@@ -44,7 +44,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (GetElasticClient(out var client))
             {
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -101,7 +101,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 var numberOfLinesPerOrder = 5;
 
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
+                var etlDone = Etl.WaitForEtlToComplete(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
 
                 for (int i = 0; i < numberOfOrders; i++)
                 {
@@ -131,7 +131,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 Assert.Equal(numberOfOrders, ordersCount.Count);
                 Assert.Equal(numberOfOrders * numberOfLinesPerOrder, orderLinesCount.Count);
 
-                etlDone = WaitForEtl(store, (n, statistics) => statistics.LastProcessedEtag >= 2 * numberOfOrders);
+                etlDone = Etl.WaitForEtlToComplete(store, (n, statistics) => statistics.LastProcessedEtag >= 2 * numberOfOrders);
 
                 for (int i = 0; i < numberOfOrders; i++)
                 {
@@ -174,8 +174,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     },
                 };
 
-                AddEtl(store, config, new ElasticSearchConnectionString { Name = "test", Nodes = new[] { "http://localhost:1234" } }); //wrong elastic search url
-
+                Etl.AddEtl(store, config, new ElasticSearchConnectionString { Name = "test", Nodes = new[] { "http://localhost:1234" } }); //wrong elastic search url
 
                 using (var session = store.OpenSession())
                 {
@@ -191,7 +190,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 var alert = await AssertWaitForNotNullAsync(() =>
                 {
-                    TryGetLoadError(store.Database, config, out var error);
+                    Etl.TryGetLoadError(store.Database, config, out var error);
 
                     return Task.FromResult(error);
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
@@ -218,7 +217,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     session.SaveChanges();
                 }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
 
@@ -285,7 +284,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (GetElasticClient(out var client))
             {
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -351,7 +350,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 }
 
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
@@ -422,7 +421,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (GetElasticClient(out var client))
             {
                 var config = SetupElasticEtl(store, @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + IndexSuffix + @"(userData)", UsersIndex, new[] { "Users", "People" });
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -523,7 +522,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (var src = GetDocumentStore())
             using (GetElasticClient(out var client))
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 var config = SetupElasticEtl(src, @"var userData = { UserId: id(this), FirstName: this.Name, LastName: this.LastName }; loadTo" + UsersIndexName + @"(userData)",
                     UsersIndex,
@@ -558,7 +557,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (var src = GetDocumentStore())
             using (GetElasticClient(out var client))
             {
-                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 var config = SetupElasticEtl(src,
                     @"var userData = { UserId: id(this), FirstName: this.Name, LastName: this.LastName }; if (this.Name == 'Joe Doe') loadToUsers" + IndexSuffix + @"(userData)",
@@ -702,13 +701,13 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     },
                     AllowEtlOnNonEncryptedChannel = true
                 };
-                AddEtl(src, config, new ElasticSearchConnectionString { Name = "test", Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
+                Etl.AddEtl(src, config, new ElasticSearchConnectionString { Name = "test", Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
 
                 var db = GetDatabase(src.Database).Result;
 
                 Assert.Equal(1, db.EtlLoader.Processes.Length);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = Etl.WaitForEtlToComplete(src);
 
                 using (var session = src.OpenSession())
                 {
@@ -954,7 +953,7 @@ output('test output')"
             using (GetElasticClient(out var client))
             {
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections, enableCompatibilityMode: true);
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 using (var session = store.OpenSession())
                 {

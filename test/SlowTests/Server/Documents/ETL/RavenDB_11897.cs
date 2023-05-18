@@ -1,20 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_11897 : EtlTestBase
+    public class RavenDB_11897 : RavenTestBase
     {
         public RavenDB_11897(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(@"
     
     function deleteDocumentsOfUsersBehavior(docId) {
@@ -37,10 +39,10 @@ namespace SlowTests.Server.Documents.ETL
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: script);
+                Etl.AddEtl(src, dest, "Users", script: script);
 
                 var last = 0;
-                var etlDone = WaitForEtl(src, (n, s) =>
+                var etlDone = Etl.WaitForEtlToComplete(src, (n, s) =>
                 {
                     var check = s.LoadSuccesses > last;
                     last = s.LoadSuccesses;
@@ -120,7 +122,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Error_if_script_does_not_contain_any_loadTo_method_and_isnt_empty()
         {
             var config = new RavenEtlConfiguration

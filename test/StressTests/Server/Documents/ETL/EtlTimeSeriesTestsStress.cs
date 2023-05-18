@@ -4,18 +4,18 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.ETL
 {
-    public class EtlTimeSeriesTestsStress : EtlTestBase
+    public class EtlTimeSeriesTestsStress : RavenTestBase
     {
         private const int _waitInterval = 1000;
 
@@ -160,7 +160,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -228,9 +228,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = "3";
                 }
             };
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId))
             {
                 using var session = src.OpenAsyncSession();
 
@@ -285,7 +285,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 .Select(i => new TimeSeriesEntry { Timestamp = startTime + TimeSpan.FromMilliseconds(i), Tag = tag, Values = new[] { 100 * random.NextDouble() } })
                 .ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, etlResult) = Etl.CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             var entity = new User { Name = "Joe Doe" };
             using (var session = src.OpenAsyncSession())
@@ -305,7 +305,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 return result?.Length ?? 0;
             }, toAppendCount, 30000, interval: 1000);
 
-            await using (OpenEtlOffArea(src, etlResult.TaskId, true))
+            await using (Etl.OpenEtlOffArea(src, etlResult.TaskId, true))
             {
                 using (var session = src.OpenAsyncSession())
                 {

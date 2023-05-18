@@ -35,13 +35,13 @@ namespace FastTests
 {
     public abstract partial class RavenTestBase
     {
-        public readonly EtlTestBase_New Etl;
+        public readonly EtlTestBase Etl;
 
-        public class EtlTestBase_New
+        public class EtlTestBase
         {
             private readonly RavenTestBase _parent;
 
-            public EtlTestBase_New(RavenTestBase parent)
+            public EtlTestBase(RavenTestBase parent)
             {
                 _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             }
@@ -50,7 +50,7 @@ namespace FastTests
 
             public static readonly BackupConfiguration DefaultBackupConfiguration;
 
-            static EtlTestBase_New()
+            static EtlTestBase()
             {
                 var configuration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database);
                 configuration.Initialize();
@@ -301,7 +301,6 @@ namespace FastTests
                 return await _parent.GetDocumentDatabaseInstanceFor(store, databaseName);
             }
 
-
             public void Dispose()
             {
                 try
@@ -326,7 +325,5 @@ namespace FastTests
             }
 
         }
-
-
     }
 }

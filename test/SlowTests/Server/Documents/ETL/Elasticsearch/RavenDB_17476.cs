@@ -50,7 +50,7 @@ loadTo" + OrdersIndexName + @"(orderData);
             {
                 var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage, DefaultIndexes, new List<string> { "Orders" });
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var etlDone = Etl.WaitForEtlToComplete(store);
 
                 using (var session = store.OpenSession())
                 {

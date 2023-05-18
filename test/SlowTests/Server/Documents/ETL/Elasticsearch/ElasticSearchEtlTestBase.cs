@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using FastTests;
 using Nest;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
@@ -15,7 +16,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.ElasticSearch
 {
-    public class ElasticSearchEtlTestBase : EtlTestBase
+    public class ElasticSearchEtlTestBase : RavenTestBase
     {
         private HashSet<string> _definedIndexes = new HashSet<string>();
 
@@ -87,7 +88,7 @@ loadToOrders" + IndexSuffix + @"(orderData);";
                 },
             };
 
-            AddEtl(store, config,
+            Etl.AddEtl(store, config,
                 new ElasticSearchConnectionString
                 {
                     Name = connectionStringName,
@@ -138,8 +139,8 @@ loadToOrders" + IndexSuffix + @"(orderData);";
         {
             if (etlDone.Wait(timeout) == false)
             {
-                TryGetLoadError(databaseName, config, out var loadError);
-                TryGetTransformationError(databaseName, config, out var transformationError);
+                Etl.TryGetLoadError(databaseName, config, out var loadError);
+                Etl.TryGetTransformationError(databaseName, config, out var transformationError);
 
                 Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
             }

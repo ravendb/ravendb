@@ -2,29 +2,31 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_10596 : EtlTestBase
+    public class RavenDB_10596 : RavenTestBase
     {
         public RavenDB_10596(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task AggregatesTransformationErrorsInSingleAlert()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script: @"throw 'super exception';
+                Etl.AddEtl(src, dest, "Users", script: @"throw 'super exception';
                                        loadToUsers(this);");
 
                 var database = await GetDatabase(src.Database);
@@ -78,7 +80,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanAddAndUpdateLoadErrors()
         {
             using (var store = GetDocumentStore())
@@ -164,7 +166,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanAddAndSlowSqlWarnings()
         {
             using (var store = GetDocumentStore())

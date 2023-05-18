@@ -1,20 +1,22 @@
 ﻿using System;
+using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.ETL;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL
+namespace SlowTests.Issues
 {
-    public class RavenDB_20136 : EtlTestBase
+    public class RavenDB_20136 : RavenTestBase
     {
 
         public RavenDB_20136(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async void DeletingDocumentWithRevisionsDoesntCorruptETLProcess()
         {
             using (var src = GetDocumentStore())
@@ -26,10 +28,10 @@ namespace SlowTests.Server.Documents.ETL
                     ConnectionStringName = "test", Name = "aaa", Transforms = {new Transformation {Name = "S1", Collections = {"Users"}}}
                 };
 
-                AddEtl(src, configuration, new RavenConnectionString {Name = "test", TopologyDiscoveryUrls = dst.Urls, Database = dst.Database,});
+                Etl.AddEtl(src, configuration, new RavenConnectionString {Name = "test", TopologyDiscoveryUrls = dst.Urls, Database = dst.Database,});
 
-                var etlDone = WaitForEtl(src, (_, statistics) => statistics.LoadSuccesses == 3);
-                var loadDone = WaitForEtl(src, (_, statistics) => statistics.LoadSuccesses == 2);
+                var etlDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 3);
+                var loadDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LoadSuccesses == 2);
 
                 using (var session = src.OpenSession())
                 {
