@@ -30,7 +30,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -138,7 +137,10 @@ namespace Raven.Server.Commercial
                 ReloadLicense(firstRun: true);
                 ReloadLicenseLimits(firstRun: true);
 
-                Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
+                _serverStore.Engine.CommandsVersionManager.OnClusterVersionChange += PutMyNodeInfoClusterVersionChange;
+
+                if (_serverStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion > 0)
+                    Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
             }
             catch (Exception e)
             {
@@ -152,6 +154,14 @@ namespace Raven.Server.Commercial
                     (int)TimeSpan.FromMinutes(1).TotalMilliseconds,
                     (int)TimeSpan.FromHours(24).TotalMilliseconds);
             }
+        }
+
+        public void PutMyNodeInfoClusterVersionChange(object sender, ClusterVersionChangeEventArgs args)
+        {
+            if (args.PreviousClusterVersion != 0)
+                return;
+
+            Task.Run(PutMyNodeInfoAsync).IgnoreUnobservedExceptions();
         }
 
         public async Task PutMyNodeInfoAsync()
@@ -943,6 +953,7 @@ namespace Raven.Server.Commercial
         public void Dispose()
         {
             _leaseLicenseTimer?.Dispose();
+            _serverStore.Engine.CommandsVersionManager.OnClusterVersionChange -= PutMyNodeInfoClusterVersionChange;
         }
 
         private void ThrowIfCannotActivateLicense(LicenseStatus newLicenseStatus)
@@ -952,9 +963,9 @@ namespace Raven.Server.Commercial
             X509Certificate2 certificate = null;
             if (_serverStore.Server.Certificate.Certificate != null)
             {
-                certificateNotBefore  = _serverStore.Server.Certificate.Certificate.NotBefore.ToUniversalTime(); 
-                certificateNotAfter  = _serverStore.Server.Certificate.Certificate.NotAfter.ToUniversalTime(); 
-                certificate = _serverStore.Server.Certificate.Certificate;   
+                certificateNotBefore = _serverStore.Server.Certificate.Certificate.NotBefore.ToUniversalTime();
+                certificateNotAfter = _serverStore.Server.Certificate.Certificate.NotAfter.ToUniversalTime();
+                certificate = _serverStore.Server.Certificate.Certificate;
             }
 
             var clusterSize = GetClusterSize();

@@ -472,7 +472,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
                 else
                 {
-                    _currentRun.PutFullDocument(docId, doc.Data);
+                    var collection = Database.DocumentsStorage.ExtractCollectionName(Context, doc.Data).Name;
+                    
+                    var etlExtractedItem = new RavenEtlItem(doc, collection);
+                    var attachments = GetAttachmentsFor(etlExtractedItem);
+                    var counterOperations = GetCounterOperationsFor(etlExtractedItem);
+                    // We don't need to put time series operations yet, it's handled outside this scope
+                    
+                    _currentRun.PutFullDocument(docId, doc.Data, attachments, counterOperations);
                 }
             }
 
@@ -757,7 +764,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private List<Attachment> GetAttachmentsFor(RavenEtlItem item)
         {
-            if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
+            if ((item.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments) 
                 return null;
 
             if (item.Document.TryGetMetadata(out var metadata) == false ||

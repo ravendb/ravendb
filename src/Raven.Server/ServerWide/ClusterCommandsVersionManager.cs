@@ -31,6 +31,8 @@ namespace Raven.Server.ServerWide
 
         public int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;
         private int _currentClusterMinimalVersion;
+        public event EventHandler<ClusterVersionChangeEventArgs> OnClusterVersionChange;
+
 
         private static readonly Logger Log = LoggingSource.Instance.GetLogger(typeof(ClusterCommandsVersionManager).FullName, typeof(ClusterCommandsVersionManager).FullName);
 
@@ -197,19 +199,22 @@ namespace Raven.Server.ServerWide
             if (MyCommandsVersion < version)
                 ThrowInvalidClusterVersion(version);
 
-            int currentVersion;
+            var previousVersion = _currentClusterMinimalVersion;
             while (true)
             {
-                currentVersion = _currentClusterMinimalVersion;
+                int currentVersion = _currentClusterMinimalVersion;
                 if (currentVersion == version)
                     break;
                 Interlocked.CompareExchange(ref _currentClusterMinimalVersion, version, currentVersion);
             }
 
-            if (currentVersion != version && Log.IsInfoEnabled)
-            {
-                Log.Info($"Cluster version was changed from {currentVersion} to {version}");
-            }
+            if (previousVersion == version)
+                return;
+            
+            OnClusterVersionChange?.Invoke(null, new ClusterVersionChangeEventArgs(previousVersion, version));
+            
+            if (Log.IsInfoEnabled) 
+                Log.Info($"Cluster version was changed from {previousVersion} to {version}");
         }
 
         public int GetClusterMinimalVersion(List<int> versions, int? maximalVersion)
@@ -243,6 +248,19 @@ namespace Raven.Server.ServerWide
 
         public UnknownClusterCommandException(string message, Exception innerException) : base(message, innerException)
         {
+        }
+    }
+
+    public class ClusterVersionChangeEventArgs : EventArgs
+    {
+        public int PreviousClusterVersion { get; }
+
+        public int CurrentClusterVersion { get; }
+
+        public ClusterVersionChangeEventArgs(int previousClusterVersion, int currentClusterVersion)
+        {
+            PreviousClusterVersion = previousClusterVersion;
+            CurrentClusterVersion = currentClusterVersion;
         }
     }
 }

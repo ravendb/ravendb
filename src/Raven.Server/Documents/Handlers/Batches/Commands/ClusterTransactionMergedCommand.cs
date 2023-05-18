@@ -75,9 +75,10 @@ public class ClusterTransactionMergedCommand : TransactionMergedCommand
                                     }
                                 }
 
-                                var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,
+                                var document = cmd.Document.Clone(context);
+                                var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, document, changeVector: changeVector,
                                     flags: DocumentFlags.FromClusterTransaction);
-                                context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
+                                context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, document.Size);
                                 AddPutResult(putResult);
                             }
                             else

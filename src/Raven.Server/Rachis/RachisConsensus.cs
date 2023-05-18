@@ -606,7 +606,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForLeaveState(RachisState rachisState, CancellationToken cts)
+        public async Task<bool> WaitForLeaveState(RachisState rachisState, CancellationToken cts)
         {
             while (cts.IsCancellationRequested == false)
             {
@@ -614,10 +614,12 @@ namespace Raven.Server.Rachis
                 var task = _stateChanged.Task.WithCancellation(cts);
 
                 if (CurrentState != rachisState)
-                    return;
+                    return true;
 
                 await task;
             }
+
+            return false;
         }
 
         public Task GetTopologyChanged()
