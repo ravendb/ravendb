@@ -183,8 +183,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         <PopoverWithHover target={popovers.identityPartsSeparator} placement="top">
                             <div className="flex-horizontal p-3">
                                 <div>
-                                    Set the default separator for automatically generated document identity IDs.<br />
-                                    Use any character except <code>'|'</code> (pipe).
+                                    Set the default separator for automatically generated document identity IDs.
+                                    <br />
+                                    Use any character except <code>&apos;|&apos;</code> (pipe).
                                 </div>
                             </div>
                         </PopoverWithHover>
@@ -193,9 +194,10 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         {globalConfig && (
                             <>
                                 <Col className="d-flex">
-                                    <Input defaultValue={globalConfig.identityPartsSeparatorValue} 
-                                           disabled
-                                           placeholder={globalConfig.identityPartsSeparatorValue || "'/' (default)"}
+                                    <Input
+                                        defaultValue={globalConfig.identityPartsSeparatorValue}
+                                        disabled
+                                        placeholder={globalConfig.identityPartsSeparatorValue || "'/' (default)"}
                                     />
                                 </Col>
                                 {formValues.overrideConfig && formValues.identityPartsSeparatorEnabled && (
@@ -234,8 +236,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         <PopoverWithHover target={popovers.maximumRequestsPerSession} placement="top">
                             <div className="flex-horizontal p-3">
                                 <div>
-                                    Set this number to restrict the number of requests
-                                    (<strong>Reads</strong> &{" "} <strong>Writes</strong>) per session in the client API.
+                                    Set this number to restrict the number of requests (<strong>Reads</strong> &{" "}
+                                    <strong>Writes</strong>) per session in the client API.
                                 </div>
                             </div>
                         </PopoverWithHover>
@@ -244,10 +246,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         {globalConfig && (
                             <>
                                 <Col className="d-flex">
-                                    <Input defaultValue={globalConfig.maximumNumberOfRequestsValue}
-                                           disabled
-                                           placeholder={globalConfig.maximumNumberOfRequestsValue ? 
-                                               globalConfig.maximumNumberOfRequestsValue.toLocaleString() : "30 (default)"}
+                                    <Input
+                                        defaultValue={globalConfig.maximumNumberOfRequestsValue}
+                                        disabled
+                                        placeholder={
+                                            globalConfig.maximumNumberOfRequestsValue
+                                                ? globalConfig.maximumNumberOfRequestsValue.toLocaleString()
+                                                : "30 (default)"
+                                        }
                                     />
                                 </Col>
                                 {formValues.overrideConfig && formValues.maximumNumberOfRequestsEnabled && (
@@ -275,7 +281,20 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         </Col>
                     </Row>
                 </Card>
-                <h4 className={globalConfig ? "mt-4 text-center" : "mt-4"}>Load Balancing Client Requests</h4>
+                <div
+                    className={
+                        globalConfig
+                            ? "d-flex justify-content-center mt-4 position-relative"
+                            : "d-flex justify-content-between mt-4 position-relative"
+                    }
+                >
+                    <h4 className={globalConfig ? "text-center" : null}>Load Balancing Client Requests</h4>
+                    <small title="Navigate to the documentation" className="position-absolute end-0">
+                        <a href="https://ravendb.net/l/GYJ8JA/latest/csharp" target="_blank">
+                            <Icon icon="link" /> Load balancing tutorial
+                        </a>
+                    </small>
+                </div>
                 <Card className="flex-column p-3">
                     <div className={globalConfig ? "d-flex flex-grow-1 justify-content-center" : "d-flex flex-grow-1"}>
                         <div className="md-label">
@@ -283,16 +302,27 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             <PopoverWithHover target={popovers.sessionContext} placement="top">
                                 <div className="flex-horizontal p-3">
                                     <div>
-                                        Set the Load balance method for <strong>Read</strong> &{" "}<strong>Write</strong> requests<br/><br/>
+                                        <span className="d-inline-block mb-1">
+                                            Set the Load balance method for <strong>Read</strong> &{" "}
+                                            <strong>Write</strong> requests.
+                                        </span>
                                         <ul>
-                                            <li><strong>None:</strong><br/>
+                                            <li className="mb-1">
+                                                <strong>None:</strong>
+                                                <br />
                                                 Read requests - the node the client will target will be based the Read
-                                                balance behavior configuration.<br />
+                                                balance behavior configuration.
+                                                <br />
                                                 Write requests - will be sent to the preferred node.
-                                            </li><br />
-                                            <li><strong>Use session context:</strong><br/>
-                                                Sessions that are assigned the same context will have all their Read & Write requests routed to the same node.<br />
-                                                The session context is hashed from a context string (given by the client) and an optional seed.
+                                            </li>
+                                            <li className="mb-1">
+                                                <strong>Use session context:</strong>
+                                                <br />
+                                                Sessions that are assigned the same context will have all their Read &
+                                                Write requests routed to the same node.
+                                                <br />
+                                                The session context is hashed from a context string (given by the
+                                                client) and an optional seed.
                                             </li>
                                         </ul>
                                     </div>
@@ -370,12 +400,13 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                         Seed
                                         <i
                                             ref={popovers.setLoadBalanceSeedBehavior}
-                                            className="icon-info text-info margin-left-xxs"
+                                            className="cursor-default icon-info text-info margin-left-xxs"
                                         />
                                         <PopoverWithHover target={popovers.loadBalanceSeedBehavior} placement="top">
                                             <div className="flex-horizontal p-3">
                                                 <div>
-                                                    An optional seed number.<br />
+                                                    An optional seed number.
+                                                    <br />
                                                     Used when hashing the session context.
                                                 </div>
                                             </div>
@@ -401,8 +432,9 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                             <PopoverWithHover target={popovers.readBalanceBehavior} placement="top">
                                 <div className="flex-horizontal p-3">
                                     <div>
-                                        Set the Read balance method the client will use when accessing a node with
-                                        <strong> Read</strong> requests.<br />
+                                        Set the Read balance method the client will use when accessing a node with{" "}
+                                        <strong>Read</strong> requests.
+                                        <br />
                                         <strong>Write</strong> requests are sent to the preferred node.
                                     </div>
                                 </div>

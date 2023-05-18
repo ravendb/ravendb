@@ -68,8 +68,9 @@ export default function ClientGlobalConfiguration() {
                         <PopoverWithHover target={popovers.identityPartsSeparator} placement="right">
                             <div className="flex-horizontal p-3">
                                 <div>
-                                    Set the default separator for automatically generated document identity IDs.<br />
-                                    Use any character except <code>'|'</code> (pipe).
+                                    Set the default separator for automatically generated document identity IDs.
+                                    <br />
+                                    Use any character except <code>&apos;|&apos;</code> (pipe).
                                 </div>
                             </div>
                         </PopoverWithHover>
@@ -102,8 +103,8 @@ export default function ClientGlobalConfiguration() {
                         <PopoverWithHover target={popovers.maximumRequestsPerSession} placement="right">
                             <div className="flex-horizontal p-3">
                                 <div>
-                                    Set this number to restrict the number of requests
-                                    (<strong>Reads</strong> &{" "}<strong>Writes</strong>) per session in the client API.
+                                    Set this number to restrict the number of requests (<strong>Reads</strong> &{" "}
+                                    <strong>Writes</strong>) per session in the client API.
                                 </div>
                             </div>
                         </PopoverWithHover>
@@ -125,7 +126,14 @@ export default function ClientGlobalConfiguration() {
                         </Col>
                     </Row>
                 </Card>
-                <h4 className="mt-4">Load Balancing Client Requests</h4>
+                <div className="d-flex justify-content-between mt-4 position-relative">
+                    <h4>Load Balancing Client Requests</h4>
+                    <small title="Navigate to the documentation" className="position-absolute end-0">
+                        <a href="https://ravendb.net/l/GYJ8JA/latest/csharp" target="_blank">
+                            <Icon icon="link" /> Load balancing tutorial
+                        </a>
+                    </small>
+                </div>
                 <Card className="flex-column mt-1 p-3">
                     <div className="d-flex flex-grow-1">
                         <div className="md-label">
@@ -133,16 +141,28 @@ export default function ClientGlobalConfiguration() {
                             <PopoverWithHover target={popovers.sessionContext} placement="right">
                                 <div className="flex-horizontal p-3">
                                     <div>
-                                        Set the Load balance method for <strong>Read</strong> &{" "}<strong>Write</strong> requests<br/><br/>
+                                        Set the Load balance method for <strong>Read</strong> & <strong>Write</strong>{" "}
+                                        requests
+                                        <br />
+                                        <br />
                                         <ul>
-                                            <li><strong>None:</strong><br/>
+                                            <li>
+                                                <strong>None:</strong>
+                                                <br />
                                                 Read requests - the node the client will target will be based the Read
-                                                balance behavior configuration.<br />
+                                                balance behavior configuration.
+                                                <br />
                                                 Write requests - will be sent to the preferred node.
-                                            </li><br />
-                                            <li><strong>Use session context:</strong><br/>
-                                                Sessions that are assigned the same context will have all their Read & Write requests routed to the same node.<br />
-                                                The session context is hashed from a context string (given by the client) and an optional seed.
+                                            </li>
+                                            <br />
+                                            <li>
+                                                <strong>Use session context:</strong>
+                                                <br />
+                                                Sessions that are assigned the same context will have all their Read &
+                                                Write requests routed to the same node.
+                                                <br />
+                                                The session context is hashed from a context string (given by the
+                                                client) and an optional seed.
                                             </li>
                                         </ul>
                                     </div>
@@ -185,7 +205,8 @@ export default function ClientGlobalConfiguration() {
                                         <PopoverWithHover target={popovers.loadBalanceSeedBehavior} placement="right">
                                             <div className="flex-horizontal p-3">
                                                 <div>
-                                                    An optional seed number.<br />
+                                                    An optional seed number.
+                                                    <br />
                                                     Used when hashing the session context.
                                                 </div>
                                             </div>
@@ -212,7 +233,8 @@ export default function ClientGlobalConfiguration() {
                                 <div className="flex-horizontal p-3">
                                     <div>
                                         Set the Read balance method the client will use when accessing a node with
-                                        <strong> Read</strong> requests.<br />
+                                        <strong> Read</strong> requests.
+                                        <br />
                                         <strong>Write</strong> requests are sent to the preferred node.
                                     </div>
                                 </div>
