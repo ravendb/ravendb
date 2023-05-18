@@ -52,9 +52,9 @@ namespace Raven.Server.Documents.Queries
                 canMergeClauses = false;
                 buildSteps?.Add($"Cannot perform merging `{rightRbq}` into `{ToString()}` since this {nameof(rightRbq)} has operator `{rightRbq._operator} and this {nameof(RavenBooleanQuery)} has {_operator}.");
             }
-            // If this RavenBooleanQuery or the incoming Rbq has a boost, we cannot merge it.
-            // When the right query is not a RavenBooleanQuery, we can merge it since it won't be boosted by this parent. 
-            else if (IsBoosted || right is RavenBooleanQuery {IsBoosted: true}) 
+            // If this RavenBooleanQuery we cannot merge it.
+            // When `right` is RavenBooleanQuery we can merge it but we cannot perform unboxing.
+            else if (IsBoosted) 
             {
                 canMergeClauses = false;
                 buildSteps?.Add($"Cannot perform merging `{right}` into `{ToString()}` since boost is non-default. Left: {Boost} Right: {right.Boost}");
@@ -91,7 +91,9 @@ namespace Raven.Server.Documents.Queries
                 canMergeClauses = false;
                 buildSteps?.Add($"Cannot perform merging `{rightRbq}` into `{ToString()}` since this {nameof(rightRbq)} has operator `{rightRbq._operator} and this {nameof(RavenBooleanQuery)} has {_operator}.");
             }
-            else if (IsBoosted || right is RavenBooleanQuery {IsBoosted: true})
+            // If this RavenBooleanQuery we cannot merge it.
+            // When `right` is RavenBooleanQuery we can merge it but we cannot perform unboxing.
+            else if (IsBoosted)
             {
                 canMergeClauses = false;
                 buildSteps?.Add($"Cannot perform merging `{right}` into `{ToString()}` since boost is non-default. Left: {Boost} Right: {right.Boost}");
@@ -119,7 +121,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (query is RavenBooleanQuery booleanQuery)
             {
-                if (booleanQuery._operator == @operator && booleanQuery.IsBoosted == false && IsBoosted == false)
+                if (booleanQuery._operator == @operator && booleanQuery.IsBoosted == false)
                 {
                     foreach (var booleanClause in booleanQuery.Clauses)
                         Add(booleanClause);
