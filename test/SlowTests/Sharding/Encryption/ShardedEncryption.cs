@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -377,10 +378,11 @@ namespace SlowTests.Sharding.Encryption
 
             using (var store = Sharding.GetDocumentStore(options))
             {
-                // add shard
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
-                var nodeToAddShardTo = sharding.Shards[0].AllNodes.First();
+                Assert.True(sharding.Shards[0].Members.Count > 0,$"No members found. {Environment.NewLine}{sharding.Shards[0]}");
+                var nodeToAddShardTo = sharding.Shards[0].Members[0];
 
+                // add shard
                 var addShardRes = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, new[] { nodeToAddShardTo }));
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addShardRes.RaftCommandIndex);
                 var newShardNumber = addShardRes.ShardNumber;
