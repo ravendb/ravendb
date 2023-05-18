@@ -48,7 +48,7 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(out var taskId))
         {
-            var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites, ClusterCommandsVersionManager.CurrentClusterMinimalVersion)
+            var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites, RequestHandler.ServerStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion)
             {
                 WaitForIndexesTimeout = waitForIndexesTimeout,
                 WaitForIndexThrow = waitForIndexThrow,

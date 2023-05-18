@@ -16,9 +16,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Extensions;
-using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
@@ -416,6 +414,7 @@ namespace Raven.Server.Rachis
 
         protected RachisConsensus(CipherSuitesPolicy cipherSuitesPolicy, int? seed = null)
         {
+            CommandsVersionManager = new ClusterCommandsVersionManager();
             CipherSuitesPolicy = cipherSuitesPolicy;
             _rand = seed.HasValue ? new Random(seed.Value) : new Random();
             LogHistory = new RachisLogHistory();
@@ -561,7 +560,7 @@ namespace Raven.Server.Rachis
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    ClusterCommandsVersionManager.SetClusterVersion(ClusterCommandsVersionManager.MyCommandsVersion);
+                    CommandsVersionManager.SetClusterVersion(ClusterCommandsVersionManager.MyCommandsVersion);
                     leader.Start();
                 }
             };
@@ -693,7 +692,7 @@ namespace Raven.Server.Rachis
 
         public void SetNewStateImmediately(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
         {
-            using(ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 SetNewStateInTx(context, rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose);
@@ -820,7 +819,7 @@ namespace Raven.Server.Rachis
                     throw new TimeoutException("Something is wrong, throwing to avoid hanging");
                 }
             }
-            
+
             public static unsafe void InsertToLogDirectlyForDebug(ClusterOperationContext context, RachisConsensus node, long term, long index, CommandBase cmd, RachisEntryFlags flags)
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
@@ -839,7 +838,7 @@ namespace Raven.Server.Rachis
                     node.LogHistory.InsertHistoryLog(context, index, term, cmdJson);
                 }
             }
-            
+
             public static unsafe void UpdateStateDirectlyForDebug(ClusterOperationContext context, RachisConsensus node, long commitIndex, long commitTerm, long lastTruncatedIndex, long lastTruncatedTerm)
             {
                 node.SetLastCommitIndex(context, commitIndex, commitTerm);
@@ -1061,7 +1060,7 @@ namespace Raven.Server.Rachis
             var leader = new Leader(this, electionTerm);
             SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () =>
             {
-                ClusterCommandsVersionManager.SetClusterVersion(version);
+                CommandsVersionManager.SetClusterVersion(version);
                 _currentLeader = leader;
             });
             leader.Start(connections);
@@ -1468,7 +1467,7 @@ namespace Raven.Server.Rachis
                     cmd = context.ReadObject(cmd, newGuid);
                 }
             }
-            
+
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(Bits.SwapBytes(lastIndex));
@@ -2255,6 +2254,7 @@ namespace Raven.Server.Rachis
         private TimeSpan _tcpConnectionTimeout;
         private DateTime _lastStateChangeTime;
         private readonly string _clusterIdBase64Id = new string(' ', 22);
+        public readonly ClusterCommandsVersionManager CommandsVersionManager;
         public readonly CipherSuitesPolicy CipherSuitesPolicy;
         private volatile RachisState _currentState;
 

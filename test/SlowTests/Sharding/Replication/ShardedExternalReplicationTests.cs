@@ -1039,7 +1039,7 @@ namespace SlowTests.Sharding.Replication
             var srcDB = GetDatabaseName();
             var dstDB = GetDatabaseName();
 
-            var srcTopology = await CreateDatabaseInCluster(srcDB, clusterSize, srcLeader.WebUrl);
+            var srcTopology = await CreateDatabaseInCluster(srcDB, replicationFactor, srcLeader.WebUrl);
             var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 3);
 
             using (var srcStore = new DocumentStore()
@@ -1057,6 +1057,13 @@ namespace SlowTests.Sharding.Replication
                     }, "users/1");
                     session.SaveChanges();
                 }
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    srcNodes,
+                    srcDB,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(60)));
 
                 var watcher = new ExternalReplication(dstDB, "connection-1");
                 await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { dstLeader.WebUrl });

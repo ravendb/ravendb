@@ -1,4 +1,5 @@
 ﻿using System;
+using JetBrains.Annotations;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
@@ -7,19 +8,24 @@ namespace Raven.Server.ServerWide
 {
     public class ClusterValidator : RachisVersionValidation
     {
+        public ClusterValidator([NotNull] ClusterCommandsVersionManager commandsVersionManager)
+            : base(commandsVersionManager)
+        {
+        }
+
         public override void AssertPutCommandToLeader(CommandBase cmd)
         {
             var commandName = cmd.GetType().Name;
-            if (ClusterCommandsVersionManager.CanPutCommand(commandName) == false)
+            if (CommandsVersionManager.CanPutCommand(commandName) == false)
             {
                 RejectPutClusterCommandException.Throw($"Cannot accept the command '{commandName}', " +
-                                                          $"because the cluster version is '{ClusterCommandsVersionManager.CurrentClusterMinimalVersion}', " +
+                                                          $"because the cluster version is '{CommandsVersionManager.CurrentClusterMinimalVersion}', " +
                                                           $"while this command can be applied in cluster with minimum version of {ClusterCommandsVersionManager.ClusterCommandsVersions[commandName]}");
             }
 
             if (cmd.UniqueRequestId == null)
             {
-               RejectPutClusterCommandException.Throw($"The command {commandName} doesn't contain the raft request unique identifier.");
+                RejectPutClusterCommandException.Throw($"The command {commandName} doesn't contain the raft request unique identifier.");
             }
         }
 
@@ -44,8 +50,6 @@ namespace Raven.Server.ServerWide
                 RejectSendToFollowerException.Throw($"The command '{type}' with the version {myCommandVersion} is not supported on follower {follower} with version build {version}.");
             }
         }
-
-        
     }
 
     public class RejectPutClusterCommandException : Exception

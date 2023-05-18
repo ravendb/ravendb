@@ -744,7 +744,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private long? CleanUpDatabaseValues(DatabaseObservationState state)
         {
-            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion <
+            if (_server.Engine.CommandsVersionManager.CurrentClusterMinimalVersion <
                 ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(CleanUpClusterStateCommand)])
             {
                 return null;
