@@ -54,11 +54,11 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
             </Checkbox>
 
             <SelectionActions active={selectedIndexes.length > 0}>
-                <div className="d-flex align-items-center">
-                    <div className="lead me-4 text-nowrap">
+                <div className="d-flex flex-wrap align-items-center justify-content-center gap-2">
+                    <div className="lead text-nowrap">
                         <strong className="text-emphasis me-1">{selectedIndexes.length}</strong> selected
                     </div>
-                    <ButtonGroup className="gap-2">
+                    <ButtonGroup className="gap-2 flex-wrap justify-content-center">
                         <UncontrolledDropdown>
                             <DropdownToggle
                                 title="Set the indexing state for the selected indexes"
@@ -123,13 +123,13 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                             color="danger"
                             disabled={selectedIndexes.length === 0}
                             onClick={deleteSelectedIndexes}
-                            className="rounded-pill"
+                            className="rounded-pill flex-grow-0"
                         >
                             <Icon icon="trash" />
                             <span>Delete</span>
                         </Button>
                     </ButtonGroup>
-                    <Button onClick={toggleSelectAll} color="link" className="ms-2">
+                    <Button onClick={toggleSelectAll} color="link">
                         Cancel
                     </Button>
                 </div>

@@ -88,6 +88,10 @@ body {
     font-size: 14px;
 }
 
+.word-break {
+    word-break: break-all;
+}
+
 // bs3 popover fix - move to scoped or component after bs3 removal
 .popover-lg {
     max-width: 560px;

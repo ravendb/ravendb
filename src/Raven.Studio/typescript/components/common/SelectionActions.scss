@@ -7,8 +7,8 @@
     border-radius: bs5variables.$border-radius-sm;
     position: absolute;
     top: bs5variables.$gutter-xxs;
-    left: 50%;
-    transform: translate(-50%, bs5variables.$gutter-xxs) scale(0.95);
+    right: 0;
+    transform: translate(0, bs5variables.$gutter-xxs) scale(0.95);
     opacity: 0;
     transition: all 0.25s bs5variables.$global-easing;
     pointer-events: none;
@@ -16,7 +16,7 @@
     box-shadow: bs5variables.$box-shadow;
 
     &.active {
-        transform: translate(-50%, 0) scale(1);
+        transform: translate(0, 0) scale(1);
         opacity: 1;
         pointer-events: all;
         transition: all 0.15s bs5variables.$global-easing;
