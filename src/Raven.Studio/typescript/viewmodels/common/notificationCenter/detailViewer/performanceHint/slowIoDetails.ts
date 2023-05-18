@@ -40,14 +40,17 @@ class slowIoDetails extends abstractPerformanceHintDetails {
 
         grid.init(() => this.fetcher(), () =>
             [
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid, x => x.Path, "Path", "45%", {
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid, x => x.Path, "Path", "35%", {
+                    sortable: "string"
+                }),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid, x => x.Type, "Type", "15%", {
                     sortable: "string"
                 }),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
                     sortable: x => x.Date
                 }),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid,
-                    x => this.formatSpeed(x), "Speed", "20%", {
+                    x => this.formatSpeed(x), "Speed", "15%", {
                         sortable: x => x.SpeedInMbPerSec
                     })
             ]);
