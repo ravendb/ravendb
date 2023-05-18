@@ -309,7 +309,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
 
     }
 
-    [LicenseRequiredFact]
+    [LicenseRequiredRetryFact(delayBetweenRetriesMs: 1000)]
     public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_One_Node()
     {
         DoNotReuseServer();
@@ -436,7 +436,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
     }
 
-    [LicenseRequiredFact]
+    [LicenseRequiredRetryFact(delayBetweenRetriesMs: 1000)]
     public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_Three_Nodes()
     {
         DoNotReuseServer();
