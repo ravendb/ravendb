@@ -194,7 +194,16 @@ namespace InterversionTests
         {
             try
             {
-                var result = await stores[0].Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(database), size));
+                var databaseRecord = new DatabaseRecord(database)
+                {
+                    Settings =
+                    {
+                        [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
+                        [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1"
+                    }
+                };
+
+                var result = await stores[0].Maintenance.Server.SendAsync(new CreateDatabaseOperation(databaseRecord, size));
                 foreach (var store in stores)
                 {
                     using (var context = JsonOperationContext.ShortTermSingleUse())
