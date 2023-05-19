@@ -43,6 +43,32 @@ namespace Voron.Data.Lookups
                 }
             }
 
+            public int Fill(Span<long> results)
+            {
+                if (_cursor._pos < 0)
+                    return 0;
+                ref var state = ref _cursor._stk[_cursor._pos];
+                while (true)
+                {
+                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
+                    if (state.LastSearchPosition < state.Header->NumberOfEntries)
+                    {
+                        var read = Math.Min(results.Length, state.Header->NumberOfEntries - state.LastSearchPosition);
+                        for (int i = 0; i < read; i++)
+                        {
+                            results[i] = GetValue(ref state, state.LastSearchPosition);
+                        }
+
+                        state.LastSearchPosition += read;
+                        return read;
+                    }
+                    if (_tree.GoToNextPage(ref _cursor) == false)
+                    {
+                        return 0;
+                    }
+                }
+            }
+            
             public bool MoveNext(out long value)
             {
                 if (_cursor._pos < 0)
@@ -138,6 +164,32 @@ namespace Voron.Data.Lookups
 
                 state.LastSearchPosition = state.Header->NumberOfEntries - 1;
             }
+            
+            public int Fill(Span<long> results)
+            {
+                if (_cursor._pos < 0)
+                    return 0;
+                ref var state = ref _cursor._stk[_cursor._pos];
+                while (true)
+                {
+                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
+                    if (state.LastSearchPosition >= 0)
+                    {
+                        var read = Math.Min(results.Length , state.LastSearchPosition);
+                        for (int i = read; i >= 0; i--)
+                        {
+                            results[i] = GetValue(ref state, state.LastSearchPosition);
+                            state.LastSearchPosition--;
+                        }
+                        return read;
+                    }
+                    if (_tree.GoToPreviousPage(ref _cursor) == false)
+                    {
+                        return 0;
+                    }
+                }
+            }
+
 
             public bool MoveNext(out long value)
             {

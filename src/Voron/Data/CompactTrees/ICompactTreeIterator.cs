@@ -7,4 +7,5 @@ public interface ITreeIterator
     void Init<T>(T parent);
     void Reset();
     bool MoveNext(out long value);
+    int Fill(Span<long> results);
 }
