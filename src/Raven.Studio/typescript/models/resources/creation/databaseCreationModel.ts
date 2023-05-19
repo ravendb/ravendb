@@ -17,6 +17,8 @@ type shardTopologyItem = {
     replicas: KnockoutObservableArray<clusterNode>;
 }
 
+const defaultReplicationFactor = 2;
+
 class databaseCreationModel {
     static storageExporterPathKeyName = storageKeyProvider.storageKeyFor("storage-exporter-path");
 
@@ -86,14 +88,16 @@ class databaseCreationModel {
     });
     
     replicationAndSharding = {
-        replicationFactor: ko.observable<number>(2),
+        replicationFactor: ko.observable<number>(defaultReplicationFactor),
         manualMode: ko.observable<boolean>(false),
         dynamicMode: ko.observable<boolean>(true),
         nodes: ko.observableArray<clusterNode>([]),
         orchestrators: ko.observableArray<clusterNode>([]),
         enableSharding: ko.observable<boolean>(false),
         numberOfShards: ko.observable<number>(1),
-        shardTopology: ko.observableArray<shardTopologyItem>([])
+        shardTopology: ko.observableArray<shardTopologyItem>([{
+            replicas: ko.observableArray(new Array(defaultReplicationFactor).fill(null))
+        }])
     };
     
     replicationValidationGroup = ko.validatedObservable({
