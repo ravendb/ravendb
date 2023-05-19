@@ -22,134 +22,97 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int FindMatches(long* dst, long* left, int leftLength, long* right, int rightLength)
         {
-            if (Avx2.IsSupported)
-                return FindMatchesVectorized(dst, left, leftLength, right, rightLength);
-            return FindMatchesScalar(dst, left, leftLength, right, rightLength);
-        }
+            // assumptions:
+            // The left is <= than the right, since the left if up to 4K and we'll only get the right
+            // on > 4K elements.
+            // 
+            // We are called *multiple* times with the same right element, switching the left each time.
+            //
+            // We should match a value only *once*, so once we have a match, we'll invalidate it in the right
+            // matches. 
 
-    
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int FindMatchesVectorized(long* dst, long* left, int leftLength, long* right, int rightLength)
-        {
-            // This is effectively a constant. 
-            uint N = (uint)Vector256<ulong>.Count;
-
-            long* dstStart = dst;
-            long* dstPtr = dst;
-
-            long* leftStart = left;
-            long* leftPtr = left;
-            long* leftEndPtr = left + leftLength;
-            long* rightPtr = right;
-            long* rightEndPtr = right + rightLength;
-
-            if (rightLength > N && leftLength > 0)
-            {
-                while (true)
-                {
-                    // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
-                    //       multiple checks at once and find the right amount of skipping using a table. 
-
-                    // If the value to compare is bigger than the biggest element in the block, we advance the block. 
-                    if ((ulong)*leftPtr > (ulong)*(rightPtr + N - 1))
-                    {
-                        if (rightPtr + N >= rightEndPtr)
-                            break;
-
-                        rightPtr += N;
-                        continue;
-                    }
-
-                    // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
-                    if ((ulong)*leftPtr < (ulong)*rightPtr)
-                    {
-                        leftPtr++;
-                        if (leftPtr >= leftEndPtr)
-                            break;
-
-                        continue;
-                    }
-
-                    Vector256<ulong> value = Vector256.Create((ulong)*leftPtr);
-                    Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)rightPtr);
-
-                    // We are going to select which direction we are going to be moving forward. 
-                    if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
-                    {
-                        // We found the value, therefore we need to store this value in the destination.
-                        *dstPtr = dstStart[(int)(leftPtr - leftStart)];
-                        dstPtr++;
-                    }
-
-                    leftPtr++;
-                    if (leftPtr >= leftEndPtr)
-                        break;
-                }
-            }
-
-            // The scalar version. This shouldn't cost much either way. 
-            while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
-            {
-                ulong leftValue = (ulong)*leftPtr;
-                ulong rightValue = (ulong)*rightPtr;
-
-                if (leftValue > rightValue)
-                {
-                    rightPtr++;
-                }
-                else if (leftValue < rightValue)
-                {
-                    leftPtr++;
-                }
-                else
-                {
-                    *dstPtr = dstStart[(int)(leftPtr - leftStart)];
-                    dstPtr++;
-                    leftPtr++;
-                    rightPtr++;
-                }
-            }
-
-            return (int)(dstPtr - dst);
-        }
-
-   
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int FindMatchesScalar(long* dst, long* left, int leftLength, long* right, int rightLength)
-        {
             long* dstStart = dst;
             long* dstPtr = dst;
             long* leftPtr = left;
             long* rightPtr = right;
-
-
             long* leftStart = left;
             long* leftEndPtr = leftPtr + leftLength;
             long* rightEndPtr = rightPtr + rightLength;
-            
-            while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
-            {
-                long leftValue = *leftPtr;
-                long rightValue = *rightPtr;
 
-                if (leftValue > rightValue)
-                {
-                    rightPtr++;
-                }
-                else if (leftValue < rightValue)
-                {
-                    leftPtr++;
-                }
-                else
-                {
-                    *dstPtr = dstStart[(int)(leftPtr - leftStart)];
-                    dstPtr++;
-                    leftPtr++;
-                    rightPtr++;
-                }
+            if (rightLength - leftLength > leftLength)
+            {
+                // we assume that this is a predictable branch so better to do a scan
+                return LinearScan();
             }
 
+            // there is a significant difference in size, wo we'll do binary search in the bigger
+            // array to find the right values
+            int minimum = 0;
+            while(leftPtr < leftEndPtr)
+            {
+                long leftValue = *leftPtr++;
+                minimum += BinarySearchOnce(rightPtr + minimum, leftValue);
+            }
             return (int)(dstPtr - dst);
+
+
+            int LinearScan()
+            {
+                while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
+                {
+                    long leftValue = *leftPtr;
+                    long rightValue = *rightPtr;
+                    // Note: we clear the top most bit for comparison
+                    long rightValueMasked = rightValue & long.MaxValue;
+
+                    if (leftValue > rightValueMasked)
+                    {
+                        rightPtr++;
+                    }
+                    else if (leftValue < rightValueMasked)
+                    {
+                        leftPtr++;
+                    }
+                    else if (leftValue == rightValue) // note: do an *actual* comparison
+                    {
+                        *dstPtr++ = dstStart[(int)(leftPtr - leftStart)];
+                        leftPtr++;
+                        *rightPtr++ |= ~long.MaxValue; // mark it as used for the *next* time
+                    }
+                }
+                return (int)(dstPtr - dst);
+            }
+
+            int BinarySearchOnce(long* start, long needle)
+            {
+                int l = 0;
+                int r = rightLength - 1;
+                while (l <= r)
+                {
+                    var pivot = (l + r) >> 1;
+                    long rightValue = start[pivot];
+                    // Note: we clear the top most bit for comparison
+                    long rightValueMasked = rightValue & long.MaxValue;
+                    switch (rightValueMasked.CompareTo(needle))
+                    {
+                        case 0:
+                            if (rightLength == needle) // check that it wasn't already used
+                            {
+                                *dstPtr = dstStart[(int)(leftPtr - leftStart)];
+                                start[pivot] |= ~long.MaxValue; // mark it as used for the *next* time
+                            }
+                            return pivot;
+                        case < 0:
+                            l = pivot + 1;
+                            break;
+                        default:
+                            r = pivot - 1;
+                            break;
+                    }
+                }
+
+                return 0;
+            }
         }
     }
 }
