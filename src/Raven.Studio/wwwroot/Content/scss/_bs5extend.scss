@@ -154,3 +154,12 @@ textarea:-webkit-autofill:focus {
     -webkit-text-fill-color: $input-focus-color;
     -webkit-box-shadow: 0 0 0 30px $input-focus-bg inset !important;
 }
+
+input,
+select {
+    &:disabled {
+        pointer-events: all !important;
+        cursor: not-allowed !important;
+        opacity: 0.66 !important;
+    }
+}
