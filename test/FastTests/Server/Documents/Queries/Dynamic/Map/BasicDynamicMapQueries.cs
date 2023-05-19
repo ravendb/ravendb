@@ -24,7 +24,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task String_where_clause(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -48,7 +48,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Numeric_where_equals_clause(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -72,7 +72,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Numeric_between_clause(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -102,7 +102,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Numeric_range_where_clause(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -425,7 +425,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_project_in_map(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -488,7 +488,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Collection_query(Options options)
         {
             using (var store = GetDocumentStore(options))

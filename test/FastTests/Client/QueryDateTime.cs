@@ -16,7 +16,7 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void DynamicQueryingDateTimeShouldWork(Options options)
         {
             using (var store = SetupStoreAndPushSomeEntities(options))
@@ -52,7 +52,7 @@ namespace FastTests.Client
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void StaticQueryingDateTimeShouldWork(Options options)
         {
             using (var store = SetupStoreAndPushSomeEntities(options))

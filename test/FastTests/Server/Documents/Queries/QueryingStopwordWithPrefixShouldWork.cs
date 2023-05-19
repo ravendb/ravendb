@@ -28,8 +28,8 @@ namespace FastTests.Server.Documents.Queries
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryStopwordsWithPrefix(Options options)
         {
             using (var store = GetDocumentStore(options))
