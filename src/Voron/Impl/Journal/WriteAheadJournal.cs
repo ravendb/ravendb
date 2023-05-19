@@ -26,7 +26,6 @@ using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
@@ -1654,7 +1653,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public CompressedPagesResult WriteToJournal(LowLevelTransaction tx, out string journalFilePath, out TimeSpan writeToJournalDuration)
+        public CompressedPagesResult WriteToJournal(LowLevelTransaction tx)
         {
             lock (_writeLock)
             {
@@ -1696,15 +1695,13 @@ namespace Voron.Impl.Journal
                     tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
                     sp.Restart();
-                    journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer, out writeToJournalDuration);
+                    journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
                     sp.Stop();
                     _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
-
-                    journalFilePath = CurrentFile.JournalWriter.FileName.FullPath;
 
                     if (CurrentFile.Available4Kbs == 0)
                     {

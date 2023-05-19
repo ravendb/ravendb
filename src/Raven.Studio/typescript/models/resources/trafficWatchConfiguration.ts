@@ -95,7 +95,11 @@ class trafficWatchConfiguration {
     }
 
     addCertificateThumbprint() {
-        this.certificateThumbprints.push(this.certificateThumbprintInput());
+        const value = this.certificateThumbprintInput();
+        if (!value) {
+            return;
+        }
+        this.certificateThumbprints.push(value);
         this.certificateThumbprintInput("");
     }
 

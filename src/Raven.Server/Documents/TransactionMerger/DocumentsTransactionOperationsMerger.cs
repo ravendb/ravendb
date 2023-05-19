@@ -57,9 +57,4 @@ public class DocumentsTransactionOperationsMerger : AbstractTransactionOperation
     {
         _database.LastAccessTime = time;
     }
-
-    internal override void NotifyAboutSlowWrite(CommitStats stats)
-    {
-        SlowWriteNotification.Notify(stats, NotificationCenter);
-    }
 }

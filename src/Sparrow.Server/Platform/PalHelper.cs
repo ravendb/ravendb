@@ -7,6 +7,10 @@ namespace Sparrow.Server.Platform
 {
     public static class PalHelper
     {
+        private const int ERROR_WRITE_PROTECT = 19; 
+        public const string ErrorMediaIsWriteProtectedHintMessage =
+            "This might indicate a hardware or OS issue. If you are running in the cloud, please consider contacting your provider since your volume's data might be inconsistent.";
+        
         public static void ThrowLastError(PalFlags.FailCodes rc, int lastError, string msg)
         {
             string txt;
@@ -34,6 +38,9 @@ namespace Sparrow.Server.Platform
 
             if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoSpc) != 0)
                 throw new DiskFullException(txt);
+
+            if (lastError is ERROR_WRITE_PROTECT)
+                txt += $"{Environment.NewLine}{ErrorMediaIsWriteProtectedHintMessage}";
 
             throw new InvalidOperationException(txt);
         }

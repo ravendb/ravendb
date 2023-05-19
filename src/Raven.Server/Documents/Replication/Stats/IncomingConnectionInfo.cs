@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.Replication.Stats
 
         public override string ToString() => $"Incoming Connection Info for {ReplicationsType} replication ({nameof(SourceDatabaseId)} : {SourceDatabaseId}, {nameof(SourceDatabaseName)} : {SourceDatabaseName}, {nameof(SourceMachineName)} : {SourceMachineName})";
 
+        public string DebugInfoString() => $"{SourceTag}/{SourceDatabaseName} @ {SourceUrl}";
+
         public bool Equals(IncomingConnectionInfo other)
         {
             if (ReferenceEquals(null, other)) return false;

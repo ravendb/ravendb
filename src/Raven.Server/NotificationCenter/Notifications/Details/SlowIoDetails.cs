@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
+using static Sparrow.Server.Meters.IoMetrics;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class SlowWritesDetails : INotificationDetails
+    public class SlowIoDetails : INotificationDetails
     {
         public const int MaxNumberOfWrites = 500;
 
@@ -22,12 +24,15 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             {
                 dict[key] = Writes[key].ToJson();
             }
-
             return djv;
         }
 
         public class SlowWriteInfo : IDynamicJsonValueConvertible
         {
+            public string Key => $"{Type}/{Path}";
+
+            public MeterType Type { get; set; }
+
             public string Path { get; set; }
 
             public double DataWrittenInMb { get; set; }
@@ -36,7 +41,27 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
             public double SpeedInMbPerSec { get; set; }
 
-            public DateTime Date { get; set; } 
+            public DateTime Date { get; set; }
+
+            public SlowWriteInfo() { /* Used for deserialization */ }
+
+            public SlowWriteInfo(IoChange ioChange, DateTime now)
+            {
+                DataWrittenInMb = ioChange.MeterItem.SizeInMb;
+                Date = now;
+                DurationInSec = ioChange.MeterItem.Duration.TotalSeconds;
+                Path = ioChange.FileName;
+                SpeedInMbPerSec = ioChange.MeterItem.RateOfWritesInMbPerSec;
+                Type = ioChange.MeterItem.Type;
+            }
+
+            public void Update(IoChange ioChange, DateTime now)
+            {
+                DataWrittenInMb = ioChange.MeterItem.SizeInMb;
+                Date = now;
+                DurationInSec = ioChange.MeterItem.Duration.TotalSeconds;
+                SpeedInMbPerSec = ioChange.MeterItem.RateOfWritesInMbPerSec;
+            }
 
             public DynamicJsonValue ToJson()
             {
@@ -46,7 +71,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                     [nameof(DataWrittenInMb)] = DataWrittenInMb,
                     [nameof(DurationInSec)] = DurationInSec,
                     [nameof(SpeedInMbPerSec)] = SpeedInMbPerSec,
-                    [nameof(Date)] = Date
+                    [nameof(Date)] = Date,
+                    [nameof(Type)] = Type
                 };
             }
         }
