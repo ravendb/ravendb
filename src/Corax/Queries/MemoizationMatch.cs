@@ -14,6 +14,11 @@ namespace Corax.Queries
 
         public bool IsBoosting => _inner.IsBoosting;
         public long Count => _inner.Count;
+        public bool DoNotSortResults()
+        {
+            return _inner.DoNotSortResults();
+        }
+
         public QueryCountConfidence Confidence => _inner.Confidence;
 
 
@@ -22,7 +27,9 @@ namespace Corax.Queries
             _inner = inner;
             _bufferCurrentIdx = 0;
         }
-             
+
+        public Span<long> FillAndRetrieve() => _inner.FillAndRetrieve();
+        
         public int Fill(Span<long> matches)
         {
             if (_inner.ReplayCounter == 1)

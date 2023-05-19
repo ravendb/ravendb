@@ -31,9 +31,10 @@ namespace Corax.Queries
         
         private bool _doNotSortResults;
 
-        public void DoNotSortResults()
+        public bool DoNotSortResults()
         {
             _doNotSortResults = true;
+            return true;
         }
 
         public MemoizationMatchProvider(ByteStringContext ctx, in TInner inner)
@@ -76,7 +77,9 @@ namespace Corax.Queries
             var bufferState = Buffer;
             int iterations = 0;
 
-            _inner.DoNotSortResults();
+            // Some inners can _tell_ us that they are already returning data in sorted order
+            if (_inner.DoNotSortResults() == false)
+                _doNotSortResults = true;
             
             int count = 0;
             while (true)

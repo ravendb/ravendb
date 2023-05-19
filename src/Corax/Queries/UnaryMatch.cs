@@ -52,6 +52,11 @@ namespace Corax.Queries
         public long Count => _totalResults;
         public long Current => _current;
 
+        public bool DoNotSortResults()
+        {
+            return _inner.DoNotSortResults();
+        }
+
         public QueryCountConfidence Confidence => _confidence;
 
         private UnaryMatch(in TInner inner,

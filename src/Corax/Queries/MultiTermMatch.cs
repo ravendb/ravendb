@@ -38,9 +38,10 @@ namespace Corax.Queries
         public long Count => _totalResults;
         public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
 
-        public void DoNotSortResults()
+        public bool DoNotSortResults()
         {
             _doNotSortResults = true;
+            return true;
         }
 
         public QueryCountConfidence Confidence => _confidence;

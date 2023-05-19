@@ -64,6 +64,8 @@ public class SpatialMatch : IQueryMatch
     }
 
     public long Count => long.MaxValue;
+    public bool DoNotSortResults() => true;
+
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
     public bool IsBoosting { get; }
 

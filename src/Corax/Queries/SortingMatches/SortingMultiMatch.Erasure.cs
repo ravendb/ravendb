@@ -19,7 +19,7 @@ namespace Corax.Queries.SortingMatches
             _functionTable = functionTable;
         }
 
-        public void DoNotSortResults() => _inner.DoNotSortResults();
+        public bool DoNotSortResults() => _inner.DoNotSortResults();
         public long TotalResults => _functionTable.TotalResultsFunc(ref this);
 
         public long Count => throw new NotSupportedException();

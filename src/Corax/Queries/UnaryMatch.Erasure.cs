@@ -21,6 +21,11 @@ namespace Corax.Queries
 
         public long Count => _functionTable.CountFunc(ref this);
 
+        public bool DoNotSortResults()
+        {
+            return _inner.DoNotSortResults();
+        }
+
         public QueryCountConfidence Confidence => _inner.Confidence;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

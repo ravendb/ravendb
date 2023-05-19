@@ -37,6 +37,11 @@ namespace Corax.Queries
         public string Term;
 #endif
 
+        public bool DoNotSortResults()
+        {
+            return false;// we already return results in sorted order
+        }
+
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
 
         private TermMatch(

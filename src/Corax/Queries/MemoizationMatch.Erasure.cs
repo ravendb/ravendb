@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 
 namespace Corax.Queries
 {
-    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct MemoizationMatch : IQueryMatch
     {
         private readonly FunctionTable _functionTable;
@@ -24,6 +23,11 @@ namespace Corax.Queries
 
         public long Count => _functionTable.CountFunc(ref this);
 
+        public bool DoNotSortResults()
+        {
+            return _inner.DoNotSortResults();
+        }
+
         public QueryCountConfidence Confidence => _inner.Confidence;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -37,21 +41,31 @@ namespace Corax.Queries
         {
             return _functionTable.AndWithFunc(ref this, buffer, matches);
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<long> FillAndRetrieve()
+        {
+            return _functionTable.FillAndRetrieveFunc(ref this);
+        }
 
         internal class FunctionTable
         {
             public readonly delegate*<ref MemoizationMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref MemoizationMatch, Span<long>, int, int> AndWithFunc;
             public readonly delegate*<ref MemoizationMatch, long> CountFunc;
+            public readonly delegate*<ref MemoizationMatch, Span<long>> FillAndRetrieveFunc;
+
 
             public FunctionTable(
                 delegate*<ref MemoizationMatch, Span<long>, int> fillFunc,
                 delegate*<ref MemoizationMatch, Span<long>, int, int> andWithFunc,
-                delegate*<ref MemoizationMatch, long> countFunc)
+                delegate*<ref MemoizationMatch, long> countFunc,
+                delegate*<ref MemoizationMatch, Span<long>> fillAndRetrieveFunc)
             {
                 FillFunc = fillFunc;
                 AndWithFunc = andWithFunc;
                 CountFunc = countFunc;
+                FillAndRetrieveFunc = fillAndRetrieveFunc;
             }
         }
 
@@ -80,6 +94,17 @@ namespace Corax.Queries
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                static Span<long> FillAndRetrieveFunc(ref MemoizationMatch match)
+                {
+                    if (match._inner is MemoizationMatch<TInner> inner)
+                    {
+                        return inner.FillAndRetrieve();
+                    }
+
+                    return default;
+                }
+                
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 static int AndWithFunc(ref MemoizationMatch match, Span<long> buffer, int matches)
                 {
                     if (match._inner is MemoizationMatch<TInner> inner)
@@ -91,7 +116,7 @@ namespace Corax.Queries
                     return 0;
                 }
 
-                FunctionTable = new FunctionTable(&FillFunc, &AndWithFunc, &CountFunc);
+                FunctionTable = new FunctionTable(&FillFunc, &AndWithFunc, &CountFunc, &FillAndRetrieveFunc);
             }
         }
 

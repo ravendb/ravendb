@@ -22,6 +22,11 @@ namespace Corax.Queries
         private Page _currentPage;
         private long _entriesContainerId;
 
+        public bool DoNotSortResults()
+        {
+            return false; //we are already returning in sorted order
+        }
+        
         public unsafe AllEntriesMatch(IndexSearcher searcher, Transaction tx)
         {
             _tx = tx;

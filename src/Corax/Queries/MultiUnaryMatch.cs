@@ -374,6 +374,11 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
     }
 
     public long Count { get; }
+    public bool DoNotSortResults()
+    {
+        return _inner.DoNotSortResults();
+    }
+
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
     public bool IsBoosting { get; }
 
