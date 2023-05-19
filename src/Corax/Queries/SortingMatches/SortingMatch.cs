@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Corax.Queries.SortingMatches.Comparers;
 using Corax.Utils;
@@ -190,7 +191,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                         _state = new(item.Length);
                         _smallPostingListBuffer = item.ToSpan();
                         if (currentIdx + PForEncoder.BufferLen > sortedIds.Length)
-                            break;
+                            return currentIdx;
                         ReadSmallPostingList(sortedIds, ref currentIdx);
                         break;
                     case TermIdMask.PostingList:
