@@ -32,6 +32,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
     private NativeIntegersList _results;
     public long TotalResults;
+    public bool DoNotSortResults() => throw new NotSupportedException();
 
     public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, int take = -1)
     {
@@ -102,7 +103,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         // we will just need to acquire via pages the totality of the results. 
         if (match.TotalResults == NotStarted)
         {
-            var memoizer = match._searcher.Memoize(match._inner);
+            if (match._inner is not MemoizationMatch memoizer)
+            {
+                memoizer = match._searcher.Memoize(match._inner).Replay();
+            }
+
             var allMatches = memoizer.FillAndRetrieve();
             match.TotalResults = allMatches.Length;
             
@@ -119,7 +124,6 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             {
                 SortUsingIndex<TEntryComparer, TDirection>(ref match, allMatches);
             }
-            memoizer.Dispose();
         }
 
         var read = match._results.MoveTo(matches);
@@ -153,7 +157,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             _smallPostingListBuffer = default;
             _state = default;
         }
-
+ 
         public int Read(Span<long> sortedIds)
         {
             int currentIdx = 0;
@@ -185,6 +189,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                         item = item.IncrementOffset(offset);
                         _state = new(item.Length);
                         _smallPostingListBuffer = item.ToSpan();
+                        if (currentIdx + PForEncoder.BufferLen > sortedIds.Length)
+                            break;
                         ReadSmallPostingList(sortedIds, ref currentIdx);
                         break;
                     case TermIdMask.PostingList:
