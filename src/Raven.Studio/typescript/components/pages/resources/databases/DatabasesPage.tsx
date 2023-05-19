@@ -7,11 +7,9 @@ import { NoDatabases } from "./partials/NoDatabases";
 import {
     Button,
     ButtonGroup,
-    Col,
     DropdownItem,
     DropdownMenu,
     DropdownToggle,
-    Row,
     UncontrolledDropdown,
 } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";

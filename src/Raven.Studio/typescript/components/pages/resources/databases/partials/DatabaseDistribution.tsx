@@ -8,7 +8,6 @@ import { SizeOnDisk } from "components/pages/resources/databases/partials/SizeOn
 import { DatabaseLoadError } from "components/pages/resources/databases/partials/DatabaseLoadError";
 import { Icon } from "components/common/Icon";
 import { selectDatabaseState } from "components/pages/resources/databases/store/databasesViewSelectors";
-import { NodeSetItem } from "components/common/NodeSet";
 import { DatabaseNodeSetItem } from "components/pages/resources/databases/partials/DatabaseNodeSetItem";
 
 interface DatabaseDistributionProps {
