@@ -120,7 +120,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 session.SaveChanges();
             }
             
-            Assert.False(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 10_000));
+            Assert.False(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2"));
 
             var revivedServer =GetNewServer(new ServerCreationOptions
             {
@@ -150,8 +150,8 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 session.SaveChanges();
             }
 
-            Assert.True(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3", 10_000));
-            Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 10_000));
+            Assert.True(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3"));
+            Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2"));
         
         }
     }
@@ -236,8 +236,8 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
             {
-                var waitForNotPassive = await mentorNode.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, cts.Token);
-                Assert.True(waitForNotPassive);
+                var waitForPassive = await mentorNode.ServerStore.Engine.WaitForState(RachisState.Passive, cts.Token);
+                Assert.True(waitForPassive);
             }
             
             var val = await WaitForValueAsync(async () =>
@@ -263,7 +263,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 return ongoingTask.ResponsibleNode.NodeTag != responsibleNodeNodeTag;
             }, true);
 
-            Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 10_000));
+            Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2"));
         }
     }
     
@@ -381,7 +381,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 hubSession.SaveChanges();
             }
 
-            Assert.True(WaitForDocument<User>(sinkStore, "users/1", u => u.Name == "Arava",30_000));
+            Assert.True(WaitForDocument<User>(sinkStore, "users/1", u => u.Name == "Arava",30_000),$"{await Replication.GetErrorsForClusterAsync(hubNodes, sinkStore.Database)}");
             var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(hubMentorNode);
             using (var hubSession = hubStore.OpenSession())
             {
