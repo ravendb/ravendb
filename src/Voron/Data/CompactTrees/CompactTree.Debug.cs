@@ -123,7 +123,8 @@ unsafe partial class CompactTree
 
         var lastEncodedKey = GetEncodedKeySpan(ref current, 0, out var lastEncodedKeyLengthInBits, out var l);
         
-        Span<byte> lastDecodedKey = stackalloc byte[dictionary.GetMaxDecodingBytes(lastEncodedKey.Length)];
+        Span<byte> lastDecodedKeyBuffer = stackalloc byte[1024];
+        Span<byte> lastDecodedKey = lastDecodedKeyBuffer;
 
         if (lastEncodedKey.Length != 0)
         {
@@ -144,23 +145,26 @@ unsafe partial class CompactTree
                 throw new InvalidOperationException("Decoded key size ("+encodedKey.Length+") is too big to verify: " + dictionary.GetMaxDecodingBytes(encodedKey.Length));
             
             Span<byte> decodedKey = decodedKeyBuffer;
+            decodedKey.Clear();
             dictionary.Decode(encodeKeyLengthInBits, encodedKey, ref decodedKey);
             if (dictionary.GetMaxEncodingBytes(encodedKey.Length) > decodedKeyBuffer.Length)
                 throw new InvalidOperationException("Encoded key size ("+encodedKey.Length+") is too big to verify: " + dictionary.GetMaxEncodingBytes(encodedKey.Length));
 
+            reencodeKeyBuffer.Clear();
             Span<byte> reencodedKey = reencodeKeyBuffer; 
             dictionary.Encode(decodedKey, ref reencodedKey, out var reencodedKeyLengthInBits);
             
-            if (dictionary.GetMaxDecodingBytes(reencodedKey.Length) > decodedKeyBuffer.Length)
+            if (dictionary.GetMaxDecodingBytes(reencodedKey.Length) > decodedKeyBuffer2.Length)
                 throw new InvalidOperationException("Rencode key size ("+reencodedKey.Length+") is too big to verify: " + dictionary.GetMaxDecodingBytes(reencodedKey.Length));
 
+            decodedKeyBuffer2.Clear();
             Span<byte> decodedKey1 = decodedKeyBuffer2;
             dictionary.Decode(reencodedKeyLengthInBits, reencodedKey, ref decodedKey1);
 
             if (decodedKey1.SequenceCompareTo(decodedKey) != 0)
                 VoronUnrecoverableErrorException.Raise(_llt, "Decoded key is not equal to the previous decoded key");
 
-            // Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
+            Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
 
             if (lastDecodedKey.SequenceCompareTo(decodedKey) > 0 || lastEncodedKey.SequenceCompareTo(encodedKey) > 0)
             {
@@ -174,7 +178,8 @@ unsafe partial class CompactTree
             }
 
             lastEncodedKey = encodedKey;
-            lastDecodedKey = decodedKey;
+            lastDecodedKey = lastDecodedKeyBuffer[..decodedKey.Length];
+            decodedKey.CopyTo(lastDecodedKey);
         }
     }
 }
