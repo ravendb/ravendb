@@ -129,7 +129,12 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         {
             if (RequestHandler.ShouldAddPagingPerformanceHint(responseWriteStats.NumberOfResults))
             {
-                var details = CreatePerformanceHintDetails();
+                string details;
+                
+                if (ids.Count > 0)
+                    details = CreatePerformanceHintDetails();
+                else
+                    details = HttpContext.Request.QueryString.Value;
 
                 RequestHandler.AddPagingPerformanceHint(
                     PagingOperationType.Documents,
