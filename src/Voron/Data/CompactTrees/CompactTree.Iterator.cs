@@ -75,7 +75,27 @@ namespace Voron.Data.CompactTrees
 
             public bool MoveNext(out long value)
             {
-                return MoveNext(out _, out value);
+                if (_cursor._pos < 0)
+                {
+                    value = default;
+                    return false;
+                }
+                ref var state = ref _cursor._stk[_cursor._pos];
+                while (true)
+                {
+                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
+                    if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
+                    {
+                        value = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[state.LastSearchPosition]);
+                        state.LastSearchPosition++;
+                        return true;
+                    }
+                    if (_tree.GoToNextPage(ref _cursor) == false)
+                    {
+                        value = default;
+                        return false;
+                    }
+                }
             }
 
             public bool MoveNext(out CompactKeyCacheScope scope, out long value)
@@ -192,9 +212,34 @@ namespace Voron.Data.CompactTrees
 
             public bool MoveNext(out long value)
             {
-                var b =  MoveNext(out var scope, out value);
-                scope.Dispose();
-                return b;
+                if (_cursor._pos < 0)
+                {
+                    value = default;
+                   return false;
+                }
+                ref var state = ref _cursor._stk[_cursor._pos];
+                while (true)
+                {
+                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
+                    if (state.LastSearchPosition >= 0) // same page
+                    {
+                        value = DecodeValue(state.Page.Pointer + state.EntriesOffsetsPtr[state.LastSearchPosition]);
+
+                        state.LastSearchPosition--;
+                        return true;
+                    }
+
+                    long pagePageNumber = state.Page.PageNumber;
+                    if (pagePageNumber == 24799)
+                    {
+                        Console.WriteLine();
+                    }
+                    if (_tree.GoToPreviousPage(ref _cursor) == false)
+                    {
+                        value = default;
+                        return false;
+                    }
+                }
             }
 
             public bool MoveNext(out CompactKeyCacheScope scope, out long value)

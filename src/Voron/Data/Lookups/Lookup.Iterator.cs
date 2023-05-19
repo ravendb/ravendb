@@ -45,7 +45,28 @@ namespace Voron.Data.Lookups
 
             public bool MoveNext(out long value)
             {
-                return MoveNext(out _, out value);
+                if (_cursor._pos < 0)
+                {
+                    value = default;
+                    return false;
+                }
+
+                ref var state = ref _cursor._stk[_cursor._pos];
+                while (true)
+                {
+                    Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
+                    if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
+                    {
+                        value = GetValue(ref state, state.LastSearchPosition);
+                        state.LastSearchPosition++;
+                        return true;
+                    }
+                    if (_tree.GoToNextPage(ref _cursor) == false)
+                    {
+                        value = default;
+                        return false;
+                    }
+                }
             }
 
             public bool MoveNext(out TKey key, out long value)
@@ -120,7 +141,27 @@ namespace Voron.Data.Lookups
 
             public bool MoveNext(out long value)
             {
-                return MoveNext(out _, out value);
+                if (_cursor._pos < 0)
+                {
+                    value = default;
+                    return false;
+                }
+                ref var state = ref _cursor._stk[_cursor._pos];
+                while (true)
+                {
+                    Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
+                    if (state.LastSearchPosition >= 0) // same page
+                    {
+                        value = GetValue(ref  state, state.LastSearchPosition);
+                        state.LastSearchPosition--;
+                        return true;
+                    }
+                    if (_tree.GoToPreviousPage(ref _cursor) == false)
+                    {
+                        value = default;
+                        return false;
+                    }
+                }
             }
 
             public bool MoveNext(out TKey key, out long value)
