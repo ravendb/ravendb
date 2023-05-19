@@ -123,18 +123,19 @@ namespace SlowTests.Issues
                     var query = from d in s.Query<MyDoc>()
                                 select new
                                 {
+                                    Id = d.Id,
                                     HasValue = d.NullableInt >= 0
                                 };
 
-                    Assert.Equal("from 'MyDocs' as d select { " +
+                    Assert.Equal("from 'MyDocs' as d select { Id : id(d), " +
                                  "HasValue : d.NullableInt>0||d.NullableInt===0 }"
-                                 , query.ToString());
+                        , query.ToString());
 
                     var results = query.ToList();
 
                     Assert.Equal(results.Count, 2);
-                    Assert.False(results[0].HasValue);
-                    Assert.True(results[1].HasValue);
+                    Assert.False(results.First(d => d.Id == "1").HasValue);
+                    Assert.True(results.First(d => d.Id == "2").HasValue);
                 }
             }
         }
