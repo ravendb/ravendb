@@ -12,10 +12,10 @@
         flex-wrap: wrap;
         align-items: flex-start;
         padding: sizes.$gutter-xs/2;
+        gap: sizes.$gutter-xs;
 
         .dbgroup-item {
             min-width: 150px;
-            margin: sizes.$gutter-xs/2;
             background-color: colors.$panel-bg-2-var;
             border-radius: sizes.$gutter-xxs;
             max-width: 200px;

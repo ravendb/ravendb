@@ -104,7 +104,7 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
 
     if (currentNode) {
         return (
-            <div className="node me-3">
+            <div className="node">
                 {usingNotPreferredNode ? (
                     <>
                         <span className="text-danger pulse" title="User preferred node for this task">
@@ -190,7 +190,7 @@ export function OngoingTaskActions(props: {
 
     return (
         <div className="actions">
-            <ButtonGroup className="ms-1">
+            <ButtonGroup>
                 <Button onClick={toggleDetails} title="Click for details">
                     <Icon icon="info" margin="m-0" />
                 </Button>

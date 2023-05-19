@@ -208,7 +208,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         {!IndexUtils.hasAnyFaultyNode(index) && (
                             <>
                                 {!IndexUtils.isSideBySide(index) && (
-                                    <UncontrolledDropdown className="me-2">
+                                    <UncontrolledDropdown>
                                         <DropdownToggle
                                             outline
                                             color={priorityButtonColor}
@@ -252,7 +252,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 {index.type !== "AutoMap" &&
                                     index.type !== "AutoMapReduce" &&
                                     !IndexUtils.isSideBySide(index) && (
-                                        <UncontrolledDropdown className="me-3">
+                                        <UncontrolledDropdown>
                                             <DropdownToggle
                                                 outline
                                                 color={lockButtonColor}
@@ -306,7 +306,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         )}
 
                         {!IndexUtils.hasAnyFaultyNode(index) && (
-                            <UncontrolledDropdown className="me-1">
+                            <UncontrolledDropdown>
                                 <DropdownToggle
                                     data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
@@ -331,7 +331,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         )}
 
                         {!IndexUtils.hasAnyFaultyNode(index) && (
-                            <UncontrolledDropdown group className="me-1">
+                            <UncontrolledDropdown group>
                                 <Button variant="secondary" href={queryUrl}>
                                     <Icon icon="search" />
                                     <span>Query</span>
@@ -347,7 +347,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             </UncontrolledDropdown>
                         )}
 
-                        <ButtonGroup className="me-1">
+                        <ButtonGroup>
                             {!IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
                                 <Button href={editUrl} title="Edit index">
                                     <Icon icon="edit" margin="m-0" />
@@ -361,13 +361,11 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         </ButtonGroup>
 
                         {isFaulty && (
-                            <Button onClick={() => openFaulty(index.nodesInfo[0].location)} className="me-1">
-                                Open faulty index
-                            </Button>
+                            <Button onClick={() => openFaulty(index.nodesInfo[0].location)}>Open faulty index</Button>
                         )}
 
                         {canReadWriteDatabase(database) && (
-                            <ButtonGroup className="me-1">
+                            <ButtonGroup>
                                 <Button color="warning" onClick={resetIndex} title="Reset index (rebuild)">
                                     <Icon icon="reset-index" margin="m-0" />
                                 </Button>

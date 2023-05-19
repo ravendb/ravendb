@@ -207,7 +207,7 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
 
 function BackupEncryption(props: { encrypted: boolean }) {
     return (
-        <div className="me-3">
+        <div>
             {props.encrypted ? (
                 <Icon icon="encryption" color="success" title="Backup is encrypted" margin="m-0" />
             ) : (

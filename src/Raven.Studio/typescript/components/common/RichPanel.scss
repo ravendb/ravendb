@@ -1,5 +1,6 @@
 ﻿@use "sass:math";
 @use "Content/scss/bs5variables";
+@use "Content/scss/sizes";
 
 .rich-panel-item {
     $status-border-radius: bs5variables.$gutter-xs;
@@ -86,6 +87,7 @@
         .rich-panel-actions {
             justify-content: end;
             flex-grow: 1;
+            gap: sizes.$gutter-sm;
         }
     }
 
