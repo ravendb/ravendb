@@ -286,7 +286,6 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     href={manageGroupUrl}
                                     title="Manage the Database Group"
                                     target={db.currentNode.relevant ? undefined : "_blank"}
-                                    className="ms-1"
                                     disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
                                 >
                                     <span>
@@ -296,7 +295,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             )}
 
                             {isAdminAccessOrAbove(db) && (
-                                <UncontrolledDropdown className="ms-1">
+                                <UncontrolledDropdown>
                                     <ButtonGroup>
                                         {isOperatorOrAbove() && (
                                             <Button onClick={onToggleDatabase}>
@@ -348,7 +347,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             )}
 
                             {isOperatorOrAbove() && (
-                                <UncontrolledDropdown className="ms-1">
+                                <UncontrolledDropdown>
                                     <ButtonGroup>
                                         <Button
                                             onClick={() => onDelete()}

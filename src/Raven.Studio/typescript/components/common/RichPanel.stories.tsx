@@ -47,7 +47,7 @@ const Template = (args: { withCheckbox: boolean }) => {
                 </RichPanelInfo>
                 <RichPanelActions>
                     <Button>Actions are placed here</Button>
-                    <Button className="ms-1" color="shard" onClick={toggleOpen} outline={!open}>
+                    <Button color="shard" onClick={toggleOpen} outline={!open}>
                         <Icon icon="sharding" margin="m-0" />
                     </Button>
                 </RichPanelActions>
