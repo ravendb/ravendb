@@ -8,6 +8,7 @@ using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -1048,7 +1049,7 @@ internal static class CoraxQueryBuilder
         {
             if (field.OrderingType == OrderByFieldType.Random)
             {
-                throw new NotSupportedException($"{nameof(Corax)} doesn't support OrderByRandom.");
+                throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support OrderByRandom.");
             }
 
             if (field.OrderingType == OrderByFieldType.Score)
