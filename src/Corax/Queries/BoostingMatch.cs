@@ -41,6 +41,11 @@ namespace Corax.Queries
 
         public long Count => _inner.Count;
 
+        public bool DoNotSortResults()
+        {
+            return _inner.DoNotSortResults();
+        }
+
         public QueryCountConfidence Confidence => _inner.Confidence;
 
         public bool IsBoosting => true;

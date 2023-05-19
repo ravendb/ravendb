@@ -58,6 +58,8 @@ public abstract class CoraxBooleanQueryBase : IQueryMatch
     protected const string QueryMatchUsageException =
         $"You tried to use {nameof(CoraxBooleanQueryBase)} as normal querying function. This class is only for type - relaxation inside {nameof(CoraxQueryBuilder)} to build big UnaryMatch stack";
 
+    public bool DoNotSortResults()  => throw new InvalidOperationException(QueryMatchUsageException);
+
     public long Count => throw new InvalidOperationException(QueryMatchUsageException);
     public QueryCountConfidence Confidence => throw new InvalidOperationException(QueryMatchUsageException);
     public int Fill(Span<long> matches) => throw new InvalidOperationException(QueryMatchUsageException);

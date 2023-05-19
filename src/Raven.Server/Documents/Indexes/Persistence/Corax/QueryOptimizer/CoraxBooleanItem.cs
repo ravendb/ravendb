@@ -161,7 +161,9 @@ public struct CoraxBooleanItem : IQueryMatch
 
         return baseMatch;
     }
-    
+
+    public bool DoNotSortResults() => throw new InvalidOperationException(IQueryMatchUsageException);
+
     public QueryCountConfidence Confidence => throw new InvalidOperationException(IQueryMatchUsageException);
     public int Fill(Span<long> matches) => throw new InvalidOperationException(IQueryMatchUsageException);
 

@@ -37,10 +37,7 @@ namespace Corax.Queries
     {
         long Count { get; }
 
-        void DoNotSortResults()
-        {
-            // most of the impl don't need this
-        }
+        bool DoNotSortResults();
         
         // The confidence of the query count.
         //  - High: We know exactly how many items there are.

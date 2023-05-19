@@ -20,6 +20,8 @@ namespace Corax.Queries.SortingMatches
 
         public long Count => throw new NotSupportedException();
 
+        public bool DoNotSortResults() => _inner.DoNotSortResults();
+
         public QueryCountConfidence Confidence => throw new NotSupportedException();
 
         public bool IsBoosting => _inner.IsBoosting;

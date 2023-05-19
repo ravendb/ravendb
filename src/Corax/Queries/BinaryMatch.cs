@@ -23,9 +23,10 @@ namespace Corax.Queries
         
         private bool _doNotSortResults;
 
-        public void DoNotSortResults()
+        public bool DoNotSortResults()
         {
             _doNotSortResults = true;
+            return true;
         }
 
 
