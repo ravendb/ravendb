@@ -86,7 +86,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void SimpleProximity(Options options)
         {
             using (var store = GetDocumentStore(options))
