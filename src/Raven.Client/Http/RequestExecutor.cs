@@ -141,7 +141,7 @@ namespace Raven.Client.Http
             get => _defaultTimeout;
             set
             {
-                if (GlobalHttpClientTimeout.Milliseconds >= 0 && value.HasValue && value.Value > GlobalHttpClientTimeout)
+                if (value.HasValue && value.Value > GlobalHttpClientTimeout && GlobalHttpClientTimeout != Timeout.InfiniteTimeSpan)
                     ThrowTimeoutTooLarge(value);
 
                 _defaultTimeout = value;
@@ -155,7 +155,7 @@ namespace Raven.Client.Http
             get => _secondBroadcastAttemptTimeout;
             set
             {
-                if (GlobalHttpClientTimeout.Milliseconds >= 0 && value > GlobalHttpClientTimeout)
+                if (value > GlobalHttpClientTimeout && GlobalHttpClientTimeout != Timeout.InfiniteTimeSpan)
                     ThrowTimeoutTooLarge(value);
 
                 _secondBroadcastAttemptTimeout = value;
@@ -169,7 +169,7 @@ namespace Raven.Client.Http
             get => _firstBroadcastAttemptTimeout;
             set
             {
-                if (GlobalHttpClientTimeout.Milliseconds >= 0 && value > GlobalHttpClientTimeout)
+                if (value > GlobalHttpClientTimeout && GlobalHttpClientTimeout != Timeout.InfiniteTimeSpan)
                     ThrowTimeoutTooLarge(value);
 
                 _firstBroadcastAttemptTimeout = value;
@@ -1016,7 +1016,7 @@ namespace Raven.Client.Http
                 var timeout = command.Timeout ?? _defaultTimeout;
                 if (timeout.HasValue)
                 {
-                    if (GlobalHttpClientTimeout.Milliseconds >= 0 && timeout > GlobalHttpClientTimeout)
+                    if (timeout > GlobalHttpClientTimeout && GlobalHttpClientTimeout != Timeout.InfiniteTimeSpan)
                         ThrowTimeoutTooLarge(timeout);
 
                     using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))

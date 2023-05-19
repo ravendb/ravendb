@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Commands
             if (indexQuery.WaitForNonStaleResultsTimeout.HasValue && indexQuery.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
             {
                 var timeout = indexQuery.WaitForNonStaleResultsTimeout.Value;
-                if (globalHttpClientTimeout.Milliseconds >= 0 && timeout < globalHttpClientTimeout) // if it is greater than it will throw in RequestExecutor
+                if (timeout < globalHttpClientTimeout || globalHttpClientTimeout == System.Threading.Timeout.InfiniteTimeSpan) // if it is greater than it will throw in RequestExecutor
                 {
                     timeout = globalHttpClientTimeout - timeout > AdditionalTimeToAddToTimeout
                         ? timeout.Add(AdditionalTimeToAddToTimeout) : globalHttpClientTimeout; // giving the server an opportunity to finish the response
