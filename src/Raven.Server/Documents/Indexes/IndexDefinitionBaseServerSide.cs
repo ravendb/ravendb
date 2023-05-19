@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Indexes
 
             public const long ProperlyParseThreeDigitsMillisecondsDates = 52_002; // RavenDB-17711
 
-            public const long EngineTypeStored = 60_000; // introducing Corax, added engine type to the index storage
+            public const long EngineTypeStored = 54_000; // introducing Corax, added engine type to the index storage
             
             public const long GuaranteedOrderOfPropertiesInMapReduceIndexes_Legacy = 54_001; // RavenDB-17312
             

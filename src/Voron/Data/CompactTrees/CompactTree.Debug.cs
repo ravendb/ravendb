@@ -123,13 +123,16 @@ unsafe partial class CompactTree
 
         var lastEncodedKey = GetEncodedKeySpan(ref current, 0, out var lastEncodedKeyLengthInBits, out var l);
         
-        Span<byte> lastDecodedKey = new byte[dictionary.GetMaxDecodingBytes(lastEncodedKey.Length)];
+        Span<byte> lastDecodedKey = stackalloc byte[dictionary.GetMaxDecodingBytes(lastEncodedKey.Length)];
 
         if (lastEncodedKey.Length != 0)
         {
             dictionary.Decode(lastEncodedKeyLengthInBits, lastEncodedKey, ref lastDecodedKey);
         }
 
+        Span<byte> decodedKeyBuffer = stackalloc byte[1024];
+        Span<byte> decodedKeyBuffer2 = stackalloc byte[1024];
+        Span<byte> reencodeKeyBuffer = stackalloc byte[1024];
         for (int i = 1; i < current.Header->NumberOfEntries; i++)
         {
             var encodedKey = GetEncodedKeySpan(ref current, i, out var encodeKeyLengthInBits, out l);
@@ -137,14 +140,21 @@ unsafe partial class CompactTree
                 VoronUnrecoverableErrorException.Raise(_llt, "Encoded key is corrupted.");
             if (lastEncodedKey.SequenceCompareTo(encodedKey) >= 0)
                 VoronUnrecoverableErrorException.Raise(_llt, "Last encoded key does not follow lexicographically.");
-
-            Span<byte> decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey.Length)];
+            if (dictionary.GetMaxDecodingBytes(encodedKey.Length) > decodedKeyBuffer.Length)
+                throw new InvalidOperationException("Decoded key size ("+encodedKey.Length+") is too big to verify: " + dictionary.GetMaxDecodingBytes(encodedKey.Length));
+            
+            Span<byte> decodedKey = decodedKeyBuffer;
             dictionary.Decode(encodeKeyLengthInBits, encodedKey, ref decodedKey);
+            if (dictionary.GetMaxEncodingBytes(encodedKey.Length) > decodedKeyBuffer.Length)
+                throw new InvalidOperationException("Encoded key size ("+encodedKey.Length+") is too big to verify: " + dictionary.GetMaxEncodingBytes(encodedKey.Length));
 
-            Span<byte> reencodedKey = new byte[dictionary.GetMaxEncodingBytes(decodedKey.Length)];
+            Span<byte> reencodedKey = reencodeKeyBuffer; 
             dictionary.Encode(decodedKey, ref reencodedKey, out var reencodedKeyLengthInBits);
+            
+            if (dictionary.GetMaxDecodingBytes(reencodedKey.Length) > decodedKeyBuffer.Length)
+                throw new InvalidOperationException("Rencode key size ("+reencodedKey.Length+") is too big to verify: " + dictionary.GetMaxDecodingBytes(reencodedKey.Length));
 
-            Span<byte> decodedKey1 = new byte[dictionary.GetMaxDecodingBytes(reencodedKey.Length)];
+            Span<byte> decodedKey1 = decodedKeyBuffer2;
             dictionary.Decode(reencodedKeyLengthInBits, reencodedKey, ref decodedKey1);
 
             if (decodedKey1.SequenceCompareTo(decodedKey) != 0)

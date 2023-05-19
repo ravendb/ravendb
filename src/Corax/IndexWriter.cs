@@ -1586,8 +1586,8 @@ namespace Corax
                 
                 if (indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
                 {
-                    AddRange(_additionsForTerm, entries.Additions);
-                    AddRange(_removalsForTerm, entries.Removals);
+                    SetRange(_additionsForTerm, entries.Additions);
+                    SetRange(_removalsForTerm, entries.Removals);
                 }
                 
                 Debug.Assert(found || entries.TotalRemovals == 0, "Cannot remove entries from term that isn't already there");
@@ -1645,7 +1645,7 @@ namespace Corax
             }
         }
 
-        private void AddRange(List<long> list, ReadOnlySpan<long> span)
+        private void SetRange(List<long> list, ReadOnlySpan<long> span)
         {
             list.Clear();
             for (int i = 0; i < span.Length; i++)
@@ -1905,8 +1905,8 @@ namespace Corax
 
         private void UpdateEntriesForTerm(EntriesModifications entries, Lookup<long> entriesToTerms, long term)
         {
-            AddRange(_additionsForTerm, entries.Additions);
-            AddRange(_removalsForTerm, entries.Removals);
+            SetRange(_additionsForTerm, entries.Additions);
+            SetRange(_removalsForTerm, entries.Removals);
 
             InsertEntriesForTerm(entriesToTerms, term);
         }

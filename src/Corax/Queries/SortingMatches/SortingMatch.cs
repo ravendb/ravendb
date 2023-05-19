@@ -109,8 +109,9 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             if (match.TotalResults == 0)
                 return 0;
 
+            const int IndexSortingThreshold = 4096;
             if (typeof(TDirection) == typeof(NoIterationOptimization) || 
-                match.TotalResults < 4096)
+                match.TotalResults < IndexSortingThreshold)
             {
                 SortResults<TEntryComparer>(ref match, allMatches);
             }

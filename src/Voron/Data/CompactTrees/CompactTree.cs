@@ -1208,8 +1208,6 @@ namespace Voron.Data.CompactTrees
             DebugStuff.RenderAndShow(this);
         }
 
-        private HashSet<long> _pagesThatWeFailedToRecompress;
-
         private void CreateRootPage()
         {
             _state.BranchPages++;
