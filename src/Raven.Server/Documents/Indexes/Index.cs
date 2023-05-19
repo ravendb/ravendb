@@ -18,7 +18,6 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Corax;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
@@ -1805,6 +1804,10 @@ namespace Raven.Server.Documents.Indexes
                                 }
                             }
                         }
+                        catch (Exception e) when (e.IsOutOfMemory())
+                        {
+                            HandleOutOfMemoryException(null, storageEnvironment, e);
+                        }
                         catch (OperationCanceledException)
                         {
                             return;
@@ -2202,7 +2205,7 @@ namespace Raven.Server.Documents.Indexes
                     exception = new OutOfMemoryException("The paging file is too small for this operation to complete, consider increasing the size of the page file", exception);
                 }
 
-                scope.AddMemoryError(exception);
+                scope?.AddMemoryError(exception);
                 var outOfMemoryErrors = Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
                 _lowMemoryFlag.Raise();
 
@@ -2405,7 +2408,6 @@ namespace Raven.Server.Documents.Indexes
                             tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => IndexPersistence.CleanWritersIfNeeded();
 
                             tx.Commit();
-                            SlowWriteNotification.Notify(commitStats, DocumentDatabase.NotificationCenter);
                             stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
                         }
                     }

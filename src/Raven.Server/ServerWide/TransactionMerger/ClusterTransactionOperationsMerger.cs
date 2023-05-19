@@ -33,10 +33,6 @@ public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsM
     {
     }
 
-    internal override void NotifyAboutSlowWrite(CommitStats stats)
-    {
-    }
-
     protected override void UpdateLastAccessTime(DateTime time)
     {
     }

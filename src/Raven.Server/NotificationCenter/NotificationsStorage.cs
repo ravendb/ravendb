@@ -87,7 +87,7 @@ namespace Raven.Server.NotificationCenter
 
         private readonly long _postponeDateNotSpecified = Bits.SwapBytes(long.MaxValue);
 
-        private void Store(LazyStringValue id, DateTime createdAt, DateTime? postponedUntil, BlittableJsonReaderObject action, RavenTransaction tx)
+        internal void Store(LazyStringValue id, DateTime createdAt, DateTime? postponedUntil, BlittableJsonReaderObject action, RavenTransaction tx)
         {
             var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
 

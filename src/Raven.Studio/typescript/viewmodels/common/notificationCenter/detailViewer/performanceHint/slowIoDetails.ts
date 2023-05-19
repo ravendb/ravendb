@@ -10,25 +10,25 @@ import performanceHint = require("common/notifications/models/performanceHint");
 import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
 import moment = require("moment");
 
-class slowWriteDetails extends abstractPerformanceHintDetails {
+class slowIoDetails extends abstractPerformanceHintDetails {
 
     view = require("views/common/notificationCenter/detailViewer/performanceHint/slowWriteDetails.html");
 
-    tableItems: Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo[] = [];
-    private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>>();
-    private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>();
+    tableItems: Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo[] = [];
+    private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>>();
+    private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>();
 
     constructor(hint: performanceHint, notificationCenter: notificationCenter) {
         super(hint, notificationCenter);
 
         // extract values - ignore keys
-        this.tableItems = _.map((this.hint.details() as Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails).Writes, v => v);
+        this.tableItems = _.map((this.hint.details() as Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails).Writes, v => v);
 
         // newest first
         this.tableItems.reverse();
     }
     
-    private formatSpeed(info: Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo) {
+    private formatSpeed(info: Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo) {
         return info.DataWrittenInMb.toFixed(2) + " MB in " + info.DurationInSec.toFixed(2) + " sec. (" + info.SpeedInMbPerSec.toFixed(2) + "MB/s)"
     }
 
@@ -40,21 +40,24 @@ class slowWriteDetails extends abstractPerformanceHintDetails {
 
         grid.init(() => this.fetcher(), () =>
             [
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>(grid, x => x.Path, "Path", "45%", {
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid, x => x.Path, "Path", "35%", {
                     sortable: "string"
                 }),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid, x => x.Type, "Type", "15%", {
+                    sortable: "string"
+                }),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
                     sortable: x => x.Date
                 }),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>(grid,
-                    x => this.formatSpeed(x), "Speed", "20%", {
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid,
+                    x => this.formatSpeed(x), "Speed", "15%", {
                         sortable: x => x.SpeedInMbPerSec
                     })
             ]);
         
         this.columnPreview.install(".slowWriteDetails", ".js-slow-write-details-tooltip",
-            (details: Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo,
-             column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>,
+            (details: Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo,
+             column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>,
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
                     if (column.header === "Date") {
@@ -69,8 +72,8 @@ class slowWriteDetails extends abstractPerformanceHintDetails {
             });
     }
     
-    private fetcher(): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>> {
-        return $.Deferred<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>>()
+    private fetcher(): JQueryPromise<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>> {
+        return $.Deferred<pagedResult<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>>()
             .resolve({
                 items: this.tableItems,
                 totalResultCount: this.tableItems.length
@@ -82,8 +85,8 @@ class slowWriteDetails extends abstractPerformanceHintDetails {
     }
 
     static showDetailsFor(hint: performanceHint, center: notificationCenter) {
-        return app.showBootstrapDialog(new slowWriteDetails(hint, center));
+        return app.showBootstrapDialog(new slowIoDetails(hint, center));
     }
 }
 
-export = slowWriteDetails;
+export = slowIoDetails;

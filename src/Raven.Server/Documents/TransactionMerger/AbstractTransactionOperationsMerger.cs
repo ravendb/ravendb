@@ -21,7 +21,6 @@ using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
-using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
 using Size = Sparrow.Size;
@@ -393,12 +392,9 @@ namespace Raven.Server.Documents.TransactionMerger
                         case PendingOperations.CompletedAll:
                             try
                             {
-                                tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
-
                                 _recording.State?.TryRecord(context, TxInstruction.Commit);
                                 tx.Commit();
 
-                                NotifyAboutSlowWrite(stats);
                                 _recording.State?.TryRecord(context, TxInstruction.DisposeTx, tx.Disposed == false);
                                 tx.Dispose();
                             }
@@ -455,7 +451,6 @@ namespace Raven.Server.Documents.TransactionMerger
         }
 
         internal abstract void UpdateGlobalReplicationInfoBeforeCommit(TOperationContext context);
-        internal abstract void NotifyAboutSlowWrite(CommitStats stats);
 
         private void NotifyTransactionFailureAndRerunIndependently(List<MergedTransactionCommand<TOperationContext, TTransaction>> pendingOps, Exception e)
         {
@@ -489,10 +484,9 @@ namespace Raven.Server.Documents.TransactionMerger
                         _log.Info($"BeginAsyncCommit on {previous.Transaction.InnerTransaction.LowLevelTransaction.Id} with {_operations.Count} additional operations pending");
 
                     currentReturnContext = _contextPool.AllocateOperationContext(out current);
-                    CommitStats commitStats = null;
+
                     try
                     {
-                        previous.Transaction.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
                         _recording.State?.TryRecord(current, TxInstruction.BeginAsyncCommitAndStartNewTransaction);
                         current.Transaction = BeginAsyncCommitAndStartNewTransaction(previous.Transaction, current);
                     }
@@ -509,7 +503,7 @@ namespace Raven.Server.Documents.TransactionMerger
                             try
                             {
                                 //already throwing, attempt to complete previous tx
-                                CompletePreviousTransaction(previous, previous.Transaction, commitStats, ref previousPendingOps, throwOnError: false);
+                                CompletePreviousTransaction(previous, previous.Transaction, ref previousPendingOps, throwOnError: false);
                             }
                             finally
                             {
@@ -539,7 +533,7 @@ namespace Raven.Server.Documents.TransactionMerger
                             transactionMeter.Dispose();
                         }
                         calledCompletePreviousTx = true;
-                        CompletePreviousTransaction(previous, previous.Transaction, commitStats, ref previousPendingOps, throwOnError: true);
+                        CompletePreviousTransaction(previous, previous.Transaction, ref previousPendingOps, throwOnError: true);
                     }
                     catch (Exception e)
                     {
@@ -551,7 +545,6 @@ namespace Raven.Server.Documents.TransactionMerger
                                 CompletePreviousTransaction(
                                     previous,
                                     previous.Transaction,
-                                    commitStats,
                                     ref previousPendingOps,
                                     // if this previous threw, it won't throw again
                                     throwOnError: false);
@@ -598,11 +591,8 @@ namespace Raven.Server.Documents.TransactionMerger
                         case PendingOperations.CompletedAll:
                             try
                             {
-                                previous.Transaction.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
                                 _recording.State?.TryRecord(current, TxInstruction.Commit);
                                 previous.Transaction.Commit();
-
-                                NotifyAboutSlowWrite(stats);
                             }
                             catch (Exception e)
                             {
@@ -639,7 +629,6 @@ namespace Raven.Server.Documents.TransactionMerger
         private void CompletePreviousTransaction(
             TOperationContext context,
             RavenTransaction previous,
-            CommitStats commitStats,
             ref List<MergedTransactionCommand<TOperationContext, TTransaction>> previousPendingOps,
             bool throwOnError)
         {
@@ -647,12 +636,6 @@ namespace Raven.Server.Documents.TransactionMerger
             {
                 _recording.State?.TryRecord(context, TxInstruction.EndAsyncCommit);
                 previous.EndAsyncCommit();
-
-                //not sure about this 'if'
-                if (commitStats != null)
-                {
-                    NotifyAboutSlowWrite(commitStats);
-                }
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"EndAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id}");
@@ -916,11 +899,8 @@ namespace Raven.Server.Documents.TransactionMerger
 
                                     op.Execute(context, _recording.State);
 
-                                    tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
-
                                     _recording.State?.TryRecord(context, TxInstruction.Commit);
                                     tx.Commit();
-                                    NotifyAboutSlowWrite(stats);
                                 }
                             }
 

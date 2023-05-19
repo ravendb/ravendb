@@ -16,6 +16,8 @@ namespace Sparrow.Server.Meters
             public int Acceleration;
             public long CompressedSize;
             public TimeSpan Duration => End - Start;
+            public double SizeInMb => Size / (double)1024 / 1024;
+            public double RateOfWritesInMbPerSec => SizeInMb / Duration.TotalSeconds;
         }
 
         public class SummerizedItem

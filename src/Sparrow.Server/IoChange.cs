@@ -5,6 +5,8 @@ namespace Sparrow.Server
 {
     public class IoChange
     {
+        public string Key => $"{MeterItem.Type}/{FileName}";
+
         public string FileName { get; set; }
 
         public IoMeterBuffer.MeterItem MeterItem { get; set; }

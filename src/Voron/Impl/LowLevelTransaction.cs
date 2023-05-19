@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server;
-using Sparrow.Server.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
@@ -1133,19 +1132,18 @@ namespace Voron.Impl
 
             try
             {
-                var numberOfWrittenPages = _journal.WriteToJournal(this, out var journalFilePath, out var writeToJournalDuration);
+                var numberOfWrittenPages = _journal.WriteToJournal(this);
                 FlushedToJournal = true;
                 _updatePageTranslationTableAndUnusedPages = numberOfWrittenPages.UpdatePageTranslationTableAndUnusedPages;
+
                 if (_forTestingPurposes?.SimulateThrowingOnCommitStage2 == true)
                     _forTestingPurposes.ThrowSimulateErrorOnCommitStage2();
 
-                if (_requestedCommitStats != null)
-                {
-                    _requestedCommitStats.WriteToJournalDuration = writeToJournalDuration;
-                    _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
-                    _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
-                    _requestedCommitStats.JournalFilePath = journalFilePath;
-                }
+                if (_requestedCommitStats == null) 
+                    return;
+
+                _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
+                _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
             }
             catch
             {
