@@ -15,7 +15,7 @@ namespace FastTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseLongCount(Options options)
         {
             using (var store = GetDocumentStore(options))

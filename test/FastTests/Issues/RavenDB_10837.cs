@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,11 +21,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void CanWaitForIndex()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanWaitForIndex(Options options)
         {
-
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 IndexDefinition entityByName = new IndexDefinition
                 {

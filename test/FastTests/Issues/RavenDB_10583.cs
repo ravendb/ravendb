@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,13 +23,13 @@ namespace FastTests.Issues
             Value3
         }
 
-        [Fact]
-        public void TranslateEnumAsString()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TranslateEnumAsString(Options options)
         {
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = a => a.Conventions.SaveEnumsAsIntegers = false
-            }))
+            options.ModifyDocumentStore = a => a.Conventions.SaveEnumsAsIntegers = false;
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -59,13 +60,13 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void TranslateEnumAsInteger()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void TranslateEnumAsInteger(Options options)
         {
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = a => a.Conventions.SaveEnumsAsIntegers = true
-            }))
+            options.ModifyDocumentStore = a => a.Conventions.SaveEnumsAsIntegers = true;
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
