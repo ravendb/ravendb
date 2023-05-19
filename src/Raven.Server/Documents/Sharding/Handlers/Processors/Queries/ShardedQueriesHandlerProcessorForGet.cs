@@ -148,6 +148,9 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         
         if (indexQuery.Metadata.HasHighlightings)
             throw new NotSupportedInShardingException("Highlighting queries are currently not supported in a sharded database ");
+        
+        if (indexQuery.Metadata.HasIntersect && indexQuery.Metadata.OrderBy?.Length > 0)
+            throw new NotSupportedInShardingException("Ordered intersect queries are currently not supported in a sharded database ");
     }
 
     private static TimingsScope Timings(IndexQueryServerSide query) => new(query);
