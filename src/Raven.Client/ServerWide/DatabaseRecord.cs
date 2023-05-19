@@ -392,20 +392,20 @@ namespace Raven.Client.ServerWide
 
         public void DeleteIndex(string name)
         {
-            var lockMode = IndexLockMode.Unlock;
-            
             if (Indexes.TryGetValue(name, out var definition))
             {
+                var lockMode = IndexLockMode.Unlock;
+                
                 if (definition.LockMode != null)
                     lockMode = definition.LockMode.Value;
-            }
-            
-            if (lockMode == IndexLockMode.LockedIgnore)
-                return;
+                
+                if (lockMode == IndexLockMode.LockedIgnore)
+                    return;
 
-            if (lockMode == IndexLockMode.LockedError)
-            {
-                throw new IndexDeletionException($"Cannot delete existing index {name} with lock mode {lockMode}");
+                if (lockMode == IndexLockMode.LockedError)
+                {
+                    throw new IndexDeletionException($"Cannot delete existing index {name} with lock mode {lockMode}");
+                }
             }
             
             Indexes?.Remove(name);
