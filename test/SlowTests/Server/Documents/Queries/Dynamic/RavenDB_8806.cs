@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_stream_dynamic_query(Options options)
         {
             using (var store = GetDocumentStore(options))

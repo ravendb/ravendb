@@ -67,7 +67,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void UsingKeywordAnalyzing(Options options)
         {
             using (var store = GetDocumentStore(options))

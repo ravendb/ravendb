@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_search_with_filters(Options options)
         {
             Property property = new Property { Id = Guid.NewGuid().ToString(), Name = "Property Name", BedroomCount = 3 };

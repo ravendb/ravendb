@@ -71,7 +71,7 @@ namespace SlowTests.Core.Indexing
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax is not supporting custom analyzers")]
         public void CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions(Options options)
         {

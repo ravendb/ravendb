@@ -20,7 +20,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanIndexValuesForDictionary(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -49,7 +49,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanIndexValuesForDictionaryAsPartOfDictionary(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -81,7 +81,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanIndexNestedValuesForDictionaryAsPartOfDictionary(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -111,7 +111,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanIndexValuesForIDictionaryAsPartOfIDictionary(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -141,7 +141,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanIndexNestedValuesForIDictionaryAsPartOfIDictionary(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -171,7 +171,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanIndexValuesForDictionaryWithNumberForIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

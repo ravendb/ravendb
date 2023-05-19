@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
@@ -11,10 +12,11 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void CanSortOnDynamicIndexOnFieldWhichWeDontQuery()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanSortOnDynamicIndexOnFieldWhichWeDontQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

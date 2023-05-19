@@ -289,7 +289,7 @@ public class RavenIntegration : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void CoraxOrQueriesCanWorksOnlyOnComplexQueries(Options options)
+    public void CoraxOrQueriesCanWorksOnComplexQueries(Options options)
     {
         using var store = GetDocumentStore(options);
         {

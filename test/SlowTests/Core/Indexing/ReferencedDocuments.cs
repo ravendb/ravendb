@@ -36,7 +36,7 @@ namespace SlowTests.Core.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseLoadDocumentToIndexReferencedDocs(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -51,14 +51,16 @@ namespace SlowTests.Core.Indexing
                 {
                     for (int i = 0; i < 10; i++)
                     {
+                        var postId = "posts/" + i;
+
                         session.Store(new Post
                         {
-                            Id = "posts/" + i
+                            Id = $"{postId}"
                         });
 
                         session.Store(new PostContent
                         {
-                            Id = "posts/" + i + "/content",
+                            Id = "posts/" + i + $"/content${postId}",
                             Text = i % 2 == 0 ? "HTML 5" : "Javascript"
                         });
 

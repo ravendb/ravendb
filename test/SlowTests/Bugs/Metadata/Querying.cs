@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Metadata
@@ -11,10 +12,11 @@ namespace SlowTests.Bugs.Metadata
         {
         }
 
-        [Fact]
-        public void Can_query_metadata()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_query_metadata(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var user1 = new User { Name = "Joe Schmoe" };
                 // This test succeeds if I use "Test-Property1" as the  property name.
@@ -44,10 +46,11 @@ namespace SlowTests.Bugs.Metadata
             }
         }
 
-        [Fact]
-        public void Index_should_take_into_account_number_of_dashes()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Index_should_take_into_account_number_of_dashes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var user1 = new User { Name = "Joe Schmoe" };
                 using (var session = store.OpenSession())
