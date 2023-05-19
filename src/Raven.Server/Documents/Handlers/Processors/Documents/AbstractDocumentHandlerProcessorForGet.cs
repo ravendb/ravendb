@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -126,14 +127,45 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         if (responseWriteStats != NoResults)
         {
-            RequestHandler.AddPagingPerformanceHint(
-                PagingOperationType.Documents,
-                actionName,
-                HttpContext.Request.QueryString.Value,
-                responseWriteStats.NumberOfResults,
-                pageSize,
-                sw.ElapsedMilliseconds,
-                responseWriteStats.TotalDocumentsSizeInBytes);
+            if (RequestHandler.ShouldAddPagingPerformanceHint(responseWriteStats.NumberOfResults))
+            {
+                var details = CreatePerformanceHintDetails();
+
+                RequestHandler.AddPagingPerformanceHint(
+                    PagingOperationType.Documents,
+                    actionName,
+                    details,
+                    responseWriteStats.NumberOfResults,
+                    pageSize,
+                    sw.ElapsedMilliseconds,
+                    responseWriteStats.TotalDocumentsSizeInBytes);
+            }
+        }
+        
+        string CreatePerformanceHintDetails()
+        {
+            var sb = new StringBuilder();
+            var addedIdsCount = 0;
+            var first = true;
+
+            while (sb.Length < 1024 && addedIdsCount < ids.Count)
+            {
+                if (first == false)
+                    sb.Append(", ");
+                else
+                    first = false;
+                    
+                sb.Append($"{ids[addedIdsCount++]}");
+            }
+
+            var idsLeftCount = ids.Count - addedIdsCount;
+
+            if (idsLeftCount > 0)
+            {
+                sb.Append($" ... (and {idsLeftCount} more)");
+            }
+
+            return sb.ToString();
         }
     }
 
