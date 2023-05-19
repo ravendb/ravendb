@@ -79,6 +79,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         {
             throw new NotSupportedException();
         }
+
+        public int Fill(Span<long> results)
+        {
+            throw new NotSupportedException();
+        }
     }
         
     private static delegate*<ref SortingMatch<TInner>, Span<long>, int> 
@@ -142,11 +147,21 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         where TIterator : struct, ITreeIterator
     {
         private PostingList.Iterator _postListIt;
-        private Span<byte> _smallPostingListBuffer;
+        private UnmanagedSpan _smallPostingListBuffer;
         private PForDecoder.DecoderState _state;
         private TIterator _termsIt;
         private readonly IndexSearcher _searcher;
         private readonly LowLevelTransaction _llt;
+
+        private const int BufferSize = 1024;
+        private readonly long* _itBuffer;
+        private readonly UnmanagedSpan* _containerItems;
+        private int _bufferIdx;
+        private int _bufferCount;
+        private int _smallPostingListIndex;
+        private NativeIntegersList _smallPostListIds;
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope _itBufferScope, _containerItemsScope;
+        private readonly PageLocator _pageLocator;
 
         public SortedIndexReader(LowLevelTransaction llt, IndexSearcher searcher, TIterator it)
         {
@@ -157,54 +172,94 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             _postListIt = default;
             _smallPostingListBuffer = default;
             _state = default;
+            _smallPostListIds = new NativeIntegersList(llt.Allocator,BufferSize);
+            _bufferCount = _bufferIdx = 0;
+            _itBufferScope = llt.Allocator.Allocate(BufferSize * sizeof(long), out ByteString bs);
+            _itBuffer = (long*)bs.Ptr;
+            _containerItemsScope = llt.Allocator.Allocate(BufferSize * sizeof(UnmanagedSpan), out bs);
+            _containerItems = (UnmanagedSpan*)bs.Ptr;
+            _pageLocator = new PageLocator(llt, BufferSize);
         }
  
-        public int Read(Span<long> sortedIds)
+
+         public int Read(Span<long> sortedIds)
+         {
+             fixed (long* pSortedIds = sortedIds)
+             {
+                 int currentIdx = 0;
+                 // here we resume the *previous* operation
+                 if (_state.BufferSize != 0)
+                 {
+                     ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
+                 }
+                 else if (_postListIt.IsValid)
+                 {
+                     ReadLargePostingList(sortedIds, ref currentIdx);
+                 }
+
+                 while (currentIdx < sortedIds.Length)
+                 {
+                     if (_bufferIdx == _bufferCount)
+                     {
+                         RefillBuffers();
+                         if (_bufferCount == 0)
+                             break;
+                     }
+
+                     var postingListId = _itBuffer[_bufferIdx++];
+                     var termType = (TermIdMask)postingListId & TermIdMask.EnsureIsSingleMask;
+                     switch (termType)
+                     {
+                         case TermIdMask.Single:
+                             sortedIds[currentIdx++] = EntryIdEncodings.GetContainerId(postingListId);
+                             break;
+                         case TermIdMask.SmallPostingList:
+                             var item = _containerItems[_smallPostingListIndex++];
+                             VariableSizeEncoding.Read<int>(item.Address, out var offset);
+                             item = item.Slice(offset);
+                             _state = new(item.Length);
+                             _smallPostingListBuffer = item;
+                             if (currentIdx + PForEncoder.BufferLen > sortedIds.Length)
+                                 return currentIdx;
+                             ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
+                             break;
+                         case TermIdMask.PostingList:
+                             var postingList = _searcher.GetPostingList(postingListId);
+                             _postListIt = postingList.Iterate();
+                             ReadLargePostingList(sortedIds, ref currentIdx);
+                             break;
+                         default:
+                             throw new OutOfMemoryException(termType.ToString());
+                     }
+                 }
+
+                 return currentIdx;
+             }
+         }
+
+         private void RefillBuffers()
         {
-            int currentIdx = 0;
-            // here we resume the *previous* operation
-            if (_state.BufferSize != 0)
+            _smallPostListIds.Clear();
+            _bufferIdx = 0;
+            _bufferCount = 0;
+            _bufferCount = _termsIt.Fill(new Span<long>(_itBuffer, BufferSize));
+            if (_bufferCount == 0)
+                return;
+            
+            for (int i = 0; i < _bufferCount; i++)
             {
-                ReadSmallPostingList(sortedIds, ref currentIdx);
-            }
-            else if (_postListIt.IsValid)
-            {
-                ReadLargePostingList(sortedIds, ref currentIdx);
-            }
-
-            while (currentIdx < sortedIds.Length)
-            {
-                if (_termsIt.MoveNext(out var postingListId) == false)
-                    break;
-
-                var termType = (TermIdMask)postingListId & TermIdMask.EnsureIsSingleMask;
-                switch (termType)
+                var termType = (TermIdMask)_itBuffer[i] & TermIdMask.EnsureIsSingleMask;
+                if (termType == TermIdMask.SmallPostingList)
                 {
-                    case TermIdMask.Single:
-                        sortedIds[currentIdx++] = EntryIdEncodings.GetContainerId(postingListId);
-                        break;
-                    case TermIdMask.SmallPostingList:
-                        var smallSetId = EntryIdEncodings.GetContainerId(postingListId);
-                        var item = Container.Get(_llt, smallSetId);
-                        VariableSizeEncoding.Read<int>(item.Address, out var offset);
-                        item = item.IncrementOffset(offset);
-                        _state = new(item.Length);
-                        _smallPostingListBuffer = item.ToSpan();
-                        if (currentIdx + PForEncoder.BufferLen > sortedIds.Length)
-                            return currentIdx;
-                        ReadSmallPostingList(sortedIds, ref currentIdx);
-                        break;
-                    case TermIdMask.PostingList:
-                        var postingList = _searcher.GetPostingList(postingListId);
-                        _postListIt = postingList.Iterate();
-                        ReadLargePostingList(sortedIds, ref currentIdx);
-                        break;
-                    default:
-                        throw new OutOfMemoryException(termType.ToString());
+                    var smallSetId = EntryIdEncodings.GetContainerId(_itBuffer[i]);
+                    _smallPostListIds.Add(smallSetId);
                 }
             }
 
-            return currentIdx;
+            _smallPostingListIndex = 0;
+            if (_smallPostListIds.Count == 0)
+                return;
+            Container.GetAll(_llt, _smallPostListIds.Items,_containerItems, long.MinValue, _pageLocator);
         }
 
         private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)
@@ -229,6 +284,13 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 }
             }
         }
+
+        public void Dispose()
+        {
+            _smallPostListIds.Dispose();
+            _containerItemsScope.Dispose();
+            _itBufferScope.Dispose();
+        }
     }
 
     private static void SortUsingIndex<TEntryComparer,TDirection>(ref SortingMatch<TInner> match, Span<long> allMatches) 
@@ -246,8 +308,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         var sortedIdsScope = allocator.Allocate( sizeof(long) * SortBatchSize, out bs);
         Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize);
 
-        SortedIndexReader<TDirection> reader = GetReader(ref match);
-        
+        var reader = GetReader(ref match);
         while (match._results.Count < maxResults)
         {
             var read = reader.Read(sortedIdBuffer);
@@ -270,6 +331,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             }
         }
 
+        reader.Dispose();
         sortedIdsScope.Dispose();
         indexesScope.Dispose();
         

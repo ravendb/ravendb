@@ -81,4 +81,9 @@ public unsafe struct NativeIntegersList : IDisposable
         RawItems += read;
         return read;
     }
+
+    public void Clear()
+    {
+        Count = 0;
+    }
 }
