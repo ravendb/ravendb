@@ -55,7 +55,7 @@ $secondary-outline: $gray-300; //fix outline button contrast
 $body-bg: $black;
 $border-color: $gray-300;
 $border-color-light: $gray-600;
-$border-color-disabled: $gray-600;
+$border-color-disabled: var(--border-color-light);
 
 $text-color: $gray-200;
 $text-muted-color: $gray-300;
@@ -111,7 +111,7 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $body-bg: $black;
     $border-color: $gray-600;
     $border-color-light: $gray-400;
-    $border-color-disabled: $gray-200;
+    $border-color-disabled: var(--border-color-light);
 
     $text-color: $gray-900;
     $text-muted-color: $gray-800;
@@ -185,7 +185,7 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $body-bg: $gray-300;
     $border-color: $gray-500;
     $border-color-light: $gray-400;
-    $border-color-disabled: $gray-200;
+    $border-color-disabled: var(--border-color-light);
 
     $text-color: $gray-800;
     $text-muted-color: $gray-700;
@@ -263,7 +263,7 @@ $hover-filter: brightness(1.2) saturate(1.1);
     $body-bg: $black;
     $border-color: $gray-300;
     $border-color-light: $gray-600;
-    $border-color-disabled: $gray-600;
+    $border-color-disabled: var(--border-color-light);
 
     $text-color: $gray-200;
     $text-muted-color: $gray-300;

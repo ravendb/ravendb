@@ -610,7 +610,7 @@ $input-font-size-lg: $input-btn-font-size-lg !default;
 
 $input-bg: $well-bg !default;
 $input-disabled-bg: transparent !default;
-$input-disabled-border-color: $border-color-disabled !default;
+$input-disabled-border-color: $border-color-disabled;
 
 $input-color: $text-color-var !default;
 $input-border-color: $border-color-light !default;
