@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { Icon } from "components/common/Icon";
-import { Button, Card, CardBody, CardHeader, Collapse, Spinner } from "reactstrap";
+import { Button, Card, CardBody, Collapse, Spinner } from "reactstrap";
 import "./CreateSampleData.scss";
 import useBoolean from "components/hooks/useBoolean";
 import { useAsync, useAsyncCallback } from "react-async-hook";
