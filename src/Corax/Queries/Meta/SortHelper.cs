@@ -116,7 +116,7 @@ internal unsafe class SortHelper
                 }
             }
 
-            return 0;
+            return lo;
         }
     }
 }
