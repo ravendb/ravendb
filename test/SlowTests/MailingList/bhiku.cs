@@ -24,7 +24,6 @@ namespace SlowTests.MailingList
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Skip = "Document boost")]
         public void CanUseBoost_StartsWith(Options options)
         {
             using (var store = GetDocumentStore(options))

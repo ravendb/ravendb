@@ -15,7 +15,7 @@ namespace FastTests.Client.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueriesWithRegexShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -38,7 +38,7 @@ namespace FastTests.Client.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueriesWithRegexFromDocumentQuery(Options options)
         {
             using (var store = GetDocumentStore(options))

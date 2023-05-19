@@ -14,7 +14,7 @@ namespace SlowTests.MailingList
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor(Options options)
         {
             using (var store = GetDocumentStore(options))

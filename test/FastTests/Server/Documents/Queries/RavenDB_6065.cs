@@ -19,7 +19,7 @@ namespace FastTests.Server.Documents.Queries
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryWithOrOperators(Options options)
         {
             using (var store = GetDocumentStore(options))

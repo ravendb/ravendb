@@ -30,10 +30,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ToQueryableTimings()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ToQueryableTimings(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {

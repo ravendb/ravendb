@@ -21,7 +21,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void WillDetectAnalyzerAutomatically(Options options)
         {
             using(var store = GetDocumentStore(options))

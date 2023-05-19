@@ -16,7 +16,7 @@ public class CoraxOrderBy : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
     public void CanSortDynamicFieldViaCorax(Options options)
     {
         var random = new Random(12431234);

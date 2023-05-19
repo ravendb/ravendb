@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Util;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -43,10 +44,11 @@ select new {Name = g.Key, CreatedTimeTicks = createdTimeTicks}
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void CanUseMax()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseMax(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
