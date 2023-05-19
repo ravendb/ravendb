@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -43,10 +45,11 @@ namespace FastTests.Server.Documents.Queries
             }
         }
 
-        [Fact]
-        public async Task As_of_now_usage()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task As_of_now_usage(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -68,12 +71,13 @@ namespace FastTests.Server.Documents.Queries
             }
         }
 
-        [Fact]
-        public void Throws_if_exceeds_timeout()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Throws_if_exceeds_timeout(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-                store.Maintenance.Send(new StopIndexingOperation());
+                store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
 
                 using (var session = store.OpenSession())
                 {

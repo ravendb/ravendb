@@ -41,6 +41,8 @@ public class ShardedQueryCommand : AbstractQueryCommand<QueryResult, BlittableJs
         IndexName = indexName;
         CanReadFromCache = canReadFromCache;
         RaftUniqueRequestId = raftUniqueRequestId;
+
+        Timeout = null; // we want to use global http timeout (infinite by default in sharding) even if WaitForNonStaleResultsTimeout is specified
     }
 
     protected readonly string IndexName;
