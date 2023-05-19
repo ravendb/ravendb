@@ -40,7 +40,7 @@ public class RavenDB_19239 : RavenTestBase
                 
                 var ex = Assert.Throws<RavenException>(() => store.Maintenance.Send(new DeleteIndexOperation("DummyIndex")));
 
-                Assert.Contains("Cannot delete existing index DummyIndex with lock mode LockedError", ex.ToString());
+                Assert.Contains("IndexDeletionException: Cannot delete existing index DummyIndex with lock mode LockedError", ex.ToString());
             }
         }
     }
