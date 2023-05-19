@@ -229,11 +229,6 @@ namespace Voron.Data.CompactTrees
                         return true;
                     }
 
-                    long pagePageNumber = state.Page.PageNumber;
-                    if (pagePageNumber == 24799)
-                    {
-                        Console.WriteLine();
-                    }
                     if (_tree.GoToPreviousPage(ref _cursor) == false)
                     {
                         value = default;
