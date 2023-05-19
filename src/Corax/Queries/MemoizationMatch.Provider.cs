@@ -126,6 +126,8 @@ namespace Corax.Queries
             }
             else
             {
+                // we increase by 3, because we just consumed all the size
+                // we want to _add_ twice as much as we already consumed
                 size = currentLength * 3;
             }
 
