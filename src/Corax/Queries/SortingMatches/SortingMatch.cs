@@ -190,7 +190,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                  // here we resume the *previous* operation
                  if (_state.BufferSize != 0)
                  {
-                     ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
+                     ReadSmallPostingList(sortedIds, ref currentIdx);
                  }
                  else if (_postListIt.IsValid)
                  {
@@ -221,7 +221,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                              _smallPostingListBuffer = item;
                              if (currentIdx + PForEncoder.BufferLen > sortedIds.Length)
                                  return currentIdx;
-                             ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
+                             ReadSmallPostingList(sortedIds, ref currentIdx);
                              break;
                          case TermIdMask.PostingList:
                              var postingList = _searcher.GetPostingList(postingListId);
