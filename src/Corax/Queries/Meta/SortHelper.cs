@@ -39,6 +39,9 @@ internal unsafe class SortHelper
         long* leftEndPtr = leftPtr + leftLength;
         long* rightEndPtr = rightPtr + rightLength;
 
+        if (*leftPtr > *(rightEndPtr - 1))
+            return 0; // there is no overlap in the range
+
         if (leftLength * 2 > rightLength)
         {
             // we assume that this is a predictable branch so better to do a scan
@@ -47,11 +50,16 @@ internal unsafe class SortHelper
 
         // there is a significant difference in size, wo we'll do binary search in the bigger
         // array to find the right values
-        int minimum = 0;
-        while (leftPtr < leftEndPtr)
+        while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
         {
             long leftValue = *leftPtr++;
-            minimum += BinarySearchOnce(rightPtr + minimum, leftValue);
+            var inc = GallopSearch(leftValue);
+            rightPtr += inc;
+            if (leftValue != *rightPtr++) 
+                continue;
+            
+            *dstPtr++ = dstStart[(int)(leftPtr - leftStart)];
+            *rightPtr |= ~long.MaxValue; // mark it as used for the *next* time
         }
 
         return (int)(dstPtr - dst);
@@ -85,38 +93,33 @@ internal unsafe class SortHelper
             return (int)(dstPtr - dst);
         }
 
-        int BinarySearchOnce(long* start, long needle)
+        int GallopSearch(long needle)
         {
-            int lo = 0;
-            int hi = rightLength - 1;
-            while (lo <= hi)
+            if (*rightPtr == needle)
+                return 0;
+            
+            var hi = 1;
+            while (rightPtr + hi < rightEndPtr &&
+                   (rightPtr[hi] & long.MaxValue) < needle)
             {
-                int i = lo + ((hi - lo) >> 1);
-                long rightValue = start[i];
-                // Note: we clear the top most bit for comparison
-                long rightValueMasked = rightValue & long.MaxValue;
-
-                if (rightValueMasked == needle)
-                {
-                    if (rightValue == needle)
-                    {
-                        *dstPtr++ = dstStart[(int)(leftPtr - leftStart)];
-                        start[i] |= ~long.MaxValue; // mark it as used for the *next* time
-                    }
-                    return i;
-                }
-
-                if (rightValueMasked < needle)
-                {
-                    lo = i + 1;
-                }
-                else  // if  (rightValueMasked > needle)
-                {
-                    hi = i - 1;
-                }
+                hi <<= 1;
             }
 
-            return lo;
+            var lo = hi / 2;
+
+            if (rightPtr + hi > rightEndPtr)
+                hi = (int)(rightEndPtr - rightPtr);
+
+            // now do binary search in range
+            while (lo < hi)
+            {
+                var pivot = (lo + hi) / 2;
+                if ((rightPtr[pivot] & long.MaxValue) < needle)
+                    lo = pivot + 1;
+                else
+                    hi = pivot;
+            }
+            return hi;
         }
     }
 }
