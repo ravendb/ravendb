@@ -263,13 +263,13 @@ namespace Voron.Data.PostingLists
             public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
             {
                 // We will try to fill.
-                total = It.TryFill(matches, pruneGreaterThanOptimization);
+                total = 0;
                           
                 while(total < matches.Length)
                 {
                     var tmp = matches.Slice(total);
-                    It.Fill(tmp, out var read, out bool hasPrunedResults,  pruneGreaterThanOptimization);                                                                                      
-
+                    var read = It.Fill(tmp, out bool hasPrunedResults,  pruneGreaterThanOptimization);
+                    
                     // We haven't read anything, but we are not getting a pruned result.
                     if (read == 0 && hasPrunedResults == false)
                     {
@@ -420,6 +420,9 @@ namespace Voron.Data.PostingLists
         {
             _additions.Sort();
             _removals.Sort();
+
+            var tempList = new NativeIntegersList(_llt.Allocator, _additions.Count + _removals.Count);
+            
             var additionsCount = _additions.Count;
             var removalsCount = _removals.Count;
             var additions = _additions.RawItems;
@@ -442,10 +445,10 @@ namespace Voron.Data.PostingLists
 
                 _state.NumberOfEntries -= leafPage.Header->NumberOfEntries;
 
-                var extras = leafPage.Update(_llt, ref additions, ref additionsCount, ref removals, ref removalsCount, limit);
+                var extras = leafPage.Update(_llt, tempList, ref additions, ref additionsCount, ref removals, ref removalsCount, limit);
                 _state.NumberOfEntries += leafPage.Header->NumberOfEntries;
 
-                if (extras != null) // we overflow and need to split excess to additional pages
+                if (extras > 0) // we overflow and need to split excess to additional pages
                 {
                     AddNewPageForTheExtras(leafPage, extras);
                 }
@@ -479,6 +482,8 @@ namespace Voron.Data.PostingLists
                     MergeSiblingsAtParent();
                 } 
             }
+            
+            tempList.Dispose();
         }
         
         private static int GetSiblingIndex(in PostingListCursorState parent)

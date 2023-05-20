@@ -11,16 +11,16 @@ public static unsafe class SimdBitPacker<TSimdTransform>
     public struct Reader
     {
         private uint _prevValue;
-        private byte* _offset;
-        private readonly byte* _segmentsBits;
+        public byte* Offset;
+        private byte* _segmentsBits;
         private int _segmentIndex;
-        private readonly SimdBitPackingHeader* _header;
+        private SimdBitPackingHeader* _header;
 
-        public Reader(byte* input)
+        public void MoveToNextHeader()
         {
-            _segmentsBits = input + sizeof(SimdBitPackingHeader);
-            _header = (SimdBitPackingHeader*)input;
-            _offset = input + _header->OffsetToFirstSegment;
+            _segmentsBits = Offset + sizeof(SimdBitPackingHeader);
+            _header = (SimdBitPackingHeader*)Offset;
+            Offset += _header->OffsetToFirstSegment;
             _segmentIndex = 0;
             _prevValue = 0;
         }
@@ -32,7 +32,7 @@ public static unsafe class SimdBitPacker<TSimdTransform>
         [SkipLocalsInit]
         public int Fill(long* entries, int count)
         {
-            Debug.Assert(count % 256 == 0);
+            Debug.Assert(count >= 256 && count % 256 == 0);
             uint* uintBuffer = stackalloc uint[256];
             var read = 0;
             var curEntries = entries;
@@ -43,20 +43,23 @@ public static unsafe class SimdBitPacker<TSimdTransform>
                  _segmentIndex++, read += 256)
             {
                 var bits = _segmentsBits[_segmentIndex];
-                SimdCompression<TSimdTransform>.Unpack256(_prevValue, _offset, uintBuffer, bits);
+                SimdCompression<TSimdTransform>.Unpack256(_prevValue, Offset, uintBuffer, bits);
                 var bufferSize = SimdCompression<TSimdTransform>.RequiredBufferSize(256, bits);
                 _prevValue = uintBuffer[255];
-                _offset += bufferSize;
+                Offset += bufferSize;
                 ConvertToInt64();
             }
             if (header.LastSegmentCount > 0 &&
                 read + header.LastSegmentCount < count &&
                 _segmentIndex == header.NumberOfFullSegments)
             {
-                SimdCompression<TSimdTransform>.UnpackSmall(_prevValue, _offset, header.LastSegmentCount,
-                    uintBuffer, _segmentsBits[_segmentIndex]);
+                byte bits = _segmentsBits[_segmentIndex];
+                SimdCompression<TSimdTransform>.UnpackSmall(_prevValue, Offset, header.LastSegmentCount,
+                    uintBuffer, bits);
                 _segmentIndex++; // this mark it as consumed, next call will not hit it
                 read += header.LastSegmentCount;
+                var bufferSize = SimdCompression<TSimdTransform>.RequiredBufferSize(header.LastSegmentCount , bits);
+                Offset += bufferSize;
                 for (int i = 0; i < header.LastSegmentCount; i++)
                 {
                     *curEntries++ = ((long)*uintBuffer++ << header.ShiftAmount) + header.Baseline;
@@ -107,7 +110,6 @@ public static unsafe class SimdBitPacker<TSimdTransform>
         if (headerSize > outputSize)
             return default; // should never happen
         Debug.Assert(headerSize < byte.MaxValue);
-
 
         var header = (SimdBitPackingHeader*)output;
         var segmentsBits = (output + sizeof(SimdBitPackingHeader));
