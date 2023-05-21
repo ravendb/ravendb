@@ -651,15 +651,19 @@ namespace Raven.Server.Documents.Revisions
             if (deletedDoc && configuration.PurgeOnDelete)
             {
                 numberOfRevisionsToDelete = long.MaxValue;
-                moreRevisionToDelete = false;
             }
             else if (configuration == ConflictConfiguration.Default || 
                      configuration == ZeroConfiguration)
             {
-                var handleNotConflicted = nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
-                var deletedCount = HandleConflictRevisionsDelete(context, table, prefixSlice, collectionName, changeVector, revisionsCount, lastModifiedTicks, handleNotConflicted, skipForceCreated, out var moreWork);
-                IncrementCountOfRevisions(context, prefixSlice, -deletedCount);
-                return moreWork;
+                if(deletedDoc && ConflictConfiguration.Default.PurgeOnDelete)
+                    numberOfRevisionsToDelete = long.MaxValue;
+                else
+                {
+                    var handleNotConflicted = nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
+                    var deletedCount = HandleConflictRevisionsDelete(context, table, prefixSlice, collectionName, changeVector, revisionsCount, lastModifiedTicks, handleNotConflicted, skipForceCreated, out var moreWork);
+                    IncrementCountOfRevisions(context, prefixSlice, -deletedCount);
+                    return moreWork;
+                }
             }
             else if (configuration.MinimumRevisionsToKeep.HasValue == false &&
                      configuration.MinimumRevisionAgeToKeep.HasValue == false)
@@ -685,7 +689,7 @@ namespace Raven.Server.Documents.Revisions
                 numberOfRevisionsToDelete = configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue;
             }
 
-            var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete, configuration.MinimumRevisionAgeToKeep, changeVector, lastModifiedTicks, skipForceCreated, out var skippedForceCreatedCount);
+            var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete, configuration.MinimumRevisionAgeToKeep, changeVector, lastModifiedTicks);
 
             Debug.Assert(numberOfRevisionsToDelete >= deletedRevisionsCount);
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
@@ -712,7 +716,7 @@ namespace Raven.Server.Documents.Revisions
 
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
-                var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete: long.MaxValue, minimumTimeToKeep: null, changeVector, lastModifiedTicks, skipForceCreated: false, out _);
+                var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete: long.MaxValue, minimumTimeToKeep: null, changeVector, lastModifiedTicks);
                 IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
             }
         }
@@ -820,11 +824,9 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName,
-            long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep, string changeVector, long lastModifiedTicks, 
-            bool skipForceCreated, out long skippedForceCreated)
+            long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep, string changeVector, long lastModifiedTicks)
         {
             var deletedRevisionsCount = 0L;
-            skippedForceCreated = 0;
             var revisionsToRemove = new List<(string ChangeVector, long Etag, DocumentFlags Flags, string CollectionName)>();
 
             foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
@@ -834,12 +836,6 @@ namespace Raven.Server.Documents.Revisions
 
                 var tvr = read.Result.Reader;
                 using var revision = TableValueToRevision(context, ref tvr);
-
-                if (revision.Flags.Contain(DocumentFlags.ForceCreated) && skipForceCreated)
-                {
-                    skippedForceCreated++;
-                    continue;
-                }
 
                 if (minimumTimeToKeep.HasValue &&
                     _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
@@ -916,7 +912,8 @@ namespace Raven.Server.Documents.Revisions
 
             var reachedNotOutOfDate = false;
             moreWork = false;
-
+            var finishedRegualr = false;
+            var finishedConflicted = false;
 
             foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
             {
@@ -927,9 +924,12 @@ namespace Raven.Server.Documents.Revisions
                     break;
                 }
 
-                var finishedRegualr = regularCount - regularDeletedCount == 0 || handleNotConflicted == false;
-                var finishedConflicted = reachedNotOutOfDate ||
-                                         (config.MinimumRevisionsToKeep.HasValue && conflictCount - conflictDeletedCount <= config.MinimumRevisionsToKeep.Value);
+                finishedRegualr = finishedRegualr ||
+                                  handleNotConflicted == false ||
+                                  regularCount - (regularDeletedCount + skippedForceCreated) == 0; 
+                finishedConflicted = finishedConflicted ||
+                                     reachedNotOutOfDate ||
+                                     (config.MinimumRevisionsToKeep.HasValue && conflictCount - conflictDeletedCount <= config.MinimumRevisionsToKeep.Value);
                 if (finishedRegualr && finishedConflicted)
                 {
                     break;
@@ -940,7 +940,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
                     {
-                        if (reachedNotOutOfDate)
+                        if (finishedConflicted)
                             continue;
 
                         if (config.MinimumRevisionAgeToKeep.HasValue)
@@ -959,7 +959,7 @@ namespace Raven.Server.Documents.Revisions
                     }
                     else
                     {
-                        if (handleNotConflicted == false)
+                        if (finishedRegualr)
                         {
                             continue;
                         }
@@ -1140,11 +1140,6 @@ namespace Raven.Server.Documents.Revisions
 
                 if (configuration.PurgeOnDelete)
                 {
-                    // using (GetKeyPrefix(context, lowerId, out var prefixSlice))
-                    // {
-                    //     DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector, lastModifiedTicks);
-                    //     DeleteCountOfRevisions(context, prefixSlice);
-                    // }
                     DeleteRevisionsFor(context, id, fromDelete: true);
                     return;
                 }
@@ -1429,7 +1424,9 @@ namespace Raven.Server.Documents.Revisions
             return EnforceConfiguration(onProgress, includeForceCreated: true, token);
         }
 
-        public async Task<IOperationResult> EnforceConfiguration(Action<IOperationProgress> onProgress, bool includeForceCreated, OperationCancelToken token)
+        public async Task<IOperationResult> EnforceConfiguration(Action<IOperationProgress> onProgress, 
+            bool includeForceCreated, // include ForceCreated revisions on deletion in case of no revisions configuration (only conflict revisions config is exist).
+            OperationCancelToken token)
         {
 
             var parameters = new Parameters
@@ -1551,11 +1548,11 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 var deletedDoc = false;
-                if (configuration.PurgeOnDelete)
-                {
+                // if (configuration.PurgeOnDelete)
+                // {
                     var local = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
                     deletedDoc = local.Document == null && local.Tombstone != null;
-                }
+                // }
 
                 var needToDeleteMore = DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, prevRevisionsCount,
                     NonPersistentDocumentFlags.ByEnforceRevisionConfiguration,
@@ -1586,7 +1583,7 @@ namespace Raven.Server.Documents.Revisions
         {
             private readonly RevisionsStorage _revisionsStorage;
             private readonly List<string> _ids;
-            private readonly bool _includeForceCreated;
+            private readonly bool _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration;
             private readonly EnforceConfigurationResult _result;
             private readonly OperationCancelToken _token;
 
@@ -1603,7 +1600,7 @@ namespace Raven.Server.Documents.Revisions
                 _ids = ids;
                 _result = result;
                 _token = token;
-                _includeForceCreated = includeForceCreated;
+                _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration = includeForceCreated;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -1612,7 +1609,7 @@ namespace Raven.Server.Documents.Revisions
                 foreach (var id in _ids)
                 {
                     _token.ThrowIfCancellationRequested();
-                    _result.RemovedRevisions += (int)_revisionsStorage.EnforceConfigurationFor(context, id, _includeForceCreated == false, ref MoreWork);
+                    _result.RemovedRevisions += (int)_revisionsStorage.EnforceConfigurationFor(context, id, _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration == false, ref MoreWork);
                 }
 
                 return _ids.Count;
@@ -1620,7 +1617,7 @@ namespace Raven.Server.Documents.Revisions
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
-                return new EnforceRevisionConfigurationCommandDto(_revisionsStorage, _ids, _includeForceCreated);
+                return new EnforceRevisionConfigurationCommandDto(_revisionsStorage, _ids, _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration);
             }
 
             private class EnforceRevisionConfigurationCommandDto : TransactionOperationsMerger.IReplayableCommandDto<EnforceRevisionConfigurationCommand>

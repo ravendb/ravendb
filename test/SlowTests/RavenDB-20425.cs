@@ -55,11 +55,11 @@ namespace SlowTests
             return Task.FromException(new InvalidOperationException($"Update type: {type} isn't handled"));
         }
 
-        private async Task EnforceConfiguration(DocumentStore store)
+        private async Task EnforceConfiguration(DocumentStore store, bool includeForceCreated = true)
         {
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationIncludeForceCreated(_ => { }, token);
+                await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, includeForceCreated, token);
         }
 
         private async Task UpdateDoc(DocumentStore store, string docId)
@@ -91,7 +91,7 @@ namespace SlowTests
                     MinimumRevisionsToKeep = 100
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create a doc with 2 revisions
             using (var session = store.OpenAsyncSession())
@@ -110,7 +110,7 @@ namespace SlowTests
             {
                 Default = null
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration1);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
 
             await TriggerRevisionsDelete(type, store, "Docs/1");
 
@@ -150,7 +150,7 @@ namespace SlowTests
                     }
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create doc with 3 revisions
             for (int i = 0; i < 3; i++)
@@ -185,7 +185,7 @@ namespace SlowTests
                     }
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration1);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
 
             await TriggerRevisionsDelete(type, store, "Docs/1");
 
@@ -214,7 +214,7 @@ namespace SlowTests
                     MinimumRevisionsToKeep = 10
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create a doc with 10 revisions
             for (int i = 0; i < 10; i++)
@@ -235,7 +235,7 @@ namespace SlowTests
                     MaximumRevisionsToDeleteUponDocumentUpdate = 2
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration1);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -274,7 +274,7 @@ namespace SlowTests
                     MinimumRevisionsToKeep = 100
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
 
             // Create a doc with 2 revisions
             using (var session = store.OpenAsyncSession())
@@ -307,7 +307,7 @@ namespace SlowTests
                     PurgeOnDelete = true,
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration: configuration1);
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration1);
 
             await EnforceConfiguration(store);
 
@@ -366,10 +366,6 @@ namespace SlowTests
                 Assert.Equal(2, doc1RevCount); // got 0
             }
         }
-
-        //---------------------------------------------------------------------------------------------------------------------------------------
-        
-        // Force-Created flag and checkbox
 
         //---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -445,7 +441,7 @@ namespace SlowTests
 
         //---------------------------------------------------------------------------------------------------------------------------------------
 
-        //  Fix - Talk with Karmel (add time window like in revert revisions)
+        //  Fixed
         [Fact]
         public async Task NotDeletingOutOfDateRevisionsBecauseTheyOrderedByEtag()
         {
@@ -490,10 +486,7 @@ return oldestDoc;"
                     MinimumRevisionsToKeep = 100
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, dst.Database, configuration: configuration);
-
-
-            Console.WriteLine(DateTime.UtcNow.AddDays(-1));
+            await RevisionsHelper.SetupRevisions(dst, Server.ServerStore, configuration: configuration);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -556,7 +549,7 @@ return oldestDoc;"
                     MinimumRevisionAgeToKeep = TimeSpan.FromHours(1)
                 }
             };
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, dst.Database, configuration: configuration2);
+            await RevisionsHelper.SetupRevisions(dst, Server.ServerStore, configuration: configuration2);
 
             await TriggerRevisionsDelete(ChangingType.EnforceConfiguration, dst);
             using (var session = dst.OpenAsyncSession())
@@ -579,6 +572,217 @@ return oldestDoc;"
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
                 Assert.Equal(0, doc1RevCount); // OLDER (DELETED EARLIER) , OLD (DELETED), OLDER (DELETED), OLDER (DELETED)
+            }
+
+        }
+
+        //---------------------------------------------------------------------------------------------------------------------------------------
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Exclude_ForceCreated_Revisions_On_EnforceConfig_InCaseOf_NoConfiguration(bool deleteAlsoForceCreated)
+        {
+            using var store = GetDocumentStore();
+
+            var configuration5 = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 5
+                }
+            };
+            var noConfiguration = new RevisionsConfiguration
+            {
+                Default = null
+            };
+
+            // Setup Config with MinimumRevisionsToKeep=5
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration5);
+            // Create 5 regular revision
+            for (int i = 1; i <= 5; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = $"Old{i}" }, "Docs/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            // Remove all configurations except the Conflicts Config
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: noConfiguration);
+            // Create 10 force-created revisions
+            for (int i = 1; i <= 10; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = $"FC{i}" }, "Docs/1");
+                    await session.SaveChangesAsync();
+
+                    session.Advanced.Revisions.ForceRevisionCreationFor("Docs/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(15, doc1RevCount);
+            }
+
+            // Enforce configuration
+            await EnforceConfiguration(store, includeForceCreated: deleteAlsoForceCreated);
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                if (deleteAlsoForceCreated)
+                    Assert.Equal(0, doc1RevCount); // all revisions were deleted
+                else
+                    Assert.Equal(10, doc1RevCount);   // only forced-created remained
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Exclude_ForceCreated_Revisions_On_EnforceConfig_InCaseOf_NoConfiguration2(bool deleteAlsoForceCreated)
+        {
+            using var src = GetDocumentStore();
+            using var dst = GetDocumentStore();
+
+            // Create a doc with 3 'conflicted' (or 'resolved') revisions in 'dst'
+            using (var session = src.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Old" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+            using (var session = dst.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "New" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+            await SetupReplicationAsync(src, dst); // Conflicts resolved
+            await EnsureReplicatingAsync(src, dst);
+            using (var session = dst.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(3, doc1RevCount); // obeys the Conflicted Config
+            }
+
+            // Create 10 force-created revisions in dst
+            for (int i = 1; i <= 10; i++)
+            {
+                using (var session = dst.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = $"FC{i}" }, "Docs/1");
+                    await session.SaveChangesAsync();
+
+                    session.Advanced.Revisions.ForceRevisionCreationFor("Docs/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+            using (var session = dst.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(13, doc1RevCount);
+            }
+
+            var dstConfig = new RevisionsCollectionConfiguration
+            {
+                Disabled = false,
+                MinimumRevisionsToKeep = 2,
+                PurgeOnDelete = true
+            };
+            await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+
+            await EnforceConfiguration(dst, deleteAlsoForceCreated);
+            WaitForUserToContinueTheTest(dst);
+
+            using (var session = dst.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                if(deleteAlsoForceCreated)
+                    Assert.Equal(2, doc1RevCount);
+                else
+                    Assert.Equal(12, doc1RevCount);
+            }
+
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Include_ForceCreated_AlwaysOn_EnforceConfig_InCaseOf_PurgeOnDelete(bool deleteAlsoForceCreated)
+        {
+            using var src = GetDocumentStore();
+            using var dst = GetDocumentStore();
+
+            // Create a doc with 3 'conflicted' (or 'resolved') revisions in 'dst'
+            using (var session = src.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Old" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+            using (var session = dst.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "New" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+            await SetupReplicationAsync(src, dst); // Conflicts resolved
+            await EnsureReplicatingAsync(src, dst);
+            using (var session = dst.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(3, doc1RevCount); // obeys the Conflicted Config
+            }
+
+            // Create 10 force-created revisions in dst
+            for (int i = 1; i <= 10; i++)
+            {
+                using (var session = dst.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = $"FC{i}" }, "Docs/1");
+                    await session.SaveChangesAsync();
+
+                    session.Advanced.Revisions.ForceRevisionCreationFor("Docs/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            using (var session = dst.OpenAsyncSession())
+            {
+                session.Delete("Docs/1");
+                await session.SaveChangesAsync();
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(13, doc1RevCount); // When you have no config, the db doesnt create a "Deleted Revision" in doc delete.
+            }
+
+            // Console.WriteLine("Before Conflict");
+            // using (var session = dst.OpenAsyncSession())
+            // {
+            //     var doc1Revisions = await session.Advanced.Revisions.GetForAsync<User>("Docs/1");
+            //     var doc1Metadatas = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
+            //     for (int i = 0; i < doc1Metadatas.Count; i++)
+            //     {
+            //         Console.WriteLine(doc1Revisions[i].Name+" " + doc1Metadatas[i].GetString("@change-vector") + " " + doc1Metadatas[i].GetString("@flags"));
+            //     }
+            // }
+
+            var dstConfig = new RevisionsCollectionConfiguration
+            {
+                Disabled = false,
+                MinimumRevisionsToKeep = 2,
+                PurgeOnDelete = true
+            };
+            await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+            
+            await EnforceConfiguration(dst, deleteAlsoForceCreated);
+            WaitForUserToContinueTheTest(dst);
+            
+            using (var session = dst.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(0, doc1RevCount);
             }
 
         }
