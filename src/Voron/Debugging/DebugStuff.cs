@@ -461,12 +461,9 @@ namespace Voron.Debugging
             var leaf = new PostingListLeafPage(page);
             var branch = new PostingListBranchPage(page);
 
-            List<long> leafEntries = null;
-            if (header.IsLeaf)
-                leafEntries = leaf.GetDebugOutput();
             sw.WriteLine(
                 string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries - {5}</label><ul>",
-                    page.PageNumber, header.IsLeaf ? "leaf" : "branch", header.IsLeaf ? leafEntries!.Count : branch.Header->NumberOfEntries, open ? "checked" : "", text, 
+                    page.PageNumber, header.IsLeaf ? "leaf" : "branch", header.IsLeaf ? leaf.Header->NumberOfEntries : branch.Header->NumberOfEntries, open ? "checked" : "", text, 
                     header.IsLeaf ? leaf.SpaceUsed + " used" : ""));
 
             if (header.IsLeaf)
@@ -474,14 +471,9 @@ namespace Voron.Debugging
                 //sw.WriteLine(
                 //    string.Format("<ul><li><input type='checkbox' id='page-{0}-details'/><label for='page-{0}-details'>Compression details</label><ul>",
                 //        page.PageNumber));
-                for (int i = 0; i < leaf.Header->NumberOfCompressedRuns; i++)
-                {
-                    var entry = leaf.Runs[i];
-                    int count = PForDecoder.ReadCount(leaf.SpanFor(i));
-                    sw.Write($"<li>Compressed {count:#,#;;0} entries with {entry.Length:#,#;;0} bytes</li>");
-                }
-                var range = leaf.GetRange();
-                sw.WriteLine($"<li>Range {range.First} ... {range.Last}</li>");
+                var leafEntries = leaf.GetDebugOutput();
+                sw.WriteLine($"<li>Entries {leaf.Header->NumberOfEntries:#,#;;0} in {leaf.Header->SizeUsed:#,#;;0} bytes</li>");
+                sw.WriteLine($"<li>Range {leafEntries[0]:#,#;;0} ... {leafEntries[^1]:#,#;;0}</li>");
 
                 //sw.WriteLine("</ul></li></ul>");
 

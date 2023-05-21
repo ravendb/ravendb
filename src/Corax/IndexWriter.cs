@@ -24,6 +24,7 @@ using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Impl;
+using Voron.Util.Simd;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Corax
@@ -1393,7 +1394,8 @@ namespace Corax
         /// Record term for deletion from Index.
         /// </summary>
         /// <param name="idInTree">With frequencies and container type.</param>
-        private void RecordDeletion(long idInTree)
+        [SkipLocalsInit]
+        private unsafe void RecordDeletion(long idInTree)
         {
             var entryId = EntryIdEncodings.GetContainerId(idInTree);
             if ((idInTree & (long)TermIdMask.PostingList) != 0)
@@ -1403,32 +1405,37 @@ namespace Corax
                 
                 using var set = new PostingList(Transaction.LowLevelTransaction, Slices.Empty, setState);
                 var iterator = set.Iterate();
-                while (iterator.MoveNext())
+                Span<long> buffer = stackalloc long[1024];
+                while (iterator.Fill(buffer, out var read))
                 {
                     // since this is also encoded we've to delete frequency and container type as well
-                    _deletedEntries.Add(EntryIdEncodings.DecodeAndDiscardFrequency(iterator.Current));
-                    _numberOfModifications--;
+                    EntryIdEncodings.DecodeAndDiscardFrequency(buffer, read);
+                    _numberOfModifications -= read;
+                    for (int i = 0; i < read; i++)
+                    {
+                        _deletedEntries.Add(buffer[i]);
+                    }
                 }
             }
             else if ((idInTree & (long)TermIdMask.SmallPostingList) != 0)
             {
-                var smallSet = Container.Get(Transaction.LowLevelTransaction, entryId).ToSpan();
-                // combine with existing value
-                _ = VariableSizeEncoding.Read<int>(smallSet, out var pos);
-                var entries = smallSet[pos..];
-                var decoderState = new PForDecoder.DecoderState(entries.Length);
-                Span<long> output = stackalloc long[PForEncoder.BufferLen];
+                var smallSet = Container.Get(Transaction.LowLevelTransaction, entryId);
+                var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = smallSet.Address };
+                reader.MoveToNextHeader();
+                var buffer = stackalloc long[1024];
+                var bufferAsSpan = new Span<long>(buffer, 1024);
                 while (true)
                 {
-                    var read = PForDecoder.Decode(ref decoderState, entries, output);
-                    if (read == 0) 
+                    var read = reader.Fill(buffer, 1024);
+                    if (read == 0)
                         break;
-                    EntryIdEncodings.DecodeAndDiscardFrequency(output, read);
+                    EntryIdEncodings.DecodeAndDiscardFrequency(bufferAsSpan, read);
                     for (int i = 0; i < read; i++)
                     {
-                        _deletedEntries.Add(output[i]);
-                        _numberOfModifications--;
+                        _deletedEntries.Add(buffer[i]);
                     }
+
+                    _numberOfModifications -= read;
                 }
             }
             else
@@ -1682,24 +1689,24 @@ namespace Corax
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
             
             var llt = Transaction.LowLevelTransaction;
-            var mutableSpace = Container.GetMutable(llt, containerId);
+            var item = Container.Get(llt, containerId);
             Debug.Assert(entries.Removals.ToArray().Distinct().Count() == entries.TotalRemovals, $"Removals list is not distinct.");
             int removalIndex = 0;
             
             // combine with existing values
-            Span<long> buffer = stackalloc long[PForEncoder.BufferLen];
-            VariableSizeEncoding.Read<int>(mutableSpace, out var offset);
-            var smallSet = mutableSpace[offset..];
-            var state = new PForDecoder.DecoderState(smallSet.Length);
+            var buffer = stackalloc long[1024];
+            var bufferAsSpan = new Span<long>(buffer, 1024);
+            var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = item.Address };
+            reader.MoveToNextHeader();
             var removals = entries.Removals;
             long freeSpace = entries.FreeSpace;
-            while (true) 
+            while (true)
             {
-                var read = PForDecoder.Decode(ref state, smallSet, buffer);
+                var read = reader.Fill(buffer, 1024);
                 if (read == 0)
                     break;
 
-                EntryIdEncodings.DecodeAndDiscardFrequency(buffer, read);
+                EntryIdEncodings.DecodeAndDiscardFrequency(bufferAsSpan, read);
                 for (int i = 0; i < read; i++)
                 {
                     if (removalIndex < removals.Length)
@@ -1746,8 +1753,9 @@ namespace Corax
                 return AddEntriesToTermResult.UpdateTermId;
             }
             
-            if (encoded.Length <= mutableSpace.Length)
+            if (encoded.Length <= item.Length)
             {
+                var mutableSpace = Container.GetMutable(llt, containerId);
                 encoded.CopyTo(mutableSpace);
 
                 // can update in place
@@ -1972,29 +1980,21 @@ namespace Corax
         
         private unsafe bool TryEncodingToBuffer(ReadOnlySpan<long> additions, Span<byte> tmpBuf, out Span<byte> encoded)
         {
-            uint* scratch = stackalloc uint[PForEncoder.BufferLen];
-            var offset = VariableSizeEncoding.Write(tmpBuf, additions.Length);
-            var pForEncoder = new PForEncoder(tmpBuf[offset..], scratch);
-
-            for (int i = 0; i < additions.Length; i++)
+            fixed (long* pAdditions = additions)
             {
-                if (pForEncoder.TryAdd(additions[i]) == false)
+                fixed (byte* pOutput = tmpBuf)
                 {
-                    goto Fail;
+                    (int count, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(pAdditions, additions.Length, pOutput, tmpBuf.Length);
+                    if (count < additions.Length)
+                    {
+                        encoded = default;
+                        return false;
+                    }
+
+                    encoded = tmpBuf[..sizeUsed];
+                    return true;
                 }
             }
-
-            if (pForEncoder.TryClose() == false)
-            {
-                goto Fail;
-            }
-
-            encoded = tmpBuf[..(pForEncoder.SizeInBytes+offset)];
-            return true;
-
-            Fail:
-            encoded = default;
-            return false;
         }
 
         private unsafe void AddNewTerm(ref EntriesModifications entries, Span<byte> tmpBuf, out long termId)

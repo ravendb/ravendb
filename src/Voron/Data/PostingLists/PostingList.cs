@@ -226,14 +226,11 @@ namespace Voron.Data.PostingLists
             private readonly PostingList _parent;
             public PostingListLeafPage.Iterator It;
 
-            public long Current;
-
             public bool IsValid => _parent != null;
             
             public Iterator(PostingList parent)
             {
                 _parent = parent;
-                Current = default;
 
                 SeekSmallest();
             }
@@ -256,8 +253,7 @@ namespace Voron.Data.PostingLists
                 var leafPage = new PostingListLeafPage(state.Page);
 
                 It = leafPage.GetIterator();
-                It.Skip(from);
-                return true;
+                return It.SkipHint(from);
             }
 
             public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
@@ -320,65 +316,7 @@ namespace Voron.Data.PostingLists
                         break; // We are done.
                 }
 
-                if (total != 0)
-                    Current = matches[total - 1];
-
                 return total != 0;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool MoveNext()
-            {
-                if (It.MoveNext(out Current))
-                    return true;
-
-                var parent = _parent;
-                if (parent._pos == 0)
-                    return false;
-
-                parent.PopPage();
-                
-                var llt = parent._llt;
-
-                var it = It;
-                bool result = false;
-                while (true)
-                {
-                    ref var state = ref parent._stk[_parent._pos];
-                    state.LastSearchPosition++;
-                    Debug.Assert(state.IsLeaf == false);
-                    if (state.LastSearchPosition >= state.BranchHeader->NumberOfEntries)
-                    {
-                        if (parent._pos == 0)
-                            break;
-
-                        parent.PopPage();
-                        continue;
-                    }
-
-                    var branch = new PostingListBranchPage(state.Page);
-                    (_, long pageNum) = branch.GetByIndex(state.LastSearchPosition);
-                    var page = llt.GetPage(pageNum);
-                    var header = (PostingListLeafPageHeader*)page.Pointer;
-
-                    parent.PushPage(pageNum);
-
-                    if (header->PostingListFlags == ExtendedPageType.PostingListBranch)
-                    {
-                        // we'll increment on the next
-                        parent._stk[parent._pos].LastSearchPosition = -1;
-                        continue;
-                    }
-                    it = new PostingListLeafPage(page).GetIterator();
-                    if (it.MoveNext(out Current))
-                    {
-                        result = true;
-                        break;
-                    }
-                }
-
-                It = it;
-                return result;
             }
 
             public void Reset()
@@ -450,7 +388,7 @@ namespace Voron.Data.PostingLists
 
                 if (extras > 0) // we overflow and need to split excess to additional pages
                 {
-                    AddNewPageForTheExtras(leafPage, extras);
+                    AddNewPageForTheExtras(tempList.RawItems + extras, tempList.Count - extras);
                 }
                 else if (hadRemovals && _len > 1 && leafPage.SpaceUsed < Constants.Storage.PageSize / 2)
                 {
@@ -471,9 +409,13 @@ namespace Voron.Data.PostingLists
                     
                     var sibling = new PostingListLeafPage(siblingPage);
                     if (sibling.SpaceUsed + leafPage.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
-                        continue; // if the two pages together will be bigger than 75%, can skip merging
+                    {
+                        // if the two pages together will be bigger than 75%, can skip merging
+                        // we do that to prevent "jumping" around between adding a page & removing that
+                        continue;
+                    }
                     
-                    PostingListLeafPage.Merge(_llt, 
+                    PostingListLeafPage.Merge(_llt.Allocator, 
                         leafPage.Header,
                         parent.LastSearchPosition == 0 ? leafPage.Header : siblingHeader,
                         parent.LastSearchPosition == 0 ? siblingHeader : leafPage.Header
@@ -565,32 +507,20 @@ namespace Voron.Data.PostingLists
             MergeSiblingsAtParent();
         }
 
-        private void AddNewPageForTheExtras(PostingListLeafPage leafPage, List<PostingListLeafPage.ExtraSegmentDetails> extras)
+        private void AddNewPageForTheExtras(long* buffer, int count)
         {
-            int idx = 0;
-            var newPage = new PostingListLeafPage(_llt.AllocatePage(1));
-            PostingListLeafPage.InitLeaf(newPage.Header);
-            _state.LeafPages++;
-            long firstValue = extras[0].FirstValue;
-            while (idx < extras.Count)
+            while (count > 0)
             {
-                var cur = extras[idx];
-                if (PostingListLeafPage.TryAdd(newPage.Header, cur.Compressed.Span))
-                {
-                    cur.Scope.Dispose();
-                    idx++;
-                    continue;
-                }
-                _state.NumberOfEntries += newPage.Header->NumberOfEntries;
-                AddToParentPage(firstValue, newPage.Header->PageNumber);
-                newPage = new PostingListLeafPage(_llt.AllocatePage(1));
-                firstValue = cur.FirstValue;
+                long firs = *buffer;
+                var newPage = new PostingListLeafPage(_llt.AllocatePage(1));
                 PostingListLeafPage.InitLeaf(newPage.Header);
+                _state.LeafPages++;
+                var written = newPage.AppendToNewPage(buffer, count);
+                _state.NumberOfEntries += newPage.Header->NumberOfEntries;
+                AddToParentPage(firs, newPage.Header->PageNumber);
+                buffer += written;
+                count -= written;
             }
-
-            _state.NumberOfEntries += newPage.Header->NumberOfEntries;
-            
-            AddToParentPage(firstValue, newPage.Header->PageNumber);
         }
 
         private long NextParentLimit()
