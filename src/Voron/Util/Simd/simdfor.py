@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # example execution to handle formatting as well
-# python.exe .\simdfor.py | clang-format --style Microsoft > .\Simd.Generated.cs
+# python.exe .\simdfor.py | &"C:\Program Files\LLVM\bin\clang-format.exe" --style Microsoft | Out-File -Encoding utf8 -FilePath .\SimdPacking.Generated.cs
 
 from math import ceil
 
@@ -83,7 +83,7 @@ for length in [32]:
 
           inwordpointer -= 32
           if(inwordpointer>0):
-            print("    outReg = Vector256.ShiftRightLogical(inReg, " + str(bit) + " - " + str(inwordpointer) + ") // OutReg = _mm_srli_epi32(InReg, " + str(bit) + " - " + str(inwordpointer) + ")")
+            print("    outReg = Vector256.ShiftRightLogical(inReg, " + str(bit) + " - " + str(inwordpointer) + "); // OutReg = _mm_srli_epi32(InReg, " + str(bit) + " - " + str(inwordpointer) + ")")
         if(valuecounter + 1 < length):
           print("    ++input; // ++in;") 
 
@@ -122,11 +122,11 @@ public static void iunpackFOR"""+str(bit)+"""(Vector256<uint> """+offsetVar+""",
       for x in range(inwordpointer,32,bit):
         if(valuecounter == length): break
         if (x > 0):
-          MainText += "    tmp = Vector256.ShiftRightLogical(inReg," + str(x) +") // tmp = _mm_srli_epi32(InReg," + str(x) +")\n" 
+          MainText += "    tmp = Vector256.ShiftRightLogical(inReg," + str(x) +"); // tmp = _mm_srli_epi32(InReg," + str(x) +")\n" 
         else:
-          MainText += "    tmp = inReg; // tmp = InReg;\n 
+          MainText += "    tmp = inReg; // tmp = InReg;\n" 
         if(x+bit<32):
-          MainText += "    outReg = tmp & mask; // OutReg = _mm_and_si128(tmp, mask);\n
+          MainText += "    outReg = tmp & mask; // OutReg = _mm_and_si128(tmp, mask);\n"
         else:
           MainText += "    outReg = tmp; // OutReg = tmp;\n"
        
