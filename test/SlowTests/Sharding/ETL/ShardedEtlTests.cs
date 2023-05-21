@@ -4,11 +4,13 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
 using Nest;
+using Newtonsoft.Json;
 using Parquet;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -1921,14 +1923,16 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     }
                 }
 
-                await AssertWaitForValueAsync(async () =>
+                var count = await WaitForValueAsync(async () =>
                 {
                     using (var session = dest.OpenAsyncSession())
                     {
                         var q = await session.Query<User>().ToListAsync();
                         return q.Count;
                     }
-                }, ids.Count);
+                }, ids.Count, 30_000);
+
+                Assert.True(count == ids.Count, await AddDebugInfoOnFailure(src, ids.Count, count));
 
                 foreach (var id in ids)
                 {
@@ -2263,6 +2267,23 @@ loadToAddresses(this.Address);
         private static void EnsureNonStaleElasticResults(ElasticClient client)
         {
             client.Indices.Refresh(new RefreshRequest(Indices.All));
+        }
+
+        private async Task<string> AddDebugInfoOnFailure(IDocumentStore store, int expected, int actual)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"not all docs reached destination, expected {expected} docs but got {actual}");
+
+            var dbs = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
+            await foreach (var database in dbs)
+            {
+                var process = database.EtlLoader.Processes.First();
+                var stats = process.GetPerformanceStats();
+                sb.AppendLine($"ETL performance stats for shard ${database.ShardNumber} :");
+                sb.AppendLine(string.Join(Environment.NewLine, stats.Select(JsonConvert.SerializeObject)));
+            }
+
+            return sb.ToString();
         }
 
     }
