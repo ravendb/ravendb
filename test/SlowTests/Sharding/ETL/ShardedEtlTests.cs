@@ -1594,7 +1594,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
         }
 
         [RequiresElasticSearchRetryFact]
-        public void ElasticEtl__SimpleScriptWithManyDocuments()
+        public async Task ElasticEtl_SimpleScriptWithManyDocuments()
         {
             using (var store = Sharding.GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -1603,7 +1603,6 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                 var numberOfLinesPerOrder = 5;
 
                 SetupElasticEtl(store, DefaultScript, new List<string>() { OrderIndexName, OrderLinesIndexName });
-                var etlsDone = Sharding.Etl.WaitForEtlOnAllShards(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
 
                 for (int i = 0; i < numberOfOrders; i++)
                 {
@@ -1630,40 +1629,37 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     }
                 }
 
-                var waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
-                WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1));
+                var ordersCount = await WaitForValueAsync(async () =>
+                {
+                    EnsureNonStaleElasticResults(client);
+                    return (await client.CountAsync<object>(c => c.Index(OrderIndexName))).Count;
+                }, expectedVal: numberOfOrders, timeout: 60_000);
 
-                EnsureNonStaleElasticResults(client);
+                Assert.True(ordersCount == numberOfOrders, await AddDebugInfoOnFailure(store, numberOfOrders, ordersCount));
 
-                var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
-                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
-
-                Assert.Equal(numberOfOrders, ordersCount.Count);
-                Assert.Equal(numberOfOrders * numberOfLinesPerOrder, orderLinesCount.Count);
-
-                etlsDone = Sharding.Etl.WaitForEtlOnAllShards(store, (n, statistics) => statistics.LastProcessedEtag >= 2 * numberOfOrders);
+                var orderLinesCount = (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
+                Assert.True(orderLinesCount == numberOfOrders * numberOfLinesPerOrder, 
+                    await AddDebugInfoOnFailure(store, numberOfOrders * numberOfLinesPerOrder, orderLinesCount));
 
                 for (int i = 0; i < numberOfOrders; i++)
                 {
                     using (var session = store.OpenSession())
                     {
                         session.Delete("orders/" + i);
-
                         session.SaveChanges();
                     }
                 }
 
-                waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
-                WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1));
+                var ordersCountAfterDelete = await WaitForValueAsync(async () =>
+                {
+                    EnsureNonStaleElasticResults(client);
+                    return (await client.CountAsync<object>(c => c.Index(OrderIndexName))).Count;
+                }, expectedVal: 0, timeout: 60_000);
 
-                EnsureNonStaleElasticResults(client);
+                Assert.True(ordersCountAfterDelete == 0, await AddDebugInfoOnFailure(store, 0, ordersCountAfterDelete));
 
-                Thread.Sleep(3000);
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
-
-                Assert.Equal(0, ordersCountAfterDelete.Count);
-                Assert.Equal(0, orderLinesCountAfterDelete.Count);
+                var orderLinesCountAfterDelete = (await client.CountAsync<object>(c => c.Index(OrderLinesIndexName))).Count;
+                Assert.True(orderLinesCountAfterDelete == 0, await AddDebugInfoOnFailure(store, 0, orderLinesCountAfterDelete));
             }
         }
 
@@ -2269,7 +2265,7 @@ loadToAddresses(this.Address);
             client.Indices.Refresh(new RefreshRequest(Indices.All));
         }
 
-        private async Task<string> AddDebugInfoOnFailure(IDocumentStore store, int expected, int actual)
+        private async Task<string> AddDebugInfoOnFailure(IDocumentStore store, int expected, long actual)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"not all docs reached destination, expected {expected} docs but got {actual}");
