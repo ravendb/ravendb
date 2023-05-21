@@ -30,15 +30,19 @@ public class PostingListTests : StorageTest
         _random = _data.OrderBy(x => random.Next()).ToList();
     }
 
-    private List<long> AllValues(PostingList postingList)
+    private unsafe List<long> AllValues(PostingList postingList)
     {
         var it = postingList.Iterate();
         var l = new List<long>();
+        Span<long> buffer = stackalloc long[1024];
         if (it.Seek(0) == false)
             return l;
-        while (it.MoveNext())
+        while (it.Fill(buffer, out var read))
         {
-            l.Add(it.Current);
+            for (int i = 0; i < read; i++)
+            {
+                l.Add(buffer[i]);
+            }
         }
 
         return l;
@@ -126,19 +130,27 @@ public class PostingListTests : StorageTest
             var it = tree.Iterate();
             Assert.True(it.Seek(0));
             bool movedNext = true;
+            Span<long> buffer = stackalloc long[256];
+            var bufIdx = 0;
+            Assert.True(it.Fill(buffer, out var read));
             for (int i = 0; i < 10_000; i++)
             {
                 var offset = (i + 100) * 8192;
                 for (int j = 0; j < 128; j++)
                 {
                     offset += 2;
-                    movedNext = it.MoveNext();
-                    Assert.True(movedNext);
-                    Assert.Equal(offset, it.Current);
+                    if (bufIdx == read)
+                    {
+                        Assert.True(it.Fill(buffer, out  read));
+                        bufIdx = 0;
+                    }
+
+                    var current = buffer[bufIdx++]; 
+                    Assert.Equal(offset, current);
                 }
             }
 
-            Assert.False(it.MoveNext());
+            Assert.False(it.Fill(buffer, out  read));
         }
     }
 
