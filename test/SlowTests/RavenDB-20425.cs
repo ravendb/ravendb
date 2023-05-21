@@ -261,7 +261,7 @@ namespace SlowTests
         }
         
 
-        [Fact] // ____Fixed - PurgeOnDelete doesnt work with Enforce Config on deleted doc
+        [Fact]
         public async Task DeleteDocWithRevisions_ThenAddPurgeOnDeleteConfig_EnforceConfig_ShouldDeleteTheRevisionsOfTheDeletedDoc()
         {
             using var store = GetDocumentStore();
@@ -323,8 +323,8 @@ namespace SlowTests
 
         //---------------------------------------------------------------------------------------------------------------------------------------
 
-        //-Fixed
-        [Fact] //
+        // (RavenDB-19641)
+        [Fact] // 
         public async Task OnlyConflictConfig_EnforceConfig_ShouldntDeletesAllRevisions()
         {
             using var src = GetDocumentStore();
@@ -369,7 +369,8 @@ namespace SlowTests
 
         //---------------------------------------------------------------------------------------------------------------------------------------
 
-        [Fact] ///// regular\manual (non-conflicted) revisions shouldnt obey the conflicted-config!!!
+        // regular\manual (non-conflicted) revisions shouldnt obey the conflicted-config!
+        [Fact] 
         public async Task ForceCreatedRevisions_ShouldntObeyToConflictedRevisions()
         {
             using var src = GetDocumentStore();
@@ -441,7 +442,6 @@ namespace SlowTests
 
         //---------------------------------------------------------------------------------------------------------------------------------------
 
-        //  Fixed
         [Fact]
         public async Task NotDeletingOutOfDateRevisionsBecauseTheyOrderedByEtag()
         {
@@ -787,5 +787,100 @@ return oldestDoc;"
 
         }
 
+
+        //---------------------------------------------------------------------------------------------------------------------------------------
+
+        // (RavenDB-19640)
+        [Fact]
+        public async Task ConfigureRevisionsForConflictsOperation_PurgeOnDelete_Doesnt_Work_As_Expected_On_Document_Delete()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                using (var session = source.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Foo" }, "FoObAr/0");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Foo2" }, "FoObAr/0");
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(source, destination);
+                await EnsureReplicatingAsync(source, destination);
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetCountForAsync("FoObAr/0");
+                    Assert.Equal(3, revisions);
+                }
+
+                await destination.Maintenance.Server.SendAsync(new ConfigureRevisionsForConflictsOperation(destination.Database, new RevisionsCollectionConfiguration
+                {
+                    PurgeOnDelete = true
+                }));
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete("FoObAr/0");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForUserToContinueTheTest(destination);
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetCountForAsync("FoObAr/0");
+                    Assert.Equal(0, revisions);
+                }
+            }
+        }
+
+        // (RavenDB-20040)
+        [Fact]
+        public async Task EnforceRevisions_Shouldnt_Deletes_ConflictRevisions_When_Having_ConflictConfig()
+        {
+            using var src = GetDocumentStore();
+            using var dst = GetDocumentStore();
+
+            var dstConfig = new RevisionsCollectionConfiguration
+            {
+                MinimumRevisionsToKeep = 2
+            };
+            await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
+
+            // Create a doc with 3 'conflicted' (or 'resolved') revisions in 'dst'
+            using (var session = src.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "Old" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+            using (var session = dst.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "New" }, "Docs/1");
+                await session.SaveChangesAsync();
+            }
+            await SetupReplicationAsync(src, dst); // Conflicts resolved
+            await EnsureReplicatingAsync(src, dst);
+
+            using (var session = dst.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(2, doc1RevCount); // obeys the Conflicted Config
+            }
+
+            await EnforceConfiguration(dst);
+            WaitForUserToContinueTheTest(dst);
+            
+            using (var session = dst.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(2, doc1RevCount);
+            }
+
+        }
     }
 }
