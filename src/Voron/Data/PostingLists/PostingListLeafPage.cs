@@ -102,8 +102,8 @@ public readonly unsafe struct PostingListLeafPage
         Debug.Assert(sizeUsed < Constants.Storage.PageSize);
         newHeader->SizeUsed = (ushort)sizeUsed;
         newHeader->NumberOfEntries = entriesCount;
-            // clear the parts we aren't using
-        Memory.Set(newPagePtr + PageHeader.SizeOf + sizeUsed, 0, Constants.Storage.PageSize - PageHeader.SizeOf + sizeUsed);
+        // clear the parts we aren't using
+        Memory.Set(newPagePtr + PageHeader.SizeOf + sizeUsed, 0, Constants.Storage.PageSize - (PageHeader.SizeOf + sizeUsed));
         Memory.Copy(Header, newPagePtr, Constants.Storage.PageSize);
             
         existingBufferScope.Dispose();
@@ -149,6 +149,27 @@ public readonly unsafe struct PostingListLeafPage
             }
         }
     }
+    
+      /// <summary>
+    /// Additions and removals are *sorted* by the caller
+    /// maxValidValue is the limit for the *next* page, so we won't consume entries from there
+    /// </summary>
+    public int AppendToNewPage(long* additions, int additionsCount)
+    {
+        PostingListLeafPageHeader* newHeader = (PostingListLeafPageHeader*)_page.Pointer;
+        InitLeaf(newHeader);
+
+        (int entriesCount, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(additions, additionsCount, _page.DataPointer,
+            Constants.Storage.PageSize - PageHeader.SizeOf);
+
+        Debug.Assert(sizeUsed < Constants.Storage.PageSize);
+        newHeader->SizeUsed = (ushort)sizeUsed;
+        newHeader->NumberOfEntries = entriesCount;
+        // clear the parts we aren't using
+        Memory.Set(_page.DataPointer+ sizeUsed, 0, Constants.Storage.PageSize - (PageHeader.SizeOf + sizeUsed));
+
+        return entriesCount;
+    }
 
     public struct Iterator
     {
@@ -193,6 +214,38 @@ public readonly unsafe struct PostingListLeafPage
                 return read;
             }
         }
+        
+
+        /// <summary>
+        ///  This will find the *range* in which there are values
+        ///  that are greater or equal to from, not the exact match
+        /// </summary>
+        public bool SkipHint(long from)
+        {
+            if (from == long.MinValue)
+                return true; // nothing to do here
+            
+            var buffer = stackalloc long[256];
+            while (true)
+            {
+                byte* previous = _reader.Offset;
+                var read = _reader.Fill(buffer, 256);
+                if (read == 0)
+                {
+                    if (_reader.Offset == _endOfData)
+                        return false; // was not found
+                    _reader.MoveToNextHeader();
+                    continue;
+                }
+
+                if (from < buffer[read - 1]) 
+                    continue;
+                
+                // we setup the *next* call to read this again
+                _reader.Offset = previous;
+                return true;
+            }
+        }
     }
 
     private int ReadAllEntries(long* existing)
@@ -225,5 +278,35 @@ public readonly unsafe struct PostingListLeafPage
     public Iterator GetIterator()
     {
         return new Iterator(_page.DataPointer, Header->SizeUsed);
+    }
+
+    public static void Merge(ByteStringContext allocator,
+        PostingListLeafPageHeader* dest, PostingListLeafPageHeader* first, PostingListLeafPageHeader* second)
+    {
+        var scope = allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
+        var tmpPtr = tmp.Ptr;
+        var newHeader = (PostingListLeafPageHeader*)tmpPtr;
+        InitLeaf(newHeader);
+        
+        Memory.Copy((byte*)dest + PageHeader.SizeOf,
+            (byte*)first + PageHeader.SizeOf,
+            first->SizeUsed
+            );
+        dest->SizeUsed += first->SizeUsed;
+        dest->NumberOfEntries += first->NumberOfEntries;
+        
+        Memory.Copy((byte*)dest + PageHeader.SizeOf + dest->SizeUsed,
+            (byte*)second + PageHeader.SizeOf,
+            second->SizeUsed
+        );
+        dest->SizeUsed += second->SizeUsed;
+        dest->NumberOfEntries += second->NumberOfEntries;
+
+        Memory.Set((byte*)dest + PageHeader.SizeOf + dest->SizeUsed, 0,
+            Constants.Storage.PageSize - (PageHeader.SizeOf + dest->SizeUsed));
+        
+        tmp.CopyTo((byte*)dest);
+        
+        scope.Dispose();
     }
 }

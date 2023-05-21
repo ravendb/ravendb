@@ -4972,15 +4972,20 @@ namespace Raven.Server.Documents.Indexes
                     if (!Corax.Constants.IndexWriter.LargePostingListsSetSlice.Equals(postingList.Name))
                         return;
 
+                    Span<long> buffer = stackalloc long[1024];
                     var it = postingList.Iterate();
-                    while (it.MoveNext())
+                    while (it.Fill(buffer, out var read))
                     {
-                        var item = Container.Get(llt, it.Current);
-                        var state = (PostingListState*)item.Address;
-                        report.BranchPages += state->BranchPages;
-                        report.LeafPages += state->LeafPages;
-                        report.PageCount += state->BranchPages + state->LeafPages;
-                        report.AllocatedSpaceInBytes += StorageReportGenerator.PagesToBytes(state->BranchPages + state->LeafPages);
+                        for (int i = 0; i < read; i++)
+                        {
+                            var item = Container.Get(llt, buffer[i]);
+                            var state = (PostingListState*)item.Address;
+                            report.BranchPages += state->BranchPages;
+                            report.LeafPages += state->LeafPages;
+                            report.PageCount += state->BranchPages + state->LeafPages;
+                            report.AllocatedSpaceInBytes += StorageReportGenerator.PagesToBytes(state->BranchPages + state->LeafPages);
+
+                        }
                     }
 
                 };

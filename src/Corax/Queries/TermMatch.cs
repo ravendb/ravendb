@@ -11,6 +11,7 @@ using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Data.Containers;
+using Voron.Util.Simd;
 
 namespace Corax.Queries
 {
@@ -26,9 +27,9 @@ namespace Corax.Queries
         private readonly long _totalResults;
         private long _current;
         internal Bm25Relevance _bm25Relevance;
-        private Container.Item _container;
         private PostingList.Iterator _set;
-        private PForDecoder.DecoderState _decoderState;
+        private Container.Item _containerItem;
+        private SimdBitPacker<SortedDifferentials>.Reader _containerReader;
         private ByteStringContext _ctx;
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
@@ -60,8 +61,9 @@ namespace Corax.Queries
             _scoreFunc = scoreFunc;
             _inspectFunc = inspectFunc;
             _ctx = ctx;
-            _container = default;
+            _containerItem = default;
             _set = default;
+            _containerReader = default;
 #if DEBUG
             Term = null;
 #endif
@@ -175,31 +177,10 @@ namespace Corax.Queries
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc<TBoostingMode>(ref TermMatch term, Span<long> matches) where TBoostingMode : IBoostingMarker
             {
-                ref var it = ref term._set.It; // reusing the existing buffer for both set & small set
-                var results = 0;
-                fixed (long* buffer = it.Buffer)
+                int results;
+                fixed (long* pMatches = matches)
                 {
-                    var rawMatches = matches;
-                    while (true)
-                    {
-                        var pendingItems = it.BufferLength - it.BufferIndex;
-                        if (pendingItems > 0)
-                        {
-                            int itemsToCopy = Math.Min(pendingItems, rawMatches.Length);
-                            new Span<long>(buffer + it.BufferIndex, itemsToCopy).CopyTo(rawMatches);
-                            results += itemsToCopy;
-                            it.BufferIndex += itemsToCopy;
-                            rawMatches = rawMatches[itemsToCopy..];
-                            if (rawMatches.Length == 0)
-                                break;
-                        }
-
-                        it.BufferIndex = 0;
-                        it.BufferLength = PForDecoder.Decode(ref term._decoderState, term._container.Address, term._container.Length, buffer, PForEncoder.BufferLen);
-                        Debug.Assert(term._decoderState.NumberOfReads <= term._totalResults);
-                        if (it.BufferLength == 0)
-                            break;
-                    }
+                    results = term._containerReader.Fill(pMatches, matches.Length);
                 }
 
                 if (results == 0)
@@ -225,14 +206,14 @@ namespace Corax.Queries
             static int AndWithFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matches) where TBoostingMode : IBoostingMarker
             {
                 // AndWith has to start from the start.
-                var stream = term._container.ToSpan();
-                Span<long> decodedMatches = stackalloc long[PForEncoder.BufferLen];
-                var decodeState = new PForDecoder.DecoderState(stream.Length);
+                var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = term._containerItem.Address };
+                reader.MoveToNextHeader();
+                var decodedMatches = stackalloc long[1024];
                 int bufferIndex = 0;
                 int matchedIndex = 0;
                 while (bufferIndex < matches)
                 {
-                    var read = PForDecoder.Decode(ref decodeState, stream, decodedMatches);
+                    var read = reader.Fill(decodedMatches, 1024);
                     if (read == 0)
                         break;
 
@@ -290,23 +271,19 @@ namespace Corax.Queries
 
             var itemsCount = VariableSizeEncoding.Read<int>(containerItem.Address, out var offset);
             containerItem = containerItem.IncrementOffset(offset);
-            var decoderState = new PForDecoder.DecoderState(containerItem.Length);
+            var reader = new SimdBitPacker<SortedDifferentials>.Reader
+            {
+                Offset = containerItem.Address
+            };
+            reader.MoveToNextHeader();
             return new TermMatch(indexSearcher, ctx, itemsCount, isBoosting? &FillFunc<HasBoosting> : &FillFunc<NoBoosting>, isBoosting ? &AndWithFunc<HasBoosting> : &AndWithFunc<NoBoosting>, inspectFunc: &InspectFunc, scoreFunc: isBoosting ? &ScoreFunc : null)
             {
                 _bm25Relevance = isBoosting 
                     ? Bm25Relevance.Small(indexSearcher, itemsCount, ctx, itemsCount, termRatioToWholeCollection) 
                     : default,
-                _container = containerItem,
-                _decoderState = decoderState,
                 _current = 0,
-                _set =
-                {
-                    It =
-                    {
-                        BufferIndex = 0,
-                        BufferLength = 0
-                    }
-                }
+                _containerItem = containerItem,
+                _containerReader = reader
             };
         }
         
@@ -321,66 +298,59 @@ namespace Corax.Queries
                 var it = term._set;
 
                 ref long start = ref MemoryMarshal.GetReference(buffer);
-                it.Seek(start - 1);
-                if (it.MoveNext() == false)
-                    goto Fail;
+                if (it.Seek(start - 1) == false)
+                    return 0;
 
-                // We update the current value we want to work with.
+                Span<long> decodedMatches = stackalloc long[1024];
 
-                long current;
-                if (typeof(TBoostingMode) == typeof(HasBoosting))
+                long maxValidValue = buffer[matches - 1] + 1;
+                while (true)
                 {
-                    if (term._bm25Relevance.IsStored)
-                        current = term._bm25Relevance.Add(it.Current);
-                    else
-                        current = EntryIdEncodings.DecodeAndDiscardFrequency(it.Current);
-                }
-                
-                else
-                    current = EntryIdEncodings.DecodeAndDiscardFrequency(it.Current);
-                
-                // Check if there are matches left to process or is any possibility of a match to be available in this block.
-                int i = 0;
-                long end = Unsafe.Add(ref start, matches - 1);
-                while (i < matches && current <= end)
-                {
-                    // While the current match is smaller we advance.
-                    while (Unsafe.Add(ref start, i) < current)
+                    if (it.Fill(decodedMatches, out var read, maxValidValue) == false)
+                        return matchedIdx;
+
+                    for (int j = 0; j < read; j++)
                     {
-                        i++;
-                        if (i >= matches)
-                            goto End;
+                        long current = decodedMatches[j];
+                        if (typeof(TBoostingMode) == typeof(HasBoosting))
+                        {
+                            if (term._bm25Relevance.IsStored)
+                                current = term._bm25Relevance.Add(current);
+                            else
+                                current = EntryIdEncodings.DecodeAndDiscardFrequency(current);
+                        }
+                
+                        else
+                            current = EntryIdEncodings.DecodeAndDiscardFrequency(current);
+                
+                        // Check if there are matches left to process or is any possibility of a match to be available in this block.
+                        int i = 0;
+                        long end = Unsafe.Add(ref start, matches - 1);
+                        while (i < matches && current <= end)
+                        {
+                            // While the current match is smaller we advance.
+                            while (Unsafe.Add(ref start, i) < current)
+                            {
+                                i++;
+                                if (i >= matches)
+                                    return matchedIdx;
+                            }
+
+                            // We are guaranteed that matches[i] is at least equal if not higher than current.
+                            Debug.Assert(buffer[i] >= current);
+
+                            // We have a match, we include it into the matches and go on. 
+                            if (current == Unsafe.Add(ref start, i))
+                            {
+                                ref long location = ref Unsafe.Add(ref start, matchedIdx++);
+                                location = current;
+                                i++;
+                            }
+                        }
                     }
 
-                    // We are guaranteed that matches[i] is at least equal if not higher than current.
-                    Debug.Assert(buffer[i] >= current);
-
-                    // We have a match, we include it into the matches and go on. 
-                    if (current == Unsafe.Add(ref start, i))
-                    {
-                        ref long location = ref Unsafe.Add(ref start, matchedIdx++);
-                        location = current;
-                        i++;
-                    }
-
-                    // We look into the next.
-                    if (it.MoveNext() == false)
-                        goto End;
-
-                    if (typeof(TBoostingMode) == typeof(HasBoosting))
-                        current = term._bm25Relevance.Add(it.Current);
-                    else
-                            current = EntryIdEncodings.DecodeAndDiscardFrequency(it.Current);
+                    return matchedIdx;
                 }
-
-                End:
-                term._set = it;
-                term._current = current;
-                return matchedIdx;
-
-                Fail:
-                term._set = it;
-                return 0;
             }
 
             [SkipLocalsInit]
@@ -633,18 +603,5 @@ namespace Corax.Queries
         }
 
         string DebugView => Inspect().ToString();
-
-        public List<long> GetResultsForDebug()
-        {
-            var list = new List<long>();
-            Span<long> buffer = stackalloc long[PForEncoder.BufferLen];
-            while (true)
-            {
-                var read = Fill(buffer);
-                if (read == 0)
-                    return list;
-                list.AddRange(buffer[0..read].ToArray());
-            }
-        }
     }
 }
