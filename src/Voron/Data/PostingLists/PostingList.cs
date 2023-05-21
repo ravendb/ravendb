@@ -386,9 +386,18 @@ namespace Voron.Data.PostingLists
                 var extras = leafPage.Update(_llt, tempList, ref additions, ref additionsCount, ref removals, ref removalsCount, limit);
                 _state.NumberOfEntries += leafPage.Header->NumberOfEntries;
 
-                if (extras > 0) // we overflow and need to split excess to additional pages
+                if (extras.Length > 0) // we overflow and need to split excess to additional pages
                 {
-                    AddNewPageForTheExtras(tempList.RawItems + extras, tempList.Count - extras);
+                    AddNewPageForTheExtras(extras);
+                }
+                else if (additionsCount > 0 && additions[0] < limit) // we don't have any more space but more new items in the range 
+                {
+                    int idx = new Span<long>(additions, additionsCount).BinarySearch(limit);
+                    if (idx < 0)
+                        idx = ~idx;
+                    AddNewPageForTheExtras(new Span<long>(additions, idx));
+                    additionsCount -= idx;
+                    additions += idx;
                 }
                 else if (hadRemovals && _len > 1 && leafPage.SpaceUsed < Constants.Storage.PageSize / 2)
                 {
@@ -419,7 +428,7 @@ namespace Voron.Data.PostingLists
                         leafPage.Header,
                         parent.LastSearchPosition == 0 ? leafPage.Header : siblingHeader,
                         parent.LastSearchPosition == 0 ? siblingHeader : leafPage.Header
-                        );
+                    );
 
                     MergeSiblingsAtParent();
                 } 
@@ -507,19 +516,24 @@ namespace Voron.Data.PostingLists
             MergeSiblingsAtParent();
         }
 
-        private void AddNewPageForTheExtras(long* buffer, int count)
+        private void AddNewPageForTheExtras(Span<long> extras)
         {
-            while (count > 0)
+            fixed (long* b = extras)
             {
-                long firs = *buffer;
-                var newPage = new PostingListLeafPage(_llt.AllocatePage(1));
-                PostingListLeafPage.InitLeaf(newPage.Header);
-                _state.LeafPages++;
-                var written = newPage.AppendToNewPage(buffer, count);
-                _state.NumberOfEntries += newPage.Header->NumberOfEntries;
-                AddToParentPage(firs, newPage.Header->PageNumber);
-                buffer += written;
-                count -= written;
+                long* buffer = b;
+                var count = extras.Length;
+                while (count > 0)
+                {
+                    long first = *buffer;
+                    var newPage = new PostingListLeafPage(_llt.AllocatePage(1));
+                    PostingListLeafPage.InitLeaf(newPage.Header);
+                    _state.LeafPages++;
+                    var written = newPage.AppendToNewPage(buffer, count);
+                    _state.NumberOfEntries += newPage.Header->NumberOfEntries;
+                    AddToParentPage(first, newPage.Header->PageNumber);
+                    buffer += written;
+                    count -= written;
+                }
             }
         }
 
@@ -554,7 +568,10 @@ namespace Voron.Data.PostingLists
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
             var parent = new PostingListBranchPage(state.Page);
             if (parent.TryAdd(_llt, separator, newPage))
+            {
+                PushPage(newPage);
                 return;
+            }
 
             SplitBranchPage(separator, newPage);
         }
@@ -629,12 +646,7 @@ namespace Voron.Data.PostingLists
             rootPage.Init();
             rootPage.TryAdd(_llt, long.MinValue, cpy);
 
-            InsertToStack(new PostingListCursorState
-            {
-                Page = page,
-                LastMatch = state.LastMatch,
-                LastSearchPosition = state.LastSearchPosition
-            });
+            InsertToStack(state with { Page = page });
             state.LastMatch = -1;
             state.LastSearchPosition = 0;
             return rootPage;

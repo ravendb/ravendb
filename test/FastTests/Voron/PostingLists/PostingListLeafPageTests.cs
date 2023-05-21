@@ -58,7 +58,7 @@ namespace FastTests.Voron.Sets
                 long* rr = null;
                 var zero = 0;
                 var extras = leaf.Update(_llt,tempList, ref rp, ref len, ref rr, ref zero, long.MaxValue);
-                Assert.Equal(0, extras);
+                Assert.Equal(0, extras.Length);
                 Assert.Equal(0, len);
                 Assert.Equal((long)(p+ span.Length), (long)rp);
             }
@@ -94,21 +94,21 @@ namespace FastTests.Voron.Sets
                 long* none = null;
                 int zero = 0;
                 var extras = leaf.Update(_llt,tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
-                Assert.Equal(0, extras);
+                Assert.Equal(0, extras.Length);
                 Assert.Equal(0, pl);
             }
             
             Assert.NotEmpty(leaf.GetDebugOutput());
             
-            Span<long> reomvals = list; // now remove
-            fixed (long* p = reomvals)
+            Span<long> removals = list; // now remove
+            fixed (long* p = removals)
             {
                 var pp = p;
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
                 var extras = leaf.Update(_llt, tempList, ref none, ref zero, ref pp, ref pl, long.MaxValue);
-                Assert.Equal(0, extras);
+                Assert.Equal(0, extras.Length);
                 Assert.Equal(0, pl);
                 Assert.Empty(leaf.GetDebugOutput());
             }
@@ -145,7 +145,7 @@ namespace FastTests.Voron.Sets
                 long* none = null;
                 int zero = 0;
                 var extras = leaf.Update(_llt, tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
-                Assert.Equal(0, extras);
+                Assert.Equal(0, extras.Length);
                 Assert.Equal(0, pl);
             }
             additions = new long[] { 24 };
@@ -157,7 +157,7 @@ namespace FastTests.Voron.Sets
                 long* none = null;
                 int zero = 0;
                 var extras = leaf.Update(_llt, tempList,ref pp, ref pl, ref none, ref zero, long.MaxValue);
-                Assert.Equal(0,extras);
+                Assert.Equal(0,extras.Length);
                 Assert.Equal(0, pl);
             }
 

@@ -164,6 +164,7 @@ public static unsafe class SimdBitPacker<TSimdTransform>
             var remainder = sep % 256;
             if (remainder != 0 && sep > remainder)
                 sep -= remainder;
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             return Encode(entries, sep, output, outputSize);
         }
 

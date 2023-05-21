@@ -12,6 +12,8 @@ namespace Voron.Data.PostingLists;
 
 public readonly unsafe struct PostingListLeafPage
 {
+    private const long InvalidValue = long.MaxValue;
+    
     private readonly Page _page;
     public PostingListLeafPageHeader* Header => (PostingListLeafPageHeader*)_page.Pointer;
 
@@ -34,7 +36,7 @@ public readonly unsafe struct PostingListLeafPage
     /// Additions and removals are *sorted* by the caller
     /// maxValidValue is the limit for the *next* page, so we won't consume entries from there
     /// </summary>
-    public int Update(LowLevelTransaction tx, NativeIntegersList tempList, ref long* additions, ref int additionsCount,
+    public Span<long> Update(LowLevelTransaction tx, NativeIntegersList tempList, ref long* additions, ref int additionsCount,
         ref long* removals, ref int removalsCount, long maxValidValue)
     {
         var maxAdditionsLimit = new Span<long>(additions, additionsCount).BinarySearch(maxValidValue);
@@ -46,9 +48,19 @@ public readonly unsafe struct PostingListLeafPage
             maxRemovalsLimit = ~maxRemovalsLimit;
       
         if (maxRemovalsLimit == 0 && maxAdditionsLimit == 0)
-            return 0; // nothing to do
-            
+            return Span<long>.Empty; // nothing to do
+        
         tempList.Clear();
+
+        if (Header->NumberOfEntries == 0)
+        {
+            var written = AppendToNewPage(additions, maxAdditionsLimit);
+            removals += maxRemovalsLimit;
+            removalsCount -= maxRemovalsLimit;
+            additions += written;
+            additionsCount -= written;
+            return Span<long>.Empty;
+        }
 
         var tmpPageScope = tx.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
         var newPagePtr = tmp.Ptr;
@@ -57,37 +69,62 @@ public readonly unsafe struct PostingListLeafPage
         Memory.Copy(newPagePtr, Header, PageHeader.SizeOf);
         InitLeaf(newHeader);
 
-        var existingBufferScope = tx.Allocator.Allocate(sizeof(long) * Header->NumberOfEntries, out tmp);
-        long* existing = (long*)tmp.Ptr;
-        int existingCount = ReadAllEntries(existing);
+        var existingList = new NativeIntegersList(tx.Allocator, (Header->NumberOfEntries+255)/256 * 256);
+        existingList.Count = ReadAllEntries(existingList.RawItems, existingList.Capacity);
 
-        Debug.Assert(existingCount == Header->NumberOfEntries);
+        Debug.Assert(existingList.Count == Header->NumberOfEntries);
 
-        int existingIndex = 0, additionsIdx = 0, removalsIdx = 0;
-        long existingCurrent = -1, additionCurrent = -1, removalCurrent = -1;
-        while (existingIndex < existingCount)
+        int existingIndex = int.MaxValue,additionsIdx = 0, removalsIdx = 0;
+
+        if (additionsCount != 0)
         {
-            if (existingCurrent == -1)
+            existingIndex = existingList.Items.BinarySearch(*additions);
+            if (existingIndex < 0)
             {
-                existingCurrent = existing[existingIndex++];
-                if (existingIndex == existingCount)
-                {
-                    AddItemToList();
-                    break;
-                }
+                existingIndex = ~existingIndex;
+            }
+        }
+
+        if (removalsCount != 0)
+        {
+            var removalIndex = existingList.Items.BinarySearch(*removals);
+            if (removalIndex < 0)
+            {
+                removalIndex = ~removalIndex;
             }
 
-            if (additionsIdx < additionsCount && additionCurrent == -1) 
+            existingIndex = Math.Min(removalIndex, existingIndex);
+        }
+
+        long existingCurrent = InvalidValue, additionCurrent = InvalidValue, removalCurrent = InvalidValue;
+        while (existingIndex < existingList.Count)
+        {
+            if (existingCurrent == InvalidValue)
+            {
+                existingCurrent = existingList.RawItems[existingIndex++];
+            }
+
+            if (additionsIdx < additionsCount && additionCurrent == InvalidValue) 
                 additionCurrent = additions[additionsIdx++];
 
-            if (removalsIdx < removalsCount && removalCurrent == -1) 
+            if (removalsIdx < removalsCount && removalCurrent == InvalidValue) 
                 removalCurrent = removals[removalsIdx++];
 
             AddItemToList();
         }
 
-        (int entriesCount, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(tempList.RawItems, tempList.Count, newPagePtr + PageHeader.SizeOf,
-            Constants.Storage.PageSize - PageHeader.SizeOf);
+        int entriesCount = 0;
+        int sizeUsed = 0;
+        Span<long> remainder = Span<long>.Empty;
+        if (tempList.Count > 0)
+        {
+            (entriesCount, sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(tempList.RawItems, tempList.Count, newPagePtr + PageHeader.SizeOf,
+                Constants.Storage.PageSize - PageHeader.SizeOf);
+            if (entriesCount < tempList.Count)
+            {
+                remainder = tempList.Items[entriesCount..];
+            }
+        }
         // we still have items to add, let's add them as the next item here
         if (entriesCount == tempList.Count && additionsIdx < additionsCount)
         {
@@ -106,42 +143,43 @@ public readonly unsafe struct PostingListLeafPage
         Memory.Set(newPagePtr + PageHeader.SizeOf + sizeUsed, 0, Constants.Storage.PageSize - (PageHeader.SizeOf + sizeUsed));
         Memory.Copy(Header, newPagePtr, Constants.Storage.PageSize);
             
-        existingBufferScope.Dispose();
+        existingList.Dispose();
         tmpPageScope.Dispose();
         
         additions += additionsIdx;
         additionsCount -= additionsIdx;
         removals += removalsIdx;
         removalsCount -= removalsIdx;
-        return tempList.Count - entriesCount;
+
+        return remainder;
         
         void AddItemToList()
         {
             long current;
-            if (additionCurrent < existingCurrent || existingCurrent == -1)
+            if (additionCurrent < existingCurrent || existingCurrent == InvalidValue)
             {
                 current = additionCurrent;
-                additionCurrent = -1;
+                additionCurrent = InvalidValue;
             }
             else if (additionCurrent == existingCurrent)
             {
                 current = additionCurrent;
-                additionCurrent = -1;
-                existingCurrent = -1;
+                additionCurrent = InvalidValue;
+                existingCurrent = InvalidValue;
             }
             else // existingCurrent > existingCurrent
             {
                 current = existingCurrent;
-                existingCurrent = -1;
+                existingCurrent = InvalidValue;
             }
 
             if (removalCurrent < current)
             {
-                removalCurrent = -1;
+                removalCurrent = InvalidValue;
             }
             else if (removalCurrent == current)
             {
-                removalCurrent = -1;
+                removalCurrent = InvalidValue;
             }
             else
             {
@@ -248,7 +286,7 @@ public readonly unsafe struct PostingListLeafPage
         }
     }
 
-    private int ReadAllEntries(long* existing)
+    private int ReadAllEntries(long* existing, int count)
     {
         int existingCount = 0;
         var offset = _page.DataPointer;
@@ -257,7 +295,7 @@ public readonly unsafe struct PostingListLeafPage
         while (reader.Offset < endOfData) // typically should have up to two of them...
         {
             reader.MoveToNextHeader();
-            var read = reader.Fill(existing + existingCount, Header->NumberOfEntries);
+            var read = reader.Fill(existing + existingCount, count);
             offset += read;
             existingCount += read;
         }
@@ -267,12 +305,12 @@ public readonly unsafe struct PostingListLeafPage
 
     public List<long> GetDebugOutput()
     {
-        var buf = new long[Header->NumberOfEntries];
+        var buf = new long[(Header->NumberOfEntries + 255)/256 * 256];
         fixed (long* f = buf)
         {
-            ReadAllEntries(f);
+            ReadAllEntries(f, buf.Length);
         }
-        return buf.ToList();
+        return buf.Take(Header->NumberOfEntries).ToList();
     }
 
     public Iterator GetIterator()
