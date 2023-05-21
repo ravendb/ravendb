@@ -57,12 +57,13 @@ namespace SlowTests.Issues
                 }
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
+                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
 
                 await store.Maintenance.SendAsync(new EnableIndexOperation(indexName));
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))) == false);
+                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId) == false);
             }
         }
 
@@ -91,7 +92,14 @@ namespace SlowTests.Issues
                 }
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
+                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+
+                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
+                var detail = blockingTombstonesDetails[0];
+
+                Assert.Equal(1, detail.NumberOfTombstones);
+                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.Exact, detail.Accuracy);
             }
         }
 
@@ -108,7 +116,7 @@ namespace SlowTests.Issues
                         var user = new User { Name = "Yonatan", Id = $"{i}"};
                         await session.StoreAsync(user);
                     }
-                    
+
                     await session.SaveChangesAsync();
                 }
 
@@ -128,7 +136,14 @@ namespace SlowTests.Issues
                 }
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
+                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+
+                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
+                var detail = blockingTombstonesDetails[0];
+
+                Assert.Equal(10_000, detail.NumberOfTombstones);
+                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.MoreThan, detail.Accuracy);
             }
         }
 
@@ -157,7 +172,14 @@ namespace SlowTests.Issues
                 }
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
+                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+
+                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
+                var detail = blockingTombstonesDetails[0];
+
+                Assert.Equal(1, detail.NumberOfTombstones);
+                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.Exact, detail.Accuracy);
             }
         }
 
@@ -208,7 +230,14 @@ namespace SlowTests.Issues
 
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
+                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+
+                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
+                var detail = blockingTombstonesDetails[0];
+
+                Assert.Equal(1, detail.NumberOfTombstones);
+                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.Exact, detail.Accuracy);
             }
         }
 
@@ -244,7 +273,14 @@ namespace SlowTests.Issues
 
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                Assert.True(documentDatabase.NotificationCenter.Exists(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones))));
+                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
+
+                var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
+                var detail = blockingTombstonesDetails[0];
+
+                Assert.Equal(2, detail.NumberOfTombstones);
+                Assert.Equal(DocumentsStorage.TombstonesCount.TombstonesAccuracy.Exact, detail.Accuracy);
             }
         }
 
