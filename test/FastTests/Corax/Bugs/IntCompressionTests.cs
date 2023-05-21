@@ -11,14 +11,15 @@ using Sparrow.Server.Debugging;
 using Tests.Infrastructure;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
+using Voron.Util.Simd;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs
 {
-    public unsafe class PForTests : NoDisposalNeeded
+    public unsafe class IntCompressionTests : NoDisposalNeeded
     {
-        public PForTests(ITestOutputHelper output) : base(output)
+        public IntCompressionTests(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -38,22 +39,21 @@ namespace FastTests.Corax.Bugs
                 67100631044
             };
 
-            Span<byte> buffer = stackalloc byte[1024];
-            uint* scratch = stackalloc uint[PForEncoder.BufferLen];
-            var encoder = new PForEncoder(buffer, scratch);
-            for (int i = 0; i < data.Length; i++)
+            var buffer = stackalloc byte[1024];
+            fixed (long* l = data)
             {
-                Assert.True(encoder.TryAdd(data[i]));
+                (int count, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buffer, 1024);
+                Assert.Equal(data.Length, count);
             }
-            Assert.True(encoder.TryClose());
-
-            var decoderState = new PForDecoder.DecoderState(encoder.SizeInBytes);
-            Span<long> output = stackalloc long[128];
+            
+            
+            var output = stackalloc long[256];
             var idx = 0;
-
+            var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = buffer };
+            reader.MoveToNextHeader();
             while (true)
             {
-                var read = PForDecoder.Decode(ref decoderState, buffer[..encoder.SizeInBytes], output);
+                var read = reader.Fill(output, 256);
                 if (read == 0)
                     break;
                 for (int i = 0; i < read; i++, idx++)
@@ -67,32 +67,27 @@ namespace FastTests.Corax.Bugs
         [RavenMultiplatformFact(RavenTestCategory.Corax | RavenTestCategory.Voron, RavenPlatform.Linux | RavenPlatform.Windows)]
         public void CanEncodeAndDecodeSafely()
         {
-            using var stream = typeof(PForTests).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs.access_violation.json.gz");
-            using var reader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
+            using var stream = typeof(IntCompressionTests).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs.access_violation.json.gz");
+            using var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
 
-            var data = JsonConvert.DeserializeObject<long[]>(reader.ReadToEnd());
+            var data = JsonConvert.DeserializeObject<long[]>(streamReader.ReadToEnd());
 
             var buf = ElectricFencedMemory.Instance.Allocate(Container.MaxSizeInsideContainerPage);
             try
             {
-                var buffer = new Span<byte>(buf, Container.MaxSizeInsideContainerPage);
-                var offset = VariableSizeEncoding.Write(buffer, data.Length);
-                uint* scratch = stackalloc uint[PForEncoder.BufferLen];
-                var encoder = new PForEncoder(buffer[offset..], scratch);
-                for (int i = 0; i < data.Length; i++)
+                fixed (long* l = data)
                 {
-                    Assert.True(encoder.TryAdd(data[i]));
+                    (int count, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buf, Container.MaxSizeInsideContainerPage);
+                    Assert.Equal(data.Length, count);
                 }
-                Assert.True(encoder.TryClose());
-
-                var decoderState = new PForDecoder.DecoderState(encoder.SizeInBytes);
-                Span<long> output = stackalloc long[128];
+                
+                var output = stackalloc long[256];
                 var idx = 0;
-                var decode = buffer[offset..(offset + encoder.SizeInBytes)];
-
+                var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = buf };
+                reader.MoveToNextHeader();
                 while (true)
                 {
-                    var read = PForDecoder.Decode(ref decoderState, decode, output);
+                    var read = reader.Fill(output, 256);
                     if (read == 0)
                         break;
                     for (int i = 0; i < read; i++)

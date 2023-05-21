@@ -31,15 +31,19 @@ namespace FastTests.Voron.Sets
             _random = _data.OrderBy(x => random.Next()).ToList();
         }
 
-        private List<long> AllValues(PostingList postingList)
+        private unsafe List<long> AllValues(PostingList postingList)
         {
             var it = postingList.Iterate();
             var l = new List<long>();
+            Span<long> buffer = stackalloc long[1024];
             if (it.Seek(0) == false)
                 return l;
-            while (it.MoveNext())
+            while (it.Fill(buffer, out var read))
             {
-                l.Add(it.Current);
+                for (int i = 0; i < read; i++)
+                {
+                    l.Add(buffer[i]);
+                }
             }
 
             return l;

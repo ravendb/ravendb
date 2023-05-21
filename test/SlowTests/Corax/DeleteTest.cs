@@ -100,9 +100,16 @@ public class DeleteTest : StorageTest
             previousIds.Sort();
 
             // Look for "list/9" in the set
-            while (iterator.MoveNext())
             {
-                Assert.False(previousIds.BinarySearch(EntryIdEncodings.DecodeAndDiscardFrequency(iterator.Current)) >= 0);
+                Span<long> buffer = stackalloc long[256];
+                while (iterator.Fill(buffer, out var total))
+                {
+                    for (int i = 0; i < total; i++)
+                    {
+                        var current = buffer[i];
+                        Assert.False(previousIds.BinarySearch(EntryIdEncodings.DecodeAndDiscardFrequency(current)) >= 0);
+                    }
+                }
             }
 
             Assert.Equal(read, match.Count);

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Voron;
 using Voron.Data.PostingLists;
 using Voron.Global;
@@ -48,15 +49,16 @@ namespace FastTests.Voron.Sets
             }
 
             Span<long> span = list.ToArray();
-            var empty = Span<long>.Empty;
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            var tempList = new NativeIntegersList(bsc);
             fixed (long* p = span)
             {
                 var len = span.Length;
                 var rp = p;
                 long* rr = null;
                 var zero = 0;
-                var extras = leaf.Update(_llt,ref rp, ref len, ref rr, ref zero, long.MaxValue);
-                Assert.Null(extras);
+                var extras = leaf.Update(_llt,tempList, ref rp, ref len, ref rr, ref zero, long.MaxValue);
+                Assert.Equal(0, extras);
                 Assert.Equal(0, len);
                 Assert.Equal((long)(p+ span.Length), (long)rp);
             }
@@ -83,14 +85,16 @@ namespace FastTests.Voron.Sets
                 list[i] = start;
             }
             Span<long> additions = list;
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            var tempList = new NativeIntegersList(bsc);
             fixed (long* p = additions)
             {
                 var pp = p;
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, ref pp, ref pl, ref none, ref zero, long.MaxValue);
-                Assert.Null(extras);
+                var extras = leaf.Update(_llt,tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                Assert.Equal(0, extras);
                 Assert.Equal(0, pl);
             }
             
@@ -103,8 +107,8 @@ namespace FastTests.Voron.Sets
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, ref none, ref zero, ref pp, ref pl, long.MaxValue);
-                Assert.Null(extras);
+                var extras = leaf.Update(_llt, tempList, ref none, ref zero, ref pp, ref pl, long.MaxValue);
+                Assert.Equal(0, extras);
                 Assert.Equal(0, pl);
                 Assert.Empty(leaf.GetDebugOutput());
             }
@@ -130,14 +134,18 @@ namespace FastTests.Voron.Sets
                 start += buf[i % buf.Length];
             }
             Span<long> additions = list.ToArray();
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            var tempList = new NativeIntegersList(bsc);
+
             fixed (long* p = additions)
             {
                 var pp = p;
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, ref pp, ref pl, ref none, ref zero, long.MaxValue);
-                Assert.Null(extras);
+                var extras = leaf.Update(_llt, tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                Assert.Equal(0, extras);
                 Assert.Equal(0, pl);
             }
             additions = new long[] { 24 };
@@ -148,8 +156,8 @@ namespace FastTests.Voron.Sets
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, ref pp, ref pl, ref none, ref zero, long.MaxValue);
-                Assert.Null(extras);
+                var extras = leaf.Update(_llt, tempList,ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                Assert.Equal(0,extras);
                 Assert.Equal(0, pl);
             }
 
