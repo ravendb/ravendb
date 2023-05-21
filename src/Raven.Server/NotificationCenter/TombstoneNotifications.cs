@@ -3,8 +3,10 @@ using System.Linq;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using static Raven.Server.Documents.DocumentsStorage.TombstonesCount;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -31,6 +33,34 @@ namespace Raven.Server.NotificationCenter
             _notificationCenter.Add(AlertRaised.Create(_database, _title, _msg, AlertType.BlockingTombstones,
                 NotificationSeverity.Warning,
                 nameof(AlertType.BlockingTombstones), details: details));
+        }
+
+        public List<BlockingTombstoneDetails> GetNotificationDetails(string id)
+        {
+            var list = new List<BlockingTombstoneDetails>();
+            using (_notificationsStorage.Read(id, out var value))
+            {
+                value.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details);
+                details.TryGet(nameof(BlockingTombstonesDetails.BlockingTombstones), out BlittableJsonReaderArray blockingTombstonesDetails);
+
+                foreach (BlittableJsonReaderObject detail in blockingTombstonesDetails)
+                {
+                    detail.TryGet(nameof(BlockingTombstoneDetails.Source), out string source);
+                    detail.TryGet(nameof(BlockingTombstoneDetails.Collection), out string collection);
+                    detail.TryGet(nameof(BlockingTombstoneDetails.NumberOfTombstones), out long numOfTombstones);
+                    detail.TryGet(nameof(BlockingTombstoneDetails.Accuracy), out DocumentsStorage.TombstonesCount.TombstonesAccuracy tombstonesAccuracy);
+                    var blockingTombstoneDetails = new BlockingTombstoneDetails()
+                    {
+                        Source = source,
+                        Collection = collection,
+                        NumberOfTombstones = numOfTombstones,
+                        Accuracy = tombstonesAccuracy
+                    };
+                    list.Add(blockingTombstoneDetails);
+                }
+            }
+
+            return list;
         }
 
         internal class BlockingTombstonesDetails : INotificationDetails
@@ -63,12 +93,12 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        internal class BlockingTombstoneDetails
+        public class BlockingTombstoneDetails
         {
-            public string Source { get; }
-            public string Collection { get; }
-            public long NumberOfTombstones { get; }
-            public string Accuracy { get; }
+            public string Source { get; set; }
+            public string Collection { get; set; }
+            public long NumberOfTombstones { get; set; }
+            public TombstonesAccuracy Accuracy { get; set; }
         }
     }
 }

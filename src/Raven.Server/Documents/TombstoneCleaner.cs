@@ -175,8 +175,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var tombstoneCollection in _documentDatabase.DocumentsStorage.GetTombstoneCollections(tx))
                 {
-                    if (tombstoneCollection != AttachmentsStorage.AttachmentsTombstones && tombstoneCollection != RevisionsStorage.RevisionsTombstones)
-                        tombstoneCollections.Add(tombstoneCollection);
+                    tombstoneCollections.Add(tombstoneCollection);
                     result.Tombstones[tombstoneCollection] = new StateHolder();
                 }
             }

@@ -1347,20 +1347,14 @@ namespace Raven.Server.Documents
             if (table == null)
                 return tombstonesCount;
 
-            long count = 0;
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], 0, 0))
             {
-                count++;
-                if (count > 10_000)
+                if (++tombstonesCount.Count >= 10_000)
                 {
-                    tombstonesCount.Count = count;
                     tombstonesCount.Accuracy = TombstonesCount.TombstonesAccuracy.MoreThan;
-
-                    return tombstonesCount;
+                    break;
                 }
             }
-
-            tombstonesCount.Count = count;
 
             return tombstonesCount;
         }
