@@ -225,42 +225,31 @@ namespace Raven.Server.Documents
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref flags, out var configuration);
-                    
+
                     if (shouldVersion)
                     {
                         var flagsBeforeVersion = flags;
                         flags |= DocumentFlags.HasRevisions;
 
-                        if (configuration.MinimumRevisionsToKeep == 0)
+
+                        if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flagsBeforeVersion, oldDoc, oldChangeVector,
+                                collectionName))
                         {
-                            var revisionsCountAfterDelete = _documentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id);
-                            if(revisionsCountAfterDelete==0)
-                                flags = flags.Strip(DocumentFlags.HasRevisions);
+                            var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue); // = flagsBeforeVersion
+                            var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
+
+                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc,
+                                oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
+                                oldChangeVector, oldTicks.Ticks, configuration, collectionName);
                         }
 
-                        else if (configuration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue &&
-                                 _documentDatabase.Time.GetUtcNow().Ticks - lastModifiedTicks.Value > configuration.MinimumRevisionAgeToKeep.Value.Ticks)
-                        {
-                            flags |= DocumentFlags.HasRevisions;
-                            var revisionsCountAfterDelete = _documentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id);
-                            if (revisionsCountAfterDelete == 0)
-                                flags = flags.Strip(DocumentFlags.HasRevisions);
-                        }
-                        else
-                        {
-                            if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flagsBeforeVersion, oldDoc, oldChangeVector, collectionName))
-                            {
-                                var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue); // = flagsBeforeVersion
-                                var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks,
+                            configuration, collectionName);
 
-                                _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc,
-                                    oldFlags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
-                                    oldChangeVector, oldTicks.Ticks, configuration, collectionName);
-                            }
+                        var revisionsCountAfterDelete = _documentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, id);
+                        if (revisionsCountAfterDelete == 0)
+                            flags = flags.Strip(DocumentFlags.HasRevisions);
 
-                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks,
-                                configuration, collectionName);
-                        }
                     }
                 }
 

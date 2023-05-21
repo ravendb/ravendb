@@ -1804,34 +1804,18 @@ namespace Raven.Server.Documents
                     {
                         var oldFlags = flags;
                         flags |= DocumentFlags.HasRevisions;
-                        if (configuration.MinimumRevisionsToKeep == 0)
+
+                        if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, oldFlags, local.Document.Data,
+                                local.Document.ChangeVector, collectionName))
                         {
-                            var revisionsCountAfterDelete = DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id, fromDelete: true);
-                            if (revisionsCountAfterDelete == 0)
-                                flags = flags.Strip(DocumentFlags.HasRevisions);
+                            DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data,
+                                flags | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
+                                local.Document.ChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
                         }
 
-                        else if (configuration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue &&
-                                 DocumentDatabase.Time.GetUtcNow().Ticks - lastModifiedTicks.Value > configuration.MinimumRevisionAgeToKeep.Value.Ticks)
-                        {
-                            var revisionsCountAfterDelete = DocumentDatabase.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(context, id, fromDelete: true);
-                            if (revisionsCountAfterDelete == 0)
-                                flags = flags.Strip(DocumentFlags.HasRevisions);
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                            modifiedTicks, nonPersistentFlags, flags);
 
-                        }
-                        else
-                        {
-                            if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, oldFlags, local.Document.Data,
-                                    local.Document.ChangeVector, collectionName))
-                            {
-                                DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data,
-                                    flags | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
-                                    local.Document.ChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
-                            }
-
-                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                                modifiedTicks, nonPersistentFlags, documentFlags);
-                        }
                     }
                 }
 
