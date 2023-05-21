@@ -473,7 +473,10 @@ namespace Voron.Debugging
                 //        page.PageNumber));
                 var leafEntries = leaf.GetDebugOutput();
                 sw.WriteLine($"<li>Entries {leaf.Header->NumberOfEntries:#,#;;0} in {leaf.Header->SizeUsed:#,#;;0} bytes</li>");
-                sw.WriteLine($"<li>Range {leafEntries[0]:#,#;;0} ... {leafEntries[^1]:#,#;;0}</li>");
+                if (leafEntries.Count > 0)
+                {
+                    sw.WriteLine($"<li>Range {leafEntries[0]:#,#;;0} ... {leafEntries[^1]:#,#;;0}</li>");
+                }
 
                 //sw.WriteLine("</ul></li></ul>");
 
