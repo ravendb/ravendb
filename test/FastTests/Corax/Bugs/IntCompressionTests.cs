@@ -40,17 +40,17 @@ namespace FastTests.Corax.Bugs
             };
 
             var buffer = stackalloc byte[1024];
+            int sizeUsed;
             fixed (long* l = data)
             {
-                (int count, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buffer, 1024);
+                (int count, sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buffer, 1024);
                 Assert.Equal(data.Length, count);
             }
             
             
             var output = stackalloc long[256];
             var idx = 0;
-            var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = buffer };
-            reader.MoveToNextHeader();
+            var reader = new SimdBitPacker<SortedDifferentials>.Reader(buffer, sizeUsed);
             while (true)
             {
                 var read = reader.Fill(output, 256);
@@ -72,19 +72,21 @@ namespace FastTests.Corax.Bugs
 
             var data = JsonConvert.DeserializeObject<long[]>(streamReader.ReadToEnd());
 
-            var buf = ElectricFencedMemory.Instance.Allocate(Container.MaxSizeInsideContainerPage);
+            var bufferSize = 9544;
+            var buf = ElectricFencedMemory.Instance.Allocate(bufferSize);
             try
             {
+                int sizeUsed;
                 fixed (long* l = data)
                 {
-                    (int count, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buf, Container.MaxSizeInsideContainerPage);
+                    (int count,  sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, data.Length, buf, 9544);
                     Assert.Equal(data.Length, count);
+                    Assert.Equal(bufferSize, sizeUsed);
                 }
                 
                 var output = stackalloc long[256];
                 var idx = 0;
-                var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = buf };
-                reader.MoveToNextHeader();
+                var reader = new SimdBitPacker<SortedDifferentials>.Reader(buf, sizeUsed);
                 while (true)
                 {
                     var read = reader.Fill(output, 256);

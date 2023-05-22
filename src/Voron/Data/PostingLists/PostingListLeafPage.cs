@@ -211,45 +211,35 @@ public readonly unsafe struct PostingListLeafPage
 
     public struct Iterator
     {
-        private readonly byte* _endOfData;
         private SimdBitPacker<SortedDifferentials>.Reader _reader;
 
         public Iterator(byte* start, int sizeUsed)
         {
-            _reader = new SimdBitPacker<SortedDifferentials>.Reader
-            {
-                Offset = start
-            };
-            _endOfData = start + sizeUsed;
+            _reader = new SimdBitPacker<SortedDifferentials>.Reader(start, sizeUsed);
         }
 
         public int Fill(Span<long> matches, out bool hasPrunedResults, long pruneGreaterThanOptimization)
         {
-            int read = 0;
+            int totalRead = 0;
             hasPrunedResults = false;
             fixed (long* m = matches)
             {
-                while (read < matches.Length)
+                while (totalRead < matches.Length)
                 {
-                    var r = _reader.Fill(m + read, matches.Length - read);
+                    var r = _reader.Fill(m + totalRead, matches.Length - totalRead);
                     if (r == 0)
-                    {
-                        if (_reader.Offset == _endOfData)
-                            break;
-                        _reader.MoveToNextHeader();
-                        continue;
-                    }
+                        break;
 
-                    read += read;
+                    totalRead += r;
                     
-                    if (pruneGreaterThanOptimization > m[read - 1])
+                    if (pruneGreaterThanOptimization > m[totalRead - 1])
                     {
                         hasPrunedResults = true;
                         break;
                     }
                 }
 
-                return read;
+                return totalRead;
             }
         }
         
@@ -266,21 +256,18 @@ public readonly unsafe struct PostingListLeafPage
             var buffer = stackalloc long[256];
             while (true)
             {
-                byte* previous = _reader.Offset;
+                var previous = _reader;
                 var read = _reader.Fill(buffer, 256);
                 if (read == 0)
                 {
-                    if (_reader.Offset == _endOfData)
-                        return false; // was not found
-                    _reader.MoveToNextHeader();
-                    continue;
+                    return false; // not found
                 }
 
-                if (from < buffer[read - 1]) 
+                if (from > buffer[read - 1]) 
                     continue;
                 
                 // we setup the *next* call to read this again
-                _reader.Offset = previous;
+                _reader = previous;
                 return true;
             }
         }
@@ -289,15 +276,13 @@ public readonly unsafe struct PostingListLeafPage
     private int ReadAllEntries(long* existing, int count)
     {
         int existingCount = 0;
-        var offset = _page.DataPointer;
-        var endOfData = offset + Header->SizeUsed;
-        var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = offset };
-        while (reader.Offset < endOfData) // typically should have up to two of them...
+        var reader = new SimdBitPacker<SortedDifferentials>.Reader(_page.DataPointer, Header->SizeUsed);
+        while (true) 
         {
-            reader.MoveToNextHeader();
-            var read = reader.Fill(existing + existingCount, count);
-            offset += read;
-            existingCount += read;
+            var read = reader.Fill(existing + existingCount, count - existingCount);
+            if (read == 0)
+                break;
+            existing += read;
         }
 
         return existingCount;

@@ -227,7 +227,7 @@ namespace Voron.Data.PostingLists
             public PostingListLeafPage.Iterator It;
 
             public bool IsValid => _parent != null;
-            
+
             public Iterator(PostingList parent)
             {
                 _parent = parent;
