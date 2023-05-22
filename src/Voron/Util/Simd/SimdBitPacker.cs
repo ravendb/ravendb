@@ -209,8 +209,11 @@ public static unsafe class SimdBitPacker<TSimdTransform>
                     sep -= remainder;
 
                 (int w, int size)  = Encode(entries, sep, output, outputSize);
-                totalSize += size;
-                totalWritten += w;
+                if (w > 0)
+                {
+                    totalSize += size;
+                    totalWritten += w;
+                }
                 if (w != sep) // means that we run out of space in the buffer
                     break;
                 entries += w;
