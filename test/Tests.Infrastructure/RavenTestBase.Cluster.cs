@@ -246,6 +246,21 @@ public partial class RavenTestBase
             ThrowTimeoutException(nodes, tasks, index, timeout.Value);
         }
 
+        public void WaitForFirstCompareExchangeTombstonesClean(RavenServer server)
+        {
+            Assert.True(WaitForValue(() =>
+            {
+                // wait for compare exchange tombstone cleaner run
+                if (server.ServerStore.Observer == null)
+                    return false;
+
+                if (server.ServerStore.Observer._lastTombstonesCleanupTimeInTicks == 0)
+                    return false;
+
+                return true;
+            }, true));
+        }
+
         private static void ThrowTimeoutException(List<RavenServer> nodes, List<Task> tasks, long index, TimeSpan timeout)
         {
             var message = $"Timed out after {timeout} waiting for index {index} because out of {nodes.Count} servers" +

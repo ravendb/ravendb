@@ -785,7 +785,7 @@ namespace SlowTests.Sharding.Backup
             using var store = GetDocumentStore();
             using var shardedStore = Sharding.GetDocumentStore();
 
-            RavenDB_11139.WaitForFirstCompareExchangeTombstonesClean(Server);
+            Cluster.WaitForFirstCompareExchangeTombstonesClean(Server);
 
             using (var session = store.OpenAsyncSession())
             {

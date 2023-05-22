@@ -1190,7 +1190,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 options.Server = server;
                 using (var store = GetDocumentStore(new Options {Server = server}))
                 {
-                    WaitForFirstCompareExchangeTombstonesClean(server);
+                    Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
                     var count = 1;
                     var indexesList = new List<long>();
 
@@ -1299,7 +1299,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 options.Server = server;
                 using (var store = GetDocumentStore(options))
                 {
-                    WaitForFirstCompareExchangeTombstonesClean(server);
+                    Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
                     var count = 1;
                     var indexesList = new List<long>();
@@ -1407,7 +1407,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
-                WaitForFirstCompareExchangeTombstonesClean(server);
+                Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
                 var indexesList = new Dictionary<string, long>();
                 // create 3 unique values
@@ -1575,7 +1575,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
-                WaitForFirstCompareExchangeTombstonesClean(server);
+                Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
                 var indexesList = new Dictionary<string, long>();
                 // create 3 unique values
                 for (int i = 0; i < 3; i++)
@@ -1638,7 +1638,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
-                WaitForFirstCompareExchangeTombstonesClean(server);
+                Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
                 var indexesList = new Dictionary<string, long>();
                 // create 3 unique values
                 for (int i = 0; i < 3; i++)
@@ -1761,7 +1761,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
-                WaitForFirstCompareExchangeTombstonesClean(server);
+                Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
                 var indexesList = new Dictionary<string, long>();
                 // create 3 unique values
                 for (int i = 0; i < 3; i++)
@@ -1814,21 +1814,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
 
             return list;
-        }
-
-        internal static void WaitForFirstCompareExchangeTombstonesClean(RavenServer server)
-        {
-            Assert.True(WaitForValue(() =>
-            {
-                // wait for compare exchange tombstone cleaner run
-                if (server.ServerStore.Observer == null)
-                    return false;
-
-                if (server.ServerStore.Observer._lastTombstonesCleanupTimeInTicks == 0)
-                    return false;
-
-                return true;
-            }, true));
         }
 
         private static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> CleanupCompareExchangeTombstones(RavenServer server, string database, ClusterOperationContext context)
