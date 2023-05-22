@@ -1,15 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
+﻿using System.Reflection;
 using System.Security.Authentication;
-using System.Threading;
-using System.Threading.Tasks;
-using Jint.Native;
-using Newtonsoft.Json.Linq;
-using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
@@ -33,24 +23,18 @@ namespace Raven.Server.Utils
 
                 var securityClearanceAttribute = member.GetCustomAttribute<SecurityClearanceAttribute>();
                 if (securityClearanceAttribute != null)
-                    AssertSecurityClearanceLevel(securityClearanceAttribute.SecurityClearanceLevel, status);
+                    AssertSecurityClearanceLevel(securityClearanceAttribute.SecurityClearanceLevel, (RavenServer.AuthenticationStatus)status);
             }
         }
 
-        private static void AssertSecurityClearanceLevel(SecurityClearance attributeStatus, RavenServer.AuthenticationStatus? userStatus)
+        private static void AssertSecurityClearanceLevel(SecurityClearance attributeStatus, RavenServer.AuthenticationStatus userStatus)
         {
-
             switch (attributeStatus, userStatus)
             {
                 case (SecurityClearance.Operator, RavenServer.AuthenticationStatus.Allowed):
                     throw new AuthenticationException(
                         $"Bad security clearance: '{userStatus}'. The current user does not have the necessary security clearance. " +
                         $"This operation is only allowed for users with '{attributeStatus}' or higher security clearance.");
-
-                case (SecurityClearance.Operator, RavenServer.AuthenticationStatus.Operator):
-                case (SecurityClearance.ValidUser, RavenServer.AuthenticationStatus.Allowed):
-                    break;
-
                 default:
                     return;
             }
