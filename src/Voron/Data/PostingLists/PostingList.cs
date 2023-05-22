@@ -224,7 +224,7 @@ namespace Voron.Data.PostingLists
         public struct Iterator 
         {
             private readonly PostingList _parent;
-            public PostingListLeafPage.Iterator It;
+            private PostingListLeafPage.Iterator _it;
 
             public bool IsValid => _parent != null;
 
@@ -242,7 +242,7 @@ namespace Voron.Data.PostingLists
                 var state = _parent.FindSmallestValue();
 
                 var leafPage = new PostingListLeafPage(state->Page);
-                It = leafPage.GetIterator();
+                _it = leafPage.GetIterator();
                 return _parent.State.NumberOfEntries > 0;
             }
 
@@ -252,19 +252,20 @@ namespace Voron.Data.PostingLists
                 ref var state = ref _parent._stk[_parent._pos];
                 var leafPage = new PostingListLeafPage(state.Page);
 
-                It = leafPage.GetIterator();
-                return It.SkipHint(from);
+                _it = leafPage.GetIterator();
+                return _it.SkipHint(from);
             }
 
             public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
             {
+                Debug.Assert(matches.Length >= PostingListLeafPage.MinimumSizeOfBuffer);
                 // We will try to fill.
                 total = 0;
                           
-                while(total < matches.Length)
+                while(total + PostingListLeafPage.MinimumSizeOfBuffer <= matches.Length)
                 {
-                    var tmp = matches.Slice(total);
-                    var read = It.Fill(tmp, out bool hasPrunedResults,  pruneGreaterThanOptimization);
+                    var tmpAligned = matches[total..(matches.Length & ~(PostingListLeafPage.MinimumSizeOfBuffer-1))];
+                    var read = _it.Fill(tmpAligned, out bool hasPrunedResults,  pruneGreaterThanOptimization);
                     
                     // We haven't read anything, but we are not getting a pruned result.
                     if (read == 0 && hasPrunedResults == false)
@@ -304,7 +305,7 @@ namespace Voron.Data.PostingLists
                                 parent._stk[parent._pos].LastSearchPosition = -1;
                                 continue;
                             }
-                            It = new PostingListLeafPage(page).GetIterator();
+                            _it = new PostingListLeafPage(page).GetIterator();
                             break;
                         }
                     }                        
