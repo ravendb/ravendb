@@ -67,7 +67,7 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
 
                 foreach (var facet in facetSetupDocument.Facets) // options aren't applicable for range facets
                 {
-                    AddFacetOptions(facet.FieldName, facet.Options ?? FacetOptions.Default);
+                    AddFacetOptions(facet.DisplayFieldName ?? facet.FieldName, facet.Options ?? FacetOptions.Default);
                 }
             }
             else if (facetField.Ranges == null || facetField.Ranges.Count == 0) // options aren't applicable for range facets
