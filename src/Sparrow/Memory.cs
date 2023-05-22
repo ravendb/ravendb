@@ -218,6 +218,10 @@ UnmanagedCompare:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Set(byte* dest, byte value, long n)
         {
+            if (n < 0)
+            {
+                throw new NotSupportedException("You cannot pass negative values to mem set");
+            }
             if (n < uint.MaxValue) // Common code-path
             {
                 Set(dest, value, (uint)n);
