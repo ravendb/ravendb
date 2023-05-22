@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Voron.Impl;
 using Voron.Util.Simd;
 using Constants = Voron.Global.Constants;
@@ -78,7 +79,7 @@ public readonly unsafe struct PostingListLeafPage
         InitLeaf(newHeader);
 
         var existingList = new NativeIntegersList(tx.Allocator, (Header->NumberOfEntries+255)/256 * 256);
-        existingList.Count = ReadAllEntries(existingList.RawItems, existingList.Capacity);
+        existingList.Count = ReadAllEntries(tx.Allocator,existingList.RawItems, existingList.Capacity);
 
         Debug.Assert(existingList.Count == Header->NumberOfEntries);
 
@@ -200,11 +201,11 @@ public readonly unsafe struct PostingListLeafPage
 
     public struct Iterator
     {
-        private SimdBitPacker<SortedDifferentials>.Reader _reader;
+        private SimdBufferedReader _reader;
 
-        public Iterator(byte* start, int sizeUsed)
+        public Iterator(ByteStringContext allocator ,byte* start, int sizeUsed)
         {
-            _reader = new SimdBitPacker<SortedDifferentials>.Reader(start, sizeUsed);
+            _reader = new SimdBufferedReader(allocator, start, sizeUsed);
         }
 
         public int Fill(Span<long> matches, out bool hasPrunedResults, long pruneGreaterThanOptimization)
@@ -243,10 +244,12 @@ public readonly unsafe struct PostingListLeafPage
                 return true; // nothing to do here
             
             var buffer = stackalloc long[MinimumSizeOfBuffer];
+            // we *copy* the reader to do the search without modifying 
+            //  the original position
+            var innerReader = _reader.Reader;
             while (true)
             {
-                var previous = _reader;
-                var read = _reader.Fill(buffer, MinimumSizeOfBuffer);
+                var read = innerReader.Fill(buffer, MinimumSizeOfBuffer);
                 if (read == 0)
                 {
                     return false; // not found
@@ -255,43 +258,41 @@ public readonly unsafe struct PostingListLeafPage
                 if (from > buffer[read - 1]) 
                     continue;
                 
-                // we setup the *next* call to read this again
-                _reader = previous;
                 return true;
             }
         }
     }
 
-    private int ReadAllEntries(long* existing, int count)
+    private int ReadAllEntries(ByteStringContext context, long* existing, int count)
     {
         int existingCount = 0;
-        var reader = new SimdBitPacker<SortedDifferentials>.Reader(_page.DataPointer, Header->SizeUsed);
-        var tmp = stackalloc long[1024];
+        var reader = new SimdBufferedReader(context, _page.DataPointer, Header->SizeUsed);
         while (true) 
         {
-            var read = reader.Fill(tmp, 1024);
-            Unsafe.CopyBlock(existing + existingCount, tmp, (uint)read * sizeof(long));
+            var read = reader.Fill(existing + existingCount, count - existingCount);
             existingCount += read;
             if (read == 0)
-                break;
+            {
+                reader.Dispose();
+                return existingCount;
+            }
         }
-
-        return existingCount;
     }
 
     public List<long> GetDebugOutput()
     {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         var buf = new long[(Header->NumberOfEntries + 255)/256 * 256];
         fixed (long* f = buf)
         {
-            ReadAllEntries(f, buf.Length);
+            ReadAllEntries(bsc, f, buf.Length);
         }
         return buf.Take(Header->NumberOfEntries).ToList();
     }
 
-    public Iterator GetIterator()
+    public Iterator GetIterator(ByteStringContext allocator)
     {
-        return new Iterator(_page.DataPointer, Header->SizeUsed);
+        return new Iterator(allocator, _page.DataPointer, Header->SizeUsed);
     }
 
     public static void Merge(ByteStringContext allocator,
