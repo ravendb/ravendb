@@ -39,6 +39,9 @@ public static unsafe class SimdBitPacker<TSimdTransform>
 
         public int Fill(long* entries, int count)
         {
+            if (!(count >= 256 && count % 256 == 0))
+                throw new NotSupportedException("Buffer size must be divisible by 256, but was: " + count);
+            
             var read = FillInternal(entries, count);
             if (_atEndOfSegment && _offset < _endOfData)
                 Reset(_offset);
@@ -58,7 +61,7 @@ public static unsafe class SimdBitPacker<TSimdTransform>
             var header = *_header;
             var baselineVec = Vector256.Create(header.Baseline);
             for (;
-                 _segmentIndex < header.NumberOfFullSegments && read + 256 <= count;
+                 _segmentIndex < header.NumberOfFullSegments && read < count;
                  _segmentIndex++, read += 256)
             {
                 var bits = _segmentsBits[_segmentIndex];
@@ -69,7 +72,7 @@ public static unsafe class SimdBitPacker<TSimdTransform>
                 ConvertToInt64();
             }
 
-            if (_segmentIndex == header.NumberOfFullSegments && read + header.LastSegmentCount < count)
+            if (_segmentIndex == header.NumberOfFullSegments && read + header.LastSegmentCount <= count)
             {
                 var metadataSize = header.NumberOfFullSegments;
                 if( header.LastSegmentCount > 0)

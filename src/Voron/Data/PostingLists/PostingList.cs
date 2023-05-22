@@ -242,7 +242,7 @@ namespace Voron.Data.PostingLists
                 var state = _parent.FindSmallestValue();
 
                 var leafPage = new PostingListLeafPage(state->Page);
-                _it = leafPage.GetIterator();
+                _it = leafPage.GetIterator(_parent._llt.Allocator);
                 return _parent.State.NumberOfEntries > 0;
             }
 
@@ -252,20 +252,18 @@ namespace Voron.Data.PostingLists
                 ref var state = ref _parent._stk[_parent._pos];
                 var leafPage = new PostingListLeafPage(state.Page);
 
-                _it = leafPage.GetIterator();
+                _it = leafPage.GetIterator(_parent._llt.Allocator);
                 return _it.SkipHint(from);
             }
 
             public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
             {
-                Debug.Assert(matches.Length >= PostingListLeafPage.MinimumSizeOfBuffer);
                 // We will try to fill.
                 total = 0;
                           
-                while(total + PostingListLeafPage.MinimumSizeOfBuffer <= matches.Length)
+                while(total < matches.Length)
                 {
-                    var tmpAligned = matches[total..(matches.Length & ~(PostingListLeafPage.MinimumSizeOfBuffer-1))];
-                    var read = _it.Fill(tmpAligned, out bool hasPrunedResults,  pruneGreaterThanOptimization);
+                    var read = _it.Fill(matches.Slice(total), out bool hasPrunedResults,  pruneGreaterThanOptimization);
                     
                     // We haven't read anything, but we are not getting a pruned result.
                     if (read == 0 && hasPrunedResults == false)
@@ -305,7 +303,7 @@ namespace Voron.Data.PostingLists
                                 parent._stk[parent._pos].LastSearchPosition = -1;
                                 continue;
                             }
-                            _it = new PostingListLeafPage(page).GetIterator();
+                            _it = new PostingListLeafPage(page).GetIterator(_parent._llt.Allocator);
                             break;
                         }
                     }                        

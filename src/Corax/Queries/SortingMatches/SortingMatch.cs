@@ -148,7 +148,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         where TIterator : struct, ITreeIterator
     {
         private PostingList.Iterator _postListIt;
-        private SimdBitPacker<SortedDifferentials>.Reader _smallListReader;
+        private SimdBufferedReader _smallListReader;
         private TIterator _termsIt;
         private readonly IndexSearcher _searcher;
         private readonly LowLevelTransaction _llt;
@@ -189,8 +189,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 // here we resume the *previous* operation
                 if (_smallListReader.IsValid)
                 {
-                    if (ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx) == false)
-                        return currentIdx;
+                    ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
                 }
                 else if (_postListIt.IsValid)
                 {
@@ -216,9 +215,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                         case TermIdMask.SmallPostingList:
                             var item = _containerItems[_smallPostingListIndex++];
                             _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
-                            _smallListReader = new SimdBitPacker<SortedDifferentials>.Reader(item.Address+offset, item.Length-offset);
-                            if (ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx) == false)
-                                return currentIdx;
+                            _smallListReader = new SimdBufferedReader(_llt.Allocator, item.Address + offset, item.Length - offset);
+                            ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx);
                             break;
                         case TermIdMask.PostingList:
                             var postingList = _searcher.GetPostingList(postingListId);
@@ -266,21 +264,20 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             currentIdx += read;
         }
 
-        private bool ReadSmallPostingList(long* pSortedIds, int count, ref int currentIdx)
+        private void ReadSmallPostingList(long* pSortedIds, int count, ref int currentIdx)
         {
-            while (currentIdx + 256 < count)
+            while (currentIdx < count)
             {
                 var read = _smallListReader.Fill(pSortedIds + currentIdx, count - currentIdx);
                 EntryIdEncodings.DecodeAndDiscardFrequency(new Span<long>(pSortedIds + currentIdx, read), read);
                 currentIdx += read;
                 if (read == 0)
                 {
+                    _smallListReader.Dispose();
                     _smallListReader = default;
-                    return true;
+                    break;
                 }
             }
-
-            return false;
         }
 
         public void Dispose()

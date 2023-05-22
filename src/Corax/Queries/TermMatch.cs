@@ -29,7 +29,7 @@ namespace Corax.Queries
         internal Bm25Relevance _bm25Relevance;
         private PostingList.Iterator _set;
         private Container.Item _containerItem;
-        private SimdBitPacker<SortedDifferentials>.Reader _containerReader;
+        private SimdBufferedReader _containerReader;
         private ByteStringContext _ctx;
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
@@ -184,7 +184,10 @@ namespace Corax.Queries
                 }
 
                 if (results == 0)
+                {
+                    term._containerReader.Dispose();
                     return 0;
+                }
                 
                 //Save the frequencies
                 if (typeof(TBoostingMode) == typeof(HasBoosting))
@@ -270,7 +273,7 @@ namespace Corax.Queries
             }
 
             var itemsCount = VariableSizeEncoding.Read<int>(containerItem.Address, out var offset);
-            var reader = new SimdBitPacker<SortedDifferentials>.Reader(containerItem.Address + offset, containerItem.Length - offset);
+            var reader = new SimdBufferedReader(ctx, containerItem.Address + offset, containerItem.Length - offset);
             return new TermMatch(indexSearcher, ctx, itemsCount, isBoosting? &FillFunc<HasBoosting> : &FillFunc<NoBoosting>, isBoosting ? &AndWithFunc<HasBoosting> : &AndWithFunc<NoBoosting>, inspectFunc: &InspectFunc, scoreFunc: isBoosting ? &ScoreFunc : null)
             {
                 _bm25Relevance = isBoosting 

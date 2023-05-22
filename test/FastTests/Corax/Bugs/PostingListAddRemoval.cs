@@ -68,7 +68,6 @@ public class PostingListAddRemoval : StorageTest
         using (var rtx = Env.ReadTransaction())
         {
             var set = rtx.OpenPostingList("test");
-           
 
             Assert.Equal(items, set.DumpAllValues());
             Assert.Equal(items.Count, set.State.NumberOfEntries);
@@ -134,10 +133,9 @@ public class PostingListAddRemoval : StorageTest
         using (var rtx = Env.ReadTransaction())
         {
             var set = rtx.OpenPostingList("test");
-           
 
-            Assert.Equal(items, set.DumpAllValues());
             Assert.Equal(items.Count, set.State.NumberOfEntries);
+            Assert.Equal(items, set.DumpAllValues());
         }
 
         var removals = ReadNumbersFromResource("Corax.Set.Removals.txt").ToList();
