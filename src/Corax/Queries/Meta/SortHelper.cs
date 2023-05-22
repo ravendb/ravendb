@@ -52,14 +52,17 @@ internal unsafe class SortHelper
         // array to find the right values
         while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
         {
+            var dstIndx = (int)(leftPtr - leftStart);
             long leftValue = *leftPtr++;
             var inc = GallopSearch(leftValue);
             rightPtr += inc;
             if (leftValue != *rightPtr++) 
                 continue;
-            
-            *dstPtr++ = dstStart[(int)(leftPtr - leftStart)];
+
+            var val = dstStart[dstIndx];
+            * dstPtr++ = val;
             *rightPtr |= ~long.MaxValue; // mark it as used for the *next* time
+
         }
 
         return (int)(dstPtr - dst);
