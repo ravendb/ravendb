@@ -236,7 +236,7 @@ namespace FastTests.Voron.Sets
                 
                 using (var rtx = Env.ReadTransaction())
                 {
-                    var matches = new long[inTreeKeys.Count];
+                    var matches = new long[PostingListLeafPage.GetNextValidBufferSize(inTreeKeys.Count)];
                     var set = rtx.OpenPostingList($"Set({name})");
 
                     set.Iterate().Fill(matches, out int read);
@@ -267,7 +267,7 @@ namespace FastTests.Voron.Sets
 
                 using (var rtx = Env.ReadTransaction())
                 {
-                    var matches = new long[inTreeKeys.Count];
+                    var matches = new long[PostingListLeafPage.GetNextValidBufferSize(inTreeKeys.Count)];
                     var set = rtx.OpenPostingList($"Set({name})");
                     set.Iterate().Fill(matches, out int read);
                     Assert.Equal(inTreeKeys.Count, read);

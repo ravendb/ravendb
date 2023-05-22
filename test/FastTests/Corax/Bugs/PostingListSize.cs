@@ -1,4 +1,5 @@
-﻿using FastTests.Voron;
+﻿using System.Linq;
+using FastTests.Voron;
 using Lucene.Net.Search.Function;
 using Voron;
 using Voron.Data.PostingLists;
@@ -42,11 +43,11 @@ public class PostingListSize : StorageTest
         {
             using var tx = Env.ReadTransaction();
             var list = tx.OpenPostingList("test");
-            var actual = new long[vals.Length];
+            var actual = new long[PostingListLeafPage.GetNextValidBufferSize(vals.Length)];
             var it = list.Iterate();
             Assert.True(it.Fill(actual, out var total));
             Assert.Equal(total, vals.Length);
-            Assert.Equal(vals, actual);
+            Assert.Equal(vals, actual.Take(total));
             Assert.False(it.Fill(actual, out  total));
         }
     }

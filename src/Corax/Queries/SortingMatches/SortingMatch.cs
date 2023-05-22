@@ -215,7 +215,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                             break;
                         case TermIdMask.SmallPostingList:
                             var item = _containerItems[_smallPostingListIndex++];
-                            _smallListReader = new SimdBitPacker<SortedDifferentials>.Reader(item.Address, item.Length);
+                            _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
+                            _smallListReader = new SimdBitPacker<SortedDifferentials>.Reader(item.Address+offset, item.Length-offset);
                             if (ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx) == false)
                                 return currentIdx;
                             break;

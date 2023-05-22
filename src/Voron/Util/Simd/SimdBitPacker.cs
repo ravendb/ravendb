@@ -52,14 +52,13 @@ public static unsafe class SimdBitPacker<TSimdTransform>
         [SkipLocalsInit]
         private int FillInternal(long* entries, int count)
         {
-            Debug.Assert(count >= 256 && count % 256 == 0);
             uint* uintBuffer = stackalloc uint[256];
             var read = 0;
             var curEntries = entries;
             var header = *_header;
             var baselineVec = Vector256.Create(header.Baseline);
             for (;
-                 _segmentIndex < header.NumberOfFullSegments && read < count;
+                 _segmentIndex < header.NumberOfFullSegments && read + 256 <= count;
                  _segmentIndex++, read += 256)
             {
                 var bits = _segmentsBits[_segmentIndex];
@@ -70,8 +69,7 @@ public static unsafe class SimdBitPacker<TSimdTransform>
                 ConvertToInt64();
             }
 
-            if (_segmentIndex == header.NumberOfFullSegments && 
-                read + header.LastSegmentCount < count)
+            if (_segmentIndex == header.NumberOfFullSegments && read + header.LastSegmentCount < count)
             {
                 var metadataSize = header.NumberOfFullSegments;
                 if( header.LastSegmentCount > 0)

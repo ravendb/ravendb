@@ -1420,7 +1420,8 @@ namespace Corax
             else if ((idInTree & (long)TermIdMask.SmallPostingList) != 0)
             {
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, entryId);
-                var reader = new SimdBitPacker<SortedDifferentials>.Reader(smallSet.Address, smallSet.Length);
+                _ = VariableSizeEncoding.Read<int>(smallSet.Address, out var offset); // discard count here
+                var reader = new SimdBitPacker<SortedDifferentials>.Reader(smallSet.Address + offset, smallSet.Length - offset);
                 var buffer = stackalloc long[1024];
                 var bufferAsSpan = new Span<long>(buffer, 1024);
                 while (true)
@@ -1695,7 +1696,8 @@ namespace Corax
             // combine with existing values
             var buffer = stackalloc long[1024];
             var bufferAsSpan = new Span<long>(buffer, 1024);
-            var reader = new SimdBitPacker<SortedDifferentials>.Reader(item.Address, item.Length);
+            _ = VariableSizeEncoding.Read<int>(item.Address, out var offset); // discard count here
+            var reader = new SimdBitPacker<SortedDifferentials>.Reader(item.Address + offset, item.Length - offset);
             var removals = entries.Removals;
             long freeSpace = entries.FreeSpace;
             while (true)
@@ -1772,11 +1774,7 @@ namespace Corax
 
         private long AllocatedSpaceForSmallSet(Span<byte> encoded, LowLevelTransaction llt, out Span<byte> space)
         {
-            var sizeToAlloc = encoded.Length;
-            var alignSize = 32 - sizeToAlloc % 32;
-            var allocatedSize = sizeToAlloc + alignSize;
-
-            long termIdInTree = Container.Allocate(llt, _postingListContainerId, allocatedSize, out space);
+            long termIdInTree = Container.Allocate(llt, _postingListContainerId, encoded.Length, out space);
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
 
@@ -1982,14 +1980,15 @@ namespace Corax
             {
                 fixed (byte* pOutput = tmpBuf)
                 {
-                    (int count, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(pAdditions, additions.Length, pOutput, tmpBuf.Length);
+                    var offset = VariableSizeEncoding.Write(pOutput, additions.Length);
+                    (int count, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(pAdditions, additions.Length, pOutput + offset, tmpBuf.Length - offset);
                     if (count < additions.Length)
                     {
                         encoded = default;
                         return false;
                     }
 
-                    encoded = tmpBuf[..sizeUsed];
+                    encoded = tmpBuf[..(sizeUsed + offset)];
                     return true;
                 }
             }

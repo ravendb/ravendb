@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Impl;
@@ -12,6 +13,13 @@ namespace Voron.Data.PostingLists;
 
 public readonly unsafe struct PostingListLeafPage
 {
+    public const int MinimumSizeOfBuffer = 256;
+
+    public static int GetNextValidBufferSize(int size)
+    {
+        return (size + 255) / 256 * 256;
+    }
+    
     private const long InvalidValue = long.MaxValue;
     
     private readonly Page _page;
@@ -74,42 +82,23 @@ public readonly unsafe struct PostingListLeafPage
 
         Debug.Assert(existingList.Count == Header->NumberOfEntries);
 
-        int existingIndex = int.MaxValue,additionsIdx = 0, removalsIdx = 0;
-
-        if (additionsCount != 0)
-        {
-            existingIndex = existingList.Items.BinarySearch(*additions);
-            if (existingIndex < 0)
-            {
-                existingIndex = ~existingIndex;
-            }
-        }
-
-        if (removalsCount != 0)
-        {
-            var removalIndex = existingList.Items.BinarySearch(*removals);
-            if (removalIndex < 0)
-            {
-                removalIndex = ~removalIndex;
-            }
-
-            existingIndex = Math.Min(removalIndex, existingIndex);
-        }
+        int existingIndex = 0, additionsIdx = 0, removalsIdx = 0;
 
         long existingCurrent = InvalidValue, additionCurrent = InvalidValue, removalCurrent = InvalidValue;
-        while (existingIndex < existingList.Count)
+        while (true)
         {
-            if (existingCurrent == InvalidValue)
-            {
+            if (existingIndex < existingList.Count && existingCurrent == InvalidValue) 
                 existingCurrent = existingList.RawItems[existingIndex++];
-            }
 
-            if (additionsIdx < additionsCount && additionCurrent == InvalidValue) 
+            if (additionsIdx < maxAdditionsLimit && additionCurrent == InvalidValue) 
                 additionCurrent = additions[additionsIdx++];
 
-            if (removalsIdx < removalsCount && removalCurrent == InvalidValue) 
+            if (removalsIdx < maxRemovalsLimit && removalCurrent == InvalidValue) 
                 removalCurrent = removals[removalsIdx++];
 
+            if (additionCurrent == InvalidValue && existingCurrent == InvalidValue)
+                break;
+            
             AddItemToList();
         }
 
@@ -232,7 +221,7 @@ public readonly unsafe struct PostingListLeafPage
 
                     totalRead += r;
                     
-                    if (pruneGreaterThanOptimization > m[totalRead - 1])
+                    if (m[totalRead - 1] >= pruneGreaterThanOptimization)
                     {
                         hasPrunedResults = true;
                         break;
@@ -253,11 +242,11 @@ public readonly unsafe struct PostingListLeafPage
             if (from == long.MinValue)
                 return true; // nothing to do here
             
-            var buffer = stackalloc long[256];
+            var buffer = stackalloc long[MinimumSizeOfBuffer];
             while (true)
             {
                 var previous = _reader;
-                var read = _reader.Fill(buffer, 256);
+                var read = _reader.Fill(buffer, MinimumSizeOfBuffer);
                 if (read == 0)
                 {
                     return false; // not found
@@ -277,12 +266,14 @@ public readonly unsafe struct PostingListLeafPage
     {
         int existingCount = 0;
         var reader = new SimdBitPacker<SortedDifferentials>.Reader(_page.DataPointer, Header->SizeUsed);
+        var tmp = stackalloc long[1024];
         while (true) 
         {
-            var read = reader.Fill(existing + existingCount, count - existingCount);
+            var read = reader.Fill(tmp, 1024);
+            Unsafe.CopyBlock(existing + existingCount, tmp, (uint)read * sizeof(long));
+            existingCount += read;
             if (read == 0)
                 break;
-            existing += read;
         }
 
         return existingCount;
