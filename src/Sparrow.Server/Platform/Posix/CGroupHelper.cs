@@ -23,7 +23,6 @@ public abstract class CGroup
     protected abstract string MaxMemoryUsageFileName { get; }
 
     private Lazy<CachedPath> _groupPathForMemory;
-    private HashSet<string> _notSupportedValue;
 
     private class CachedPath
     {
@@ -47,34 +46,24 @@ public abstract class CGroup
         _groupPathForMemory = CreateNewLazyCachedPath();
     }
 
-    public long? GetMaxMemoryUsage()
+    public virtual long? GetMaxMemoryUsage()
     {
         try
         {
-            return _notSupportedValue.Contains(MaxMemoryUsageFileName) == false
-                ?ReadValue(GetGroupPathForMemory, MaxMemoryUsageFileName)
-                : null;
+            return ReadValue(MaxMemoryUsageFileName);
         }
         catch (Exception e)
         {
-            if (e is FileNotFoundException)
-            {
-                _notSupportedValue.Add(MaxMemoryUsageFileName);
-                if(Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to get CGroup max memory usage from {MaxMemoryUsageFileName} - {GetType().Name}", e);
-            }
-            
             if(Logger.IsInfoEnabled)
                 Logger.Info($"Failed to get CGroup max memory usage from {MaxMemoryUsageFileName} - {GetType().Name}", e);
             return null;
         }
     }
-
     public long? GetPhysicalMemoryUsage()
     {
         try
         {
-            return ReadValue(GetGroupPathForMemory, MemoryUsageFileName);
+            return ReadValue(MemoryUsageFileName);
         }
         catch (Exception e)
         {
@@ -87,7 +76,7 @@ public abstract class CGroup
     {
         try
         {
-            return ReadValue(GetGroupPathForMemory, MemoryLimitFileName, CheckLimitValues);
+            return ReadValue(MemoryLimitFileName, CheckLimitValues);
         }
         catch (Exception e)
         {
@@ -141,9 +130,9 @@ public abstract class CGroup
         return false;
     }
 
-    private static long? ReadValue(Func<Lazy<CachedPath>> getBasePath, string file, CheckSpecialValues checkSpecialValues = null, bool retry = true)
+    protected long? ReadValue(string file, CheckSpecialValues checkSpecialValues = null, bool retry = true)
     {
-        var basePath = getBasePath();
+        var basePath = GetGroupPathForMemory();
         if (basePath.Value.Path == null)
             return null;
 
@@ -159,7 +148,7 @@ public abstract class CGroup
             
             //If the cgroup changed and the old cgroup was removed
             basePath.Value.Deprecate();
-            return ReadValue(getBasePath, file, checkSpecialValues, false);
+            return ReadValue(file, checkSpecialValues, false);
         }
     }
 
@@ -191,7 +180,7 @@ public abstract class CGroup
         return mountPath + toAppend;
     }
 
-    private delegate bool CheckSpecialValues(string textValue, out long? value);
+    protected delegate bool CheckSpecialValues(string textValue, out long? value);
     private static long? ReadMemoryValueFromFile(string fileName, CheckSpecialValues checkSpecialValues)
     {
         var txt = File.ReadAllText(fileName);
@@ -260,10 +249,12 @@ public class CGroupV1 : CGroup
 
 public class CGroupV2 : CGroup
 {
+    private bool _hasMemoryPeakFile = true;
+
     protected override string MemoryLimitFileName => "memory.max";
     protected override string MemoryUsageFileName => "memory.current";
     protected override string MaxMemoryUsageFileName => "memory.peak";
-
+    
     protected override string FindCGroupPathForMemory() => FindCGroupPath();
     
     private static string FindCGroupPath()
@@ -300,6 +291,23 @@ public class CGroupV2 : CGroup
 
         return null;
     }
+    
+    public override long? GetMaxMemoryUsage()
+    {
+        try
+        {
+            return _hasMemoryPeakFile ? ReadValue(MaxMemoryUsageFileName) : null;
+        }
+        catch (Exception e)
+        {
+            if (e is FileNotFoundException)
+                _hasMemoryPeakFile = false;
+            
+            if(Logger.IsInfoEnabled)
+                Logger.Info($"Failed to get CGroup max memory usage from {MaxMemoryUsageFileName} - {GetType().Name}", e);
+            return null;
+        }
+    }
 }
 
 public class UnidentifiedCGroup : CGroup
@@ -330,7 +338,6 @@ public class UnidentifiedCGroup : CGroup
 
 public static class CGroupHelper
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(CGroupHelper));
     public static readonly CGroup CGroup = GetCGroup();
 
     private static CGroup GetCGroup()
