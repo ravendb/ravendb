@@ -42,7 +42,7 @@ public unsafe struct SimdCompression<TSimdDiff>
         }
         if (bit == 32)
         {
-            new Span<byte>(inputBuf, length).CopyTo(new Span<byte>(outputBuf, length));
+            new Span<uint>(inputBuf, length).CopyTo(new Span<uint>(outputBuf, length));
             return length * sizeof(uint);
         }
         var offset = Vector256.Create(initValue);

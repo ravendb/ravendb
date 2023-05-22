@@ -206,8 +206,7 @@ namespace Corax.Queries
             static int AndWithFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matches) where TBoostingMode : IBoostingMarker
             {
                 // AndWith has to start from the start.
-                var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = term._containerItem.Address };
-                reader.MoveToNextHeader();
+                var reader = new SimdBitPacker<SortedDifferentials>.Reader(term._containerItem.Address, term._containerItem.Length);
                 var decodedMatches = stackalloc long[1024];
                 int bufferIndex = 0;
                 int matchedIndex = 0;
@@ -271,11 +270,7 @@ namespace Corax.Queries
 
             var itemsCount = VariableSizeEncoding.Read<int>(containerItem.Address, out var offset);
             containerItem = containerItem.IncrementOffset(offset);
-            var reader = new SimdBitPacker<SortedDifferentials>.Reader
-            {
-                Offset = containerItem.Address
-            };
-            reader.MoveToNextHeader();
+            var reader = new SimdBitPacker<SortedDifferentials>.Reader(containerItem.Address, containerItem.Length);
             return new TermMatch(indexSearcher, ctx, itemsCount, isBoosting? &FillFunc<HasBoosting> : &FillFunc<NoBoosting>, isBoosting ? &AndWithFunc<HasBoosting> : &AndWithFunc<NoBoosting>, inspectFunc: &InspectFunc, scoreFunc: isBoosting ? &ScoreFunc : null)
             {
                 _bm25Relevance = isBoosting 

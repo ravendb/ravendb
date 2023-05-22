@@ -133,17 +133,17 @@ public class SimdCompressionEncodingTests : NoDisposalNeeded
     [Fact]
     public unsafe void CanProperlyEncodeValues()
     {
-        var buffer = stackalloc byte[5000];
+        var buffer = stackalloc byte[10000];
         var entries = stackalloc long[1024];
 
+        int sizeUsed;
         fixed (long* l = Data)
         {
-            (int count, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, Data.Length, buffer, 5000);
+            (int count, sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(l, Data.Length, buffer, 10000);
             Assert.Equal(count, Data.Length);
         }
 
-        var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = buffer };
-        reader.MoveToNextHeader();
+        var reader = new SimdBitPacker<SortedDifferentials>.Reader(buffer, sizeUsed);
         int idx = 0;
         while (true)
         {
@@ -152,7 +152,7 @@ public class SimdCompressionEncodingTests : NoDisposalNeeded
                 break;
             for (int i = 0; i < read; i++)
             {
-                Assert.Equal(Data[idx++], buffer[i]);
+                Assert.Equal(Data[idx++], entries[i]);
             }
         }
     }

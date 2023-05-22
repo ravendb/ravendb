@@ -1420,8 +1420,7 @@ namespace Corax
             else if ((idInTree & (long)TermIdMask.SmallPostingList) != 0)
             {
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, entryId);
-                var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = smallSet.Address };
-                reader.MoveToNextHeader();
+                var reader = new SimdBitPacker<SortedDifferentials>.Reader(smallSet.Address, smallSet.Length);
                 var buffer = stackalloc long[1024];
                 var bufferAsSpan = new Span<long>(buffer, 1024);
                 while (true)
@@ -1696,8 +1695,7 @@ namespace Corax
             // combine with existing values
             var buffer = stackalloc long[1024];
             var bufferAsSpan = new Span<long>(buffer, 1024);
-            var reader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = item.Address };
-            reader.MoveToNextHeader();
+            var reader = new SimdBitPacker<SortedDifferentials>.Reader(item.Address, item.Length);
             var removals = entries.Removals;
             long freeSpace = entries.FreeSpace;
             while (true)

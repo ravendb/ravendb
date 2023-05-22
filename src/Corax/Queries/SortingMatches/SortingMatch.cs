@@ -187,7 +187,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             {
                 int currentIdx = 0;
                 // here we resume the *previous* operation
-                if (_smallListReader.Offset != null)
+                if (_smallListReader.IsValid)
                 {
                     if (ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx) == false)
                         return currentIdx;
@@ -215,8 +215,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                             break;
                         case TermIdMask.SmallPostingList:
                             var item = _containerItems[_smallPostingListIndex++];
-                            _smallListReader = new SimdBitPacker<SortedDifferentials>.Reader { Offset = item.Address };
-                            _smallListReader.MoveToNextHeader();
+                            _smallListReader = new SimdBitPacker<SortedDifferentials>.Reader(item.Address, item.Length);
                             if (ReadSmallPostingList(pSortedIds, sortedIds.Length, ref currentIdx) == false)
                                 return currentIdx;
                             break;

@@ -10,7 +10,7 @@ public struct SimdBitPackingHeader
     [FieldOffset(8)]
     public ushort Prefix;
     [FieldOffset(10)]
-    public ushort OffsetToFirstSegment;
+    public ushort OffsetToMetadata;
     [FieldOffset(12)]
     public byte ShiftAmount;
     [FieldOffset(13)]

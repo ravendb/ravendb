@@ -10,19 +10,39 @@ public static unsafe class SimdBitPacker<TSimdTransform>
 {
     public struct Reader
     {
-        private uint _prevValue;
-        public byte* Offset;
+        private byte* _offset;
         private byte* _segmentsBits;
-        private int _segmentIndex;
+        private readonly byte* _endOfData;
         private SimdBitPackingHeader* _header;
+        private uint _prevValue;
+        private int _segmentIndex;
+        private bool _atEndOfSegment;
 
-        public void MoveToNextHeader()
+        public bool IsValid => _offset != null;
+        
+        public Reader(byte* start, int size)
         {
-            _segmentsBits = Offset + sizeof(SimdBitPackingHeader);
-            _header = (SimdBitPackingHeader*)Offset;
-            Offset += _header->OffsetToFirstSegment;
+            _endOfData = start + size;
+            Reset(start);
+        }
+
+
+        private void Reset(byte* currentOffset)
+        {
+            _header = (SimdBitPackingHeader*)currentOffset;
+            _segmentsBits = currentOffset + _header->OffsetToMetadata;
+            _offset = currentOffset + sizeof(SimdBitPackingHeader);
             _segmentIndex = 0;
             _prevValue = 0;
+            _atEndOfSegment = false;
+        }
+
+        public int Fill(long* entries, int count)
+        {
+            var read = FillInternal(entries, count);
+            if (_atEndOfSegment && _offset < _endOfData)
+                Reset(_offset);
+            return read;
         }
 
         /// <summary>
@@ -30,7 +50,7 @@ public static unsafe class SimdBitPacker<TSimdTransform>
         /// The buffer should be sized in 256 chunks. 
         /// </summary>
         [SkipLocalsInit]
-        public int Fill(long* entries, int count)
+        private int FillInternal(long* entries, int count)
         {
             Debug.Assert(count >= 256 && count % 256 == 0);
             uint* uintBuffer = stackalloc uint[256];
@@ -43,27 +63,35 @@ public static unsafe class SimdBitPacker<TSimdTransform>
                  _segmentIndex++, read += 256)
             {
                 var bits = _segmentsBits[_segmentIndex];
-                SimdCompression<TSimdTransform>.Unpack256(_prevValue, Offset, uintBuffer, bits);
+                SimdCompression<TSimdTransform>.Unpack256(_prevValue, _offset, uintBuffer, bits);
                 var bufferSize = SimdCompression<TSimdTransform>.RequiredBufferSize(256, bits);
                 _prevValue = uintBuffer[255];
-                Offset += bufferSize;
+                _offset += bufferSize;
                 ConvertToInt64();
             }
-            if (header.LastSegmentCount > 0 &&
-                read + header.LastSegmentCount < count &&
-                _segmentIndex == header.NumberOfFullSegments)
+
+            if (_segmentIndex == header.NumberOfFullSegments && 
+                read + header.LastSegmentCount < count)
             {
-                byte bits = _segmentsBits[_segmentIndex];
-                SimdCompression<TSimdTransform>.UnpackSmall(_prevValue, Offset, header.LastSegmentCount,
-                    uintBuffer, bits);
-                _segmentIndex++; // this mark it as consumed, next call will not hit it
-                read += header.LastSegmentCount;
-                var bufferSize = SimdCompression<TSimdTransform>.RequiredBufferSize(header.LastSegmentCount , bits);
-                Offset += bufferSize;
-                for (int i = 0; i < header.LastSegmentCount; i++)
+                var metadataSize = header.NumberOfFullSegments;
+                if( header.LastSegmentCount > 0)
                 {
-                    *curEntries++ = ((long)*uintBuffer++ << header.ShiftAmount) + header.Baseline;
+                    metadataSize++;
+                    byte bits = _segmentsBits[_segmentIndex];
+                    SimdCompression<TSimdTransform>.UnpackSmall(_prevValue, _offset, header.LastSegmentCount,
+                        uintBuffer, bits);
+                    _segmentIndex++; // this mark it as consumed, next call will not hit it
+                    read += header.LastSegmentCount;
+                    var bufferSize = SimdCompression<TSimdTransform>.RequiredBufferSize(header.LastSegmentCount , bits);
+                    _offset += bufferSize;
+                    for (int i = 0; i < header.LastSegmentCount; i++)
+                    {
+                        *curEntries++ = ((long)*uintBuffer++ << header.ShiftAmount) + header.Baseline;
+                    }
                 }
+
+                _atEndOfSegment = true;
+                _offset += metadataSize;
             }
             return read;
 
@@ -98,40 +126,38 @@ public static unsafe class SimdBitPacker<TSimdTransform>
     [SkipLocalsInit]
     public static (int Count, int SizeUsed) Encode(long* entries, int count, byte* output, int outputSize)
     {
-        count = Math.Min(count, 256 * 128); // ensure we can't overflow NumberOfFullSegments
+        const int maxNumberOfSegments = 128;
+        count = Math.Min(count, 256 * maxNumberOfSegments); // ensure we can't overflow NumberOfFullSegments
         if (entries[count - 1] - entries[0] > uint.MaxValue)
             return UnlikelySplitEntries();
 
         uint* uintBuffer = stackalloc uint[256];
         var countOfFullSegments = count / 256;
-
-        // we ensure that we are always taking metadata that is 32 bytes in size
-        var headerSize = (sizeof(SimdBitPackingHeader) + (count + 255) / 256 + 31) / 32 * 32;
-        if (headerSize > outputSize)
-            return default; // should never happen
-        Debug.Assert(headerSize < byte.MaxValue);
+        byte* segmentsBits = stackalloc byte[maxNumberOfSegments];
 
         var header = (SimdBitPackingHeader*)output;
-        var segmentsBits = (output + sizeof(SimdBitPackingHeader));
         var shiftAmount = ComputeSharedPrefix(entries, count, out header->Prefix);
         InitializeHeader();
         var baselineScalar = entries[0] >> shiftAmount;
 
-        var sizeUsed = headerSize;
+        var sizeUsed = sizeof(SimdBitPackingHeader);
 
         var baseline = Vector256.Create(baselineScalar);
         uint prevValue = 0;
-
-        for (var segmentIdx = 0; segmentIdx < countOfFullSegments; segmentIdx++)
+        var segmentIdx = 0;
+        var written = 0;
+        for (; segmentIdx < countOfFullSegments; segmentIdx++)
         {
             ConvertFullSegmentToUint32();
             var bits = SimdCompression<TSimdTransform>.FindMaxBits(prevValue, uintBuffer, 256);
             var size = SimdCompression<TSimdTransform>.RequiredBufferSize(256, (int)bits);
-            if (sizeUsed + size > outputSize) //        not enough space, return early
-                return (segmentIdx * 256, sizeUsed); // should be rare
+            var metadataBytes = segmentIdx + 1;
+            if (sizeUsed + size + metadataBytes > outputSize) //        not enough space, return early
+                return FinishEncoding();
             SimdCompression<TSimdTransform>.Pack256(prevValue, uintBuffer, output + sizeUsed, bits);
             sizeUsed += size;
             prevValue = uintBuffer[255];
+            written += 256;
             header->NumberOfFullSegments++;
             segmentsBits[segmentIdx] = (byte)bits;
         }
@@ -145,27 +171,53 @@ public static unsafe class SimdBitPacker<TSimdTransform>
             }
             var bits = SimdCompression<TSimdTransform>.FindMaxBits(prevValue, uintBuffer, remainingItems);
             var size = SimdCompression<TSimdTransform>.RequiredBufferSize(remainingItems, (int)bits);
-            if (sizeUsed + size > outputSize)
-                return (countOfFullSegments * 256, sizeUsed);
+            var metadataBytes = segmentIdx + 1;
+            if (sizeUsed + size + metadataBytes > outputSize)
+                return FinishEncoding();
+            written += remainingItems;
             SimdCompression<TSimdTransform>.PackSmall(prevValue, uintBuffer, remainingItems, output + sizeUsed, bits);
             header->LastSegmentCount = (byte)remainingItems;
             sizeUsed += size;
-            segmentsBits[countOfFullSegments] = (byte)bits;
+            segmentsBits[segmentIdx++] = (byte)bits;
         }
-        return (count, sizeUsed);
-
+        return FinishEncoding();
+        
+        (int Count, int SizeUsed) FinishEncoding()
+        {
+            Unsafe.CopyBlock(output + sizeUsed, segmentsBits, (uint)segmentIdx);
+            Debug.Assert(sizeUsed < ushort.MaxValue);
+            header->OffsetToMetadata = (ushort)sizeUsed;
+            sizeUsed += segmentIdx; // include the metadata usage
+            return (written, sizeUsed);
+        }
+        
         (int Count, int SizeUsed) UnlikelySplitEntries()
         {
-            var entriesSpan = new Span<long>(entries, count);
-            var sep = entriesSpan.BinarySearch(entries[0] + uint.MaxValue - 1);
-            if (sep < 0)
-                sep = ~sep;
-            // we want to favor getting 256 exactly, and we have enough to do so
-            var remainder = sep % 256;
-            if (remainder != 0 && sep > remainder)
-                sep -= remainder;
             RuntimeHelpers.EnsureSufficientExecutionStack();
-            return Encode(entries, sep, output, outputSize);
+            var totalWritten = 0;
+            var totalSize = 0;
+            while (count > 0)
+            {
+                var entriesSpan = new Span<long>(entries, count);
+                var sep = entriesSpan.BinarySearch(entries[0] + uint.MaxValue - 1);
+                if (sep < 0)
+                    sep = ~sep;
+                // we want to favor getting 256 exactly, and we have enough to do so
+                var remainder = sep % 256;
+                if (remainder != 0 && sep > remainder)
+                    sep -= remainder;
+
+                (int w, int size)  = Encode(entries, sep, output, outputSize);
+                totalSize += size;
+                totalWritten += w;
+                if (w != sep) // means that we run out of space in the buffer
+                    break;
+                entries += w;
+                count -= w;
+                output += size;
+                outputSize -= size;
+            }
+            return (totalWritten, totalSize);
         }
 
         void ConvertFullSegmentToUint32()
@@ -186,7 +238,7 @@ public static unsafe class SimdBitPacker<TSimdTransform>
         void InitializeHeader()
         {
             header->Baseline = entries[0];
-            header->OffsetToFirstSegment = (byte)headerSize;
+            header->OffsetToMetadata = 0;
             header->ShiftAmount = shiftAmount;
             header->LastSegmentCount = 0;
             header->NumberOfFullSegments = 0;
