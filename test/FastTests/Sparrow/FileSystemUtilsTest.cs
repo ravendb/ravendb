@@ -39,7 +39,6 @@ namespace FastTests.Sparrow
         public void CGroup_WhenTryingToGetData_SuccessToGetValue()
         {
             var cgroup = CGroupHelper.CGroup;
-            Assert.NotNull(cgroup.GetMaxMemoryUsage());
             Assert.NotNull(cgroup.GetPhysicalMemoryLimit());
             Assert.NotNull(cgroup.GetPhysicalMemoryUsage());
         }

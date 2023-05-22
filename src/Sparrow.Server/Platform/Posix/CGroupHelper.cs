@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Sparrow.Extensions;
 using Sparrow.Logging;
 using static Sparrow.Server.Platform.Posix.Syscall;
 
@@ -22,7 +23,8 @@ public abstract class CGroup
     protected abstract string MaxMemoryUsageFileName { get; }
 
     private Lazy<CachedPath> _groupPathForMemory;
-    
+    private HashSet<string> _notSupportedValue;
+
     private class CachedPath
     {
         public DateTime Time { get; private set; }
@@ -44,10 +46,56 @@ public abstract class CGroup
     {
         _groupPathForMemory = CreateNewLazyCachedPath();
     }
-    
-    public long? GetMaxMemoryUsage() => ReadValue(GetGroupPathForMemory, MaxMemoryUsageFileName);
-    public long? GetPhysicalMemoryUsage() => ReadValue(GetGroupPathForMemory, MemoryUsageFileName);
-    public long? GetPhysicalMemoryLimit() => ReadValue(GetGroupPathForMemory, MemoryLimitFileName, CheckLimitValues);
+
+    public long? GetMaxMemoryUsage()
+    {
+        try
+        {
+            return _notSupportedValue.Contains(MaxMemoryUsageFileName) == false
+                ?ReadValue(GetGroupPathForMemory, MaxMemoryUsageFileName)
+                : null;
+        }
+        catch (Exception e)
+        {
+            if (e is FileNotFoundException)
+            {
+                _notSupportedValue.Add(MaxMemoryUsageFileName);
+                if(Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to get CGroup max memory usage from {MaxMemoryUsageFileName} - {GetType().Name}", e);
+            }
+            
+            if(Logger.IsInfoEnabled)
+                Logger.Info($"Failed to get CGroup max memory usage from {MaxMemoryUsageFileName} - {GetType().Name}", e);
+            return null;
+        }
+    }
+
+    public long? GetPhysicalMemoryUsage()
+    {
+        try
+        {
+            return ReadValue(GetGroupPathForMemory, MemoryUsageFileName);
+        }
+        catch (Exception e)
+        {
+            if(Logger.IsInfoEnabled)
+                Logger.Info($"Failed to get CGroup current memory usage from {MemoryUsageFileName} - {GetType().Name}", e);
+            return null;
+        }
+    }
+    public long? GetPhysicalMemoryLimit()
+    {
+        try
+        {
+            return ReadValue(GetGroupPathForMemory, MemoryLimitFileName, CheckLimitValues);
+        }
+        catch (Exception e)
+        {
+            if(Logger.IsInfoEnabled)
+                Logger.Info($"Failed to get CGroup memory limit from {MemoryLimitFileName} - {GetType().Name}", e);
+            return null;
+        }
+    }
     
     private Lazy<CachedPath> GetGroupPathForMemory()
     {
@@ -82,7 +130,7 @@ public abstract class CGroup
     
     private static bool CheckLimitValues(string textValue, out long? value)
     {
-        //'max' stand for unlimited 
+        //'max' stands for unlimited 
         if (textValue.StartsWith("max"))
         {
             value = long.MaxValue;
@@ -106,8 +154,8 @@ public abstract class CGroup
         }
         catch (Exception e)
         {
-            if (e is not DirectoryNotFoundException || retry == false) 
-                return null;
+            if (e is not DirectoryNotFoundException || retry == false)
+                throw;
             
             //If the cgroup changed and the old cgroup was removed
             basePath.Value.Deprecate();
