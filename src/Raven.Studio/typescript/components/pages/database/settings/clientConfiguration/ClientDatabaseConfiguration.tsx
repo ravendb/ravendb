@@ -442,7 +442,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                     </InputGroup>
                                 </Col>
                             </Row>
-                            {(globalConfig.loadBalancerSeedValue ||
+                            {(globalConfig?.loadBalancerSeedValue ||
                                 formValues.loadBalancerValue === "UseSessionContext") && (
                                 <>
                                     <div

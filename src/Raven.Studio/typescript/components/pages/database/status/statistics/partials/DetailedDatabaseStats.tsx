@@ -108,10 +108,9 @@ export function DetailedDatabaseStats() {
                                             >
                                                 <PopoverBody>
                                                     {formattedChangeVector.map((cv) => (
-                                                        <>
-                                                            <small key={cv.fullFormat}>{cv.fullFormat}</small>
-                                                            <br />
-                                                        </>
+                                                        <div key={cv.fullFormat}>
+                                                            <small>{cv.fullFormat}</small>
+                                                        </div>
                                                     ))}
                                                 </PopoverBody>
                                             </UncontrolledPopover>
