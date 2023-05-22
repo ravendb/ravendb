@@ -23,7 +23,7 @@ public class RavenDB_20206 : RavenTestBase
         using (var store1 = GetDocumentStore(new Options { Server = server }))
         using (var store2 = GetDocumentStore(new Options { Server = server, ModifyDatabaseName = _ => store1.Database + "_123" }))
         {
-            WaitForFirstCompareExchangeTombstonesClean(server);
+            Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
             var indexesList1 = new Dictionary<string, long>();
             var indexesList2 = new Dictionary<string, long>();
             // create 3 unique values
@@ -102,21 +102,6 @@ public class RavenDB_20206 : RavenTestBase
                 Assert.Equal(2, numOfCompareExchanges);
             }
         }
-    }
-
-    private static void WaitForFirstCompareExchangeTombstonesClean(RavenServer server)
-    {
-        Assert.True(WaitForValue(() =>
-        {
-            // wait for compare exchange tombstone cleaner run
-            if (server.ServerStore.Observer == null)
-                return false;
-
-            if (server.ServerStore.Observer._lastTombstonesCleanupTimeInTicks == 0)
-                return false;
-
-            return true;
-        }, true));
     }
 
     private static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> CleanupCompareExchangeTombstonesAsync(RavenServer server, string database, ClusterOperationContext context)

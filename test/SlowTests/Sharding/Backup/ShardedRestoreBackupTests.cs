@@ -26,7 +26,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.PeriodicBackup;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -724,6 +723,8 @@ namespace SlowTests.Sharding.Backup
 
             using (var store = Sharding.GetDocumentStore(options))
             {
+                Cluster.WaitForFirstCompareExchangeTombstonesClean(cluster.Leader);
+
                 await Sharding.Backup.InsertData(store);
 
                 var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
@@ -966,7 +967,7 @@ namespace SlowTests.Sharding.Backup
             //RavenDB-19201
             using (var store = Sharding.GetDocumentStore())
             {
-                RavenDB_11139.WaitForFirstCompareExchangeTombstonesClean(Server);
+                Cluster.WaitForFirstCompareExchangeTombstonesClean(Server);
 
                 using (var session = store.OpenAsyncSession())
                 {
