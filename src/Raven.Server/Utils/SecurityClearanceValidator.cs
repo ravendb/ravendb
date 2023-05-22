@@ -32,6 +32,8 @@ namespace Raven.Server.Utils
             switch (attributeStatus, userStatus)
             {
                 case (SecurityClearance.Operator, RavenServer.AuthenticationStatus.Allowed):
+                case (SecurityClearance.ClusterAdmin, RavenServer.AuthenticationStatus.Operator):
+                case (SecurityClearance.ClusterAdmin, RavenServer.AuthenticationStatus.Allowed):
                     throw new AuthenticationException(
                         $"Bad security clearance: '{userStatus}'. The current user does not have the necessary security clearance. " +
                         $"This operation is only allowed for users with '{attributeStatus}' or higher security clearance.");
