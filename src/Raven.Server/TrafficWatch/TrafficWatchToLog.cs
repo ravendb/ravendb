@@ -74,7 +74,8 @@ internal class TrafficWatchToLog : IDynamicJson
 
             var requestSize = new Size(twhc.RequestSizeInBytes, SizeUnit.Bytes);
             var responseSize = new Size(twhc.ResponseSizeInBytes, SizeUnit.Bytes);
-            var customInfo = twhc.CustomInfo?.ReplaceLineEndings(string.Empty) ?? "N/A";
+            var customInfo = twhc.CustomInfo?.ReplaceLineEndings(" ") ?? "N/A";
+            var queryTimings = twhc.QueryTimings;
 
             stringBuilder
                 .Append("HTTP, ")
@@ -91,6 +92,22 @@ internal class TrafficWatchToLog : IDynamicJson
                 .Append(twhc.Type).Append(", ")
                 .Append(twhc.ElapsedMilliseconds).Append("ms, ")
                 .Append("custom info: ").Append(customInfo);
+
+            if (queryTimings != null)
+            {
+                bool isFirst = true;
+                stringBuilder.Append(", ")
+                    .Append("query timings: ").Append(queryTimings.DurationInMs).Append("ms - ");
+                foreach (var key in queryTimings.Timings.Keys)
+                {
+                    if (isFirst == false)
+                        stringBuilder.Append(", ");
+                    stringBuilder.Append(key).Append(": ")
+                        .Append(queryTimings.Timings[key].DurationInMs).Append("ms");
+
+                    isFirst = false;
+                }
+            }
         }
         else if (trafficWatchData is TrafficWatchTcpChange twtc)
         {
