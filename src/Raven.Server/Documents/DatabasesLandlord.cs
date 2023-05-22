@@ -1265,6 +1265,8 @@ namespace Raven.Server.Documents
             LastEtag = lastEtag;
             Type = type;
             TaskId = taskId;
+
+            Debug.Assert(timeOfActivity?.Kind != DateTimeKind.Unspecified);
             DateTime = timeOfActivity?.ToUniversalTime();
         }
     }
