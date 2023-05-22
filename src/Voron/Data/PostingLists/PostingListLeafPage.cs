@@ -45,7 +45,7 @@ public readonly unsafe struct PostingListLeafPage
     /// Additions and removals are *sorted* by the caller
     /// maxValidValue is the limit for the *next* page, so we won't consume entries from there
     /// </summary>
-    public Span<long> Update(LowLevelTransaction tx, NativeIntegersList tempList, ref long* additions, ref int additionsCount,
+    public Span<long> Update(LowLevelTransaction tx, ref NativeIntegersList tempList, ref long* additions, ref int additionsCount,
         ref long* removals, ref int removalsCount, long maxValidValue)
     {
         var maxAdditionsLimit = new Span<long>(additions, additionsCount).BinarySearch(maxValidValue);
@@ -100,7 +100,7 @@ public readonly unsafe struct PostingListLeafPage
             if (additionCurrent == InvalidValue && existingCurrent == InvalidValue)
                 break;
             
-            AddItemToList();
+            AddItemToList(ref tempList);
         }
 
         int entriesCount = 0;
@@ -143,7 +143,7 @@ public readonly unsafe struct PostingListLeafPage
 
         return remainder;
         
-        void AddItemToList()
+        void AddItemToList(ref NativeIntegersList list)
         {
             long current;
             if (additionCurrent < existingCurrent || existingCurrent == InvalidValue)
@@ -173,7 +173,7 @@ public readonly unsafe struct PostingListLeafPage
             }
             else
             {
-                tempList.Add(current);
+                list.Add(current);
             }
         }
     }
