@@ -1753,7 +1753,7 @@ namespace Corax
                 return AddEntriesToTermResult.UpdateTermId;
             }
             
-            if (encoded.Length <= item.Length)
+            if (encoded.Length == item.Length)
             {
                 var mutableSpace = Container.GetMutable(llt, containerId);
                 encoded.CopyTo(mutableSpace);

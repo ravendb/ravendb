@@ -57,7 +57,7 @@ namespace FastTests.Voron.Sets
                 var rp = p;
                 long* rr = null;
                 var zero = 0;
-                var extras = leaf.Update(_llt,tempList, ref rp, ref len, ref rr, ref zero, long.MaxValue);
+                var extras = leaf.Update(_llt,ref tempList, ref rp, ref len, ref rr, ref zero, long.MaxValue);
                 Assert.Equal(0, extras.Length);
                 Assert.Equal(0, len);
                 Assert.Equal((long)(p+ span.Length), (long)rp);
@@ -93,7 +93,7 @@ namespace FastTests.Voron.Sets
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt,tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                var extras = leaf.Update(_llt, ref tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
                 Assert.Equal(0, extras.Length);
                 Assert.Equal(0, pl);
             }
@@ -107,7 +107,7 @@ namespace FastTests.Voron.Sets
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, tempList, ref none, ref zero, ref pp, ref pl, long.MaxValue);
+                var extras = leaf.Update(_llt, ref tempList, ref none, ref zero, ref pp, ref pl, long.MaxValue);
                 Assert.Equal(0, extras.Length);
                 Assert.Equal(0, pl);
                 Assert.Empty(leaf.GetDebugOutput());
@@ -144,7 +144,7 @@ namespace FastTests.Voron.Sets
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                var extras = leaf.Update(_llt, ref tempList, ref pp, ref pl, ref none, ref zero, long.MaxValue);
                 Assert.Equal(0, extras.Length);
                 Assert.Equal(0, pl);
             }
@@ -156,7 +156,7 @@ namespace FastTests.Voron.Sets
                 var pl = additions.Length;
                 long* none = null;
                 int zero = 0;
-                var extras = leaf.Update(_llt, tempList,ref pp, ref pl, ref none, ref zero, long.MaxValue);
+                var extras = leaf.Update(_llt, ref tempList,ref pp, ref pl, ref none, ref zero, long.MaxValue);
                 Assert.Equal(0,extras.Length);
                 Assert.Equal(0, pl);
             }

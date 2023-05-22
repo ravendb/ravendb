@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.Intrinsics;
+using Sparrow.Binary;
+using Sparrow.Server.Binary;
 
 namespace Voron.Util.Simd;
 
@@ -35,16 +37,19 @@ public unsafe struct SimdCompression<TSimdDiff>
     {
         if (length == 0)
             return 0;
-        if (bit == 0)
+        switch (bit)
         {
-            new Span<uint>(outputBuf, length).Fill(initValue);
-            return length * sizeof(uint);
+            case 0:
+                new Span<uint>(outputBuf, length).Fill(initValue);
+                return length * sizeof(uint);
+            case 32:
+                new Span<uint>(inputBuf, length).CopyTo(new Span<uint>(outputBuf, length));
+                return length * sizeof(uint);
+            case < 0 or > 32:
+                Debug.Fail("Should never be reached");
+                throw new InvalidOperationException("Wrong number of of bits used in unpacking: " + bit);
         }
-        if (bit == 32)
-        {
-            new Span<uint>(inputBuf, length).CopyTo(new Span<uint>(outputBuf, length));
-            return length * sizeof(uint);
-        }
+
         var offset = Vector256.Create(initValue);
         var mask = Vector256.Create((1u << (int)bit) - 1u);
         var inWordPos = 0u;
@@ -90,11 +95,16 @@ public unsafe struct SimdCompression<TSimdDiff>
     {
         if (length == 0)
             return 0;
-        if (bit == 32)
+        switch (bit)
         {
-            new Span<uint>(inputBuf, length).CopyTo(new Span<uint>(outputBuf, length));
-            return length * sizeof(uint);
+            case 32:
+                new Span<uint>(inputBuf, length).CopyTo(new Span<uint>(outputBuf, length));
+                return length * sizeof(uint);
+            case < 0 or > 32:
+                Debug.Fail("Should never be reached");
+                throw new InvalidOperationException("Wrong number of of bits used in unpacking: " + bit);
         }
+
         var offset = Vector256.Create(initValue);
         var input = (Vector256<uint>*)inputBuf;
         var output = (Vector256<uint>*)outputBuf;
@@ -350,8 +360,7 @@ public unsafe struct SimdCompression<TSimdDiff>
                 break;
 
             default:
-                Debug.Fail("Should never be reached");
-                break;
+                throw new InvalidOperationException("Wrong number of of bits used in unpacking: " + bit);
         }
 
     }
@@ -507,8 +516,7 @@ public unsafe struct SimdCompression<TSimdDiff>
                 break;
 
             default:
-                Debug.Fail("Should never be reached");
-                break;
+                throw new InvalidOperationException("Wrong number of of bits used in unpacking: " + bit);
         }
     }
 
