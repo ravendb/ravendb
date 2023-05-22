@@ -382,7 +382,7 @@ namespace Voron.Data.PostingLists
 
                 _state.NumberOfEntries -= leafPage.Header->NumberOfEntries;
 
-                var extras = leafPage.Update(_llt, tempList, ref additions, ref additionsCount, ref removals, ref removalsCount, limit);
+                var extras = leafPage.Update(_llt, ref tempList, ref additions, ref additionsCount, ref removals, ref removalsCount, limit);
                 _state.NumberOfEntries += leafPage.Header->NumberOfEntries;
 
                 if (extras.Length > 0) // we overflow and need to split excess to additional pages
