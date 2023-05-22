@@ -180,8 +180,8 @@ function ConnectedClients(props: ConnectedClientsProps) {
             )}
             <div className="connected-clients-items">
                 {connections.Results.length === 0 && <div>No clients connected</div>}
-                {connections.Results.map((connection) => (
-                    <div className="text-center py-2 connected-client">
+                {connections.Results.map((connection, index) => (
+                    <div key={"connectedClient" + index} className="text-center py-2 connected-client">
                         <div className="pb-1">
                             <Icon icon="client" color="primary" className="mb-1" />
                         </div>
