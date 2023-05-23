@@ -39,9 +39,17 @@ public abstract class AbstractIndexDeleteController
             return true;
         }
 
-        var (index, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(indexDefinition.Name, GetDatabaseName(), raftRequestId));
+        try
+        {
+            var (index, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(indexDefinition.Name, GetDatabaseName(), raftRequestId));
 
-        await WaitForIndexNotificationAsync(index);
+            await WaitForIndexNotificationAsync(index);
+        }
+
+        catch (Exception e)
+        {
+            IndexStore.ThrowIndexDeletionException(name, e);
+        }
 
         return true;
     }
@@ -52,9 +60,17 @@ public abstract class AbstractIndexDeleteController
         if (indexDefinition == null)
             IndexDoesNotExistException.ThrowFor(name);
 
-        var (index, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(indexDefinition.Name, GetDatabaseName(), raftRequestId));
-
-        await WaitForIndexNotificationAsync(index);
+        try
+        {
+            var (index, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(indexDefinition.Name, GetDatabaseName(), raftRequestId));
+            
+            await WaitForIndexNotificationAsync(index);
+        }
+        
+        catch (Exception e)
+        {
+            IndexStore.ThrowIndexDeletionException(name, e);
+        }
     }
 
     private async ValueTask HandleSideBySideIndexDeleteAsync(string name, string raftRequestId)

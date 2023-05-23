@@ -1,8 +1,9 @@
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ public class RavenDB_19239 : RavenTestBase
     }
     
     [RavenFact(RavenTestCategory.Indexes)]
-    public void TestLockedError()
+    public async Task TestLockedError()
     {
         using (var store = GetDocumentStore())
         {
@@ -32,15 +33,13 @@ public class RavenDB_19239 : RavenTestBase
                 
                 var index = new DummyIndex();
 
-                index.Execute(store);
+                await index.ExecuteAsync(store);
                 
-                Indexes.WaitForIndexing(store);
-                
-                store.Maintenance.Send(new SetIndexesLockOperation("DummyIndex", IndexLockMode.LockedError));
-                
-                var ex = Assert.Throws<RavenException>(() => store.Maintenance.Send(new DeleteIndexOperation("DummyIndex")));
+                await Indexes.WaitForIndexingAsync(store);
 
-                Assert.Contains("IndexDeletionException: Cannot delete existing index DummyIndex with lock mode LockedError", ex.ToString());
+                await store.Maintenance.SendAsync(new SetIndexesLockOperation("DummyIndex", IndexLockMode.LockedError));
+                
+                await Assert.ThrowsAsync<IndexDeletionException>(async () => await store.Maintenance.SendAsync(new DeleteIndexOperation("DummyIndex")));
             }
         }
     }

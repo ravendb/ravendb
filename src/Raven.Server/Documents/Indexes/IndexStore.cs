@@ -2125,6 +2125,11 @@ namespace Raven.Server.Documents.Indexes
             throw new IndexCreationException($"Failed to create {indexType} index '{indexName}', {reason}. Node {serverStore.NodeTag} state is {serverStore.LastStateChangeReason()}", exception);
         }
 
+        public static void ThrowIndexDeletionException(string indexName, Exception exception)
+        {
+            throw new IndexDeletionException($"Failed to delete index '{indexName}'.", exception);
+        }
+
         internal TestingStuff ForTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
