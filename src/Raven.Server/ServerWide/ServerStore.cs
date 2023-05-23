@@ -2711,10 +2711,12 @@ namespace Raven.Server.ServerWide
 
             if (record.Encrypted && Server.AllowEncryptedDatabasesOverHttp == false)
             {
+#if !ALLOW_ENCRYPTED_SSL_ONLY
                 clusterNodes.RemoveAll(n => AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
                 if (clusterNodes.Count < topology.ReplicationFactor)
                     throw new InvalidOperationException(
                         $"Database {record.DatabaseName} is encrypted and requires {topology.ReplicationFactor} node(s) which supports SSL. There are {clusterNodes.Count} such node(s) available in the cluster.");
+#endif
             }
 
             if (clusterNodes.Count < topology.ReplicationFactor)
