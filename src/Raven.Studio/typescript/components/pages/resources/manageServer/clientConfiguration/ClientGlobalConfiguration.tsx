@@ -103,8 +103,8 @@ export default function ClientGlobalConfiguration() {
                         <PopoverWithHover target={popovers.maximumRequestsPerSession} placement="right">
                             <div className="flex-horizontal p-3">
                                 <div>
-                                    Set this number to restrict the number of requests (<strong>Reads</strong> &{" "}
-                                    <strong>Writes</strong>) per session in the client API.
+                                    Set this number to restrict the number of requests (<code>Reads</code> &{" "}
+                                    <code>Writes</code>) per session in the client API.
                                 </div>
                             </div>
                         </PopoverWithHover>
@@ -147,7 +147,7 @@ export default function ClientGlobalConfiguration() {
                                         <br />
                                         <ul>
                                             <li>
-                                                <strong>None:</strong>
+                                                <code>None</code>
                                                 <br />
                                                 Read requests - the node the client will target will be based the Read
                                                 balance behavior configuration.
@@ -156,7 +156,7 @@ export default function ClientGlobalConfiguration() {
                                             </li>
                                             <br />
                                             <li>
-                                                <strong>Use session context:</strong>
+                                                <code>Use session context</code>
                                                 <br />
                                                 Sessions that are assigned the same context will have all their Read &
                                                 Write requests routed to the same node.

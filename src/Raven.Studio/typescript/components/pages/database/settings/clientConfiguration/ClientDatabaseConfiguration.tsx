@@ -31,7 +31,7 @@ import useClientConfigurationFormController from "components/common/clientConfig
 import { tryHandleSubmit } from "components/utils/common";
 import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
 import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "components/common/PropSummary";
-import classNames = require("classnames");
+import classNames from "classnames";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
@@ -81,6 +81,8 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
     if (asyncGetClientConfiguration.error) {
         return <LoadError error="Unable to load client configuration" refresh={onRefresh} />;
     }
+
+    const canEditDatabaseConfig = formValues.overrideConfig || !globalConfig;
 
     return (
         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
@@ -269,7 +271,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             <FormCheckbox
                                                 control={control}
                                                 name="identityPartsSeparatorEnabled"
-                                                disabled={!formValues.overrideConfig}
+                                                disabled={!canEditDatabaseConfig}
                                                 color="primary"
                                             />
                                         </InputGroupText>
@@ -279,7 +281,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             name="identityPartsSeparatorValue"
                                             placeholder="'/' (default)"
                                             disabled={
-                                                !formValues.identityPartsSeparatorEnabled || !formValues.overrideConfig
+                                                !formValues.identityPartsSeparatorEnabled || !canEditDatabaseConfig
                                             }
                                             className="d-flex"
                                         />
@@ -336,7 +338,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             <FormCheckbox
                                                 control={control}
                                                 name="maximumNumberOfRequestsEnabled"
-                                                disabled={!formValues.overrideConfig}
+                                                disabled={!canEditDatabaseConfig}
                                                 color="primary"
                                             />
                                         </InputGroupText>
@@ -346,7 +348,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             name="maximumNumberOfRequestsValue"
                                             placeholder="30 (default)"
                                             disabled={
-                                                !formValues.maximumNumberOfRequestsEnabled || !formValues.overrideConfig
+                                                !formValues.maximumNumberOfRequestsEnabled || !canEditDatabaseConfig
                                             }
                                         />
                                     </InputGroup>
@@ -429,14 +431,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             <FormCheckbox
                                                 control={control}
                                                 name="loadBalancerEnabled"
-                                                disabled={!formValues.overrideConfig}
+                                                disabled={!canEditDatabaseConfig}
                                                 color="primary"
                                             />
                                         </InputGroupText>
                                         <FormSelect
                                             control={control}
                                             name="loadBalancerValue"
-                                            disabled={!formValues.loadBalancerEnabled || !formValues.overrideConfig}
+                                            disabled={!formValues.loadBalancerEnabled || !canEditDatabaseConfig}
                                             options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
                                         />
                                     </InputGroup>
@@ -496,7 +498,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                 label="Seed"
                                                 disabled={
                                                     formValues.loadBalancerValue !== "UseSessionContext" ||
-                                                    !formValues.overrideConfig
+                                                    !canEditDatabaseConfig
                                                 }
                                                 className="small"
                                             ></FormSwitch>
@@ -507,8 +509,7 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                     name="loadBalancerSeedValue"
                                                     placeholder="0 (default)"
                                                     disabled={
-                                                        !formValues.loadBalancerSeedEnabled ||
-                                                        !formValues.overrideConfig
+                                                        !formValues.loadBalancerSeedEnabled || !canEditDatabaseConfig
                                                     }
                                                 />
                                             </InputGroup>
@@ -562,16 +563,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             <FormCheckbox
                                                 control={control}
                                                 name="readBalanceBehaviorEnabled"
-                                                disabled={!formValues.overrideConfig}
+                                                disabled={!canEditDatabaseConfig}
                                                 color="primary"
                                             />
                                         </InputGroupText>
                                         <FormSelect
                                             control={control}
                                             name="readBalanceBehaviorValue"
-                                            disabled={
-                                                !formValues.readBalanceBehaviorEnabled || !formValues.overrideConfig
-                                            }
+                                            disabled={!formValues.readBalanceBehaviorEnabled || !canEditDatabaseConfig}
                                             options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
                                         />
                                     </InputGroup>
@@ -632,11 +631,13 @@ function getLoadBalancerSeedEffectiveValue(
     formValues: ClientConfigurationFormData,
     globalConfig: ClientConfigurationFormData
 ) {
-    return (
-        (formValues.overrideConfig && formValues.loadBalancerSeedValue) ||
-        globalConfig?.loadBalancerSeedValue ||
-        "0 (Default)"
-    );
+    if (formValues.overrideConfig && formValues.loadBalancerEnabled) {
+        if (formValues.loadBalancerValue === "None") return "Not set";
+        else if (formValues.loadBalancerSeedEnabled) {
+            return formValues.loadBalancerSeedValue || "0 (Default)";
+        }
+    }
+    return globalConfig?.loadBalancerSeedValue || "0 (Default)";
 }
 
 function getReadBalanceBehaviorEffectiveValue(
