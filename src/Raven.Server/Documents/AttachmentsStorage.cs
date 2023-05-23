@@ -122,7 +122,7 @@ namespace Raven.Server.Documents
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
                 if (stream == null)
-                    ThrowMissingAttachment(attachment.Name);
+                    ThrowMissingAttachment(GetDocIdAndAttachmentName(context, attachment.Key));
 
                 attachment.Stream = stream;
 
@@ -957,9 +957,9 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        private static void ThrowMissingAttachment(string attachmentName)
+        private static void ThrowMissingAttachment((LazyStringValue DocId, LazyStringValue AttachmentName) details)
         {
-            throw new FileNotFoundException($"Attachment's stream '{attachmentName}' was not found. This should never happen.");
+            throw new FileNotFoundException($"Attachment's stream for file '{details.AttachmentName}' in document '{details.DocId}' was not found. This should never happen.");
         }
 
         private static void ThrowConcurrentException(string documentId, string name, string expectedChangeVector, string oldChangeVector)
@@ -1335,11 +1335,11 @@ namespace Raven.Server.Documents
             return new StreamsTempFile(tempPath.FullPath, _documentDatabase.DocumentsStorage.Environment);
         }
 
-        public static (LazyStringValue DocId, LazyStringValue AttachmentName) ExtractDocIdAndAttachmentNameFromTombstone(JsonOperationContext context,
-            LazyStringValue attachmentTombstoneId)
+        public static (LazyStringValue DocId, LazyStringValue AttachmentName) GetDocIdAndAttachmentName(JsonOperationContext context,
+            LazyStringValue attachmentKey)
         {
-            var p = attachmentTombstoneId.Buffer;
-            var size = attachmentTombstoneId.Size;
+            var p = attachmentKey.Buffer;
+            var size = attachmentKey.Size;
 
             int sizeOfDocId = 0;
             for (; sizeOfDocId < size; sizeOfDocId++)
