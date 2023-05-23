@@ -16,7 +16,7 @@ namespace SlowTests.Core.Utils.Indexes
         public Posts_ByContent()
         {
             Map = posts => from post in posts
-                           let body = LoadDocument<PostContent>(post.Id + $"/content${post.Id}")
+                           let body = LoadDocument<PostContent>(post.Id + "/content")
                            select new
                            {
                                Text = body == null ? null : body.Text

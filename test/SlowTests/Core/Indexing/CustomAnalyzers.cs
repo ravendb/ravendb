@@ -71,7 +71,8 @@ namespace SlowTests.Core.Indexing
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Highlighting queries are currently not supported in a sharded database ")]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax is not supporting custom analyzers")]
         public void CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions(Options options)
         {
