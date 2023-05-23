@@ -33,7 +33,7 @@ function BuildServer ( $srcDir, $outDir, $target) {
     }
 
     if ($env:ALLOW_ENCRYPTED_SSL_ONLY) {
-        $commandArgs += "/p:DefineConstants=ALLOW_ENCRYPTED_SSL_ONLY"
+        $commandArgs += "/p:AllowEncryptedWithoutSsl=True"
     }
 
     $commandArgs += '/p:SourceLinkCreate=true'
