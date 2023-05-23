@@ -24,6 +24,7 @@ export interface DatabaseLocalInfo {
     totalSize: Raven.Client.Util.Size;
     upTime?: string;
     backupInfo: Raven.Client.ServerWide.Operations.BackupInfo;
+    databaseStatus: Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseStatus;
 }
 
 export interface OrchestratorLocalInfo {

@@ -189,6 +189,48 @@ function selectOrchestratorState(name: string) {
     };
 }
 
+function getDatabaseLocalInfo(
+    data: DatabaseLocalInfo,
+    location: databaseLocationSpecifier
+): locationAwareLoadableData<DatabaseLocalInfo> {
+    if (!data) {
+        return {
+            location,
+            status: "idle",
+        };
+    }
+
+    if (data.loadError) {
+        return {
+            location,
+            status: "success",
+            data,
+        };
+    }
+
+    switch (data.databaseStatus) {
+        case "Online":
+        case "None":
+            return {
+                location,
+                status: "success",
+                data,
+            };
+        case "Loading":
+            return {
+                location,
+                status: "loading",
+            };
+        case "Error":
+            return {
+                location,
+                status: "failure",
+            };
+        default:
+            assertUnreachable(data.databaseStatus);
+    }
+}
+
 export function selectDatabaseState(name: string) {
     return (store: RootState) => {
         const db = databaseSelectors.databaseByName(name)(store);
@@ -218,11 +260,7 @@ export function selectDatabaseState(name: string) {
                         databasesViewSliceInternal.selectDatabaseInfoId(name, location)
                     );
 
-                    return {
-                        location,
-                        status: data ? "success" : "idle",
-                        data,
-                    };
+                    return getDatabaseLocalInfo(data, location);
                 }
             }
         });
