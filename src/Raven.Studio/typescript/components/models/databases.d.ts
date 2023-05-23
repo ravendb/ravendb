@@ -46,7 +46,6 @@ export type MergedDatabaseState = "Loading" | "Error" | "Offline" | "Disabled" |
 
 export interface DatabaseSharedInfo {
     name: string;
-    sharded: this is ShardedDatabaseSharedInfo;
     lockMode: DatabaseLockMode;
     deletionInProgress: string[];
     encrypted: boolean;
@@ -59,6 +58,8 @@ export interface DatabaseSharedInfo {
         relevant: boolean;
         isBeingDeleted: boolean;
     };
+    sharded: this is ShardedDatabaseSharedInfo;
+    shards?: DatabaseSharedInfo[];
 }
 
 export interface ShardedDatabaseSharedInfo extends DatabaseSharedInfo {

@@ -68,8 +68,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     </div>
                 );
 
-                const node = db.nodes.find((x) => x.tag === localState.location.nodeTag);
-
+                const node = getNode(db, localState.location);
                 const uptime = localState.data ? formatUptime(localState.data.upTime) : "";
 
                 return (
@@ -101,4 +100,9 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
             })}
         </LocationDistribution>
     );
+}
+
+function getNode(db: DatabaseSharedInfo, location: databaseLocationSpecifier) {
+    const nodes = db.sharded ? db.shards[location.shardNumber].nodes : db.nodes;
+    return nodes.find((x) => x.tag === location.nodeTag);
 }
