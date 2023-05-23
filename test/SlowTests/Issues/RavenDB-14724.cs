@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     {
                         Default = null
                     };
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);
+                    await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
                 }
 
                 using (var session = store.OpenSession())
