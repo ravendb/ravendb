@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             }
                             else
                             {
-                                var (doc, attachmentName) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId);
+                                var (doc, attachmentName) = AttachmentsStorage.GetDocIdAndAttachmentName(Context, item.AttachmentTombstoneId);
                                 _currentRun.DeleteAttachment(doc, attachmentName);
                             }
                         }
