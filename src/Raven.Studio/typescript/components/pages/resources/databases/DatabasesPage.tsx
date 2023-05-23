@@ -4,14 +4,7 @@ import { useAccessManager } from "hooks/useAccessManager";
 import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
-import {
-    Button,
-    ButtonGroup,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    UncontrolledDropdown,
-} from "reactstrap";
+import { Button, ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import appUrl from "common/appUrl";
@@ -68,14 +61,6 @@ export function DatabasesPage(props: DatabasesPageProps) {
     }, [dispatch, nodeTags]);
 
     useEffect(() => dispatch(syncDatabaseDetails()), [dispatch]);
-
-    useEffect(() => {
-        const visibleNames = filteredDatabaseNames;
-        const nonVisibleSelection = selectedDatabaseNames.filter((x) => !visibleNames.includes(x));
-        if (nonVisibleSelection.length) {
-            setSelectedDatabaseNames((prev) => prev.filter((x) => !nonVisibleSelection.includes(x)));
-        }
-    }, [selectedDatabaseNames, filteredDatabaseNames]);
 
     const toggleSelection = (dbName: string) => {
         if (selectedDatabaseNames.includes(dbName)) {

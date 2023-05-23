@@ -24,6 +24,8 @@ import {
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
 
+type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
+
 interface DatabasesSelectActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
     databaseNames: string[];
@@ -46,6 +48,11 @@ export function DatabasesSelectActions({
 
     const canDeleteSelection = selectedDatabases.some((x) => x.lockMode === "Unlock");
     const anythingSelected = selectedDatabases.length > 0;
+
+    const selectionState = getSelectionState(
+        databaseNames,
+        selectedDatabases.map((x) => x.name)
+    );
 
     const toggleSelectAll = useCallback(() => {
         const selectedCount = selectedDatabases.length;
@@ -109,8 +116,8 @@ export function DatabasesSelectActions({
     return (
         <div className="position-relative">
             <Checkbox
-                selected={selectedDatabases.length > 0}
-                indeterminate={0 < selectedDatabases.length && selectedDatabases.length < databaseNames.length}
+                selected={selectionState === "AllSelected"}
+                indeterminate={selectionState === "SomeSelected"}
                 toggleSelection={toggleSelectAll}
                 color="primary"
                 title="Select all or none"
@@ -203,4 +210,21 @@ export function DatabasesSelectActions({
             </SelectionActions>
         </div>
     );
+}
+
+function getSelectionState(filteredNames: string[], selectedNames: string[]): SelectionState {
+    const selectedFromFilteredCount = selectedNames.reduce((count, selectedName) => {
+        if (filteredNames.includes(selectedName)) {
+            return count + 1;
+        }
+        return count;
+    }, 0);
+
+    if (selectedFromFilteredCount === 0) {
+        return "Empty";
+    }
+    if (selectedFromFilteredCount === filteredNames.length) {
+        return "AllSelected";
+    }
+    return "SomeSelected";
 }
