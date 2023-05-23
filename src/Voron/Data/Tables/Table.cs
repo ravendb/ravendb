@@ -745,19 +745,39 @@ namespace Voron.Data.Tables
 
         public class CompressionDictionariesHolder : IDisposable
         {
-            private readonly ConcurrentDictionary<int, ZstdLib.CompressionDictionary> _compressionDictionaries = new ConcurrentDictionary<int, ZstdLib.CompressionDictionary>();
+            public ConcurrentDictionary<int, ZstdLib.CompressionDictionary> CompressionDictionaries { get; } = new();
 
             public ZstdLib.CompressionDictionary GetCompressionDictionaryFor(Transaction tx, int id)
             {
-                if (_compressionDictionaries.TryGetValue(id, out var current))
+                if (CompressionDictionaries.TryGetValue(id, out var current))
                     return current;
 
                 current = CreateCompressionDictionary(tx, id);
 
-                var result = _compressionDictionaries.GetOrAdd(id, current);
+                var result = CompressionDictionaries.GetOrAdd(id, current);
                 if (result != current)
                     current.Dispose();
                 return result;
+            }
+
+            public IEnumerable<ZstdLib.CompressionDictionary> GetInStorageDictionaries(Transaction tx)
+            {
+                var tree = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
+                if (tree == null)
+                    yield break;
+
+                using (var iterator = tree.Iterate(true))
+                {
+                    if (iterator.Seek(Slices.BeforeAllKeys) == false)
+                        yield break;
+
+                    do
+                    {
+                        var id = iterator.CurrentKey.CreateReader().ReadBigEndianInt32();
+                        var dict = CreateCompressionDictionary(tx, id);
+                        yield return dict;
+                    } while (iterator.MoveNext());
+                }
             }
 
             private ZstdLib.CompressionDictionary CreateCompressionDictionary(Transaction tx, int id)
@@ -790,22 +810,20 @@ namespace Voron.Data.Tables
 
             public void Dispose()
             {
-                foreach (var (_, dic) in _compressionDictionaries)
+                foreach (var (_, dic) in CompressionDictionaries)
                 {
                     dic.Dispose();
 
                 }
             }
 
-            public void Remove(int id)
+            public bool Remove(int id)
             {
                 // Intentionally orphaning the dictionary here, we'll let the 
                 // GC's finalizer to clear it up, this is a *very* rare operation.
-                _compressionDictionaries.TryRemove(id, out _);
+                return CompressionDictionaries.TryRemove(id, out _);
             }
         }
-
-
 
         private void UpdateValuesFromIndex(long id, ref TableValueReader oldVer, TableValueBuilder newVer, bool forceUpdate)
         {

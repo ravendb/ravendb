@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Utils;
@@ -31,6 +32,8 @@ namespace Voron.Data.Tables
         private ByteStringContext<ByteStringMemoryCache>.InternalScope _compressedScope;
         public ByteStringContext<ByteStringMemoryCache>.InternalScope RawScope;
         public bool CompressionTried;
+
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TableValueCompressor>("Compression");
 
         public TableValueCompressor(TableValueBuilder builder)
         {
@@ -215,9 +218,10 @@ namespace Voron.Data.Tables
                         using var compressionDictionary = new ZstdLib.CompressionDictionary(newId, dictionaryBuffer.Ptr, dictionaryBufferSpan.Length, 3);
 
                         if (ShouldReplaceDictionary(tx, compressionDictionary) == false)
-                        {
                             return;
-                        }
+
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Compression dictionary '{newId}' was replaced in '{table.Name}' table.");
 
                         table.CurrentCompressionDictionaryId = newId;
                         compressionDictionary.ExpectedCompressionRatio = GetCompressionRatio(CompressedBuffer.Length, RawBuffer.Length);
@@ -242,7 +246,15 @@ namespace Voron.Data.Tables
                             // keep it, we can compress data with a dictionary that we rolled back, and end up with data
                             // corruption!!!
                             // ****************************************
-                            llt.Environment.CompressionDictionariesHolder.Remove(newId);
+                            bool removed = llt.Environment.CompressionDictionariesHolder.Remove(newId);
+
+                            if (Logger.IsInfoEnabled == false)
+                                return;
+                            
+                            Logger.Info(
+                                removed
+                                    ? $"Compression dictionary '{newId}' was removed during rollback in '{table.Name}' table."
+                                    : $"Fail to remove compression dictionary '{newId}' during rollback in '{table.Name}' table.");
                         };
                     }
                 }
