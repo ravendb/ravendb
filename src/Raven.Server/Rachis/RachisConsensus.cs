@@ -30,6 +30,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -448,8 +449,8 @@ namespace Raven.Server.Rachis
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
                 ContextPool = new ClusterContextPool(changes, _persistentState, configuration.Memory.MaxContextSizeToKeep);
-                TxMerger = new ClusterTransactionOperationsMerger(this, configuration, time, shutdown);
-                TxMerger.Initialize(ContextPool);
+                TxMerger = new ClusterTransactionOperationsMerger(configuration, time, shutdown);
+                TxMerger.Initialize(ContextPool, IsEncrypted, PlatformDetails.Is32Bits || configuration.Storage.ForceUsing32BitsPager);
                 TxMerger.Start();
 
                 ClusterTopology topology;

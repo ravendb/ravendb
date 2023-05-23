@@ -362,7 +362,7 @@ namespace Raven.Server.Documents
                 _addToInitLog("Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
                 _addToInitLog("Starting Transaction Merger");
-                TxMerger.Initialize(DocumentsStorage.ContextPool, NotificationCenter);
+                TxMerger.Initialize(DocumentsStorage.ContextPool, IsEncrypted, Is32Bits);
                 TxMerger.Start();
                 _addToInitLog("Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();

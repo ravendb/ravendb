@@ -54,6 +54,9 @@ namespace Raven.Server.Documents.TransactionMerger
         private readonly long _maxTxSizeInBytes;
         private readonly double _maxTimeToWaitForPreviousTxBeforeRejectingInMs;
 
+        private bool _isEncrypted;
+        private bool _is32Bits;
+
         private bool _initialized;
 
         protected AbstractTransactionOperationsMerger(
@@ -75,15 +78,13 @@ namespace Raven.Server.Documents.TransactionMerger
             _lastHighDirtyMemCheck = time.GetUtcNow();
         }
 
-        public void Initialize([NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+        public void Initialize([NotNull] JsonContextPoolBase<TOperationContext> contextPool, bool isEncrypted, bool is32Bits)
         {
             _contextPool = contextPool ?? throw new ArgumentNullException(nameof(contextPool));
+            _isEncrypted = isEncrypted;
+            _is32Bits = is32Bits;
             _initialized = true;
         }
-
-        protected abstract bool IsEncrypted { get; }
-
-        protected abstract bool Is32Bits { get; }
 
         internal abstract TTransaction BeginAsyncCommitAndStartNewTransaction(TTransaction previousTransaction, TOperationContext currentContext);
 
@@ -96,7 +97,7 @@ namespace Raven.Server.Documents.TransactionMerger
 
         public void Start()
         {
-            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, ThreadNames.ForTransactionMerging(TransactionMergerThreadName, _resourceName));
+            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ => MergeOperationThreadProc(), null, ThreadNames.ForTransactionMerging(TransactionMergerThreadName, _resourceName));
         }
 
         /// <summary>
@@ -156,7 +157,7 @@ namespace Raven.Server.Documents.TransactionMerger
 
                         if (_operations.IsEmpty)
                         {
-                            if (IsEncrypted)
+                            if (_isEncrypted)
                             {
                                 using (_contextPool.AllocateOperationContext(out TOperationContext ctx))
                                 {
@@ -715,7 +716,7 @@ namespace Raven.Server.Documents.TransactionMerger
                 modifiedSize += llt.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
-                if (canCloseCurrentTx || Is32Bits)
+                if (canCloseCurrentTx || _is32Bits)
                 {
                     if (_operations.IsEmpty)
                         break; // nothing remaining to do, let's us close this work
@@ -853,11 +854,11 @@ namespace Raven.Server.Documents.TransactionMerger
         private PendingOperations GetPendingOperationsStatus(TOperationContext context, bool forceCompletion = false)
         {
             // this optimization is disabled for 32 bits
-            if (Is32Bits)
+            if (_is32Bits)
                 return PendingOperations.CompletedAll;
 
             // This optimization is disabled when encryption is on
-            if (IsEncrypted)
+            if (_isEncrypted)
                 return PendingOperations.CompletedAll;
 
             if (forceCompletion)
