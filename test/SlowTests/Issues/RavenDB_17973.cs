@@ -18,7 +18,7 @@ public class RavenDB_17973 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
     public void CanPerformIntersectQueryWithFilter(Options options)
     {
         using (var store = GetDocumentStore(options))

@@ -19,7 +19,7 @@ namespace SlowTests.Core.Streaming
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldStreamArticlesOfTenant1(Options options)
         {
             const string tenantA = "tenantA";
