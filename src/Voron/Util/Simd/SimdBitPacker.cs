@@ -127,9 +127,6 @@ public static unsafe class SimdBitPacker<TSimdTransform>
     [SkipLocalsInit]
     public static (int Count, int SizeUsed) Encode(long* entries, int count, byte* output, int outputSize)
     {
-        if (outputSize < 128)
-            return default;
-
         const int maxNumberOfSegments = 128;
         count = Math.Min(count, 256 * maxNumberOfSegments); // ensure we can't overflow NumberOfFullSegments
         if (entries[count - 1] - entries[0] > uint.MaxValue)
