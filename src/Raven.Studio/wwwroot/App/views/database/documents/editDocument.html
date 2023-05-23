@@ -290,6 +290,14 @@
                             <i class="icon-warning text-warning margin-left-xs" data-bind="visible: $root.isHugeDocument"></i>
                         </span>
                     </dd>
+                    <dt data-bind="visible: $root.savedInClusterTransaction">
+                       <i class="icon-cmp-xchg"></i> 
+                    </dt>
+                    <dd data-bind="visible: $root.savedInClusterTransaction">
+                        Document was saved using Cluster Transaction.
+                        <br />
+                        <a data-bind="attr: { href: $root.atomicGuardUrl }">Go to atomic guard</a>
+                    </dd>
                 </dl>
             </div>
         </div>
