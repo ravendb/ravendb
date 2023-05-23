@@ -41,28 +41,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 var changeVector = context.GetChangeVector(item.ChangeVector).Order;
-
-                if (ShouldUpdateOrder(context, changeVector) == false)
-                    return base.PreProcessItem(context, item);
-
-
                 var order = _database.DocumentsStorage.GetNewChangeVector(context).ChangeVector;
                 order = order.MergeOrderWith(changeVector, context);
                 item.ChangeVector = context.GetChangeVector(changeVector.Version, order.Order).AsString();
 
                 return order;
-            }
-
-            private bool ShouldUpdateOrder(DocumentsOperationContext context, ChangeVector changeVector)
-            {
-                var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                if (current.IsNullOrEmpty)
-                    return true;
-
-                if (changeVector.Contains(_database.DbBase64Id) == false)
-                    return true;
-
-                return false;
             }
         }
     }

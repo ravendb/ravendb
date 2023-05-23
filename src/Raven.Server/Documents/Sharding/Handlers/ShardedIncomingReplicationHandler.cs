@@ -178,7 +178,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     throw new MissingAttachmentException(missingAttachmentMessage);
 
                 var cvs = new List<string>();
-                var minEtag = long.MaxValue;
                 foreach (var (shardNumber, batch) in batches)
                 {
                     // ignore change vectors from heartbeat
