@@ -82,6 +82,9 @@ class editDocument extends shardViewModelBase {
     changeVectorHtml: KnockoutComputed<string>;
     changeVectorFormatted: KnockoutComputed<string>;
     
+    savedInClusterTransaction: KnockoutComputed<boolean>;
+    atomicGuardUrl: KnockoutComputed<string>;
+    
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     rawJsonUrl: KnockoutComputed<string>;
@@ -518,6 +521,17 @@ class editDocument extends shardViewModelBase {
 
         this.changeVectorHtml = ko.pureComputed(() => {
             return `<div><strong>Change Vector</strong></div>${this.changeVectorFormatted()}`;
+        });
+        
+        this.savedInClusterTransaction = ko.pureComputed(() => {
+            const vectors = this.changeVector().find(x => x.shortFormat.startsWith("TRXN:"));
+            return !!vectors;
+        });
+        
+        this.atomicGuardUrl = ko.pureComputed(() => {
+            const id = this.document().getId();
+           
+            return appUrl.forEditCmpXchg("rvn-atomic/" + id.toLocaleLowerCase(), this.activeDatabase());
         });
 
         this.isConflictDocument = ko.computed(() => {
