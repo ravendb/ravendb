@@ -18,8 +18,13 @@ public static class TimeFields
         if (timeFieldsTree != null)
         {
             using var iterator = timeFieldsTree.MultiRead(Constants.IndexTimeFieldsSlice);
-            while (iterator.MoveNext())
-                fieldsNames.Add(iterator.CurrentKey.ToString());
+            if (iterator.Seek(Slices.BeforeAllKeys))
+            {
+                do
+                {
+                    fieldsNames.Add(iterator.CurrentKey.ToString());
+                } while (iterator.MoveNext());
+            }
         }
 
         return fieldsNames;

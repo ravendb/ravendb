@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Voron.Data.Lookups;
 using Voron.Global;
 
 namespace Voron.Data.CompactTrees
