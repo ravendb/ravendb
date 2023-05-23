@@ -32,6 +32,10 @@ function BuildServer ( $srcDir, $outDir, $target) {
         $commandArgs += "/p:UseAppHost=false"
     }
 
+    if ($env:ALLOW_ENCRYPTED_SSL_ONLY) {
+        $commandArgs += "/p:DefineConstants=ALLOW_ENCRYPTED_SSL_ONLY"
+    }
+
     $commandArgs += '/p:SourceLinkCreate=true'
     
     #if ($target -and $global:isPublishBundlingEnabled) {
