@@ -110,6 +110,7 @@ public readonly unsafe struct PostingListLeafPage
         {
             (entriesCount, sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(tempList.RawItems, tempList.Count, newPagePtr + PageHeader.SizeOf,
                 Constants.Storage.PageSize - PageHeader.SizeOf);
+            Debug.Assert(entriesCount > 0);
             if (entriesCount < tempList.Count)
             {
                 remainder = tempList.Items[entriesCount..];
@@ -121,9 +122,12 @@ public readonly unsafe struct PostingListLeafPage
             (int secondCount,  int sizeUsedSecond) = SimdBitPacker<SortedDifferentials>.Encode(additions + additionsIdx, additionsCount - additionsIdx,
                 newPagePtr + PageHeader.SizeOf + sizeUsed,
                 Constants.Storage.PageSize - PageHeader.SizeOf - sizeUsed);
-            additionsIdx += secondCount;
-            entriesCount += secondCount;
-            sizeUsed += sizeUsedSecond;
+            if (secondCount > 0)
+            {
+                additionsIdx += secondCount;
+                entriesCount += secondCount;
+                sizeUsed += sizeUsedSecond;
+            }
         }
 
         Debug.Assert(sizeUsed < Constants.Storage.PageSize);
@@ -189,7 +193,7 @@ public readonly unsafe struct PostingListLeafPage
 
         (int entriesCount, int sizeUsed) = SimdBitPacker<SortedDifferentials>.Encode(additions, additionsCount, _page.DataPointer,
             Constants.Storage.PageSize - PageHeader.SizeOf);
-
+        Debug.Assert(entriesCount > 0);
         Debug.Assert(sizeUsed < Constants.Storage.PageSize);
         newHeader->SizeUsed = (ushort)sizeUsed;
         newHeader->NumberOfEntries = entriesCount;
