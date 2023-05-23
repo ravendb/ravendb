@@ -65,13 +65,13 @@ export default class DatabaseUtils {
             return "Disabled";
         }
 
-        const offLineCount = localInfo.filter((x) => x.status === "success" && !x.data.upTime).length;
-        if (offLineCount === localInfo.length) {
-            return "Offline";
+        const onlineCount = localInfo.filter((x) => x.status === "success" && x.data.upTime).length;
+        if (onlineCount === localInfo.length) {
+            return "Online";
         }
 
-        if (offLineCount === 0) {
-            return "Online";
+        if (onlineCount === 0) {
+            return "Offline";
         }
 
         return "Partially Online";
