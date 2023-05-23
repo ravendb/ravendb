@@ -41,7 +41,7 @@ namespace SlowTests.Core.Indexing
         {
             using (var store = GetDocumentStore(options))
             {
-                var postsByContent = new Posts_ByContent();
+                var postsByContent = new Posts_ByContent_Sharding();
                 postsByContent.Execute(store);
 
                 var companiesWithEmployees = new Companies_WithReferencedEmployees();
@@ -640,6 +640,19 @@ namespace SlowTests.Core.Indexing
 
                     Assert.Contains(queryResult, e => e.Id == $"Companies/{batchSize}");
                 }
+            }
+        }
+
+        public class Posts_ByContent_Sharding : AbstractIndexCreationTask<Post>
+        {
+            public Posts_ByContent_Sharding()
+            {
+                Map = posts => from post in posts
+                    let body = LoadDocument<PostContent>(post.Id + $"/content${post.Id}")
+                    select new
+                    {
+                        Text = body == null ? null : body.Text
+                    };
             }
         }
     }
