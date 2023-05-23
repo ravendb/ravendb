@@ -306,6 +306,13 @@ namespace Raven.Server.Documents.Revisions
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 return true;
 
+            if (Configuration == null)
+            {
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver)
+                    && nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved)==false)
+                    return false;
+            }
+
             if (configuration.Disabled)
                 return false;
 

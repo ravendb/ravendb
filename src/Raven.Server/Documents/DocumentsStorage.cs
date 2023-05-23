@@ -1806,8 +1806,11 @@ namespace Raven.Server.Documents
                         }
 
                         revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                            modifiedTicks, nonPersistentFlags, flags);
+                            modifiedTicks, nonPersistentFlags, documentFlags == DocumentFlags.Reverted ? documentFlags : flags);
 
+                        var revisionsCountAfterDelete = DocumentDatabase.DocumentsStorage.RevisionsStorage.GetRevisionsCount(context, id);
+                        if (revisionsCountAfterDelete == 0)
+                            flags = flags.Strip(DocumentFlags.HasRevisions);
                     }
                 }
 
