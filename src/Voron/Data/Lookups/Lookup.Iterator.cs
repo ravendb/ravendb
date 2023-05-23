@@ -172,7 +172,7 @@ namespace Voron.Data.Lookups
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)
                 {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
+                    Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
                     if (state.LastSearchPosition >= 0)
                     {
                         var read = Math.Min(results.Length , state.LastSearchPosition);

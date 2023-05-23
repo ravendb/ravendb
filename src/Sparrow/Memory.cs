@@ -220,7 +220,7 @@ UnmanagedCompare:
         {
             if (n < 0)
             {
-                throw new NotSupportedException("You cannot pass negative values to mem set");
+                throw new NotSupportedException("You cannot pass negative values to mem set: " + n);
             }
             if (n < uint.MaxValue) // Common code-path
             {
