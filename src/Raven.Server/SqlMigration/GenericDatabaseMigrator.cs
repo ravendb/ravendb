@@ -38,7 +38,11 @@ namespace Raven.Server.SqlMigration
                 var tableSchema = dbSchema.GetTable(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
                 var specialColumns = dbSchema.FindSpecialColumns(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
 
-                string CollectionNameProvider(string schema, string name) => settings.CollectionsMapping.Single(x => x.TableSchema == schema && x.TableName == name).CollectionName;
+                string CollectionNameProvider(string schema, string name, bool isEmbeddedCollection)
+                {
+                    return isEmbeddedCollection? null : settings.CollectionsMapping.Single(x => 
+                        x.TableSchema == schema && x.TableName == name).CollectionName;
+                }
                 
                 using (var patcher = new JsPatcher(collectionToImport, context))
                 {
@@ -95,7 +99,12 @@ namespace Raven.Server.SqlMigration
             if (onProgress == null)
                 onProgress = progress => { };
 
-            string CollectionNameProvider(string tableSchema, string tableName) => settings.Collections.Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name;
+            string CollectionNameProvider(string tableSchema, string tableName, bool isEmbeddedCollection)
+            {
+                return isEmbeddedCollection 
+                    ? settings.Collections.SelectMany(x => x.NestedCollections).Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name 
+                    : settings.Collections.Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name;
+            }
 
             await using (var enumerationConnection = OpenConnection())
             await using (var referencesConnection = OpenConnection())
@@ -186,8 +195,11 @@ namespace Raven.Server.SqlMigration
                     case ReferenceType.ArrayEmbed:
                         var arrayWithEmbeddedObjects = (EmbeddedArrayValue)refInfo.DataProvider.Provide(specialColumns);
                         value[refInfo.PropertyName] = arrayWithEmbeddedObjects.ArrayOfNestedObjects;
-
-                        if (refInfo.ChildReferences != null)
+                        
+                        var embeddedArrayWithLinks = (DynamicJsonArray)refInfo.EmbeddedReferenceKeyDataProvider.Provide(specialColumns);
+                        value[refInfo.PropertyName + "Ids"] = embeddedArrayWithLinks;
+                        
+                        if (refInfo.ChildReferences != null) // nested references
                         {
                             var idx = 0;
                             foreach (DynamicJsonValue arrayItem in arrayWithEmbeddedObjects.ArrayOfNestedObjects)
@@ -210,6 +222,12 @@ namespace Raven.Server.SqlMigration
                         var embeddedObjectValue = (EmbeddedObjectValue)refInfo.DataProvider.Provide(specialColumns);
                         value[refInfo.PropertyName] = embeddedObjectValue?.Object; // fill in value or null
 
+                        var embeddedObjectLinkValue = (string)refInfo.EmbeddedReferenceKeyDataProvider.Provide(specialColumns);
+                        if (value[refInfo.PropertyName] != null && value[refInfo.PropertyName] is DynamicJsonValue)
+                        {
+                            ((DynamicJsonValue)value[refInfo.PropertyName])[refInfo.PropertyName + "Id"] = embeddedObjectLinkValue;
+                        }
+                        
                         if (embeddedObjectValue != null)
                         {
                             var innerAttachmentPrefix = GenerateAttachmentKey(attachmentNamePrefix, refInfo.PropertyName);
@@ -264,12 +282,14 @@ namespace Raven.Server.SqlMigration
                 {
                     case ReferenceType.ArrayEmbed:
                         reference.DataProvider = CreateArrayEmbedDataProvider(reference, connection);
+                        reference.EmbeddedReferenceKeyDataProvider = CreateArrayLinkDataProvider(reference, connection);
                         break;
                     case ReferenceType.ArrayLink:
                         reference.DataProvider = CreateArrayLinkDataProvider(reference, connection);
                         break;
                     case ReferenceType.ObjectEmbed:
                         reference.DataProvider = CreateObjectEmbedDataProvider(reference, connection);
+                        reference.EmbeddedReferenceKeyDataProvider = CreateObjectLinkDataProvider(reference);
                         break;
                     case ReferenceType.ObjectLink:
                         reference.DataProvider = CreateObjectLinkDataProvider(reference);
@@ -284,7 +304,7 @@ namespace Raven.Server.SqlMigration
         }
 
         private List<ReferenceInformation> ResolveReferences(CollectionWithReferences sourceCollection, DatabaseSchema dbSchema, 
-            Func<string, string, string> collectionNameProvider)
+            Func<string, string, bool, string> collectionNameProvider)
         {
             var result = new List<ReferenceInformation>();
 
@@ -309,7 +329,7 @@ namespace Raven.Server.SqlMigration
         }
 
         private ReferenceInformation CreateReference(DatabaseSchema dbSchema,
-            Func<string, string, string> collectionNameProvider, AbstractCollection sourceCollection,
+            Func<string, string, bool, string> collectionNameProvider, AbstractCollection sourceCollection,
             ICollectionReference destinationCollection)
         {
             var sourceSchema = dbSchema.GetTable(sourceCollection.SourceTableSchema, sourceCollection.SourceTableName);
@@ -343,11 +363,7 @@ namespace Raven.Server.SqlMigration
                     : (destinationCollection.Type == RelationType.ManyToOne ? ReferenceType.ObjectLink : ReferenceType.ArrayLink),
             };
 
-            if (destinationCollection is LinkedCollection)
-            {
-                // linked connection
-                referenceInformation.CollectionNameToUseInLinks = collectionNameProvider(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName);
-            }
+            referenceInformation.CollectionNameToUseInLinks = collectionNameProvider(destinationCollection.SourceTableSchema, destinationCollection.SourceTableName, destinationCollection is EmbeddedCollection);
 
             return referenceInformation;
         }
