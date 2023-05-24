@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,10 +10,16 @@ using FastTests.Server.Replication;
 using FastTests.Utils;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.ServerWide;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -114,8 +121,6 @@ namespace SlowTests
 
             await TriggerRevisionsDelete(type, store, "Docs/1");
 
-            // WaitForUserToContinueTheTest(store);
-
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
@@ -189,8 +194,6 @@ namespace SlowTests
 
             await TriggerRevisionsDelete(type, store, "Docs/1");
 
-            // WaitForUserToContinueTheTest(store);
-
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
@@ -248,7 +251,6 @@ namespace SlowTests
                                                // So it should not take into account the 'UponUpdate'.
             }
 
-            //--
             //Enforce
             await EnforceConfiguration(store);
 
@@ -311,8 +313,6 @@ namespace SlowTests
 
             await EnforceConfiguration(store);
 
-            // WaitForUserToContinueTheTest(store);
-
             using (var session = store.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
@@ -324,7 +324,7 @@ namespace SlowTests
         //---------------------------------------------------------------------------------------------------------------------------------------
 
         // (RavenDB-19641)
-        [Fact] // 
+        [Fact]
         public async Task OnlyConflictConfig_EnforceConfig_ShouldntDeletesAllRevisions()
         {
             using var src = GetDocumentStore();
@@ -355,8 +355,6 @@ namespace SlowTests
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
                 Assert.Equal(2, doc1RevCount); // obeys the Conflicted Config
             }
-
-            // WaitForUserToContinueTheTest(dst);
 
             await EnforceConfiguration(dst);
 
@@ -400,35 +398,11 @@ namespace SlowTests
                 }
             }
 
-            // Console.WriteLine("Before Conflict");
-            // using (var session = dst.OpenAsyncSession())
-            // {
-            //     var doc1Revisions = await session.Advanced.Revisions.GetForAsync<User>("Docs/1");
-            //     var doc1Metadatas = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
-            //     for (int i = 0; i < doc1Metadatas.Count; i++)
-            //     {
-            //         Console.WriteLine(doc1Revisions[i].Name+" " + doc1Metadatas[i].GetString("@change-vector") + " " + doc1Metadatas[i].GetString("@flags"));
-            //     }
-            // }
-
-            // WaitForUserToContinueTheTest(dst);
-
 
             await SetupReplicationAsync(src, dst); // Conflicts resolved
             await EnsureReplicatingAsync(src, dst);
 
             WaitForUserToContinueTheTest(dst);
-
-            // Console.WriteLine("\nAfter Conflict");
-            // using (var session = dst.OpenAsyncSession())
-            // {
-            //     var doc1Revisions = await session.Advanced.Revisions.GetForAsync<User>("Docs/1");
-            //     var doc1Metadatas = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
-            //     for (int i = 0; i < doc1Metadatas.Count; i++)
-            //     {
-            //         Console.WriteLine(doc1Revisions[i].Name + " " + doc1Metadatas[i].GetString("@change-vector") + " " + doc1Metadatas[i].GetString("@flags"));
-            //     }
-            // }
 
             using (var session = dst.OpenAsyncSession())
             {
@@ -539,8 +513,6 @@ return oldestDoc;"
                 Assert.False(orderedByTime);
             }
 
-            // var dstConfig = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionAgeToKeep = TimeSpan.FromHours(1) };
-            // await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
             var configuration2 = new RevisionsConfiguration
             {
                 Default = new RevisionsCollectionConfiguration
@@ -757,17 +729,6 @@ return oldestDoc;"
                 Assert.Equal(13, doc1RevCount); // When you have no config, the db doesnt create a "Deleted Revision" in doc delete.
             }
 
-            // Console.WriteLine("Before Conflict");
-            // using (var session = dst.OpenAsyncSession())
-            // {
-            //     var doc1Revisions = await session.Advanced.Revisions.GetForAsync<User>("Docs/1");
-            //     var doc1Metadatas = await session.Advanced.Revisions.GetMetadataForAsync("Docs/1");
-            //     for (int i = 0; i < doc1Metadatas.Count; i++)
-            //     {
-            //         Console.WriteLine(doc1Revisions[i].Name+" " + doc1Metadatas[i].GetString("@change-vector") + " " + doc1Metadatas[i].GetString("@flags"));
-            //     }
-            // }
-
             var dstConfig = new RevisionsCollectionConfiguration
             {
                 Disabled = false,
@@ -777,8 +738,7 @@ return oldestDoc;"
             await RevisionsHelper.SetupConflictedRevisions(dst, Server.ServerStore, configuration: dstConfig);
             
             await EnforceConfiguration(dst, deleteAlsoForceCreated);
-            WaitForUserToContinueTheTest(dst);
-            
+
             using (var session = dst.OpenAsyncSession())
             {
                 var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
@@ -881,6 +841,137 @@ return oldestDoc;"
                 Assert.Equal(2, doc1RevCount);
             }
 
+        }
+
+
+        [Fact]
+        public async Task Delete_Only_ForceCreated_Revisions()
+        {
+            using var store = GetDocumentStore();
+
+            // Add config
+            var configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
+                }
+            };
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: configuration);
+
+            // Create doc with 3 revisions
+            for (int i = 0; i < 3; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = $"Regular{i}" }, "Docs/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = $"Regular{i}" }, "Docs/2");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(3, doc1RevCount);
+
+                var doc2RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/2");
+                Assert.Equal(5, doc2RevCount);
+            }
+
+            // Remove config (remove all configs except conflict config).
+            var noConfiguration = new RevisionsConfiguration
+            {
+                Default = null
+            };
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration: noConfiguration);
+
+            // Create doc with 2 force-created revisions
+            for (int i = 3; i < 5; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = $"ForceCreated{i}" }, "Docs/1");
+                    await session.SaveChangesAsync();
+
+                    session.Advanced.Revisions.ForceRevisionCreationFor("Docs/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(5, doc1RevCount);
+
+                var doc2RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/2");
+                Assert.Equal(5, doc2RevCount);
+            }
+
+            WaitForUserToContinueTheTest(store);
+
+            await store.Maintenance.SendAsync(new DeleteForceCreatedRevisionsOperation(new AdminRevisionsHandler.Parameters { DocumentIds = new[] { "Docs/2", "Docs/1" } }));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc1RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/1");
+                Assert.Equal(3, doc1RevCount);
+
+                var doc2RevCount = await session.Advanced.Revisions.GetCountForAsync("Docs/2");
+                Assert.Equal(5, doc2RevCount);
+            }
+
+        }
+
+        public class DeleteForceCreatedRevisionsOperation : IMaintenanceOperation
+        {
+            private readonly AdminRevisionsHandler.Parameters _parameters;
+
+            public DeleteForceCreatedRevisionsOperation(AdminRevisionsHandler.Parameters parameters)
+            {
+                _parameters = parameters;
+            }
+
+            public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new DeleteRevisionsCommand(conventions, context, _parameters);
+            }
+
+            private class DeleteRevisionsCommand : RavenCommand
+            {
+                private readonly BlittableJsonReaderObject _parameters;
+
+                public DeleteRevisionsCommand(DocumentConventions conventions, JsonOperationContext context, AdminRevisionsHandler.Parameters parameters)
+                {
+                    if (conventions == null)
+                        throw new ArgumentNullException(nameof(conventions));
+                    if (context == null)
+                        throw new ArgumentNullException(nameof(context));
+                    if (parameters == null)
+                        throw new ArgumentNullException(nameof(parameters));
+
+                    _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
+                }
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/admin/revisions?onlyForceCreated=true";
+
+                    return new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Delete,
+                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false))
+                    };
+                }
+            }
         }
     }
 }
