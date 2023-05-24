@@ -31,8 +31,10 @@
 }
 
 .item-disabled {
-    filter: contrast(75%) brightness(0.75);
+    filter: contrast(85%);
     mix-blend-mode: luminosity;
+    opacity: 0.4;
+    transition: all 0.2s $global-easing;
 }
 
 .item-busy {

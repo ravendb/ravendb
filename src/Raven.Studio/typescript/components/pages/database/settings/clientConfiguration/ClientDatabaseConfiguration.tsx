@@ -1,17 +1,5 @@
-import React, { useMemo } from "react";
-import {
-    Form,
-    Col,
-    Button,
-    Card,
-    Row,
-    Spinner,
-    Input,
-    InputGroupText,
-    InputGroup,
-    UncontrolledPopover,
-    Fade,
-} from "reactstrap";
+import React, { useMemo, useState } from "react";
+import { Form, Col, Button, Row, Spinner, Input, InputGroupText, InputGroup, UncontrolledPopover } from "reactstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { FormCheckbox, FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
@@ -32,6 +20,8 @@ import { tryHandleSubmit } from "components/utils/common";
 import useClientConfigurationPopovers from "components/common/clientConfiguration/useClientConfigurationPopovers";
 import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "components/common/PropSummary";
 import classNames from "classnames";
+import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/RadioToggle";
+import { RichPanel, RichPanelHeader } from "components/common/RichPanel";
 
 interface ClientDatabaseConfigurationProps {
     db: database;
@@ -69,6 +59,22 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
             reset(null, { keepValues: true });
         });
     };
+
+    const leftRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: "Use server config",
+        value: "server",
+        iconName: "server",
+    };
+
+    const rightRadioToggleItem: RadioToggleWithIconInputItem = {
+        label: "Use database config",
+        value: "database",
+        iconName: "database",
+    };
+
+    const [radioToggleSelectedValue, setRadioToggleSelectedValue] = useState(leftRadioToggleItem.value);
+
+    formValues.overrideConfig = radioToggleSelectedValue === "database";
 
     const onRefresh = async () => {
         reset(ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(db), false));
@@ -188,67 +194,61 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                         </div>
 
                         {globalConfig && (
-                            <Row className="flex-grow-1 mt-4 mb-3">
-                                <FormSwitch
-                                    control={control}
-                                    name="overrideConfig"
-                                    color="primary"
-                                    className="mt-1 mb-3"
-                                >
+                            <div className="mt-4 mb-3">
+                                <div className="hstack justify-content-center">
+                                    <RadioToggleWithIcon
+                                        name="overrideConfig"
+                                        // control={control}
+                                        leftItem={leftRadioToggleItem}
+                                        rightItem={rightRadioToggleItem}
+                                        selectedValue={radioToggleSelectedValue}
+                                        setSelectedValue={(x) => setRadioToggleSelectedValue(x)}
+                                    />
+                                </div>
+                                <FormSwitch control={control} name="overrideConfig" color="primary">
                                     Override server configuration
                                 </FormSwitch>
-                                <Col>
-                                    <div className="flex-horizontal gap-1">
-                                        <h3 className="mb-0">
-                                            <Icon icon="server" />
-                                            Server Configuration
-                                        </h3>
-                                        {canNavigateToServerSettings() && (
-                                            <a
-                                                target="_blank"
-                                                href={appUrl.forGlobalClientConfiguration()}
-                                                className="me-1 no-decor"
-                                                title="Server settings"
-                                            >
-                                                <Icon icon="link" />
-                                            </a>
-                                        )}
-                                    </div>
-                                </Col>
-                                <Col>
-                                    <h3 className="mb-0">
-                                        <Icon icon="database" />
-                                        Database Configuration
-                                    </h3>
-                                </Col>
-                            </Row>
+                            </div>
                         )}
 
-                        <Card className="card flex-column p-3 mb-3">
-                            <div
-                                className={classNames("d-flex flex-grow-1", { "justify-content-center": globalConfig })}
-                            >
-                                <div className="md-label">
-                                    Identity parts separator{" "}
-                                    <Icon id="SetIdentityPartsSeparator" icon="info" color="info" />
-                                </div>
-                                <UncontrolledPopover
-                                    target="SetIdentityPartsSeparator"
-                                    trigger="hover"
-                                    container="PopoverContainer"
-                                    placement="top"
-                                >
-                                    <div className="p-3">
-                                        Set the default separator for automatically generated document identity IDs.
-                                        <br />
-                                        Use any character except <code>&apos;|&apos;</code> (pipe).
-                                    </div>
-                                </UncontrolledPopover>
-                            </div>
-                            <Row className="flex-grow-1 align-items-start">
-                                {globalConfig && (
-                                    <>
-                                        <Col className="d-flex">
+                        <Row>
+                            {globalConfig && (
+                                <Col>
+                                    <RichPanel className={formValues.overrideConfig && "item-disabled"}>
+                                        <RichPanelHeader className="px-4 py-2 gap-2">
+                                            <h3 className="mb-0">
+                                                <Icon icon="server" />
+                                                Server Configuration
+                                            </h3>
+                                            {canNavigateToServerSettings() && (
+                                                <a
+                                                    target="_blank"
+                                                    href={appUrl.forGlobalClientConfiguration()}
+                                                    className="me-1 no-decor"
+                                                    title="Server settings"
+                                                >
+                                                    <Icon icon="link" />
+                                                </a>
+                                            )}
+                                        </RichPanelHeader>
+                                        <div className="p-4">
+                                            <div className="md-label">
+                                                Identity parts separator{" "}
+                                                <Icon id="SetIdentityPartsSeparator" icon="info" color="info" />
+                                            </div>
+                                            <UncontrolledPopover
+                                                target="SetIdentityPartsSeparator"
+                                                trigger="hover"
+                                                container="PopoverContainer"
+                                                placement="top"
+                                            >
+                                                <div className="p-3">
+                                                    Set the default separator for automatically generated document
+                                                    identity IDs.
+                                                    <br />
+                                                    Use any character except <code>&apos;|&apos;</code> (pipe).
+                                                </div>
+                                            </UncontrolledPopover>
                                             <Input
                                                 defaultValue={globalConfig.identityPartsSeparatorValue}
                                                 disabled
@@ -256,64 +256,22 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                     globalConfig.identityPartsSeparatorValue || "'/' (default)"
                                                 }
                                             />
-                                        </Col>
-
-                                        <GlobalSettingsSeparator
-                                            active={
-                                                formValues.overrideConfig && formValues.identityPartsSeparatorEnabled
-                                            }
-                                        />
-                                    </>
-                                )}
-                                <Col className="d-flex">
-                                    <InputGroup>
-                                        <InputGroupText>
-                                            <FormCheckbox
-                                                control={control}
-                                                name="identityPartsSeparatorEnabled"
-                                                disabled={!canEditDatabaseConfig}
-                                                color="primary"
-                                            />
-                                        </InputGroupText>
-                                        <FormInput
-                                            type="text"
-                                            control={control}
-                                            name="identityPartsSeparatorValue"
-                                            placeholder="'/' (default)"
-                                            disabled={
-                                                !formValues.identityPartsSeparatorEnabled || !canEditDatabaseConfig
-                                            }
-                                            className="d-flex"
-                                        />
-                                    </InputGroup>
-                                </Col>
-                            </Row>
-                        </Card>
-
-                        <Card className="flex-column mb-3 p-3">
-                            <div
-                                className={classNames("d-flex flex-grow-1", { "justify-content-center": globalConfig })}
-                            >
-                                <div className="md-label">
-                                    Maximum number of requests per session{" "}
-                                    <Icon id="SetMaximumRequestsPerSession" icon="info" color="info" />
-                                </div>
-                                <UncontrolledPopover
-                                    target="SetMaximumRequestsPerSession"
-                                    trigger="hover"
-                                    container="PopoverContainer"
-                                    placement="top"
-                                >
-                                    <div className="p-3">
-                                        Set this number to restrict the number of requests (<code>Reads</code> &{" "}
-                                        <code>Writes</code>) per session in the client API.
-                                    </div>
-                                </UncontrolledPopover>
-                            </div>
-                            <Row className="flex-grow-1 align-items-start">
-                                {globalConfig && (
-                                    <>
-                                        <Col className="d-flex">
+                                            <div className="md-label mt-4">
+                                                Maximum number of requests per session{" "}
+                                                <Icon id="SetMaximumRequestsPerSession" icon="info" color="info" />
+                                            </div>
+                                            <UncontrolledPopover
+                                                target="SetMaximumRequestsPerSession"
+                                                trigger="hover"
+                                                container="PopoverContainer"
+                                                placement="top"
+                                            >
+                                                <div className="p-3">
+                                                    Set this number to restrict the number of requests (
+                                                    <code>Reads</code> & <code>Writes</code>) per session in the client
+                                                    API.
+                                                </div>
+                                            </UncontrolledPopover>
                                             <Input
                                                 defaultValue={globalConfig.maximumNumberOfRequestsValue}
                                                 disabled
@@ -323,38 +281,95 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                                         : "30 (default)"
                                                 }
                                             />
-                                        </Col>
-
-                                        <GlobalSettingsSeparator
-                                            active={
-                                                formValues.overrideConfig && formValues.maximumNumberOfRequestsEnabled
-                                            }
-                                        />
-                                    </>
-                                )}
-                                <Col className="d-flex">
-                                    <InputGroup>
-                                        <InputGroupText>
-                                            <FormCheckbox
-                                                control={control}
-                                                name="maximumNumberOfRequestsEnabled"
-                                                disabled={!canEditDatabaseConfig}
-                                                color="primary"
-                                            />
-                                        </InputGroupText>
-                                        <FormInput
-                                            type="number"
-                                            control={control}
-                                            name="maximumNumberOfRequestsValue"
-                                            placeholder="30 (default)"
-                                            disabled={
-                                                !formValues.maximumNumberOfRequestsEnabled || !canEditDatabaseConfig
-                                            }
-                                        />
-                                    </InputGroup>
+                                        </div>
+                                    </RichPanel>
                                 </Col>
-                            </Row>
-                        </Card>
+                            )}
+                            <Col>
+                                <RichPanel className={!formValues.overrideConfig && "item-disabled"}>
+                                    <RichPanelHeader className="px-4 py-2">
+                                        <h3 className="mb-0">
+                                            <Icon icon="database" />
+                                            Database Configuration
+                                        </h3>
+                                    </RichPanelHeader>
+                                    <div className="p-4">
+                                        <div className="md-label">
+                                            Identity parts separator{" "}
+                                            <Icon id="SetIdentityPartsSeparator" icon="info" color="info" />
+                                        </div>
+                                        <UncontrolledPopover
+                                            target="SetIdentityPartsSeparator"
+                                            trigger="hover"
+                                            container="PopoverContainer"
+                                            placement="top"
+                                        >
+                                            <div className="p-3">
+                                                Set the default separator for automatically generated document identity
+                                                IDs.
+                                                <br />
+                                                Use any character except <code>&apos;|&apos;</code> (pipe).
+                                            </div>
+                                        </UncontrolledPopover>
+                                        <InputGroup>
+                                            <InputGroupText>
+                                                <FormCheckbox
+                                                    control={control}
+                                                    name="identityPartsSeparatorEnabled"
+                                                    disabled={!canEditDatabaseConfig}
+                                                    color="primary"
+                                                />
+                                            </InputGroupText>
+                                            <FormInput
+                                                type="text"
+                                                control={control}
+                                                name="identityPartsSeparatorValue"
+                                                placeholder="'/' (default)"
+                                                disabled={
+                                                    !formValues.identityPartsSeparatorEnabled || !canEditDatabaseConfig
+                                                }
+                                                className="d-flex"
+                                            />
+                                        </InputGroup>
+                                        <div className="md-label mt-4">
+                                            Maximum number of requests per session{" "}
+                                            <Icon id="SetMaximumRequestsPerSession" icon="info" color="info" />
+                                        </div>
+                                        <UncontrolledPopover
+                                            target="SetMaximumRequestsPerSession"
+                                            trigger="hover"
+                                            container="PopoverContainer"
+                                            placement="top"
+                                        >
+                                            <div className="p-3">
+                                                Set this number to restrict the number of requests (<code>Reads</code> &{" "}
+                                                <code>Writes</code>) per session in the client API.
+                                            </div>
+                                        </UncontrolledPopover>
+                                        <InputGroup>
+                                            <InputGroupText>
+                                                <FormCheckbox
+                                                    control={control}
+                                                    name="maximumNumberOfRequestsEnabled"
+                                                    disabled={!canEditDatabaseConfig}
+                                                    color="primary"
+                                                />
+                                            </InputGroupText>
+                                            <FormInput
+                                                type="number"
+                                                control={control}
+                                                name="maximumNumberOfRequestsValue"
+                                                placeholder="30 (default)"
+                                                disabled={
+                                                    !formValues.maximumNumberOfRequestsEnabled || !canEditDatabaseConfig
+                                                }
+                                            />
+                                        </InputGroup>
+                                    </div>
+                                </RichPanel>
+                            </Col>
+                        </Row>
+
                         <div
                             className={classNames(
                                 "d-flex mt-4 position-relative",
@@ -369,12 +384,116 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                 </a>
                             </small>
                         </div>
-                        <Card className="flex-column p-3">
-                            <div
-                                className={classNames("d-flex flex-grow-1", { "justify-content-center": globalConfig })}
-                            >
-                                <div className="md-label">
-                                    Load Balance Behavior <Icon id="SetSessionContext" icon="info" color="info" />
+
+                        <Row>
+                            {globalConfig && (
+                                <Col>
+                                    <RichPanel
+                                        className={classNames("p-4", { "item-disabled": formValues.overrideConfig })}
+                                    >
+                                        <div className="md-label">
+                                            Load Balance Behavior{" "}
+                                            <Icon id="SetSessionContext" icon="info" color="info" />
+                                        </div>
+                                        <UncontrolledPopover
+                                            target="SetSessionContext"
+                                            trigger="hover"
+                                            container="PopoverContainer"
+                                            placement="top"
+                                        >
+                                            <div className="p-3">
+                                                <span className="d-inline-block mb-1">
+                                                    Set the Load balance method for <strong>Read</strong> &{" "}
+                                                    <strong>Write</strong> requests.
+                                                </span>
+                                                <ul>
+                                                    <li className="mb-1">
+                                                        <code>None</code>
+                                                        <br />
+                                                        Read requests - the node the client will target will be based
+                                                        the Read balance behavior configuration.
+                                                        <br />
+                                                        Write requests - will be sent to the preferred node.
+                                                    </li>
+                                                    <li className="mb-1">
+                                                        <code>Use session context</code>
+                                                        <br />
+                                                        Sessions that are assigned the same context will have all their
+                                                        Read & Write requests routed to the same node.
+                                                        <br />
+                                                        The session context is hashed from a context string (given by
+                                                        the client) and an optional seed.
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </UncontrolledPopover>
+                                        <Input
+                                            defaultValue={globalConfig.loadBalancerValue}
+                                            disabled
+                                            placeholder="None"
+                                        />
+                                        {(globalConfig?.loadBalancerSeedValue ||
+                                            formValues.loadBalancerValue === "UseSessionContext") && (
+                                            <>
+                                                <div className="md-label mt-4">
+                                                    {" "}
+                                                    Seed
+                                                    <Icon id="SetLoadBalanceSeedBehavior" icon="info" color="info" />
+                                                    <UncontrolledPopover
+                                                        target="SetLoadBalanceSeedBehavior"
+                                                        trigger="hover"
+                                                        container="PopoverContainer"
+                                                        placement="top"
+                                                    >
+                                                        <div className="p-3">
+                                                            An optional seed number.
+                                                            <br />
+                                                            Used when hashing the session context.
+                                                        </div>
+                                                    </UncontrolledPopover>
+                                                </div>
+                                                <Input
+                                                    defaultValue={globalConfig.loadBalancerSeedValue}
+                                                    disabled
+                                                    placeholder="0 (default)"
+                                                />
+                                            </>
+                                        )}
+                                        <div className="md-label mt-4">
+                                            Read Balance Behavior{" "}
+                                            <Icon id="SetReadBalanceBehavior" icon="info" color="info" />
+                                            <UncontrolledPopover
+                                                target="SetReadBalanceBehavior"
+                                                trigger="hover"
+                                                container="PopoverContainer"
+                                                placement="top"
+                                            >
+                                                <div className="p-3">
+                                                    <div>
+                                                        Set the Read balance method the client will use when accessing a
+                                                        node with
+                                                        <code> Read</code> requests.
+                                                        <br />
+                                                        <code>Write</code> requests are sent to the preferred node.
+                                                    </div>
+                                                </div>
+                                            </UncontrolledPopover>
+                                        </div>
+                                        <Input
+                                            defaultValue={globalConfig.readBalanceBehaviorValue}
+                                            placeholder="None"
+                                            disabled
+                                        />
+                                    </RichPanel>
+                                </Col>
+                            )}
+                            <Col>
+                                <RichPanel
+                                    className={classNames("p-4", { "item-disabled": !formValues.overrideConfig })}
+                                >
+                                    <div className="md-label">
+                                        Load Balance Behavior <Icon id="SetSessionContext" icon="info" color="info" />
+                                    </div>
                                     <UncontrolledPopover
                                         target="SetSessionContext"
                                         trigger="hover"
@@ -407,25 +526,6 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             </ul>
                                         </div>
                                     </UncontrolledPopover>
-                                </div>
-                            </div>
-                            <Row className="mb-4 align-items-start">
-                                {globalConfig && (
-                                    <>
-                                        <Col className="d-flex">
-                                            <Input
-                                                defaultValue={globalConfig.loadBalancerValue}
-                                                disabled
-                                                placeholder="None"
-                                            />
-                                        </Col>
-
-                                        <GlobalSettingsSeparator
-                                            active={formValues.overrideConfig && formValues.loadBalancerEnabled}
-                                        />
-                                    </>
-                                )}
-                                <Col className="d-flex align-items-center gap-3">
                                     <InputGroup>
                                         <InputGroupText>
                                             <FormCheckbox
@@ -442,122 +542,74 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
                                         />
                                     </InputGroup>
-                                </Col>
-                            </Row>
-                            {(globalConfig?.loadBalancerSeedValue ||
-                                formValues.loadBalancerValue === "UseSessionContext") && (
-                                <>
-                                    <div
-                                        className={
-                                            globalConfig
-                                                ? "d-flex flex-grow-1 justify-content-center"
-                                                : "d-flex flex-grow-1"
-                                        }
-                                    >
-                                        <div className="md-label">
-                                            {" "}
-                                            Seed
-                                            <Icon id="SetLoadBalanceSeedBehavior" icon="info" color="info" />
-                                            <UncontrolledPopover
-                                                target="SetLoadBalanceSeedBehavior"
-                                                trigger="hover"
-                                                container="PopoverContainer"
-                                                placement="top"
-                                            >
-                                                <div className="p-3">
-                                                    An optional seed number.
-                                                    <br />
-                                                    Used when hashing the session context.
-                                                </div>
-                                            </UncontrolledPopover>
-                                        </div>
-                                    </div>
-                                    <Row className="mb-4 align-items-start">
-                                        {globalConfig && (
-                                            <>
-                                                <Col className="d-flex">
-                                                    <Input
-                                                        defaultValue={globalConfig.loadBalancerSeedValue}
-                                                        disabled
-                                                        placeholder="0 (default)"
-                                                    />
-                                                </Col>
-
-                                                <GlobalSettingsSeparator
-                                                    active={
-                                                        formValues.overrideConfig && formValues.loadBalancerSeedEnabled
-                                                    }
-                                                />
-                                            </>
-                                        )}
-                                        <Col className="d-flex align-items-center gap-3">
-                                            <FormSwitch
-                                                control={control}
-                                                name="loadBalancerSeedEnabled"
-                                                color="primary"
-                                                label="Seed"
-                                                disabled={
-                                                    formValues.loadBalancerValue !== "UseSessionContext" ||
-                                                    !canEditDatabaseConfig
-                                                }
-                                                className="small"
-                                            ></FormSwitch>
-                                            <InputGroup>
-                                                <FormInput
-                                                    type="number"
-                                                    control={control}
-                                                    name="loadBalancerSeedValue"
-                                                    placeholder="0 (default)"
-                                                    disabled={
-                                                        !formValues.loadBalancerSeedEnabled || !canEditDatabaseConfig
-                                                    }
-                                                />
-                                            </InputGroup>
-                                        </Col>
-                                    </Row>
-                                </>
-                            )}
-                            <div
-                                className={classNames("d-flex flex-grow-1", { "justify-content-center": globalConfig })}
-                            >
-                                <div className="md-label">
-                                    Read Balance Behavior <Icon id="SetReadBalanceBehavior" icon="info" color="info" />
-                                    <UncontrolledPopover
-                                        target="SetReadBalanceBehavior"
-                                        trigger="hover"
-                                        container="PopoverContainer"
-                                        placement="top"
-                                    >
-                                        <div className="p-3">
-                                            <div>
-                                                Set the Read balance method the client will use when accessing a node
-                                                with
-                                                <code> Read</code> requests.
-                                                <br />
-                                                <code>Write</code> requests are sent to the preferred node.
+                                    {(globalConfig?.loadBalancerSeedValue ||
+                                        formValues.loadBalancerValue === "UseSessionContext") && (
+                                        <>
+                                            <div className="md-label mt-4">
+                                                {" "}
+                                                Seed
+                                                <Icon id="SetLoadBalanceSeedBehavior" icon="info" color="info" />
+                                                <UncontrolledPopover
+                                                    target="SetLoadBalanceSeedBehavior"
+                                                    trigger="hover"
+                                                    container="PopoverContainer"
+                                                    placement="top"
+                                                >
+                                                    <div className="p-3">
+                                                        An optional seed number.
+                                                        <br />
+                                                        Used when hashing the session context.
+                                                    </div>
+                                                </UncontrolledPopover>
                                             </div>
-                                        </div>
-                                    </UncontrolledPopover>
-                                </div>
-                            </div>
-                            <Row className="align-items-start">
-                                {globalConfig && (
-                                    <>
-                                        <Col className="d-flex">
-                                            <Input
-                                                defaultValue={globalConfig.readBalanceBehaviorValue}
-                                                placeholder="None"
-                                                disabled
-                                            />
-                                        </Col>
 
-                                        <GlobalSettingsSeparator
-                                            active={formValues.overrideConfig && formValues.readBalanceBehaviorEnabled}
-                                        />
-                                    </>
-                                )}
-
-                                <Col className="d-flex">
+                                            <div className="hstack gap-3">
+                                                <FormSwitch
+                                                    control={control}
+                                                    name="loadBalancerSeedEnabled"
+                                                    color="primary"
+                                                    label="Seed"
+                                                    disabled={
+                                                        formValues.loadBalancerValue !== "UseSessionContext" ||
+                                                        !canEditDatabaseConfig
+                                                    }
+                                                    className="small"
+                                                ></FormSwitch>
+                                                <InputGroup>
+                                                    <FormInput
+                                                        type="number"
+                                                        control={control}
+                                                        name="loadBalancerSeedValue"
+                                                        placeholder="0 (default)"
+                                                        disabled={
+                                                            !formValues.loadBalancerSeedEnabled ||
+                                                            !canEditDatabaseConfig
+                                                        }
+                                                    />
+                                                </InputGroup>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="md-label mt-4">
+                                        Read Balance Behavior{" "}
+                                        <Icon id="SetReadBalanceBehavior" icon="info" color="info" />
+                                        <UncontrolledPopover
+                                            target="SetReadBalanceBehavior"
+                                            trigger="hover"
+                                            container="PopoverContainer"
+                                            placement="top"
+                                        >
+                                            <div className="p-3">
+                                                <div>
+                                                    Set the Read balance method the client will use when accessing a
+                                                    node with
+                                                    <code> Read</code> requests.
+                                                    <br />
+                                                    <code>Write</code> requests are sent to the preferred node.
+                                                </div>
+                                            </div>
+                                        </UncontrolledPopover>
+                                    </div>
                                     <InputGroup>
                                         <InputGroupText>
                                             <FormCheckbox
@@ -574,23 +626,14 @@ export default function ClientDatabaseConfiguration({ db }: ClientDatabaseConfig
                                             options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
                                         />
                                     </InputGroup>
-                                </Col>
-                            </Row>
-                        </Card>
+                                </RichPanel>
+                            </Col>
+                        </Row>
                     </Col>
                 </Row>
             </div>
             <div id="PopoverContainer"></div>
         </Form>
-    );
-}
-
-function GlobalSettingsSeparator(props: { active: boolean }) {
-    const { active } = props;
-    return (
-        <Fade in={active} className={classNames("align-self-center col-sm-auto")}>
-            <Icon icon="arrow-right" margin="m-0" />
-        </Fade>
     );
 }
 
