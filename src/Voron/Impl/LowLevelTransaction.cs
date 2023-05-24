@@ -235,6 +235,11 @@ namespace Voron.Impl
             var env = previous._env;
             env.Options.AssertNoCatastrophicFailure();
 
+            Debug.Assert(env.Options.Encryption.IsEnabled == false,
+                $"Async commit isn't supported in encrypted environments. We don't carry {nameof(IPagerLevelTransactionState.CryptoPagerTransactionState)} from previous tx");
+            Debug.Assert((PlatformDetails.Is32Bits || env.Options.ForceUsing32BitsPager) == false,
+                $"Async commit isn't supported in 32bits environments. We don't carry {nameof(IPagerLevelTransactionState.PagerTransactionState32Bits)} from previous tx");
+
             FlushInProgressLockTaken = previous.FlushInProgressLockTaken;
             CurrentTransactionHolder = previous.CurrentTransactionHolder;
             TxStartTime = DateTime.UtcNow;
