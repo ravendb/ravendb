@@ -59,6 +59,7 @@ namespace Raven.Client.Documents.Conventions
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new();
 
         private readonly List<(Type Type, TryConvertValueToObjectForQueryDelegate<object> Convert)> _listOfQueryValueToObjectConverters = new();
+        private readonly TypeCache<TryConvertValueToObjectForQueryDelegate<object>> _listOfQueryValueToObjectConvertersCache = new(512);
 
         private readonly List<QueryMethodConverter> _listOfQueryMethodConverters = new();
 
@@ -289,7 +290,8 @@ namespace Raven.Client.Documents.Conventions
 
         private bool _frozen;
         private ClientConfiguration _originalConfiguration;
-        private Dictionary<Type, MemberInfo> _idPropertyCache = new();
+
+        private readonly TypeCache<MemberInfo> _idPropertyCache = new(1024);
 
         private bool _saveEnumsAsIntegers;
         private char _identityPartsSeparator;
@@ -1229,21 +1231,20 @@ namespace Raven.Client.Documents.Conventions
         /// <returns></returns>
         public MemberInfo GetIdentityProperty(Type type)
         {
+            // If we had obtained the identity property for that type, we will return it.
             var currentIdPropertyCache = _idPropertyCache;
-            if (currentIdPropertyCache.TryGetValue(type, out var info))
-                return info;
+            if (currentIdPropertyCache.TryGet(type, out var identityProperty))
+                return identityProperty;
 
-            var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
+            identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
             if (identityProperty != null && identityProperty.DeclaringType != type)
             {
                 var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
                 identityProperty = propertyInfo ?? identityProperty;
             }
 
-            _idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
-            {
-                {type, identityProperty}
-            };
+            // Add it to the cache.
+            currentIdPropertyCache.Put(type, identityProperty);
 
             return identityProperty;
         }
@@ -1270,16 +1271,15 @@ namespace Raven.Client.Documents.Conventions
                     return;
                 }
 
-                if (_originalConfiguration == null)
-                    _originalConfiguration = new ClientConfiguration
-                    {
-                        Etag = -1,
-                        MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
-                        ReadBalanceBehavior = ReadBalanceBehavior,
-                        IdentityPartsSeparator = IdentityPartsSeparator,
-                        LoadBalanceBehavior = _loadBalanceBehavior,
-                        LoadBalancerContextSeed = _loadBalancerContextSeed
-                    };
+                _originalConfiguration ??= new ClientConfiguration
+                {
+                    Etag = -1,
+                    MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
+                    ReadBalanceBehavior = ReadBalanceBehavior,
+                    IdentityPartsSeparator = IdentityPartsSeparator,
+                    LoadBalanceBehavior = _loadBalanceBehavior,
+                    LoadBalancerContextSeed = _loadBalancerContextSeed
+                };
 
                 _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession ?? _maxNumberOfRequestsPerSession;
                 _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior ?? _readBalanceBehavior;
@@ -1424,16 +1424,29 @@ namespace Raven.Client.Documents.Conventions
             _customRangeTypes[typeof(T)] = rangeType;
         }
 
-        internal bool TryConvertValueToObjectForQuery(string fieldName, object value, bool forRange, out object objValue)
+        internal bool TryConvertValueToObjectForQuery(string fieldName, Type baseType, object value, bool forRange, out object objValue)
         {
-            foreach (var queryValueConverter in _listOfQueryValueToObjectConverters)
+            // We try to find this converter in the cache.
+            if (!_listOfQueryValueToObjectConvertersCache.TryGet(baseType, out var objValueFunc))
             {
-                if (queryValueConverter.Type.IsInstanceOfType(value) == false)
-                    continue;
+                // Because we haven't find it, we need to do the actual work of trying out every single converter
+                // in order to find the one that matches for this object type.
+                foreach (var queryValueConverter in _listOfQueryValueToObjectConverters)
+                {
+                    if (queryValueConverter.Type.IsInstanceOfType(value) == false)
+                        continue;
 
-                return queryValueConverter.Convert(fieldName, value, forRange, out objValue);
+                    objValueFunc = queryValueConverter.Convert;
+
+                    // Store in the cache.
+                    _listOfQueryValueToObjectConvertersCache.Put(baseType, objValueFunc);
+                    break;
+                }
             }
 
+            if (objValueFunc != null)
+                return objValueFunc(fieldName, value, forRange, out objValue);
+            
             objValue = null;
             return false;
         }

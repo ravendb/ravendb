@@ -26,6 +26,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Session
 {
@@ -47,7 +48,7 @@ namespace Raven.Client.Documents.Session
             typeof (T)
         };
 
-        private static Dictionary<Type, Func<object, string>> _implicitStringsCache = new Dictionary<Type, Func<object, string>>();
+        private static TypeCache<Func<object, string>> _implicitStringsCache = new (1024);
 
         /// <summary>
         /// Whether to negate the next operation
@@ -1737,95 +1738,80 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (type == null)
                 return null;
 
-            Func<object, string> value;
             var localStringsCache = _implicitStringsCache;
-            if (localStringsCache.TryGetValue(type, out value))
+            if (localStringsCache.TryGet(type, out Func<object, string> value))
                 return value;
 
             var methodInfo = type.GetMethod("op_Implicit", new[] { type });
 
             if (methodInfo == null || methodInfo.ReturnType != typeof(string))
             {
-                _implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
-                {
-                    {type, null}
-                };
+                localStringsCache.Put(type, null);
                 return null;
             }
 
             var arg = Expression.Parameter(typeof(object), "self");
-
             var func = (Func<object, string>)Expression.Lambda(Expression.Call(methodInfo, Expression.Convert(arg, type)), arg).Compile();
 
-            _implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
-            {
-                {type, func}
-            };
+            localStringsCache.Put(type, func);
             return func;
         }
 
         private object TransformValue(WhereParams whereParams, bool forRange = false)
         {
-            if (whereParams.Value == null)
+            var actualValue = whereParams.Value;
+
+            // These 2 are shortcuts for common case of it is null or string.
+            if (actualValue == null)
                 return null;
-            if (Equals(whereParams.Value, string.Empty))
-                return string.Empty;
+            if (actualValue is string)
+                return actualValue;
 
-            var type = whereParams.Value.GetType().GetNonNullableType();
-
-            if (_conventions.TryConvertValueToObjectForQuery(whereParams.FieldName, whereParams.Value, forRange, out var objValue))
+            // Now the fun begins. We need to get the actual non nullable type of the object.
+            var baseType = actualValue.GetType();
+            if (_conventions.TryConvertValueToObjectForQuery(whereParams.FieldName, baseType, actualValue, forRange, out var objValue))
                 return objValue;
 
-            if (type == typeof(DateTime))
-                return whereParams.Value;
-            if (type == typeof(DateTimeOffset))
+            // This is much faster than doing reflection to get the non-nullable type.
+            if (!AbstractDocumentQueryCache.TransformNonNullableTypeCache.TryGet(baseType, out var type))
             {
-                return whereParams.Exact
-                    ? ((DateTimeOffset)whereParams.Value).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture)
-                    : whereParams.Value;
+                type = baseType.GetNonNullableType();
+                AbstractDocumentQueryCache.TransformNonNullableTypeCache.Put(baseType, type);
             }
+
+            if (AbstractDocumentQueryCache.TransformTypeCache.TryGet(type, out var typeFormat))
+            {
+                switch (typeFormat)
+                {
+                    case AbstractDocumentQueryCache.TransformationMode.Value:
+                        return actualValue;
+                    case AbstractDocumentQueryCache.TransformationMode.Dates:
+                        return whereParams.Exact
+                            ? ((DateTimeOffset)actualValue).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture)
+                            : actualValue;
+                    case AbstractDocumentQueryCache.TransformationMode.Ticks:
+                        return forRange ? ((TimeSpan)actualValue).Ticks : actualValue;
+                }
+            }
+
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
             if (type == typeof(DateOnly))
-                return ((DateOnly)whereParams.Value).ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                return ((DateOnly)actualValue).ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
             if (type == typeof(TimeOnly))
-                return ((TimeOnly)whereParams.Value).ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                return ((TimeOnly)actualValue).ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
 #endif
-            if (type == typeof(string))
-                return (string)whereParams.Value;
-            if (type == typeof(int))
-                return whereParams.Value;
-            if (type == typeof(long))
-                return whereParams.Value;
-            if (type == typeof(decimal))
-                return whereParams.Value;
-            if (type == typeof(double))
-                return whereParams.Value;
-            if (whereParams.Value is TimeSpan)
-            {
-                if (forRange)
-                    return ((TimeSpan)whereParams.Value).Ticks;
 
-                return whereParams.Value;
-            }
-            if (whereParams.Value is float)
-                return whereParams.Value;
-            if (whereParams.Value is string)
-                return whereParams.Value;
-            if (whereParams.Value is bool)
-                return whereParams.Value;
-            if (whereParams.Value is Guid)
-                return whereParams.Value;
             if (type.IsEnum)
                 return whereParams.Value;
 
-            if (whereParams.Value is ValueType)
-                return Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture);
+            if (actualValue is ValueType)
+                return Convert.ToString(actualValue, CultureInfo.InvariantCulture);
 
-            var result = GetImplicitStringConversion(whereParams.Value.GetType());
+            var result = GetImplicitStringConversion(baseType);
             if (result != null)
-                return result(whereParams.Value);
+                return result(actualValue);
 
-            return whereParams.Value;
+            return actualValue;
         }
 
         private string AddQueryParameter(object value)
@@ -2035,6 +2021,35 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new InvalidDataException("filter_limit needs to be positive and bigger than 0.");
             if (filterLimit is not int.MaxValue)
                 FilterLimit = filterLimit;
+        }
+    }
+
+    internal class AbstractDocumentQueryCache
+    {
+        public enum TransformationMode
+        {
+            None = 0,
+            Value,
+            Ticks,
+            Dates,
+        }
+
+        public static readonly TypeCache<TransformationMode> TransformTypeCache;
+        public static readonly TypeCache<Type> TransformNonNullableTypeCache = new(256);
+
+        static AbstractDocumentQueryCache()
+        {
+            TransformTypeCache = new(64);
+            TransformTypeCache.Put(typeof(DateTime), TransformationMode.Value);
+            TransformTypeCache.Put(typeof(int), TransformationMode.Value);
+            TransformTypeCache.Put(typeof(long), TransformationMode.Value);
+            TransformTypeCache.Put(typeof(decimal), TransformationMode.Value);
+            TransformTypeCache.Put(typeof(double), TransformationMode.Value);
+            TransformTypeCache.Put(typeof(float), TransformationMode.Value);
+            TransformTypeCache.Put(typeof(bool), TransformationMode.Value);
+            TransformTypeCache.Put(typeof(Guid), TransformationMode.Value);
+            TransformTypeCache.Put(typeof(TimeSpan), TransformationMode.Ticks);
+            TransformTypeCache.Put(typeof(DateTimeOffset), TransformationMode.Dates);
         }
     }
 }
