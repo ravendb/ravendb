@@ -1,13 +1,13 @@
 using System;
-using System.Collections.Generic;
 using Newtonsoft.Json;
+using Sparrow.Utils;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
     internal sealed class CachingJsonConverter : JsonConverter
     {
         private readonly JsonConverter[] _converters;
-        private Dictionary<Type, JsonConverter> _cache = new Dictionary<Type, JsonConverter>();
+        private TypeCache<JsonConverter> _cache = new(256);
 
         public override bool CanRead { get; }
         public override bool CanWrite { get; }
@@ -28,7 +28,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             }
 
             Type objectType = value.GetType();
-            if (_cache.TryGetValue(objectType, out var converter))
+            if (_cache.TryGet(objectType, out var converter))
             {
                 if (converter == null)
                     ThrowConverterIsNullException(objectType);
@@ -47,7 +47,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            if (_cache.TryGetValue(objectType, out var converter))
+            if (_cache.TryGet(objectType, out var converter))
             {
                 if (converter == null)
                     ThrowConverterIsNullException(objectType);
@@ -66,7 +66,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 
         public override bool CanConvert(Type objectType)
         {
-            if (_cache.TryGetValue(objectType, out var value))
+            if (_cache.TryGet(objectType, out var value))
                 return value != null;
             return UpdateCache(objectType) != null;
         }
@@ -77,10 +77,10 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             {
                 if (!converter.CanConvert(objectType))
                     continue;
-                _cache = new Dictionary<Type, JsonConverter>(_cache) { [objectType] = converter };
+                _cache.Put(objectType, converter);
                 return converter;
             }
-            _cache = new Dictionary<Type, JsonConverter>(_cache) { [objectType] = null };
+            _cache.Put(objectType, null);
             return null;
         }
         
