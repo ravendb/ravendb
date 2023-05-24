@@ -701,7 +701,7 @@ namespace Raven.Server.Documents.Revisions
             return moreRevisionToDelete && deletedRevisionsCount == numberOfRevisionsToDelete;
         }
 
-        public void DeleteAllRevisionsFor(DocumentsOperationContext context, string id)
+        public void DeleteAllRevisionsFor(DocumentsOperationContext context, string id, bool onlyForceCreated = false)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
@@ -720,8 +720,11 @@ namespace Raven.Server.Documents.Revisions
                 context.LastDatabaseChangeVector = changeVector;
 
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-
-                var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete: long.MaxValue, minimumTimeToKeep: null, changeVector, lastModifiedTicks);
+                var deletedRevisionsCount = 0L;
+                if (onlyForceCreated)
+                    deletedRevisionsCount = DeleteForceCreatedRevisions(context, table, prefixSlice, collectionName, changeVector, lastModifiedTicks);
+                else
+                    deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete: long.MaxValue, minimumTimeToKeep: null, changeVector, lastModifiedTicks);
                 IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
             }
         }
@@ -1001,6 +1004,32 @@ namespace Raven.Server.Documents.Revisions
             }
 
             return count;
+        }
+
+        private long DeleteForceCreatedRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName,
+            string changeVector, long lastModifiedTicks)
+        {
+            var deletedRevisionsCount = 0L;
+            var revisionsToRemove = new List<(string ChangeVector, long Etag, DocumentFlags Flags, string CollectionName)>();
+
+            foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
+            {
+                var tvr = read.Result.Reader;
+                using var revision = TableValueToRevision(context, ref tvr);
+
+                if (revision.Flags.Contain(DocumentFlags.ForceCreated) == false)
+                    continue;
+
+                var collection = CollectionName.GetCollectionName(revision.Data);
+
+                revisionsToRemove.Add((revision.ChangeVector, revision.Etag, revision.Flags, collection));
+                deletedRevisionsCount++;
+            }
+
+            var maxEtagDeleted = DeleteRevisionsInternal(context, table, collectionName, changeVector, lastModifiedTicks, revisionsToRemove);
+
+            _database.DocumentsStorage.EnsureLastEtagIsPersisted(context, maxEtagDeleted);
+            return deletedRevisionsCount;
         }
 
         public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)

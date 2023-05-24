@@ -18,12 +18,14 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/revisions", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteRevisionsFor()
         {
+            var deleteOnlyForceCreated = GetBoolValueQueryString("onlyForceCreated", required: false) ?? false;
+
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "admin/revisions/delete");
                 var parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
 
-                var cmd = new DeleteRevisionsCommand(parameters.DocumentIds, Database);
+                var cmd = new DeleteRevisionsCommand(parameters.DocumentIds, Database, deleteOnlyForceCreated);
                 await Database.TxMerger.Enqueue(cmd);
                 NoContentStatus();
             }
@@ -33,28 +35,27 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             private readonly Microsoft.Extensions.Primitives.StringValues _ids;
             private readonly DocumentDatabase _database;
+            private readonly bool _deleteOnlyForceCreated;
 
-            public DeleteRevisionsCommand(string[] ids, DocumentDatabase database)
+            public DeleteRevisionsCommand(string[] ids, DocumentDatabase database, bool deleteOnlyForceCreated)
             {
                 _ids = ids;
                 _database = database;
+                _deleteOnlyForceCreated = deleteOnlyForceCreated;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 foreach (var id in _ids)
                 {
-                    _database.DocumentsStorage.RevisionsStorage.DeleteAllRevisionsFor(context, id);
+                    _database.DocumentsStorage.RevisionsStorage.DeleteAllRevisionsFor(context, id, _deleteOnlyForceCreated);
                 }
                 return 1;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
-                return new DeleteRevisionsCommandDto
-                {
-                    Ids = _ids
-                };
+                return new DeleteRevisionsCommandDto(_ids, _deleteOnlyForceCreated);
             }
         }
 
@@ -66,11 +67,18 @@ namespace Raven.Server.Documents.Handlers.Admin
 
     internal class DeleteRevisionsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AdminRevisionsHandler.DeleteRevisionsCommand>
     {
-        public string[] Ids;
+        private readonly string[] _ids;
+        private readonly bool _deleteOnlyForceCreated;
+
+        public DeleteRevisionsCommandDto(string[] ids, bool deleteOnlyForceCreated)
+        {
+            _ids = ids;
+            _deleteOnlyForceCreated = deleteOnlyForceCreated;
+        }
 
         public AdminRevisionsHandler.DeleteRevisionsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new AdminRevisionsHandler.DeleteRevisionsCommand(Ids, database);
+            var command = new AdminRevisionsHandler.DeleteRevisionsCommand(_ids, database, _deleteOnlyForceCreated);
             return command;
         }
     }
