@@ -2708,7 +2708,7 @@ namespace Raven.Server.ServerWide
                 .Concat(clusterTopology.Watchers.Keys)
                 .ToList();
 
-            if (record.Encrypted)
+            if (record.Encrypted && Server.AllowEncryptedDatabasesOverHttp == false)
             {
                 clusterNodes.RemoveAll(n => AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
                 if (clusterNodes.Count < topology.ReplicationFactor)
