@@ -74,23 +74,28 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             var willUseDefaultContractResolver = usesDefaultContractResolver && isDynamicObject == false;
             var hasIdentityProperty = conventions.GetIdentityProperty(type) != null;
 
-            try
+            if (willUseDefaultContractResolver)
             {
-                if (willUseDefaultContractResolver)
-                {
-                    DefaultRavenContractResolver.RootEntity = removeIdentityProperty && hasIdentityProperty ? entity : null;
-                    DefaultRavenContractResolver.RemovedIdentityProperty = false;
-                }
+                DefaultRavenContractResolver.RootEntity = removeIdentityProperty && hasIdentityProperty ? entity : null;
+                DefaultRavenContractResolver.RemovedIdentityProperty = false;
 
-                serializer.Serialize(writer, entity);
-            }
-            finally
-            {
-                if (willUseDefaultContractResolver)
+                // PERF: By moving the try..finally statement we forgo the need for prolog and epilog when it is not needed.
+                try
+                {
+                    serializer.Serialize(writer, entity);
+                }
+                finally
+                {
                     DefaultRavenContractResolver.RootEntity = null;
+                }
+            }
+            else
+            {
+                serializer.Serialize(writer, entity);
             }
 
             writer.FinalizeDocument();
+
             var reader = writer.CreateReader();
 
             if (willUseDefaultContractResolver == false || hasIdentityProperty && DefaultRavenContractResolver.RemovedIdentityProperty == false)
