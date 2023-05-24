@@ -291,7 +291,7 @@ namespace Raven.Client.Documents.Conventions
         private bool _frozen;
         private ClientConfiguration _originalConfiguration;
 
-        private readonly TypeCache<MemberInfo> _idPropertyCache = new(1024);
+        private static readonly TypeCache<MemberInfo> IdPropertyCache = new(1024);
 
         private bool _saveEnumsAsIntegers;
         private char _identityPartsSeparator;
@@ -1230,7 +1230,7 @@ namespace Raven.Client.Documents.Conventions
         public MemberInfo GetIdentityProperty(Type type)
         {
             // If we had obtained the identity property for that type, we will return it.
-            var currentIdPropertyCache = _idPropertyCache;
+            var currentIdPropertyCache = IdPropertyCache;
             if (currentIdPropertyCache.TryGet(type, out var identityProperty))
                 return identityProperty;
 
