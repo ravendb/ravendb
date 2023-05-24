@@ -590,6 +590,19 @@ namespace Voron.Impl
             if (_pageLocator.TryGetReadOnlyPage(pageNumber, out Page result))
                 return result;
 
+            var p = GetPageInternal(pageNumber);
+
+            _pageLocator.SetReadable(p.PageNumber, p);
+
+            return p;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Page GetPageWithoutCache(long pageNumber)
+        {
+            if (_disposed != TxState.None)
+                ThrowObjectDisposed();
+
             return GetPageInternal(pageNumber);
         }
 
@@ -641,8 +654,25 @@ namespace Voron.Impl
 
             TrackReadOnlyPage(p);
 
-            _pageLocator.SetReadable(p.PageNumber, p);
             return p;
+        }
+
+        public void TryReleasePage(long pageNumber)
+        {
+            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out _))
+            {
+                // we don't release pages from the scratch buffers
+                return;
+            }
+
+            var pageFromJournalExists = _journal.PageExists(this, pageNumber);
+            if (pageFromJournalExists)
+            {
+                // we don't release pages from the scratch buffers that we found through the journals
+                return;
+            }
+
+            DataPager.TryReleasePage(this, pageNumber);
         }
 
         private void ThrowObjectDisposed()

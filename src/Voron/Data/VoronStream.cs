@@ -13,6 +13,7 @@ namespace Voron.Data
 
         private readonly Tree.ChunkDetails[] _chunksDetails;
         private readonly long[] _chunksOffsets;
+        private readonly bool _encrypted;
         private long _position;
         private int _index;
         private LowLevelTransaction _llt;
@@ -36,6 +37,7 @@ namespace Voron.Data
 
             _index = 0;
             _llt = llt;
+            _encrypted = _llt.Environment.Options.Encryption.IsEnabled;
             _lastPage = default(Page);
             _position = 0;
 
@@ -129,11 +131,8 @@ namespace Voron.Data
                     return -1;
             }
 
-            if (!_lastPage.IsValid || _lastPage.PageNumber != chunk.PageNumber)
-            {
-                _lastPage = _llt.GetPage(chunk.PageNumber);
-            }
-            
+            UpdateLastPageIfNeeded(chunk.PageNumber);
+
             var pos = _position - _chunksOffsets[_index];
             _position++; //move ptr
             return _lastPage.DataPointer[pos];
@@ -162,10 +161,8 @@ namespace Voron.Data
                 count = (int)countSizeLeft;
 
             ref Tree.ChunkDetails chunk = ref _chunksDetails[_index];
-            if (!_lastPage.IsValid || _lastPage.PageNumber != chunk.PageNumber)
-            {
-                _lastPage = _llt.GetPage(chunk.PageNumber);
-            }
+
+            UpdateLastPageIfNeeded(chunk.PageNumber);
 
             var pos = _position - _chunksOffsets[_index];
             fixed (byte* dst = buffer)
@@ -176,6 +173,26 @@ namespace Voron.Data
             //move ptr
             _position += count;
             return count;
+        }
+
+        private void UpdateLastPageIfNeeded(long pageNumber)
+        {
+            if (_lastPage.IsValid && _lastPage.PageNumber == pageNumber)
+                return;
+
+            if (_encrypted == false)
+            {
+                _lastPage = _llt.GetPage(pageNumber);
+                return;
+            }
+
+            if (_lastPage.IsValid)
+            {
+                // the last page won't be needed anymore, we'll try to release it
+                _llt.TryReleasePage(_lastPage.PageNumber);
+            }
+
+            _lastPage = _llt.GetPageWithoutCache(pageNumber);
         }
 
         public override long Seek(long offset, SeekOrigin origin)
