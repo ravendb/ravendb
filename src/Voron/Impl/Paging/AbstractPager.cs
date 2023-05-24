@@ -758,6 +758,10 @@ namespace Voron.Impl.Paging
             return AcquirePagePointer(tx, pageNumber, pagerState);
         }
 
+        public virtual void TryReleasePage(IPagerLevelTransactionState tx, long page)
+        {
+        }
+
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
             // We could check for nested calls to LowMemory here, but we 

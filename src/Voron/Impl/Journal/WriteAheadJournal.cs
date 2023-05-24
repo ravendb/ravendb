@@ -467,7 +467,6 @@ namespace Voron.Impl.Journal
             isMoreThanMaxFileSize = false;
         }
 
-
         public Page? ReadPage(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
         {
             // read transactions have to read from journal snapshots
@@ -506,6 +505,32 @@ namespace Voron.Impl.Journal
             }
 
             return null;
+        }
+
+        public bool PageExists(LowLevelTransaction tx, long pageNumber)
+        {
+            // read transactions have to read from journal snapshots
+            if (tx.Flags == TransactionFlags.Read)
+            {
+                // read log snapshots from the back to get the most recent version of a page
+                for (var i = tx.JournalSnapshots.Count - 1; i >= 0; i--)
+                {
+                    if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out _))
+                        return true;
+                }
+
+                return false;
+            }
+
+            // write transactions can read directly from journals that they got when they started up
+            var files = tx.JournalFiles;
+            for (var i = files.Count - 1; i >= 0; i--)
+            {
+                if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out _))
+                    return true;
+            }
+
+            return false;
         }
 
         public void Dispose()
