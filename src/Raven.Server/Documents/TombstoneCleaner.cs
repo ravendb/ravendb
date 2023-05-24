@@ -230,7 +230,15 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                CreateWarningIfThereAreBlockingTombstones(tombstoneCollections);
+                try
+                {
+                    CreateWarningIfThereAreBlockingTombstones(tombstoneCollections);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to notify on blocking tombstones in database '{_documentDatabase.Name}'", e);
+                }
             }
             finally
             {
