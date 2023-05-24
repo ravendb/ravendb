@@ -240,8 +240,7 @@
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(AllowEncryptedWithoutSsl)' == 'True'">
-    <DefineConstants>$(DefineConstants);ALLOW_ENCRYPTED_SSL_ONLY</DefineConstants>
-    <Optimize>true</Optimize>
+  <PropertyGroup Condition="'$(AllowEncryptedOverHttp)' == 'True'">
+    <DefineConstants>$(DefineConstants);ALLOW_ENCRYPTED_OVER_HTTP</DefineConstants>
   </PropertyGroup>
 </Project>

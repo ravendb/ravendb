@@ -887,11 +887,7 @@ namespace Raven.Server.Documents
                 var record = databaseRecord.MaterializedRecord;
                 if (record.Encrypted && _serverStore.Server.AllowEncryptedDatabasesOverHttp == false)
                 {
-                    var allowEncryptedSslOnly = true;
-#if ALLOW_ENCRYPTED_SSL_ONLY
-                    allowEncryptedSslOnly = false;
-#endif
-                    if (allowEncryptedSslOnly && _serverStore.Server.WebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                    if (_serverStore.Server.WebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                     {
                         throw new DatabaseDisabledException(
                             $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {_serverStore.Server.WebUrl}");
