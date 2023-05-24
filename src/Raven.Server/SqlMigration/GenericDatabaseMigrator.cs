@@ -99,12 +99,9 @@ namespace Raven.Server.SqlMigration
             if (onProgress == null)
                 onProgress = progress => { };
 
-            string CollectionNameProvider(string tableSchema, string tableName, bool isEmbeddedCollection)
-            {
-                return isEmbeddedCollection 
-                    ? settings.Collections.SelectMany(x => x.NestedCollections).Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name 
-                    : settings.Collections.Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name;
-            }
+            string CollectionNameProvider(string tableSchema, string tableName, bool isEmbeddedCollection) => isEmbeddedCollection 
+                ? settings.Collections.SelectMany(x => x.NestedCollections).Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name 
+                : settings.Collections.Single(x => x.SourceTableSchema == tableSchema && x.SourceTableName == tableName).Name;
 
             await using (var enumerationConnection = OpenConnection())
             await using (var referencesConnection = OpenConnection())
@@ -199,7 +196,7 @@ namespace Raven.Server.SqlMigration
                         var embeddedArrayWithLinks = (DynamicJsonArray)refInfo.EmbeddedReferenceKeyDataProvider.Provide(specialColumns);
                         value[refInfo.PropertyName + "Ids"] = embeddedArrayWithLinks;
                         
-                        if (refInfo.ChildReferences != null) // nested references
+                        if (refInfo.ChildReferences != null)
                         {
                             var idx = 0;
                             foreach (DynamicJsonValue arrayItem in arrayWithEmbeddedObjects.ArrayOfNestedObjects)
@@ -224,9 +221,7 @@ namespace Raven.Server.SqlMigration
 
                         var embeddedObjectLinkValue = (string)refInfo.EmbeddedReferenceKeyDataProvider.Provide(specialColumns);
                         if (value[refInfo.PropertyName] != null && value[refInfo.PropertyName] is DynamicJsonValue)
-                        {
                             ((DynamicJsonValue)value[refInfo.PropertyName])[refInfo.PropertyName + "Id"] = embeddedObjectLinkValue;
-                        }
                         
                         if (embeddedObjectValue != null)
                         {
