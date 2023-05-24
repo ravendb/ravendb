@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Conventions
 
         private static readonly bool DefaultDisableTcpCompression = false;
 
-        private static Dictionary<Type, string> CachedDefaultTypeCollectionNames = new();
+        private static TypeCache<string> CachedDefaultTypeCollectionNames = new(128);
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new();
 
@@ -1034,12 +1034,15 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public static string DefaultGetCollectionName(Type t)
         {
-            if (CachedDefaultTypeCollectionNames.TryGetValue(t, out var result))
+            if (CachedDefaultTypeCollectionNames.TryGet(t, out var result))
                 return result;
 
             if (t.Name.Contains("<>"))
+            {
+                CachedDefaultTypeCollectionNames.Put(t, null);
                 return null;
-
+            }
+            
             // we want to reject queries and other operations on abstract types, because you usually
             // want to use them for polymorphic queries, and that require the conventions to be
             // applied properly, so we reject the behavior and hint to the user explicitly
@@ -1063,19 +1066,14 @@ namespace Raven.Client.Documents.Conventions
             }
             else if (t == typeof(object))
             {
-                return null;
+                result = null;
             }
             else
             {
                 result = Inflector.Pluralize(t.Name);
             }
 
-            var temp = new Dictionary<Type, string>(CachedDefaultTypeCollectionNames)
-            {
-                [t] = result
-            };
-
-            CachedDefaultTypeCollectionNames = temp;
+            CachedDefaultTypeCollectionNames.Put(t, result);
             return result;
         }
 
