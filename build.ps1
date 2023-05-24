@@ -15,7 +15,8 @@ param(
     [switch]$NoBundling,
     [switch]$DryRunVersionBump = $false,
     [switch]$DryRunSign = $false,
-    [switch]$Help)
+    [switch]$Help,
+    [switch]$AllowEncryptedOverHttp)
 
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -54,6 +55,10 @@ if ($Osx) {
 }
 
 CheckPrerequisites
+
+if ($AllowEncryptedOverHttp) {
+    $ALLOW_ENCRYPTED_OVER_HTTP = $true;
+}
 
 $PROJECT_DIR = Get-ScriptDirectory
 $RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
@@ -197,7 +202,7 @@ Foreach ($target in $targets) {
     $specOutDir = [io.path]::combine($OUT_DIR, $target.Name)
     CleanDir $specOutDir
 
-    BuildServer $SERVER_SRC_DIR $specOutDir $target
+    BuildServer $SERVER_SRC_DIR $specOutDir $target $ALLOW_ENCRYPTED_OVER_HTTP
     BuildTool rvn $RVN_SRC_DIR $specOutDir $target $true
     BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target $false
     BuildTool migrator $MIGRATOR_SRC_DIR $specOutDir $target $true

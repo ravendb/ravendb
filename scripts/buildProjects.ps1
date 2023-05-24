@@ -1,5 +1,5 @@
 
-function BuildServer ( $srcDir, $outDir, $target) {
+function BuildServer ( $srcDir, $outDir, $target, $ALLOW_ENCRYPTED_OVER_HTTP) {
 
     if ($target) {
         write-host "Building Server for $($target.Name)..."
@@ -32,8 +32,8 @@ function BuildServer ( $srcDir, $outDir, $target) {
         $commandArgs += "/p:UseAppHost=false"
     }
 
-    if ($env:ALLOW_ENCRYPTED_SSL_ONLY) {
-        $commandArgs += "/p:AllowEncryptedWithoutSsl=True"
+    if ($ALLOW_ENCRYPTED_OVER_HTTP) {
+        $commandArgs += "/p:AllowEncryptedOverHttp=True"
     }
 
     $commandArgs += '/p:SourceLinkCreate=true'
