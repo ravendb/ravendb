@@ -7,6 +7,8 @@ using Newtonsoft.Json;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow;
+using Sparrow.Utils;
+using System.Linq;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
@@ -19,6 +21,32 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             typeof(ParametersConverter).Assembly,
             typeof(LazyStringValue).Assembly
         };
+
+        private enum ParameterType
+        {
+            Unknown = 0,
+            DateTime,
+            DateTimeOffset,
+            Enumerable,
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+            DateOnly,
+            TimeOnly,
+#endif
+            RavenAssembly,
+        }
+
+        private static readonly TypeCache<ParameterType> ConverterCache;
+
+        static ParametersConverter()
+        {
+            ConverterCache = new(256);
+            ConverterCache.Put(typeof(DateTime), ParameterType.DateTime);
+            ConverterCache.Put(typeof(DateTimeOffset), ParameterType.DateTimeOffset);
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+            ConverterCache.Put(typeof(DateOnly), ParameterType.DateOnly);
+            ConverterCache.Put(typeof(TimeOnly), ParameterType.TimeOnly);
+#endif
+        }
 
         private ParametersConverter()
         {
@@ -45,63 +73,84 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                     writer.WritePropertyName(kvp.Key);
 
                     var v = kvp.Value;
-
-                    if (v is DateTime dateTime)
+                    if (v == null)
                     {
-                        if (dateTime.Kind == DateTimeKind.Unspecified)
-                            dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
-                        writer.WriteValue(dateTime.GetDefaultRavenFormat());
-                    }
-                    else if (v is DateTimeOffset dateTimeOffset)
-                    {
-                        writer.WriteValue(dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true));
-                    }
-#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
-                    else if (v is DateOnly dateOnly)
-                    {
-                        writer.WriteValue(dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
-                    }
-                    else if (v is TimeOnly timeOnly)
-                    {
-                        writer.WriteValue(timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture));
-                    }
-#endif
-                    else if (v is IEnumerable enumerable)
-                    {
-                        var oldTypeNameHandling = serializer.TypeNameHandling;
-
-                        try
-                        {
-                            serializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.None;
-
-                            serializer.Serialize(writer, enumerable);
-                        }
-                        finally
-                        {
-                            serializer.TypeNameHandling = oldTypeNameHandling;
-                        }
-                    }
-                    else if (IsRavenAssembly(v))
-                    {
-                        var oldNullValueHandling = serializer.NullValueHandling;
-                        var oldDefaultValueHandling = serializer.DefaultValueHandling;
-
-                        try
-                        {
-                            serializer.NullValueHandling = NullValueHandling.Ignore;
-                            serializer.DefaultValueHandling = DefaultValueHandling.Ignore;
-
-                            serializer.Serialize(writer, v);
-                        }
-                        finally
-                        {
-                            serializer.NullValueHandling = oldNullValueHandling;
-                            serializer.DefaultValueHandling = oldDefaultValueHandling;
-                        }
+                        serializer.Serialize(writer, null);
                     }
                     else
                     {
-                        serializer.Serialize(writer, v);
+                        var vType = v.GetType();
+                        if (ConverterCache.TryGet(vType, out var pType) == false)
+                        {
+                            // Ensure that we figure out which converter we need. 
+                            if (v is IEnumerable)
+                            {
+                                pType = ParameterType.Enumerable;
+                            }
+                            else if (IsRavenAssembly(v))
+                            {
+                                pType = ParameterType.RavenAssembly;
+                            }
+                            else
+                            {
+                                pType = ParameterType.Unknown;
+                            }
+
+                            ConverterCache.Put(vType, pType);
+                        }
+
+                        switch (pType)
+                        {
+                            case ParameterType.Unknown:
+                                serializer.Serialize(writer, v);
+                                break;
+                            case ParameterType.DateTime:
+                                var dateTime = (DateTime)v;
+                                if (dateTime.Kind == DateTimeKind.Unspecified)
+                                    dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
+                                writer.WriteValue(dateTime.GetDefaultRavenFormat());
+                                break;
+                            case ParameterType.DateTimeOffset:
+                                writer.WriteValue(((DateTimeOffset)v).UtcDateTime.GetDefaultRavenFormat(true));
+                                break;
+                            case ParameterType.Enumerable:
+                                var oldTypeNameHandling = serializer.TypeNameHandling;
+                                try
+                                {
+                                    serializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.None;
+                                    serializer.Serialize(writer, (IEnumerable)v);
+                                }
+                                finally
+                                {
+                                    serializer.TypeNameHandling = oldTypeNameHandling;
+                                }
+                                break;
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                            case ParameterType.DateOnly:
+                                writer.WriteValue(((DateOnly)v).ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                                break;
+                            case ParameterType.TimeOnly:
+                                writer.WriteValue(((TimeOnly)v).ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                                break;
+#endif
+                            case ParameterType.RavenAssembly:
+                                var oldNullValueHandling = serializer.NullValueHandling;
+                                var oldDefaultValueHandling = serializer.DefaultValueHandling;
+
+                                try
+                                {
+                                    serializer.NullValueHandling = NullValueHandling.Ignore;
+                                    serializer.DefaultValueHandling = DefaultValueHandling.Ignore;
+
+                                    serializer.Serialize(writer, v);
+                                }
+                                finally
+                                {
+                                    serializer.NullValueHandling = oldNullValueHandling;
+                                    serializer.DefaultValueHandling = oldDefaultValueHandling;
+                                }
+                                break;
+                        }
                     }
                 }
             }
