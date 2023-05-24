@@ -1,5 +1,5 @@
 
-function CreateServerPackage ( $projectDir, $releaseDir, $packOpts ) {
+function CreateServerPackage ( $projectDir, $releaseDir, $packOpts, $ALLOW_ENCRYPTED_OVER_HTTP ) {
     $target = $packOpts.Target
     write-host "Create server package for $($target.runtime)..."
     $packageDir = [io.path]::combine($packOpts.outDirs.Main, "ServerPackage")
@@ -10,9 +10,9 @@ function CreateServerPackage ( $projectDir, $releaseDir, $packOpts ) {
     $releaseArchiveFile = GetRavenArchiveFileName $packOpts.VersionInfo.Version $target
     $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
     if ($target.IsUnix) {
-        CreateArchiveFromDir $releaseArchivePath $packageDir $target "RavenDB"
+        CreateArchiveFromDir $releaseArchivePath $packageDir $target "RavenDB" $ALLOW_ENCRYPTED_OVER_HTTP
     } else {
-        CreateArchiveFromDir $releaseArchivePath $packageDir $target
+        CreateArchiveFromDir $releaseArchivePath $packageDir $target "" $ALLOW_ENCRYPTED_OVER_HTTP
     }
     
     Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Server)"

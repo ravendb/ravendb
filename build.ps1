@@ -15,8 +15,8 @@ param(
     [switch]$NoBundling,
     [switch]$DryRunVersionBump = $false,
     [switch]$DryRunSign = $false,
-    [switch]$Help,
-    [switch]$AllowEncryptedOverHttp)
+    [switch]$AllowEncryptedOverHttp,
+    [switch]$Help)
 
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -257,7 +257,7 @@ Foreach ($target in $targets) {
         }
     }
 
-    CreateServerPackage $PROJECT_DIR $RELEASE_DIR $packOpts
+    CreateServerPackage $PROJECT_DIR $RELEASE_DIR $packOpts $ALLOW_ENCRYPTED_OVER_HTTP
     CreateToolsPackage $PROJECT_DIR $RELEASE_DIR $packOpts
 }
 

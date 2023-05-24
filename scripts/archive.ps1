@@ -35,25 +35,30 @@ function UnpackTarGzToDir ( $archivePath, $outDir ) {
     }
 }
 
-function CreateArchiveFromDir ( $targetFilename, $dir, $target, $wrapperDirName ) {
+function CreateArchiveFromDir ( $targetFilename, $dir, $target, $wrapperDirName, $ALLOW_ENCRYPTED_OVER_HTTP ) {
     if ($target.PkgType -eq "zip") {
-        ZipFilesFromDir $targetFilename $dir
+        ZipFilesFromDir $targetFilename $dir $ALLOW_ENCRYPTED_OVER_HTTP
     }
     elseif ($target.PkgType -eq "tar.bz2") {
-        TarBzFilesFromDir $targetFilename $dir $wrapperDirName
+        TarBzFilesFromDir $targetFilename $dir $wrapperDirName $ALLOW_ENCRYPTED_OVER_HTTP
     }
     else {
         throw "Unknown archive method for $targetFilename"
     }
 }
 
-function ZipFilesFromDir( $targetFilename, $sourceDir ) {
+function ZipFilesFromDir( $targetFilename, $sourceDir, $ALLOW_ENCRYPTED_OVER_HTTP ) {
     $toZipGlob = [io.path]::combine($sourceDir, '*')
-    $zipFile = "$targetFilename.zip"
+    if ($ALLOW_ENCRYPTED_OVER_HTTP) {
+        $zipFile = "$targetFilename-encrypted-over-http.zip"
+    }
+    else {
+        $zipFile = "$targetFilename.zip"
+    }
     Compress-Archive -Path "$toZipGlob" -DestinationPath "$zipFile"
 }
 
-function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName ) {
+function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName, $ALLOW_ENCRYPTED_OVER_HTTP ) {
 
     if ([string]::IsNullOrEmpty($wrapperDirName) -eq $false) {
         WrapContentsInDir $sourceDir $wrapperDirName
@@ -61,7 +66,12 @@ function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName ) {
 
     $glob = [io.path]::combine($sourceDir, '*')
     if ($($IsWindows -eq $False) -and $(Get-Command "tar" -ErrorAction SilentlyContinue)) {
-        & tar -C $sourceDir -cjvf "$targetFilename.tar.bz2" .
+        if ($ALLOW_ENCRYPTED_OVER_HTTP){
+            & tar -C $sourceDir -cjvf "$targetFilename-encrypted-over-http.tar.bz2" .    
+        }
+        else {
+            & tar -C $sourceDir -cjvf "$targetFilename.tar.bz2" .
+        }
         CheckLastExitCode
     }
     else 
@@ -69,7 +79,12 @@ function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName ) {
         $7za = [io.path]::combine("scripts", "assets", "bin", "7za.exe")
         & "$7za" a -ttar "$targetFilename.tar" $glob
         CheckLastExitCode
-        & "$7za" a -tbzip2 "$targetFilename.tar.bz2" "$targetFilename.tar"
+        if ($ALLOW_ENCRYPTED_OVER_HTTP -and !($string -contains "Tools") ){
+            & "$7za" a -tbzip2 "$targetFilename-encrypted-over-http.tar.bz2" "$targetFilename.tar"
+        }
+        else {
+            & "$7za" a -tbzip2 "$targetFilename.tar.bz2" "$targetFilename.tar"
+        }
         CheckLastExitCode
         rm "$targetFilename.tar"
         CheckLastExitCode
