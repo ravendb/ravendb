@@ -9,9 +9,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static.Sharding;
 public class ShardedAggregatedAnonymousObjects : AggregatedAnonymousObjects
 {
     private static readonly DynamicJsonValue DummyDynamicJsonValue = new();
-
-    public ShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext) : base(results, propertyAccessor, indexContext)
+    
+    public ShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext, bool skipImplicitNullInOutput) : base(results, propertyAccessor, indexContext)
     {
+        SkipImplicitNullInOutput = skipImplicitNullInOutput;
         ModifyOutputToStore = djv =>
         {
             djv[Constants.Documents.Metadata.Key] = DummyDynamicJsonValue;

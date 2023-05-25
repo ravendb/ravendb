@@ -2,6 +2,7 @@
 using Sparrow.Json;
 using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
 
@@ -14,9 +15,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly IPropertyAccessor _propertyAccessor;
         private readonly JsonOperationContext _indexContext;
         protected Action<DynamicJsonValue> ModifyOutputToStore;
+        protected bool SkipImplicitNullInOutput;
 
         public AggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext)
         {
+            SkipImplicitNullInOutput = false;
             _outputs = results;
             _propertyAccessor = propertyAccessor;
             _jsons = new List<BlittableJsonReaderObject>(results.Count);
@@ -39,6 +42,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 foreach (var property in _propertyAccessor.GetProperties(output))
                 {
                     var value = property.Value;
+                    
+                    if (SkipImplicitNullInOutput && value is DynamicNullObject { IsExplicitNull: false })
+                        continue;
+                    
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
                 }
 
