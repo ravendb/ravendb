@@ -229,7 +229,7 @@ namespace Raven.Server.Web.System
                 }
                 else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var connectionsState))
                 {
-                    connectionStatus = connectionsState.IsSubscriptionActive()? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
+                    connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
                 }
                 else
                 {
@@ -360,7 +360,7 @@ namespace Raven.Server.Web.System
                     BackupConfigurationHelper.AssertBackupConfiguration(configuration);
                     BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
                     SecurityClearanceValidator.AssertSecurityClearance(configuration, feature?.Status);
-                    
+
                     readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
                 },
                 fillJson: (json, readerObject, index) =>
@@ -526,7 +526,7 @@ namespace Raven.Server.Web.System
                     {
                         writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                     }
-                    
+
                     LogTaskToAudit(BackupDatabaseOnceTag, operationId, json);
                 }
                 catch (Exception e)
@@ -732,7 +732,7 @@ namespace Raven.Server.Web.System
                     }
 
                     break;
-                
+
                 case ConnectionStringType.Olap:
                     var recordOlapConnectionStrings = rawRecord.OlapConnectionString;
                     if (recordOlapConnectionStrings != null && recordOlapConnectionStrings.TryGetValue(connectionStringName, out var olapConnectionString))
@@ -741,7 +741,7 @@ namespace Raven.Server.Web.System
                     }
 
                     break;
-                
+
                 case ConnectionStringType.ElasticSearch:
                     var recordElasticConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
                     if (recordElasticConnectionStrings != null && recordElasticConnectionStrings.TryGetValue(connectionStringName, out var elasticConnectionString))
@@ -776,8 +776,14 @@ namespace Raven.Server.Web.System
                 PutConnectionStringDebugTag, GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
                 {
-                    var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-                    SecurityClearanceValidator.AssertSecurityClearance(JsonDeserializationClient.OlapConnectionString(readerObject),feature?.Status);
+                    var connectionStringType = ConnectionString.GetConnectionStringType(readerObject);
+                    switch (connectionStringType)
+                    {
+                        case ConnectionStringType.Olap:
+                            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+                            SecurityClearanceValidator.AssertSecurityClearance(JsonDeserializationClient.OlapConnectionString(readerObject), feature?.Status);
+                            break;
+                    }
                 });
         }
 
@@ -933,7 +939,7 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.OlapEtls != null)
             {
                 foreach (var olapEtl in databaseRecord.OlapEtls)
@@ -966,13 +972,13 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.ElasticSearchEtls != null)
             {
                 foreach (var elasticSearchEtl in databaseRecord.ElasticSearchEtls)
                 {
                     databaseRecord.ElasticSearchConnectionStrings.TryGetValue(elasticSearchEtl.ConnectionStringName, out var connection);
-                    
+
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, elasticSearchEtl, out var tag, out var error);
                     var taskState = GetEtlTaskState(elasticSearchEtl);
 
@@ -994,13 +1000,13 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.QueueEtls != null)
             {
                 foreach (var queueEtl in databaseRecord.QueueEtls)
                 {
                     databaseRecord.QueueConnectionStrings.TryGetValue(queueEtl.ConnectionStringName, out var connection);
-                    
+
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, queueEtl, out var tag, out var error);
                     var taskState = GetEtlTaskState(queueEtl);
 
@@ -1179,7 +1185,7 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            
+
                             await WriteResult(context, new OngoingTaskOlapEtlDetails
                             {
                                 TaskId = olapEtl.TaskId,
@@ -1197,7 +1203,7 @@ namespace Raven.Server.Web.System
                             });
                             break;
 
-                        
+
                         case OngoingTaskType.RavenEtl:
 
                             var ravenEtl = name != null ?
@@ -1229,7 +1235,7 @@ namespace Raven.Server.Web.System
                                 Error = ravenEtlError
                             });
                             break;
-                        
+
                         case OngoingTaskType.ElasticSearchEtl:
 
                             var elasticSearchEtl = name != null ?
@@ -1258,7 +1264,7 @@ namespace Raven.Server.Web.System
                                 Error = queueEtlError
                             });
                             break;
-                        
+
                         case OngoingTaskType.QueueEtl:
 
                             var queueEtl = name != null ?
@@ -1336,7 +1342,7 @@ namespace Raven.Server.Web.System
                                 },
                                 TaskConnectionStatus = connectionStatus
                             };
-                            
+
                             await WriteResult(context, subscriptionStateInfo);
                             break;
 
