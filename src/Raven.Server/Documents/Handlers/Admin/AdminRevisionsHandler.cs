@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
-                return new DeleteRevisionsCommandDto(_ids, _deleteOnlyForceCreated);
+                return new DeleteRevisionsCommandDto() { Ids = _ids, DeleteOnlyForceCreated = _deleteOnlyForceCreated };
             }
         }
 
@@ -67,18 +67,12 @@ namespace Raven.Server.Documents.Handlers.Admin
 
     internal class DeleteRevisionsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AdminRevisionsHandler.DeleteRevisionsCommand>
     {
-        private readonly string[] _ids;
-        private readonly bool _deleteOnlyForceCreated;
-
-        public DeleteRevisionsCommandDto(string[] ids, bool deleteOnlyForceCreated)
-        {
-            _ids = ids;
-            _deleteOnlyForceCreated = deleteOnlyForceCreated;
-        }
+        public string[] Ids;
+        public bool DeleteOnlyForceCreated;
 
         public AdminRevisionsHandler.DeleteRevisionsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new AdminRevisionsHandler.DeleteRevisionsCommand(_ids, database, _deleteOnlyForceCreated);
+            var command = new AdminRevisionsHandler.DeleteRevisionsCommand(Ids, database, DeleteOnlyForceCreated);
             return command;
         }
     }
