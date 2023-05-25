@@ -140,8 +140,8 @@ namespace SlowTests.Server.Documents.QueueSink.Kafka
             Assert.Equal("Script 'test' must not be empty", errors[0]);
         }
 
-        [Fact]
-        /*public async Task CanTestScript()
+        /*[Fact]
+        public async Task CanTestScript()
         {
             using (var store = GetDocumentStore())
             {
