@@ -15,8 +15,17 @@ param(
     [switch]$NoBundling,
     [switch]$DryRunVersionBump = $false,
     [switch]$DryRunSign = $false,
-    [switch]$AllowEncryptedOverHttp,
+    [string]$BuildOptions = "",
+    [string]$ArtifactNameSuffix = "",
     [switch]$Help)
+
+if ([string]::IsNullOrEmpty($BuildOptions) -eq $False) {
+  $env:RAVEN_BuildOptions = $BuildOptions
+}
+
+if ([string]::IsNullOrEmpty($ArtifactNameSuffix) -eq $False) {
+  $env:RAVEN_ArtifactNameSuffix = $ArtifactNameSuffix
+}
 
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -55,10 +64,6 @@ if ($Osx) {
 }
 
 CheckPrerequisites
-
-if ($AllowEncryptedOverHttp) {
-    $ALLOW_ENCRYPTED_OVER_HTTP = $true;
-}
 
 $PROJECT_DIR = Get-ScriptDirectory
 $RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
@@ -202,7 +207,7 @@ Foreach ($target in $targets) {
     $specOutDir = [io.path]::combine($OUT_DIR, $target.Name)
     CleanDir $specOutDir
 
-    BuildServer $SERVER_SRC_DIR $specOutDir $target $ALLOW_ENCRYPTED_OVER_HTTP
+    BuildServer $SERVER_SRC_DIR $specOutDir $target
     BuildTool rvn $RVN_SRC_DIR $specOutDir $target $true
     BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target $false
     BuildTool migrator $MIGRATOR_SRC_DIR $specOutDir $target $true
@@ -257,7 +262,7 @@ Foreach ($target in $targets) {
         }
     }
 
-    CreateServerPackage $PROJECT_DIR $RELEASE_DIR $packOpts $ALLOW_ENCRYPTED_OVER_HTTP
+    CreateServerPackage $PROJECT_DIR $RELEASE_DIR $packOpts
     CreateToolsPackage $PROJECT_DIR $RELEASE_DIR $packOpts
 }
 

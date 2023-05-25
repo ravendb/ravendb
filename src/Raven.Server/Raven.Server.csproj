@@ -240,7 +240,7 @@
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(AllowEncryptedOverHttp)' == 'True'">
-    <DefineConstants>$(DefineConstants);ALLOW_ENCRYPTED_OVER_HTTP</DefineConstants>
+  <PropertyGroup Condition="'$(RAVEN_BuildOptions)' != ''">
+    <DefineConstants>$(DefineConstants);$(RAVEN_BuildOptions)</DefineConstants>
   </PropertyGroup>
 </Project>
