@@ -31,7 +31,7 @@ class exportDatabaseModel {
 
     includeAllCollections = ko.observable(true);
     includedCollections = ko.observableArray<string>([]);
-    ignoreCorruptedDocumentsErrors = ko.observable(true);
+    ignoreCorruptedDocumentsErrors = ko.observable(false);
 
     transformScript = ko.observable<string>();
 
