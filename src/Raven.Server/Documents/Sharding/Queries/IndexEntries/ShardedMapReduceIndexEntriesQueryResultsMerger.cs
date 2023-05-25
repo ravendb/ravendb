@@ -46,6 +46,6 @@ public class ShardedMapReduceIndexEntriesQueryResultsMerger : ShardedMapReduceQu
         return base.AggregateForStaticMapReduce(index);
     }
 
-    protected override AggregatedAnonymousObjects CreateShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor)
+    protected override AggregatedAnonymousObjects CreateShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, bool skipImplicitNullInOutput = false)
         => new ShardedAggregatedAnonymousObjectsForIndexEntries(results, propertyAccessor, _reduceKeyHash, Context);
 }

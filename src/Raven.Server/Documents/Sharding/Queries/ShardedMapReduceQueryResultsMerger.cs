@@ -83,13 +83,13 @@ public class ShardedMapReduceQueryResultsMerger
             if (propertyAccessor == null)
                 return new List<BlittableJsonReaderObject>(0);
 
-            var objects = CreateShardedAggregatedAnonymousObjects(results, propertyAccessor);
+            var objects = CreateShardedAggregatedAnonymousObjects(results, propertyAccessor, index.Configuration.IndexMissingFieldsAsNull == false);
             return objects.GetOutputsToStore().ToList();
         }
     }
 
-    protected virtual AggregatedAnonymousObjects CreateShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor)
-        => new ShardedAggregatedAnonymousObjects(results, propertyAccessor, Context);
+    protected virtual AggregatedAnonymousObjects CreateShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, bool skipImplicitNullInOutput = false)
+        => new ShardedAggregatedAnonymousObjects(results, propertyAccessor, Context, skipImplicitNullInOutput);
 
     internal virtual AggregationResult AggregateForAutoMapReduce(AutoMapReduceIndexDefinition indexDefinition)
     {

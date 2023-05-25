@@ -17,18 +17,18 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Map_reduce_results_should_not_contains_implicit_nulls_wich_were_not_indexed(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
-                new DocsIndex().Execute(store);
+                await new DocsIndex().ExecuteAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Doc { Id = "doc-1", StrVal = "a", });
                     await session.SaveChangesAsync();
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     var result = await session.Query<BlittableJsonReaderObject, DocsIndex>().FirstAsync();
 
