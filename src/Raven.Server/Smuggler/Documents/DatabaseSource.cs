@@ -22,7 +22,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Iteration;
 using Raven.Server.Utils.Enumerators;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
@@ -69,6 +68,8 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly SmugglerSourceType _type;
 
+        private SmugglerResult _result;
+
         public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startRaftIndex, Logger logger)
         {
             _database = database;
@@ -107,6 +108,12 @@ namespace Raven.Server.Smuggler.Documents
                 using (var rawRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(_serverContext, _database.Name))
                 {
                     LastRaftIndex = rawRecord.EtagForBackup;
+                }
+
+                if (options.IgnoreCorruptedDocumentsErrors)
+                {
+                    _database.DocumentsStorage.OnCorruptedDocumentHandler = OnCorruptedDocument;
+                    _result = result;
                 }
             }
 
@@ -592,6 +599,12 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerSourceType GetSourceType()
         {
             return _type;
+        }
+
+        private void OnCorruptedDocument(object sender, InvalidOperationException e)
+        {
+            _result.Documents.ErroredCount++;
+            _result.AddError(e.Message);
         }
     }
 }
