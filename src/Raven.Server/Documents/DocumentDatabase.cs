@@ -1506,14 +1506,18 @@ namespace Raven.Server.Documents
 
                 if (_lastTopologyIndex < record.Topology.Stamp.Index)
                 {
-                    _lastTopologyIndex = record.Topology.Stamp.Index;
-
                     var clusterTopology = ServerStore.GetClusterTopology();
-                    Changes.RaiseNotifications(new TopologyChange
+                    var url = clusterTopology.GetUrlFromTag(ServerStore.NodeTag);
+                    if (url != null)
                     {
-                        Url = clusterTopology.GetUrlFromTag(ServerStore.NodeTag),
-                        Database = Name
-                    });
+                        _lastTopologyIndex = record.Topology.Stamp.Index;
+
+                        Changes.RaiseNotifications(new TopologyChange
+                        {
+                            Url = url,
+                            Database = Name
+                        });
+                    }
                 }
 
                 ClientConfiguration = record.Client;
