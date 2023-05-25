@@ -19,12 +19,18 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
+using Raven.Server.Config;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Utils;
+using Voron;
+using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
+using Address = Raven.Tests.Core.Utils.Entities.Address;
 using Company = Raven.Tests.Core.Utils.Entities.Company;
 using Employee = Raven.Tests.Core.Utils.Entities.Employee;
 
@@ -2034,6 +2040,100 @@ namespace SlowTests.Smuggler
                 var revision = await session.Advanced.Revisions.GetForAsync<User>(user.Id);
                 Assert.NotNull(revision);
                 Assert.NotEmpty(revision);
+            }
+        }
+
+        [Fact]
+        public async Task CanExportAndImportDocumentIfCompressionDictionaryMissed()
+        {
+            const int expectedNumberOfNonCorruptedDocuments = 1024;
+            const int expectedNumberOfDocuments = expectedNumberOfNonCorruptedDocuments + 1;
+
+            var file = GetTempFileName();
+
+            try
+            {
+                using (var server = GetNewServer(new ServerCreationOptions
+                       {
+                           CustomSettings = new Dictionary<string, string>
+                           {
+                               [RavenConfiguration.GetKey(x => x.Databases.CompressAllCollectionsDefault)] = true.ToString()
+                           }
+                       }))
+                using (var sourceStore = GetDocumentStore(new Options { Server = server }))
+                using (var destStore = GetDocumentStore(new Options { Server = server }))
+                {
+                    var database = await GetDatabase(server, sourceStore.Database);
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        using (var session = sourceStore.OpenAsyncSession())
+                        {
+                            for (int i = 0; i < expectedNumberOfDocuments; i++)
+                            {
+                                var user = new User { Name = $"User{i}" };
+
+                                await session.StoreAsync(user, $"users/{i}");
+                            }
+
+                            await session.SaveChangesAsync();
+                        }
+
+                        List<ZstdLib.CompressionDictionary> inStorageDictionaries;
+                        using (var tx = context.Environment.ReadTransaction())
+                            inStorageDictionaries = context.Environment.CompressionDictionariesHolder.GetInStorageDictionaries(tx).ToList();
+                        
+                        Assert.True(inStorageDictionaries.Count == 1);
+
+                        using (var tx = context.Environment.WriteTransaction())
+                        {
+                            var tree = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
+                            using (var iterator = tree.Iterate(true))
+                            {
+                                iterator.Seek(Slices.BeforeAllKeys);
+
+                                do
+                                {
+                                    var id = iterator.CurrentKey;
+                                    tree.Delete(id);
+                                } while (iterator.MoveNext());
+                            }
+
+                            tx.Commit();
+                        }
+
+                        using (var tx = context.Environment.ReadTransaction())
+                        {
+                            inStorageDictionaries = context.Environment.CompressionDictionariesHolder.GetInStorageDictionaries(tx).ToList();
+                            Assert.True(inStorageDictionaries.Count == 0);
+                        }
+
+                        context.Environment.CompressionDictionariesHolder.CompressionDictionaries.Clear();
+                    }
+
+                    var operation = await sourceStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IgnoreCorruptedDocumentsErrors = true }, file);
+                    var result = await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(15)) as SmugglerResult;
+                    var stats = sourceStore.Maintenance.Send(new GetStatisticsOperation());
+
+                    Assert.True(result?.Documents.ReadCount == expectedNumberOfDocuments, 
+                        $"Documents.ReadCount of smuggler export result is {result?.Documents.ReadCount} documents, but should be {expectedNumberOfDocuments}");
+
+                    Assert.True(result.Documents.ErroredCount == expectedNumberOfDocuments - expectedNumberOfNonCorruptedDocuments,
+                        $"Documents.ErroredCount of smuggler export result is {result.Documents.ErroredCount} documents, but should be {expectedNumberOfDocuments - expectedNumberOfNonCorruptedDocuments}");
+
+                    Assert.True(stats.CountOfDocuments == expectedNumberOfDocuments, 
+                        $"The source database contains {stats.CountOfDocuments} documents, but should be {expectedNumberOfDocuments}");
+
+                    operation = await destStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    stats = destStore.Maintenance.Send(new GetStatisticsOperation());
+                    Assert.True(stats.CountOfDocuments == expectedNumberOfNonCorruptedDocuments, 
+                        $"The destination database contains {stats.CountOfDocuments} documents, but expected {expectedNumberOfNonCorruptedDocuments}");
+                }
+            }
+            finally
+            {
+                File.Delete(file);
             }
         }
 

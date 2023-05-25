@@ -25,6 +25,7 @@ namespace Voron.Data.Tables
         private readonly bool _forGlobalReadsOnly;
         private readonly TableSchema _schema;
         internal readonly Transaction _tx;
+        private readonly EventHandler<InvalidOperationException> _onCorruptedDocumentErrorHandler;
         private readonly Tree _tableTree;
 
         private ActiveRawDataSmallSection _activeDataSmallSection;
@@ -141,12 +142,13 @@ namespace Voron.Data.Tables
         /// this overload is meant to be used for global reads only, when want to use
         /// a global index to find data, without touching the actual table.
         /// </summary>
-        public Table(TableSchema schema, Transaction tx)
+        public Table(TableSchema schema, Transaction tx, EventHandler<InvalidOperationException> onCorruptedDocumentErrorHandler = null)
         {
             _schema = schema;
             _tx = tx;
             _forGlobalReadsOnly = true;
             _tableType = 0;
+            _onCorruptedDocumentErrorHandler = onCorruptedDocumentErrorHandler;
         }
 
         public bool ReadByKey(Slice key, out TableValueReader reader)
@@ -1619,7 +1621,18 @@ namespace Voron.Data.Tables
                 var result = new TableValueHolder();
                 do
                 {
-                    GetTableValueReader(it, out result.Reader);
+                    try
+                    {
+                        GetTableValueReader(it, out result.Reader);
+                    }
+                    catch (InvalidOperationException e)
+                    {
+                        if (_onCorruptedDocumentErrorHandler == null)
+                            throw;
+
+                        _onCorruptedDocumentErrorHandler.Invoke(this, e);
+                    }
+
                     yield return result;
                 } while (it.MoveNext());
             }

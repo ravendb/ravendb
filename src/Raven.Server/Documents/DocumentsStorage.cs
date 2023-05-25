@@ -68,6 +68,7 @@ namespace Raven.Server.Documents
         public static readonly TableSchema CollectionsSchema = new TableSchema();
 
         public readonly DocumentDatabase DocumentDatabase;
+        public EventHandler<InvalidOperationException> OnCorruptedDocumentHandler;
 
         private Dictionary<string, CollectionName> _collectionsCache;
 
@@ -932,7 +933,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, long start, long take, DocumentFields fields = DocumentFields.All)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction, OnCorruptedDocumentHandler);
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, start))
             {

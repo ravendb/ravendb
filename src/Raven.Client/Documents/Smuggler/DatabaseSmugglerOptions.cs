@@ -74,6 +74,8 @@ namespace Raven.Client.Documents.Smuggler
         public string EncryptionKey { get; set; }
 
         public List<string> Collections { get; set; }
+
+        public bool IgnoreCorruptedDocumentsErrors { get; set; }
     }
 
     internal interface IDatabaseSmugglerOptions
