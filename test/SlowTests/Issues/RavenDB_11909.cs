@@ -89,7 +89,7 @@ namespace SlowTests.Issues
         [Fact]
         public void ThrowOnDatabaseRecordChanges()
         {
-            const int numberOfFields = 42;
+            const int numberOfFields = 43;
             const int numberOfProperties = 1;
 
             var tasksList = new List<string>
@@ -102,7 +102,8 @@ namespace SlowTests.Issues
                 nameof(DatabaseRecord.SqlEtls),
                 nameof(DatabaseRecord.OlapEtls),
                 nameof(DatabaseRecord.ElasticSearchEtls),
-                nameof(DatabaseRecord.QueueEtls)
+                nameof(DatabaseRecord.QueueEtls),
+                nameof(DatabaseRecord.QueueSinks),
             };
 
             var dbRecordType = typeof(DatabaseRecord);

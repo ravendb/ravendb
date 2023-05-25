@@ -1728,8 +1728,8 @@ namespace Raven.Server.ServerWide
             nameof(DatabaseRecord.SqlEtls),
             nameof(DatabaseRecord.OlapEtls),
             nameof(DatabaseRecord.ElasticSearchEtls),
-            nameof(DatabaseRecord.QueueEtls)
-
+            nameof(DatabaseRecord.QueueEtls),
+            nameof(DatabaseRecord.QueueSinks)
         };
 
         private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
