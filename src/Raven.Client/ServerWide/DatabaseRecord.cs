@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -123,6 +124,8 @@ namespace Raven.Client.ServerWide
         public List<OlapEtlConfiguration> OlapEtls = new List<OlapEtlConfiguration>();
         
         public List<QueueEtlConfiguration> QueueEtls = new List<QueueEtlConfiguration>();
+        
+        public List<QueueSinkConfiguration> QueueSinks = new List<QueueSinkConfiguration>();
 
         public ClientConfiguration Client;
 

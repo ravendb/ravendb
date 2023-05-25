@@ -52,6 +52,8 @@ namespace Raven.Server.Config
         public HttpConfiguration Http { get; }
 
         public EtlConfiguration Etl { get; }
+        
+        public QueueSinkConfiguration QueueSink { get; }
 
         public ReplicationConfiguration Replication { get; }
 
@@ -153,6 +155,7 @@ namespace Raven.Server.Config
             Migration = new MigrationConfiguration();
             TrafficWatch = new TrafficWatchConfiguration();
             Integrations = new IntegrationsConfiguration();
+            QueueSink = new QueueSinkConfiguration();
             Sharding = new ShardingConfiguration();
         }
 
@@ -215,6 +218,7 @@ namespace Raven.Server.Config
             Migration.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             TrafficWatch.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Integrations.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            QueueSink.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Sharding.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
 
             PostInit();

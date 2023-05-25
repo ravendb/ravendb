@@ -60,6 +60,7 @@ namespace Raven.Client.Documents.Smuggler
         QueueConnectionStrings = 1 << 24,
         QueueEtls = 1 << 25,
         IndexesHistory = 1 << 26,
-        Refresh = 1 << 27
+        Refresh = 1 << 27,
+        QueueSinks = 1 << 28
     }
 }

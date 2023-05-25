@@ -130,7 +130,7 @@ namespace Raven.Server.Commercial
         public bool HasRavenEtl => GetValue<bool>("ravenEtl");
 
         public bool HasSqlEtl => GetValue<bool>("sqlEtl");
-
+        
         public bool HasHighlyAvailableTasks => GetValue<bool>("highlyAvailableTasks");
 
         public bool HasPullReplicationAsHub => GetValue<bool>("pullReplicationAsHub");
@@ -181,6 +181,10 @@ namespace Raven.Server.Commercial
         public bool HasPowerBI => GetValue<bool>("powerBI");
 
         public bool HasPostgreSqlIntegration => GetValue<bool>("postgreSqlIntegration");
+        
+        // todo djordje: use this when available in license
+        //public bool HasQueueSink => GetValue<bool>("QueueSink");
+        public bool HasQueueSink => true;
 
         public DynamicJsonValue ToJson()
         {
@@ -229,7 +233,8 @@ namespace Raven.Server.Commercial
                 [nameof(HasElasticSearchEtl)] = HasElasticSearchEtl,
                 [nameof(HasQueueEtl)] = HasQueueEtl,
                 [nameof(HasPowerBI)] = HasPowerBI,
-                [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration
+                [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
+                [nameof(HasQueueSink)] = HasQueueSink
             };
         }
     }

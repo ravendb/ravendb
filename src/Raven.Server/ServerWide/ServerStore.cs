@@ -23,6 +23,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -63,6 +64,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
@@ -2185,6 +2187,55 @@ namespace Raven.Server.ServerWide
 
             return await SendToLeaderAsync(command);
         }
+        
+        public async Task<(long, object)> AddQueueSink(TransactionOperationContext context,
+            string databaseName, BlittableJsonReaderObject queueSinkConfiguration, string raftRequestId)
+        {
+            UpdateDatabaseCommand command;
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, databaseName))
+            {
+                var queueSink = JsonDeserializationCluster.QueueSinkConfiguration(queueSinkConfiguration);
+                queueSink.Validate(out var queueSinkErr, validateName: false, validateConnection: false);
+
+                var queueConnectionString = rawRecord.QueueConnectionStrings;
+                var validateConnectionString = queueConnectionString != null && queueConnectionString.TryGetValue(queueSink.ConnectionStringName, out _);
+
+                if (validateConnectionString == false)
+                    queueSinkErr.Add($"Could not find connection string named '{queueSink.ConnectionStringName}'. Please supply an existing connection string.");
+
+                ThrowInvalidQueueSinkConfigurationIfNecessary(queueSinkConfiguration, queueSinkErr);
+                command = new AddQueueSinkCommand(queueSink, databaseName, raftRequestId);
+            }
+
+            return await SendToLeaderAsync(command);
+        }
+        
+        public async Task<(long, object)> UpdateQueueSink(TransactionOperationContext context, string databaseName,
+            long id, BlittableJsonReaderObject queueSinkConfiguration, string raftRequestId)
+        {
+            UpdateDatabaseCommand command;
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, databaseName))
+            {
+                var queueSink = JsonDeserializationCluster.QueueSinkConfiguration(queueSinkConfiguration);
+                queueSink.Validate(out var queueSinkErr, validateName: false, validateConnection: false);
+                
+                var queueConnectionString = rawRecord.QueueConnectionStrings;
+                var a = queueConnectionString != null && queueConnectionString.TryGetValue(queueSink.ConnectionStringName, out _);
+
+                if (a)
+                    queueSinkErr.Add($"Could not find connection string named '{queueSink.ConnectionStringName}'. Please supply an existing connection string.");
+
+                ThrowInvalidQueueSinkConfigurationIfNecessary(queueSinkConfiguration, queueSinkErr);
+                command = new UpdateQueueSinkCommand(id, queueSink, databaseName, raftRequestId);
+            }
+
+            return await SendToLeaderAsync(command);
+        }
 
         [DoesNotReturn]
         private void ThrowInvalidConfigurationIfNecessary(BlittableJsonReaderObject etlConfiguration, IReadOnlyCollection<string> errors)
@@ -2206,6 +2257,30 @@ namespace Raven.Server.ServerWide
 
             sb.AppendLine("Configuration:");
             sb.AppendLine(etlConfiguration.ToString());
+
+            throw new InvalidOperationException(sb.ToString());
+        }
+        
+        private void ThrowInvalidQueueSinkConfigurationIfNecessary(BlittableJsonReaderObject queueSinkConfiguration,
+            IReadOnlyCollection<string> errors)
+        {
+            if (errors.Count <= 0)
+                return;
+
+            var sb = new StringBuilder();
+            sb
+                .AppendLine("Invalid Queue Sink configuration.")
+                .AppendLine("Errors:");
+
+            foreach (var err in errors)
+            {
+                sb
+                    .Append("- ")
+                    .AppendLine(err);
+            }
+
+            sb.AppendLine("Configuration:");
+            sb.AppendLine(queueSinkConfiguration.ToString());
 
             throw new InvalidOperationException(sb.ToString());
         }

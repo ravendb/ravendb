@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -223,11 +224,17 @@ namespace Raven.Client.Json.Serialization
         
         internal static readonly Func<BlittableJsonReaderObject, AddEtlOperationResult> AddEtlOperationResult = GenerateJsonDeserializationRoutine<AddEtlOperationResult>();
         
+        internal static readonly Func<BlittableJsonReaderObject, AddQueueSinkOperationResult> AddQueueSinkOperationResult = GenerateJsonDeserializationRoutine<AddQueueSinkOperationResult>();
+        
         internal static readonly Func<BlittableJsonReaderObject, ReplicationHubAccessResult> ReplicationHubAccessResult = GenerateJsonDeserializationRoutine<ReplicationHubAccessResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, UpdateEtlOperationResult> UpdateEtlOperationResult = GenerateJsonDeserializationRoutine<UpdateEtlOperationResult>();
+        
+        internal static readonly Func<BlittableJsonReaderObject, UpdateQueueSinkOperationResult> UpdateQueueSinkOperationResult = GenerateJsonDeserializationRoutine<UpdateQueueSinkOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessState = GenerateJsonDeserializationRoutine<EtlProcessState>();
+        
+        internal static readonly Func<BlittableJsonReaderObject, QueueSinkProcessState> QueueSinkProcessState = GenerateJsonDeserializationRoutine<QueueSinkProcessState>();
 
         internal static readonly Func<BlittableJsonReaderObject, PutConnectionStringResult> PutConnectionStringResult = GenerateJsonDeserializationRoutine<PutConnectionStringResult>();
 

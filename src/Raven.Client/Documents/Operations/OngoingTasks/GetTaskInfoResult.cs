@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
@@ -26,7 +27,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         Backup,
         Subscription,
         PullReplicationAsHub,
-        PullReplicationAsSink
+        PullReplicationAsSink,
+        QueueSink
     }
 
     public enum OngoingTaskState
@@ -434,6 +436,25 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 [nameof(IsFull)] = IsFull,
                 [nameof(RunningBackupTaskId)] = RunningBackupTaskId
             };
+        }
+    }
+    
+    public class OngoingTaskQueueSinkDetails : OngoingTask
+    {
+        public OngoingTaskQueueSinkDetails()
+        {
+            TaskType = OngoingTaskType.QueueSink;
+        }
+
+        public QueueSinkConfiguration Configuration { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(Configuration)] = Configuration?.ToJson();
+
+            return json;
         }
     }
 }

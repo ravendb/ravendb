@@ -1696,6 +1696,18 @@ namespace Raven.Server.Commercial
             const string message = "Your current license doesn't include the encryption feature";
             throw GenerateLicenseLimit(LimitType.Encryption, message);
         }
+        
+        public void AssertCanAddQueueSink()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasQueueSink)
+                return;
+
+            const string message = "Your current license doesn't include the queue sink feature";
+            throw GenerateLicenseLimit(LimitType.QueueSink, message);
+        }
 
         private void DismissLicenseLimit(LimitType limitType)
         {

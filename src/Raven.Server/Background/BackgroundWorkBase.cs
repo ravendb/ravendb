@@ -91,6 +91,8 @@ namespace Raven.Server.Background
             Cts.Dispose();
         }
 
+        
+
         protected async Task WaitOrThrowOperationCanceled(TimeSpan time)
         {
             try
