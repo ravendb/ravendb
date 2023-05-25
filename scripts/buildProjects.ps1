@@ -1,5 +1,5 @@
 
-function BuildServer ( $srcDir, $outDir, $target, $ALLOW_ENCRYPTED_OVER_HTTP) {
+function BuildServer ( $srcDir, $outDir, $target) {
 
     if ($target) {
         write-host "Building Server for $($target.Name)..."
@@ -32,8 +32,8 @@ function BuildServer ( $srcDir, $outDir, $target, $ALLOW_ENCRYPTED_OVER_HTTP) {
         $commandArgs += "/p:UseAppHost=false"
     }
 
-    if ($ALLOW_ENCRYPTED_OVER_HTTP) {
-        $commandArgs += "/p:AllowEncryptedOverHttp=True"
+    if ($env:RAVEN_BuildOptions -like "*AllowEncryptedOverHttp*") {
+        $commandArgs += "/p:RAVEN_BuildOptions=$RAVEN_BuildOptions"
     }
 
     $commandArgs += '/p:SourceLinkCreate=true'

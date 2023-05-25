@@ -35,30 +35,25 @@ function UnpackTarGzToDir ( $archivePath, $outDir ) {
     }
 }
 
-function CreateArchiveFromDir ( $targetFilename, $dir, $target, $wrapperDirName, $ALLOW_ENCRYPTED_OVER_HTTP ) {
+function CreateArchiveFromDir ( $targetFilename, $dir, $target, $wrapperDirName ) {
     if ($target.PkgType -eq "zip") {
-        ZipFilesFromDir $targetFilename $dir $ALLOW_ENCRYPTED_OVER_HTTP
+        ZipFilesFromDir $targetFilename $dir
     }
     elseif ($target.PkgType -eq "tar.bz2") {
-        TarBzFilesFromDir $targetFilename $dir $wrapperDirName $ALLOW_ENCRYPTED_OVER_HTTP
+        TarBzFilesFromDir $targetFilename $dir $wrapperDirName
     }
     else {
         throw "Unknown archive method for $targetFilename"
     }
 }
 
-function ZipFilesFromDir( $targetFilename, $sourceDir, $ALLOW_ENCRYPTED_OVER_HTTP ) {
+function ZipFilesFromDir( $targetFilename, $sourceDir ) {
     $toZipGlob = [io.path]::combine($sourceDir, '*')
-    if ($ALLOW_ENCRYPTED_OVER_HTTP) {
-        $zipFile = "$targetFilename-encrypted-over-http.zip"
-    }
-    else {
-        $zipFile = "$targetFilename.zip"
-    }
+    $zipFile = "$targetFilename$($env:RAVEN_ArtifactNameSuffix).zip"
     Compress-Archive -Path "$toZipGlob" -DestinationPath "$zipFile"
 }
 
-function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName, $ALLOW_ENCRYPTED_OVER_HTTP ) {
+function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName ) {
 
     if ([string]::IsNullOrEmpty($wrapperDirName) -eq $false) {
         WrapContentsInDir $sourceDir $wrapperDirName
@@ -66,12 +61,7 @@ function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName, $ALLO
 
     $glob = [io.path]::combine($sourceDir, '*')
     if ($($IsWindows -eq $False) -and $(Get-Command "tar" -ErrorAction SilentlyContinue)) {
-        if ($ALLOW_ENCRYPTED_OVER_HTTP){
-            & tar -C $sourceDir -cjvf "$targetFilename-encrypted-over-http.tar.bz2" .    
-        }
-        else {
-            & tar -C $sourceDir -cjvf "$targetFilename.tar.bz2" .
-        }
+        & tar -C $sourceDir -cjvf "$targetFilename$($env:RAVEN_ArtifactNameSuffix).tar.bz2" .
         CheckLastExitCode
     }
     else 
@@ -79,12 +69,7 @@ function TarBzFilesFromDir ( $targetFilename, $sourceDir, $wrapperDirName, $ALLO
         $7za = [io.path]::combine("scripts", "assets", "bin", "7za.exe")
         & "$7za" a -ttar "$targetFilename.tar" $glob
         CheckLastExitCode
-        if ($ALLOW_ENCRYPTED_OVER_HTTP -and !($string -contains "Tools") ){
-            & "$7za" a -tbzip2 "$targetFilename-encrypted-over-http.tar.bz2" "$targetFilename.tar"
-        }
-        else {
-            & "$7za" a -tbzip2 "$targetFilename.tar.bz2" "$targetFilename.tar"
-        }
+        & "$7za" a -tbzip2 "$targetFilename$($env:RAVEN_ArtifactNameSuffix).tar.bz2" "$targetFilename.tar"
         CheckLastExitCode
         rm "$targetFilename.tar"
         CheckLastExitCode
