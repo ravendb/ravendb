@@ -214,6 +214,9 @@ namespace Sparrow.Server.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int statx(int fd, string filename, Int32 flags, UInt32 mask, out Statx buf);
+        
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int statfs(string path, out statfs buf);
 
         public static void PwriteOrThrow(int fd, byte* buffer, ulong count, long offset, string file, string debug)
         {

@@ -1275,6 +1275,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+                wakeup = DateTime.SpecifyKind(wakeup, DateTimeKind.Utc);
                 var nextIdleDatabaseActivity = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
                 DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
 

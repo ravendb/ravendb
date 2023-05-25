@@ -10,6 +10,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
+using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using NativeMemory = Sparrow.Utils.NativeMemory;
@@ -31,10 +32,6 @@ namespace Sparrow.LowMemory
         private static readonly byte[] MemTotal = Encoding.UTF8.GetBytes("MemTotal:");
         private static readonly byte[] SwapTotal = Encoding.UTF8.GetBytes("SwapTotal:");
         private static readonly byte[] Committed_AS = Encoding.UTF8.GetBytes("Committed_AS:");
-
-        private const string CgroupMemoryLimit = "/sys/fs/cgroup/memory/memory.limit_in_bytes";
-        private const string CgroupMaxMemoryUsage = "/sys/fs/cgroup/memory/memory.max_usage_in_bytes";
-        private const string CgroupMemoryUsage = "/sys/fs/cgroup/memory/memory.usage_in_bytes";
 
         public static long HighLastOneMinute;
         public static long LowLastOneMinute = long.MaxValue;
@@ -455,26 +452,29 @@ namespace Sparrow.LowMemory
 
             var totalPhysicalMemoryInBytes = fromProcMemInfo.TotalMemory.GetValue(SizeUnit.Bytes);
 
-            var cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryLimit);
-            var cgroupMaxMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMaxMemoryUsage);
+            var cgroupMemoryLimit = CGroupHelper.CGroup.GetPhysicalMemoryLimit();
+            var cgroupMaxMemoryUsage = CGroupHelper.CGroup.GetMaxMemoryUsage();
             // here we need to deal with _soft_ limit, so we'll take the largest of these values
             var maxMemoryUsage = Math.Max(cgroupMemoryLimit ?? 0, cgroupMaxMemoryUsage ?? 0);
-            if (maxMemoryUsage != 0 && maxMemoryUsage <= totalPhysicalMemoryInBytes)
+            var constrainedByCgroups = maxMemoryUsage != 0 && maxMemoryUsage <= totalPhysicalMemoryInBytes;
+            if (constrainedByCgroups)
             {
                 // running in a limited cgroup
                 var commitedMemoryInBytes = 0L;
                 var cgroupMemoryUsage = LowMemoryNotification.Instance.UseTotalDirtyMemInsteadOfMemUsage // RDBS-45
                     ? fromProcMemInfo.TotalDirty.GetValue(SizeUnit.Bytes)
-                    : KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
+                    : CGroupHelper.CGroup.GetPhysicalMemoryUsage();
 
                 if (cgroupMemoryUsage != null)
                 {
                     commitedMemoryInBytes = cgroupMemoryUsage.Value;
                     fromProcMemInfo.Commited.Set(commitedMemoryInBytes, SizeUnit.Bytes);
-                    fromProcMemInfo.AvailableMemory.Set(maxMemoryUsage - cgroupMemoryUsage.Value, SizeUnit.Bytes);
+                    var availableMemory = Math.Min(maxMemoryUsage - cgroupMemoryUsage.Value, fromProcMemInfo.AvailableMemory.GetValue(SizeUnit.Bytes));
+                    fromProcMemInfo.AvailableMemory.Set(availableMemory, SizeUnit.Bytes);
                     var realAvailable = maxMemoryUsage - cgroupMemoryUsage.Value + fromProcMemInfo.SharedCleanMemory.GetValue(SizeUnit.Bytes);
                     if (realAvailable < 0)
                         realAvailable = 0;
+                    realAvailable = Math.Min(realAvailable, fromProcMemInfo.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes));
                     fromProcMemInfo.AvailableMemoryForProcessing.Set(realAvailable, SizeUnit.Bytes);
                 }
 
@@ -512,7 +512,7 @@ namespace Sparrow.LowMemory
                 WorkingSetSwapUsage = fromProcMemInfo.WorkingSetSwap,
                 
                 IsExtended = extended,
-                Remarks = maxMemoryUsage != 0 ? "Memory constrained by cgroups limits" :  null
+                Remarks = constrainedByCgroups ? "Memory constrained by cgroups limits" :  null
             };
         }
 
