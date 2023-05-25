@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography.X509Certificates;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
@@ -58,8 +59,10 @@ namespace Raven.Client.Documents.Operations.Backups
             TimeoutInMs = script.TimeoutInMs;
         }
 
+        [SecurityClearance(SecurityClearance.Operator)]
         public string Exec { get; set; }
 
+        [SecurityClearance(SecurityClearance.Operator)]
         public string Arguments { get; set; }
 
         public int TimeoutInMs { get; set; }

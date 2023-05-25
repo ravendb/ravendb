@@ -78,7 +78,7 @@ namespace Raven.Server.Web.System
 
                     if (databaseRecord.Topology.RelevantFor(node) == false)
                     {
-                        ValidateNodeForAddingToDb(dbName, node, databaseRecord, clusterTopology, baseMessage: $"Can't modify database {dbName} topology");
+                        ValidateNodeForAddingToDb(dbName, node, databaseRecord, clusterTopology, Server, baseMessage: $"Can't modify database {dbName} topology");
                     }
                 }
                 databaseTopology.ReplicationFactor = Math.Min(databaseTopology.Count, clusterTopology.AllNodes.Count);

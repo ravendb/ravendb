@@ -1116,7 +1116,7 @@ namespace Raven.Server.Documents
                     return null;
 
                 var record = databaseRecord.MaterializedRecord;
-                if (record.Encrypted)
+                if (record.Encrypted && _serverStore.Server.AllowEncryptedDatabasesOverHttp == false)
                 {
                     if (_serverStore.Server.WebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                     {
@@ -1621,6 +1621,8 @@ namespace Raven.Server.Documents
             LastEtag = lastEtag;
             Type = type;
             TaskId = taskId;
+
+            Debug.Assert(timeOfActivity?.Kind != DateTimeKind.Unspecified);
             DateTime = timeOfActivity?.ToUniversalTime();
         }
     }

@@ -91,4 +91,29 @@ namespace Sparrow.Server.Platform.Posix
         public UInt32 stx_dev_minor;        // Minor ID
         private unsafe fixed UInt64 __spare2[14];
     }
+    
+    [StructLayout(LayoutKind.Sequential)]
+    public struct statfs
+    {
+        public uint f_type;
+        public uint f_bsize;
+        public ulong f_blocks;
+        public ulong f_bfree;
+        public ulong f_bavail;
+        public ulong f_files;
+        public ulong f_ffree;
+        public fsid_t f_fsid;
+        public uint f_namelen;
+        public uint f_frsize;
+        public uint f_flags;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 5)]
+        public uint[] f_spare1;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct fsid_t
+    {
+        public int val1;
+        public int val2;
+    }
 }

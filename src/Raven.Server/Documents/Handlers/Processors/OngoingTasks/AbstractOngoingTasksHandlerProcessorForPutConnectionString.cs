@@ -1,7 +1,13 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors.Databases;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
@@ -15,6 +21,19 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected AbstractOngoingTasksHandlerProcessorForPutConnectionString([NotNull] TRequestHandler requestHandler)
             : base(requestHandler)
         {
+        }
+
+        protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
+        {
+            switch (ConnectionString.GetConnectionStringType(configuration))
+            {
+                case ConnectionStringType.Olap:
+                    var authConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
+                    SecurityClearanceValidator.AssertSecurityClearance(JsonDeserializationClient.OlapConnectionString(configuration), authConnection?.Status);
+                    break;
+
+            }
         }
 
         protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)

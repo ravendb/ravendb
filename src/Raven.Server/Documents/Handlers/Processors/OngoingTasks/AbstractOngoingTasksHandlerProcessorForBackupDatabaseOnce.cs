@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Json;
@@ -34,7 +35,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected virtual void AssertBackup(BackupConfiguration configuration)
         {
-            BackupConfigurationHelper.AssertOneTimeBackup(configuration, ServerStore);
+            var authConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
+            BackupConfigurationHelper.AssertOneTimeBackup(configuration, ServerStore, authConnection);
         }
 
         public override async ValueTask ExecuteAsync()
