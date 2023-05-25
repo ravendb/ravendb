@@ -32,6 +32,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.QueueSink;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Smuggler;
 using Raven.Server.Documents.Subscriptions;
@@ -174,6 +175,7 @@ namespace Raven.Server.Documents
                 });
                 _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
                 IdentityPartsSeparator = '/';
+                QueueSinkLoader = new QueueSinkLoader(this, serverStore);
                 _requestExecutor = CreateRequestExecutor();
                 _serverStore.Server.ServerCertificateChanged += OnCertificateChange;
             }
@@ -293,6 +295,8 @@ namespace Raven.Server.Documents
         public ReplicationLoader ReplicationLoader { get; internal set; }
 
         public EtlLoader EtlLoader { get; private set; }
+        
+        public QueueSinkLoader QueueSinkLoader { get; private set; }
 
         public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
@@ -396,6 +400,7 @@ namespace Raven.Server.Documents
                 ReplicationLoader?.Initialize(record, index);
                 _addToInitLog("Initializing ETL");
                 EtlLoader.Initialize(record);
+                QueueSinkLoader.Initialize(record);
 
                 TombstoneCleaner.Start();
                 InitializeAndStartDocumentsMigration();
@@ -951,6 +956,7 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing EtlLoader");
             exceptionAggregator.Execute(() =>
             {
+                // todo djordje: add for queusinkloader
                 EtlLoader?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed EtlLoader");

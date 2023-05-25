@@ -18,7 +18,8 @@ namespace Raven.Server.Documents.Patch
         OlapEtl,
         Smuggler,
         EtlBehaviorFunctions,
-        QueueEtl
+        QueueEtl,
+        QueueSink
     }
 
     /// <summary>
@@ -84,6 +85,7 @@ namespace Raven.Server.Documents.Patch
                 case PatchRequestType.RavenEtl:
                 case PatchRequestType.OlapEtl:
                 case PatchRequestType.QueueEtl:
+                case PatchRequestType.QueueSink:
                 // modify and return the document
                 case PatchRequestType.Patch:
                     return $@"
