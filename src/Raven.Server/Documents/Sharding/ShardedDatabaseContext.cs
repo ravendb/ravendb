@@ -134,14 +134,18 @@ namespace Raven.Server.Documents.Sharding
             var topologyChange = record.Sharding.Orchestrator.Topology.Stamp?.Index ?? 0;
             if (topologyChange > _lastTopologyChangeEtag)
             {
-                _lastTopologyChangeEtag = topologyChange;
-
                 var clusterTopology = ServerStore.GetClusterTopology();
-                Changes.RaiseNotifications(new TopologyChange
+                var url = clusterTopology.GetUrlFromTag(ServerStore.NodeTag);
+                if (url != null)
                 {
-                    Url = clusterTopology.GetUrlFromTag(ServerStore.NodeTag),
-                    Database = DatabaseName
-                });
+                    _lastTopologyChangeEtag = topologyChange;
+
+                    Changes.RaiseNotifications(new TopologyChange
+                    {
+                        Url = url,
+                        Database = DatabaseName
+                    });
+                }
             }
 
             Interlocked.Exchange(ref _record, record);

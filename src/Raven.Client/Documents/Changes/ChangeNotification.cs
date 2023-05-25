@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -18,6 +19,9 @@ namespace Raven.Client.Documents.Changes
 
         public DynamicJsonValue ToJson()
         {
+            Debug.Assert(string.IsNullOrEmpty(Url) == false, "string.IsNullOrEmpty(Url) == false");
+            Debug.Assert(string.IsNullOrEmpty(Database) == false, "string.IsNullOrEmpty(Database) == false");
+
             return new DynamicJsonValue
             {
                 [nameof(Url)] = Url,
@@ -29,6 +33,9 @@ namespace Raven.Client.Documents.Changes
         {
             value.TryGet(nameof(Url), out string url);
             value.TryGet(nameof(Database), out string database);
+
+            Debug.Assert(string.IsNullOrEmpty(url) == false, "string.IsNullOrEmpty(url) == false");
+            Debug.Assert(string.IsNullOrEmpty(database) == false, "string.IsNullOrEmpty(database) == false");
 
             return new TopologyChange
             {
