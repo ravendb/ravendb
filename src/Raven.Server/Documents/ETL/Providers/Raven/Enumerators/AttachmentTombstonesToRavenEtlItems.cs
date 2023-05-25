@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 
         public static bool FilterAttachment(DocumentsOperationContext context, RavenEtlItem item)
         {
-            var documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(context, item.AttachmentTombstoneId).DocId;
+            var documentId = AttachmentsStorage.GetDocIdAndAttachmentName(context, item.AttachmentTombstoneId).DocId;
             var document = context.DocumentDatabase.DocumentsStorage.Get(context, documentId);
             if (document == null)
                 return true; // document could be deleted, no need to send DELETE of tombstone, we can filter it out

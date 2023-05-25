@@ -5,6 +5,7 @@ using NCrontab.Advanced;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
 using Voron.Util.Settings;
 
@@ -143,21 +144,25 @@ namespace Raven.Server.Documents.PeriodicBackup
                 serverStore.Configuration.Backup.AssertRegionAllowed(configuration.GlacierSettings.AwsRegionName);
         }
 
-        public static void AssertPeriodicBackup(PeriodicBackupConfiguration configuration, ServerStore serverStore)
+        public static void AssertPeriodicBackup(PeriodicBackupConfiguration configuration, ServerStore serverStore, RavenServer.AuthenticateConnection authConnection)
         {
             serverStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
 
             UpdateLocalPathIfNeeded(configuration, serverStore);
             AssertBackupConfiguration(configuration);
             AssertDestinationAndRegionAreAllowed(configuration, serverStore);
+
+            SecurityClearanceValidator.AssertSecurityClearance(configuration, authConnection?.Status);
         }
 
-        public static void AssertOneTimeBackup(BackupConfiguration configuration, ServerStore serverStore)
+        public static void AssertOneTimeBackup(BackupConfiguration configuration, ServerStore serverStore, RavenServer.AuthenticateConnection authConnection)
         {
             serverStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
 
             AssertBackupConfigurationInternal(configuration);
             AssertDestinationAndRegionAreAllowed(configuration, serverStore);
+
+            SecurityClearanceValidator.AssertSecurityClearance(configuration, authConnection?.Status);
         }
 
         public class ActualPathResult

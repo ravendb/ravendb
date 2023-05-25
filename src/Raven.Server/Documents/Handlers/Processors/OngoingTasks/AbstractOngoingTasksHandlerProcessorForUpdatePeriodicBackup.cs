@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.Documents.PeriodicBackup;
@@ -30,7 +31,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected override void OnBeforeUpdateConfiguration(ref PeriodicBackupConfiguration configuration, JsonOperationContext context)
         {
-            BackupConfigurationHelper.AssertPeriodicBackup(configuration, RequestHandler.ServerStore);
+            var authConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
+            BackupConfigurationHelper.AssertPeriodicBackup(configuration, RequestHandler.ServerStore, authConnection);
         }
 
         protected override void OnBeforeResponseWrite(TransactionOperationContext _, DynamicJsonValue responseJson, PeriodicBackupConfiguration configuration, long index)

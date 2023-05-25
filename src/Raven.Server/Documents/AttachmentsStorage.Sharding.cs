@@ -2,7 +2,6 @@
 using Raven.Server.Documents.Replication.ReplicationItems;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -28,7 +27,7 @@ namespace Raven.Server.Documents
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
                 if (stream == null)
-                    ThrowMissingAttachment(attachment.Name);
+                    ThrowMissingAttachment(GetDocIdAndAttachmentName(context, attachment.Key));
 
                 attachment.Stream = stream;
 
@@ -113,7 +112,7 @@ namespace Raven.Server.Documents
         {
             if (tx.Owner is not DocumentsOperationContext { DocumentDatabase: ShardedDocumentDatabase documentDatabase })
             {
-                Debug.Assert(false,$"tx.Owner is not DocumentsOperationContext");
+                Debug.Assert(false, $"tx.Owner is not DocumentsOperationContext");
                 return;
             }
 
@@ -143,7 +142,7 @@ namespace Raven.Server.Documents
                     case 1:
                         if (delete)
                             goto default;
-                        
+
                         // unique stream for this bucket was add
                         var info = tree.GetStreamInfo(hashSlice, writable: false);
 

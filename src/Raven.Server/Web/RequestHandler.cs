@@ -187,7 +187,7 @@ namespace Raven.Server.Web
             return false;
         }
 
-        public static void ValidateNodeForAddingToDb(string databaseName, string node, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, string baseMessage = null)
+        public static void ValidateNodeForAddingToDb(string databaseName, string node, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, RavenServer server, string baseMessage = null)
         {
             baseMessage ??= "Can't execute the operation";
 
@@ -201,7 +201,7 @@ namespace Raven.Server.Web
             if (url == null)
                 throw new InvalidOperationException($"{baseMessage}, because node {node} (which is in the new topology) is not part of the cluster");
 
-            if (databaseRecord.Encrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+            if (databaseRecord.Encrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false && server.AllowEncryptedDatabasesOverHttp == false)
                 throw new InvalidOperationException($"{baseMessage}, because database {databaseName} is encrypted but node {node} (which is in the new topology) doesn't have an SSL certificate.");
         }
 

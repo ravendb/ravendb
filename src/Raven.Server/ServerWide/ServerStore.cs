@@ -1347,6 +1347,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            wakeup = DateTime.SpecifyKind(wakeup, DateTimeKind.Utc);
             var nextIdleDatabaseActivity = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
             DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
 
@@ -2299,13 +2300,9 @@ namespace Raven.Server.ServerWide
 
         public async Task<(long, object)> PutConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString, string raftRequestId)
         {
-            if (connectionString.TryGet(nameof(ConnectionString.Type), out string type) == false)
-                throw new InvalidOperationException($"Connection string must have {nameof(ConnectionString.Type)} field");
-
-            if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
-                throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-
             UpdateDatabaseCommand command;
+
+            var connectionStringType = ConnectionString.GetConnectionStringType(connectionString);
 
             switch (connectionStringType)
             {
@@ -2810,7 +2807,7 @@ namespace Raven.Server.ServerWide
                 .Concat(clusterTopology.Watchers.Keys)
                 .ToList();
 
-            if (encrypted)
+            if (encrypted && Server.AllowEncryptedDatabasesOverHttp == false)
             {
                 clusterNodes.RemoveAll(n => AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
                 if (clusterNodes.Count < databaseTopology.ReplicationFactor)

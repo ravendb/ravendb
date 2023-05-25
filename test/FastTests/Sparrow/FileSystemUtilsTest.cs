@@ -1,4 +1,5 @@
 ﻿using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,6 +33,16 @@ namespace FastTests.Sparrow
             
             var swap = KernelVirtualFileSystemUtils.ReadSwapInformationFromSwapsFile(fileName);
             Assert.All(swap, s => Assert.NotNull(s.DeviceName));
+        }
+        
+        [LinuxFact]
+        public void CGroup_WhenTryingToGetData_SuccessToGetValue()
+        {
+            var cgroup = CGroupHelper.CGroup;
+            //cgroup2 does not always have memory.peak
+            cgroup.GetMaxMemoryUsage();
+            Assert.NotNull(cgroup.GetPhysicalMemoryLimit());
+            Assert.NotNull(cgroup.GetPhysicalMemoryUsage());
         }
     }
 }

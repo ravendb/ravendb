@@ -114,6 +114,12 @@ namespace Raven.Server
 
         internal bool ThrowOnLicenseActivationFailure;
 
+#if ALLOW_ENCRYPTED_OVER_HTTP
+        internal bool AllowEncryptedDatabasesOverHttp = true;
+#else
+        internal bool AllowEncryptedDatabasesOverHttp = false;
+#endif
+
         internal Action<StorageEnvironment> BeforeSchemaUpgrade;
 
         internal string DebugTag;
