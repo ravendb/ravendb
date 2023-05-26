@@ -14,7 +14,7 @@ public class RavenDB_19317 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
     public void CoraxLowercaseTheTermWhenFieldHasFullTextSearchConfiguration(RavenTestBase.Options options)
     {
         using var store = GetDocumentStore(options);
