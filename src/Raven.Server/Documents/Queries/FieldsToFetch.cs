@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Queries
             // Since we always store fields in Corax, we can try to retrieve them from the index entry when performing projection. This is an alternative value for `canExtractFromIndex`.
             // Additionally, when the index is a map-reduce, we have to skip the fields' stored values and look them up in the stored JSON of the reduce-map.
             // The reason behind this is related to the type of value we return to the client. In the field, we can have a LazyStringValue, but the client may want a numeric value.
-            var forceExtractFromIndex = searchEngineType is SearchEngineType.Corax && indexType.IsMapReduce() is false;
+            var forceExtractFromIndex = false && indexType.IsMapReduce() is false;
 
             selectFieldKey = selectField.Alias ?? selectField.Name;
             var selectFieldName = selectField.Name;

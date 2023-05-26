@@ -24,8 +24,8 @@ namespace SlowTests.Issues
         private char a = 'a';
         private char z = 'z';
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying, Skip = "Corax")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public async Task Can_Export_raw_index_entries_in_Csv_Async_Corax(Options options) => await Can_Export_raw_index_entries_in_Csv_Async(options, csv =>
         {
             csv.Read();

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.5</RuntimeFrameworkVersion>
+    <TargetFramework>net6.0</TargetFramework>
+    <RuntimeFrameworkVersion>6.0.16</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>FastTests</AssemblyName>
     <PackageId>FastTests</PackageId>
@@ -21,26 +21,9 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Blittable\BlittableJsonWriterTests\Jsons\*.json" />
-    <None Remove="Corax\Bugs\access_violation.json.gz" />
-    <None Remove="Corax\Bugs\Corax.Set.Adds.txt" />
     <None Remove="Voron\CompactTrees\RavenDB-19703.replay" />
     <None Remove="Voron\CompactTrees\RavenDB-19937.replay" />
     <None Remove="Voron\CompactTrees\RavenDB-19956.replay" />
-    <EmbeddedResource Include="Corax\Bugs\access_violation.json.gz" />
-    <EmbeddedResource Include="Corax\Bugs\Corax.Set.Adds.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <None Remove="Corax\Bugs\Corax.Set.Removals.txt" />
-    <EmbeddedResource Include="Corax\Bugs\Corax.Set.Removals.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <None Remove="Corax\Bugs\Terms.log.gz" />
-    <None Remove="Corax\Bugs\repro-2.log.gz" />
-    <None Remove="Corax\Bugs\Terms-2.txt.gz" />
-    <EmbeddedResource Include="Corax\Bugs\Terms-2.txt.gz" />
-    <None Remove="Corax\Bugs\3-2015-10.txt.gz" />
-    <EmbeddedResource Include="Corax\Bugs\3-2015-10.txt.gz" />
-    <None Remove="Corax\Bugs\repro-4.log.gz" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Sparrow\BitVectors.cs" />
@@ -54,7 +37,6 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Corax\Corax.csproj" />
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
@@ -66,7 +48,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
     <PackageReference Include="NodaTime" Version="3.1.9" />
     <PackageReference Include="Spatial4n" Version="0.4.1.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
@@ -89,11 +71,5 @@
     <None Update="Issues\RavenDB-13499.ravendbdump">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="Corax\Bugs\Corax.PostingList.RemBiggerThanInt" />
-    <EmbeddedResource Include="Corax\Bugs\Corax.PostingList.RemBiggerThanInt.txt" />
-    <None Remove="Corax\Bugs\Corax.PostingList.AddsBiggerThanInt" />
-    <EmbeddedResource Include="Corax\Bugs\Corax.PostingList.AddsBiggerThanInt.txt" />
   </ItemGroup>
 </Project>

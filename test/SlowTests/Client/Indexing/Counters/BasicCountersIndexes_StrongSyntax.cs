@@ -251,7 +251,7 @@ namespace SlowTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
-                var countersIndex = new FastTests.Corax.CoraxProjections.MyCounterIndex();
+                var countersIndex = new MyCounterIndex();
                 var indexDefinition = countersIndex.CreateIndexDefinition();
                 RavenTestHelper.AssertEqualRespectingNewLines("counters.Companies.HeartRate.Select(counter => new {\r\n    HeartBeat = counter.Value,\r\n    Name = counter.Name,\r\n    User = counter.DocumentId\r\n})", indexDefinition.Maps.First());
 
@@ -1477,6 +1477,15 @@ namespace SlowTests.Client.Indexing.Counters
                 return indexesProgress.Results[0].Collections["Users"];
             }
             return null;
+        }
+
+        public class MyCounterIndex : AbstractCountersIndexCreationTask<Company>
+        {
+            public MyCounterIndex()
+            {
+                AddMap("HeartRate", counters => from counter in counters
+                    select new {HeartBeat = counter.Value, Name = counter.Name, User = counter.DocumentId});
+            }
         }
     }
 }

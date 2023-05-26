@@ -285,27 +285,7 @@
                             </button>
                         </div>
                         <hr class="margin-bottom">
-                        <div class="row">
-                            <div class="col-lg-8">
-                                <div class="form-group">
-                                    <div class="flex-grow margin-left margin-left-lg">
-                                        <input class="form-control" data-bind="textInput: $root.constructor.searchEngineConfigurationLabel" disabled />
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-3">
-                                <div class="btn-group properties-value">
-                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                        <span data-bind="text: effectiveSearchEngineText"></span> <i class="caret"></i>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a href="#" data-bind="click: searchEngineConfiguration.bind(searchEngineConfiguration, null)"><span data-bind="text: inheritSearchEngineText"></span></a></li>
-                                        <li><a href="#" data-bind="click: searchEngineConfiguration.bind(searchEngineConfiguration, 'Lucene')"><span data-bind="text: $root.constructor.formatEngine('Lucene')"></span></a></li>
-                                        <li><a href="#" data-bind="click: searchEngineConfiguration.bind(searchEngineConfiguration, 'Corax')"><span data-bind="text: $root.constructor.formatEngine('Corax')"></span></a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
+                        
                         <div data-bind="foreach: editedIndex().configuration">
                             <div class="row">
                                 <div class="col-lg-8" data-bind="validationElement: key">
@@ -625,9 +605,9 @@
                             </a>
                         </span>
                         <div class="btn-group properties-value has-disable-reason"
-                             data-bind="validationElement: indexOrStore, attr: { 'data-original-title': isCorax() ? 'Fields are always stored when search engine is Corax' : '' }">
+                             data-bind="validationElement: indexOrStore}">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
-                                    data-bind="css: { 'border-warning': isStoreField() && isLucene() }, disable: isCorax()">
+                                    data-bind="css: { 'border-warning': isStoreField() && isLucene() }">
                                 <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">

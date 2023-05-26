@@ -16,8 +16,8 @@ public class RavenDB_18357 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax, Skip = "Corax")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
     public void AutoIndexShouldThrowWhenTryingToIndexComplexObject(Options options)
     {
         var oldModifyDatabaseRecord = options.ModifyDatabaseRecord;
@@ -51,7 +51,7 @@ public class RavenDB_18357 : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void StaticIndexShouldNotThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereNotExplicitlySetInDefinition(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -68,8 +68,8 @@ public class RavenDB_18357 : RavenTestBase
         Assert.Null(errors);
     }
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax, Skip = "Corax")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
     public void StaticIndexShouldThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereExplicitlySetInDefinition(Options options)
     {
         var modifiedOptions = new Options()
@@ -98,7 +98,7 @@ public class RavenDB_18357 : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void StaticIndexShouldNotThrowWhenTryingToIndexComplexObjectAndFieldIsNotIndexed(Options options)
     {
         using var store = GetDocumentStore(options);

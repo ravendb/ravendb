@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
@@ -13,8 +12,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Query = Lucene.Net.Search.Query;
-using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
-using CoraxAnalyzer = Corax.Analyzer;
 
 namespace Raven.Server.Documents.Indexes.Persistence;
 
@@ -117,28 +114,6 @@ public abstract class IndexOperationBase : IDisposable
         return (int)pageSize;
     }
 
-    protected static int CoraxBufferSize(global::Corax.IndexSearcher searcher, long pageSize, IndexQueryServerSide query)
-    {
-        var numberOfEntries = searcher.NumberOfEntries;
-        if (numberOfEntries == 0)
-            return 16;
-        
-        if (query.Metadata.OrderBy is not null || query.Metadata.IsDistinct)
-        {
-            if (numberOfEntries > MaxBufferSizeForCorax)
-                return MaxBufferSizeForCorax;
-            
-            return DefaultBufferSizeForCorax;
-        }
-        
-        if (pageSize <= 0 && numberOfEntries < DefaultBufferSizeForCorax)
-            return DefaultBufferSizeForCorax;
-        
-        return numberOfEntries > MaxBufferSizeForCorax
-            ? MaxBufferSizeForCorax
-            : DefaultBufferSizeForCorax;
-    }
-    
     protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults,
         Reference<int> scannedDocuments, IQueryResultRetriever retriever, QueryTimingsScope queryTimings)
 

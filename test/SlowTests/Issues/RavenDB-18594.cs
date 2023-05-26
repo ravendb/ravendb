@@ -18,7 +18,7 @@ public class RavenDB_18594 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void ShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticIndex(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -101,8 +101,8 @@ public class RavenDB_18594 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying, Skip = "Corax")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
     public void CoraxShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticJavaScriptIndex(Options options)
     {
         using var store = GetDocumentStore(options);

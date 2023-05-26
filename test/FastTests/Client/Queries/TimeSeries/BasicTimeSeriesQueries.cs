@@ -30,8 +30,8 @@ namespace FastTests.Client.Queries.TimeSeries
             public long Count { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries, Skip = "Corax")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public void BasicMapIndex_Query(Options options)
         {
             using (var store = GetDocumentStore(options))

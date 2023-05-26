@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using Lucene.Net.Search;
-using Lucene.Net.Store;
-using System.Text;
-using Corax;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -13,12 +8,8 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Newtonsoft.Json;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
-using Raven.Server.Documents.Indexes;
 using Sparrow;
 using Constants = Raven.Client.Constants;
-using IndexSearcher = Corax.IndexSearcher;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -85,29 +76,18 @@ namespace Raven.Server.Documents.Queries.Results
 
             return djv;
         }
-        
-        public override unsafe Document DirectGet(ref RetrieverInput retrieverInput,string id, DocumentFields fields)
+
+        public override unsafe Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
             BlittableJsonReaderObject result;
-            if (retrieverInput.IsLuceneDocument() == false)
-            {
-                retrieverInput.CoraxEntry.GetFieldReaderFor(retrieverInput.KnownFields.StoredJsonPropertyOffset).Read(out var binaryValue);
-                fixed (byte* ptr = &binaryValue.GetPinnableReference())
-                {
-                    using var temp = new BlittableJsonReaderObject(ptr, binaryValue.Length, _context);
-                    result = temp.Clone(_context);
-                }
-            }
-            else
-            {
-                var storedValue = retrieverInput.LuceneDocument.GetField(_storedValueFieldName).GetBinaryValue(retrieverInput.State);
 
-                var allocation = _context.GetMemory(storedValue.Length);
-                var buffer = new UnmanagedWriteBuffer(_context, allocation);
-                buffer.Write(storedValue, 0, storedValue.Length);
+            var storedValue = retrieverInput.LuceneDocument.GetField(_storedValueFieldName).GetBinaryValue(retrieverInput.State);
 
-                result = new BlittableJsonReaderObject(allocation.Address, storedValue.Length, _context, buffer);
-            }
+            var allocation = _context.GetMemory(storedValue.Length);
+            var buffer = new UnmanagedWriteBuffer(_context, allocation);
+            buffer.Write(storedValue, 0, storedValue.Length);
+
+            result = new BlittableJsonReaderObject(allocation.Address, storedValue.Length, _context, buffer);
 
             return new Document
             {
@@ -133,12 +113,6 @@ namespace Raven.Server.Documents.Queries.Results
         public override bool TryGetKeyLucene(ref RetrieverInput retrieverInput, out string key)
         {
             key = null;
-            return false;
-        }
-        
-        public override bool TryGetKeyCorax(IndexSearcher searcher, long id, out UnmanagedSpan key)
-        {
-            key = default;
             return false;
         }
     }

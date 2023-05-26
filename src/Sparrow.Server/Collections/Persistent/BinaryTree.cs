@@ -239,7 +239,7 @@ namespace Sparrow.Server.Collections.Persistent
                 if (keyLength != 0)
                 {
                     // We can easily find the the current byte by a simple shift, which is what divided by 8 will be translated to. 
-                    ref byte currentByte = ref Unsafe.AddByteOffset(ref key, currentBit / 8);
+                    ref byte currentByte = ref Unsafe.AddByteOffset(ref key, new IntPtr(currentBit / 8));
 
                     // PERF: There are 2 ways to do this. The first involve shifting the bits to leave the current bit as the last bit
                     // in the byte. However, for that we need to find the number of bits subtracting from the total amount of 
@@ -249,7 +249,7 @@ namespace Sparrow.Server.Collections.Persistent
                     var current = currentByte & (0b1000_0000 >> (currentBit % 8));
 
                     int u = current == 0 ? currentNode.LeftChild : currentNode.RightChild;
-                    currentNode = ref Unsafe.AddByteOffset(ref nodeRef, u * Unsafe.SizeOf<Node>());
+                    currentNode = ref Unsafe.AddByteOffset(ref nodeRef, new IntPtr(u * Unsafe.SizeOf<Node>()));
 
                     keyLength--;
                     currentBit++;

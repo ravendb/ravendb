@@ -60,10 +60,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 numberOfOutputs = UpdateIndexEntriesLucene(indexItem, mapResults, writer, indexContext, stats);
             }
-            else if(SearchEngineType == SearchEngineType.Corax)
-            {
-                numberOfOutputs = UpdateIndexEntriesCorax(indexItem, mapResults, writer, indexContext, stats);
-            }
             else
             {
                 throw new ArgumentOutOfRangeException(nameof(SearchEngineType), SearchEngineType + " is not a supported value");

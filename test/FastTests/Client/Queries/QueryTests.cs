@@ -263,8 +263,8 @@ namespace FastTests.Client.Queries
             WaitForUserToContinueTheTest(store);
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenTheory(RavenTestCategory.Querying, Skip = "Corax")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax")]
         public async Task Query_DifferentTypesComparison(Options options)
         {
             using var store = GetDocumentStore(options);

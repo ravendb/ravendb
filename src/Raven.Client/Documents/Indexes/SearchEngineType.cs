@@ -3,7 +3,6 @@
     public enum SearchEngineType
     {
         None,
-        Corax, 
         Lucene
     }
 }
