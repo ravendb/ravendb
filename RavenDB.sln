@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7C0225BB-6184-4859-8ED1-2251A492A449}"
 	ProjectSection(SolutionItems) = preProject
 		src\CommonAssemblyInfo.cs = src\CommonAssemblyInfo.cs
+		global.json = global.json
 		RavenDB.ruleset = RavenDB.ruleset
 	EndProjectSection
 EndProject

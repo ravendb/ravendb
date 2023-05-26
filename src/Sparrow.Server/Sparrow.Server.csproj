@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.5</RuntimeFrameworkVersion>
+    <TargetFramework>net6.0</TargetFramework>
+    <RuntimeFrameworkVersion>6.0.16</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Sparrow.Server</AssemblyName>
     <PackageId>Sparrow.Server</PackageId>
     <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>
     <Configurations>Debug;Release;Validate</Configurations>
+    <EnablePreviewFeatures>true</EnablePreviewFeatures>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Include="..\Sparrow\Properties\AssemblyInfo.Windows.cs" Link="Properties\AssemblyInfo.Windows.cs" />
@@ -47,6 +48,7 @@
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="System.Runtime.Experimental" Version="6.0.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />

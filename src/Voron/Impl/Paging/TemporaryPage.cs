@@ -8,7 +8,7 @@ namespace Voron.Impl.Paging
 {
     public unsafe class TemporaryPage : IDisposable
     {
-        private readonly byte[] _tempPageBuffer;
+        internal readonly byte[] _tempPageBuffer;
         private GCHandle _tempPageHandle;
         private IntPtr _tempPage;
         internal readonly int PageSize;
